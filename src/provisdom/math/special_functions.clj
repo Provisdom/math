@@ -2,7 +2,8 @@
   (:require [provisdom.utility-belt.core :as co]
             [provisdom.math [core :as m]
              [matrix :as mx]
-             [apache :as ap]])
+             [apache :as ap]]
+            [taoensso.truss :as truss :refer (have have! have?)])
   (:import [cern.jet.stat.tdouble Gamma]))
 
 (set! *warn-on-reflection* true)
@@ -66,8 +67,8 @@
 
 (defn inv-erf 
   "Returns the inverse error function"
-  ^double [^double x] 
-  (when-not (and (>= x -1) (<= x 1)) (m/exc-out-of-range x (var inv-erf)))
+  ^double [^double x]
+  {:pre [(have? >= x -1) (have? <= x 1)]}
   (cond (m/roughly? 1.0 x m/*dbl-close*) m/inf+, 
         (m/roughly? -1.0 x m/*dbl-close*) m/inf-, 
         (zero? x) 0.0 :else (ap/erf-inv x)))
@@ -75,7 +76,7 @@
 (defn inv-erfc 
   "Returns the inverse complementary error function"
   ^double [^double x]
-  (when-not (and (m/non-? x) (<= x 2)) (m/exc-out-of-range x (var inv-erfc)))
+  {:pre [(have? m/non-? x) (have? <= x 2)]}
   (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+, 
         (m/roughly? x 2.0 m/*dbl-close*) m/inf-, 
         (m/one? x) 0.0 :else (ap/erfc-inv x)))
@@ -83,8 +84,7 @@
 (defn inv-cdf-standard-normal
   "Returns the standard Normal inverse cdf"
   [^double cumul-prob]
-  (when-not (m/prob? cumul-prob) 
-    (m/exc-out-of-range cumul-prob (var inv-cdf-standard-normal)))
+  {:pre [(have? m/prob? cumul-prob)]}
   (cond (zero? cumul-prob) m/inf-, (m/one? cumul-prob) m/inf+, 
         (== 0.5 cumul-prob) 0.0 
         :else (* m/sqrt-two (inv-erf (dec (* 2 cumul-prob))))))
@@ -93,73 +93,68 @@
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t^(x-1) * e^-t * dt).
 Although gamma is defined for pos x, this function allows for all non-zero x."
-  ^double [^double x] 
-  (when (zero? x) (m/exc-out-of-range x (var gamma)))
+  ^double [^double x]
+  {:pre [(have? (complement zero?) x)]}
   (Gamma/gamma x))
 
 (defn lower-gamma 
   "Returns the lower incomplete gamma function: 
    integral[0, c] (t^(x-1) * e^-t * dt)"
   ^double [^double c ^double x]
-  (when (neg? c) (throw (m/exc- c (var lower-gamma))))
-  (when (m/non+? x) (throw (m/exc-non+ x (var lower-gamma))))
-  (cond (zero? c) 0.0, (m/one? x) (m/rev (m/exp (- c))), 
+  {:pre [(have? m/non-? c) (have? pos? x)]}
+  (cond (zero? c) 0.0, (m/one? x) (m/rev (m/exp (- c))),
         :else (* (gamma x) (ap/regularized-gamma-p c x))))
 
 (defn upper-gamma
   "Returns the upper incomplete gamma function: 
    integral[c, inf] (t^(x-1) * e^-t * dt)"
   ^double [^double c ^double x]
-  (when (neg? c) (throw (m/exc- c (var upper-gamma))))
-  (when (m/non+? x) (throw (m/exc-non+ x (var upper-gamma))))
-  (cond (zero? c) (gamma x), (m/one? x) (m/exp (- c)), 
+  {:pre [(have? m/non-? c) (have? pos? x)]}
+  (cond (zero? c) (gamma x), (m/one? x) (m/exp (- c)),
         :else (* (gamma x) (ap/regularized-gamma-q c x))))
 
 (defn upper-gamma-derivative-c 
   "Returns the upper gamma derivative c"
   ^double [^double c ^double x]
-  (when (neg? c) (throw (m/exc- c (var upper-gamma-derivative-c))))
-  (when (m/non+? x) (throw (m/exc-non+ x (var upper-gamma-derivative-c))))
+  {:pre [(have? m/non-? c) (have? pos? x)]}
   (->> x dec (m/pow c) - (* (m/exp (- c)))))
 
 (defn regularized-gamma-p 
   "Returns the regularized gamma function P(c, x) = 1 - Q(c, x).  
 Equal to lower incomplete gamma function divided by gamma function"
   ^double [^double c ^double x]
-  (when (neg? c) (throw (m/exc- c (var regularized-gamma-p))))
-  (when (m/non+? x) (throw (m/exc-non+ x (var regularized-gamma-p))))
+  {:pre [(have? m/non-? c) (have? pos? x)]}
   (if (zero? c) 0.0 (ap/regularized-gamma-p c x)))
 
 (defn regularized-gamma-q 
   "Returns the regularized gamma function Q(c, x) = 1 - P(c, x).  
 Equal to upper incomplete gamma function divided by gamma function"
   ^double [^double c ^double x]
-  (when (neg? c) (throw (m/exc- c (var regularized-gamma-q))))
-  (when (m/non+? x) (throw (m/exc-non+ x (var regularized-gamma-q))))
+  {:pre [(have? m/non-? c) (have? pos? x)]}
   (if(zero? c) 1.0 (ap/regularized-gamma-q c x)))
 
 (defn log-gamma 
   "Returns the log gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (throw (m/exc-non+ x (var log-gamma))))
+  {:pre [(have? pos? x)]}
   (ap/log-gamma x))
 
 (defn log-gamma-derivative
   "Returns the derivative of the log gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (throw (m/exc-non+ x (var log-gamma-derivative))))
+  {:pre [(have? pos? x)]}
   (ap/digamma x))
 
 (defn digamma  
   "Equivalent to log-gamma-derivative" 
   ^double [^double x]
-  (when (m/non+? x) (throw (m/exc-non+ x (var digamma))))
+  {:pre [(have? pos? x)]}
   (log-gamma-derivative x))
 
 (defn gamma-derivative 
   "Returns the derivative of the gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (throw (m/exc-non+ x (var gamma-derivative))))
+  {:pre [(have? pos? x)]}
   (* (gamma x) (log-gamma-derivative x)))
 
 (defn trigamma  
@@ -169,16 +164,14 @@ Equal to upper incomplete gamma function divided by gamma function"
 (defn multivariate-gamma
   "Returns the multivariate gamma of x with dimension p"
   ^double [^double x p]
-  (when-not (and (m/roughly-round? p 0.0) (m/non-? p)) 
-    (m/exc-out-of-range p (var multivariate-gamma)))
+  {:pre [(have? m/roughly-round? p 0.0) (have? m/non-? p)]}
   (* (m/pow m/PI (* 0.25 p (dec p))) 
      (mx/eproduct (fn [i] (gamma (+ x (* 0.5 (m/rev i))))) (range 1 (inc p)))))
 
 (defn multivariate-log-gamma
   "Returns the multivariate log gamma of x with dimension p"
   ^double [^double x p]
-  (when-not (and (m/roughly-round? p 0.0) (m/non-? p)) 
-    (m/exc-out-of-range p (var multivariate-log-gamma)))
+  {:pre [(have? m/roughly-round? p 0.0) (have? m/non-? p)]}
    (+ (* m/log-pi 0.25 p (dec p)) 
       (mx/esum (fn [i] (log-gamma (+ x (* 0.5 (m/rev i))))) 
                (range 1 (inc p)))))
@@ -189,29 +182,25 @@ Equal to upper incomplete gamma function divided by gamma function"
 Although beta is defined for pos x and y, this function allows for all 
    non-zero x and y."
   ^double [^double x ^double y]
-  (when-not (and (not (zero? x)) (not (zero? y)))
-    (co/exc-ill-arg (var beta)))
+  {:pre [(have? (complement zero?) x) (have? (complement zero?) y)]}
   (Gamma/beta x y))
 
 (defn log-beta 
   "Returns the log-beta of x and y"
   ^double [^double x ^double y]
-  (when (m/non+? x) (throw (m/exc-non+ x (var log-beta))))
-  (when (m/non+? y) (throw (m/exc-non+ y (var log-beta))))
+  {:pre [(have? pos? x) (have? pos? y)]}
   (ap/log-beta x y))
 
 (defn regularized-beta 
   "Returns the regularized beta.  
 Equal to incomplete beta function divided by beta function"
   ^double [^double c ^double x ^double y]
-  (when-not (and (pos? x) (pos? y) (m/prob? c))
-    (co/exc-ill-arg (var regularized-beta)))
+  {:pre [(have? pos? x) (have? pos? y) (have? m/prob? c)]}
   (if (zero? c) 0.0 (Gamma/incompleteBeta x y c))) ;cern misnamed this
 
 (defn incomplete-beta 
   "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt"
   ^double [^double c ^double x ^double y]
-  (when-not (and (pos? x) (pos? y) (m/prob? c))
-    (co/exc-ill-arg (var incomplete-beta)))
+  {:pre [(have? pos? x) (have? pos? y) (have? m/prob? c)]}
   ;;cern misnamed this
   (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) 
