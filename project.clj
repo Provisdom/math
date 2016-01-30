@@ -10,5 +10,7 @@
                  [provisdom/test "0.1.0" :scope "test"]
                  [midje "1.6.3" :exclusions [org.clojure/clojure] :scope "test"]
 
+                 [net.mikera/core.matrix "0.49.0"]
                  [org.apache.commons/commons-math3 "3.5"]
-                 [clatrix "0.5.0"]])
+                 [clatrix "0.5.0"]]
+  :plugins [[lein-midje "3.1.3"]])
