@@ -3,7 +3,8 @@
             [provisdom.math [core :as m]
              [combinatorics :as cm]
              [calculus :as ca]
-             [matrix :as mx]]))
+             [matrix :as mx]]
+            [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
@@ -42,8 +43,7 @@
   "Returns a chebyshev polynomial function.  
 Can optionally use first kind (default) or second kind."
   [n & second-kind?]
-  (when-not (m/long-able-non-? n) 
-    (m/exc-not-long-able-non- n (var chebyshev-polynomial-fn)))
+  {:pre [(have? m/long-able-non-? n)]}
   (let [n (long n), g #(let [[x y] %, z (- (* 2 y) x)] [y z]), 
         c (if second-kind? chebyshev-poly-second-kind-fns 
             chebyshev-poly-first-kind-fns), 
@@ -59,9 +59,7 @@ Can optionally use first kind (default) or second kind."
 Can optionally use first kind (default) or second kind.
 Will use numerical derivative when necessary."
   [n deriv & second-kind?]
-  (when-not (and (m/long-able-non-? n)
-                 (m/long-able? deriv) (pos? deriv))
-    (co/exc-ill-arg (var chebyshev-derivative-fn)))
+  {:pre [(have? m/long-able-non-? n) (have? m/long-able? deriv) (pos? deriv)]}
   (let [n (long n)] 
     (cond (zero? n) (fn [x] 0.0)
           (m/one? deriv) (if second-kind? 
@@ -105,8 +103,8 @@ Can optionally use first kind (default) or second kind."
     0 (fn [x] #(m/pow x %))
     1 (fn [x] #((chebyshev-polynomial-fn %) x))
     2 (fn [x] #((chebyshev-polynomial-fn % true) x))
-    (co/exc (format "Chebyshev-kind %i doesn't exist" chebyshev-kind) 
-            (var polynomial-functions))))
+    (throw (ex-info (format "Chebyshev-kind %i doesn't exist" chebyshev-kind) ; TODO - truss or assert
+                    {:fn (var polynomial-functions)}))))
 
 (defn- polynomial-2D-degrees ^double [count] 
   (- (m/sqrt (+ 0.25 (* 2 count))) 1.5)) 
@@ -132,10 +130,9 @@ Returns a collection of functions that each take a number and return a
 
 (defn polynomial-2D-count
   (^long [^long end-degree] (polynomial-2D-count 0 end-degree))
-  (^long [^long start-degree ^long end-degree] 
-    (when (neg? start-degree) (throw (m/exc- start-degree (var polynomial-2D-count))))
-    (when (neg? end-degree) (throw (m/exc- end-degree (var polynomial-2D-count))))
-    (let [d (inc end-degree), f #(* 0.5 (+ % (m/sq %)))] 
+  (^long [^long start-degree ^long end-degree]
+   {:pre [(have? m/non-? start-degree) (have? m/non-? end-degree)]}
+    (let [d (inc end-degree), f #(* 0.5 (+ % (m/sq %)))]
       (- (f d) (f start-degree)))))
 
 (defn polynomial-2D-fn
@@ -244,18 +241,18 @@ Options:
    error-pred -- predicate indicating an error 
       (default is that index is > m/*max-iter*)
    error-return-function -- function that throws exception upon error"
-  [coll & 
-   {:keys [kahan? converged-pred err-pred err-ret-fn] 
-    :or {kahan? false, 
-         converged-pred (fn [sum i val] 
-                          (and (>= i m/*min-iter*) 
-                               (or (<= (m/abs val) m/*quad-close*) 
-                                   (<= (m/abs (/ val sum)) m/*quad-close*))))
-         err-pred (fn [sum i val] (> i m/*max-iter*)), 
-         err-ret-fn (fn [sum i val]
-                      (co/exc 
-                        (str "Series evaluation failed to converge " sum) 
-                        (var sum-convergent-series)))}}]
+  [coll &
+   {:keys [kahan? converged-pred err-pred err-ret-fn]
+    :or   {kahan?         false,
+           converged-pred (fn [sum i val]
+                            (and (>= i m/*min-iter*)
+                                 (or (<= (m/abs val) m/*quad-close*)
+                                     (<= (m/abs (/ val sum)) m/*quad-close*))))
+           err-pred       (fn [sum i val] (> i m/*max-iter*)),
+           err-ret-fn     (fn [sum i val]
+                            (throw (ex-info
+                                     (str "Series evaluation failed to converge " sum)
+                                     {:fn (var sum-convergent-series)})))}}]
   (if kahan?
     (first (co/reduce-kv-with-stop 
              (fn [sum i val] 
