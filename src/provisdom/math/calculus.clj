@@ -3,7 +3,8 @@
              [async :as as]]
             [provisdom.math [core :as m]
              [matrix :as mx]
-             [combinatorics :as mc]]))
+             [combinatorics :as mc]]
+            [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
@@ -29,7 +30,7 @@
         nvars (count ranges)]
     ;;this can be sped for larger seqs (use ^doubles or even approximate)
     (if (m/one? nvars) (let [[a b] ranges] (mx/esum (map f (range a b))))
-                       (co/exc-not-implemented-yet (var integer-integrate))))) ;;to do
+                       (throw (ex-info "Not implmented" (var integer-integrate)))))) ;;to do
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
@@ -310,9 +311,9 @@
         (if (and (>= i min-iter) (<= tot-err tol))
           (ftot-val errs)
           (do (when (>= i max-iter)
-                (co/exc (str "Iteration limit reached.  Error: " tot-err
-                             " Value: " (ftot-val errs))
-                        (var adaptive-quadrature) :solver? true))
+                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err
+                              " Value: " (ftot-val errs))
+                                {:fn (var adaptive-quadrature) :solver? true})))
               (let [[e [h an bn]] (peek errs)
                     mn (* 0.5 (+ an bn))
                     [[err1 h1] [err2 h2]] (as/thread
@@ -331,9 +332,10 @@
 (defn- simple-sort-fn [err errs1d] (apply max errs1d))
 
 (defn- simple-select-dims-fn [errs1d i min-iter]
-  (let [m (apply max errs1d)]
-    (if (< i min-iter) [(co/first-position #(= % m) errs1d)]
-                       (co/positions #(>= % (* m 0.1)) errs1d))))
+  (let [m (apply max errs1d)
+        ps (map vector (range) errs1d)]
+    (if (< i min-iter) [(ffirst (filter #(= % m) ps))]
+                       (mapv first (filter #(>= % (* m 0.1)) ps)))))
 
 (defn- adaptive-quadrature-ndim
   "sort-fn takes the error of the approx and the sequence of 1-dim errors, 
@@ -351,9 +353,8 @@
         (if (and (>= i min-iter) (<= tot-err tol))
           (ftot-val errs)
           (do (when (>= i max-iter)
-                (co/exc (str "Iteration limit reached.  Error: "
-                             tot-err " Value: " (ftot-val errs))
-                        (var adaptive-quadrature-ndim)))
+                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err " Value: " (ftot-val errs))
+                                {:fn (var adaptive-quadrature-ndim)})))
               (let [[_ [_ _ e1d rn]] (peek errs),
                     dims (select-dims-fn e1d i min-iter),
                     dims-with-new-ranges (map #(let [[an bn] (nth rn %),
@@ -606,10 +607,10 @@
 
 (defn- get-forward-coeff
   [^long deriv ^long accuracy]
-  (when-not (and (pos? accuracy) (<= accuracy 6)
-                 (or (<= accuracy 5) (<= deriv 3))
-                 (<= deriv 4) (pos? deriv))
-    (co/exc-ill-arg (var get-forward-coeff)))
+  {:pre [(have? #(not (and (pos? %2) (<= %2 6)
+                           (or (<= %2 5) (<= %1 3))
+                           (<= %1 4) (pos? %1)))
+                deriv accuracy)]}
   (let [v (condp = deriv 1 forward-coeff1, 2 forward-coeff2, 3 forward-coeff3,
                          4 forward-coeff4), coeff (nth v (dec accuracy))]
     (conj coeff [0 (- (mx/esum (map second coeff)))])))
@@ -635,8 +636,8 @@
          (default accuracy is 2 for derivative <= 2, else 6"
   [f & {:keys [^long derivative ^double h type ^long accuracy]
         :or   {derivative 1, type :central}}]
-  (when (neg? derivative) (throw (m/exc- derivative (var derivative-fn))))
-  (when (> derivative 8) (m/exc-out-of-range derivative (var derivative-fn)))
+  {:pre [(have? m/non-? derivative)
+         (have? #(> % 8) derivative)]}
   (cond (zero? derivative) f
         (> derivative 4) (let [exc (- derivative 4),
                                x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]
