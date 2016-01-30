@@ -2,7 +2,8 @@
   (:require [provisdom.math [core :as m]
              [special-functions :as mf]]
             [provisdom.utility-belt.core :as co]
-            [clojure.math.numeric-tower :as nt]))
+            [clojure.math.numeric-tower :as nt]
+            [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
@@ -66,12 +67,11 @@
 (defn choose-k-from-n' 
   "Returns the number of ways to choose k items out of n items"
   [k n]
+  {:pre [(have? m/non-? n)]}
   (letfn [(ms [s e] (reduce *' (range s e)))]
-    (let [k (if (> k (* m/half n)) (- n k) k)] 
+    (let [k (have m/non-? (if (> k (* m/half n)) (- n k) k))]
       (cond 
-        (neg? k) (throw (m/exc- k 'choose-k-from-n'))
-        (neg? n) (throw (m/exc- n 'choose-k-from-n'))
-        (> k n) 0 
+        (> k n) 0
         (or (zero? k) (== k n)) 1
         (or (m/one? k) (== k (dec n))) n 
         :else (/ (ms (inc (- n k)) (inc' n)) (ms 2 (inc' k)))))))
@@ -79,13 +79,9 @@
 (defn binomial-series-factor' 
   "Returns the k-th out of n binomial series factor"
   ([k n prob prob-factor reverse-prob-factor]
-    (cond
-      (neg? n) (throw (m/exc- n 'binomial-series-factor'))
-      (< n k) (m/exc-out-of-range n 'binomial-series-factor')
-      (neg? prob) (throw (m/exc- prob 'binomial-series-factor'))
-      (> prob 1) (m/exc-out-of-range prob 'binomial-series-factor')
-      :else (*' (choose-k-from-n' k n) (pow' prob prob-factor) 
-                (pow' (m/rev prob) reverse-prob-factor))))      
+   {:pre [(have? m/non-? n) (have? >= n k) (have? m/prob? prob)]}
+   (*' (choose-k-from-n' k n) (pow' prob prob-factor)
+       (pow' (m/rev prob) reverse-prob-factor)))
   ([k n prob] (binomial-series-factor' k n prob k (- n k))))
 
 ;;;SERIES SOLVERS
@@ -153,7 +149,7 @@
 (defn gamma' 
   "Returns the gamma of x: integral[0, inf] (t^(x-1) * e^-t * dt)"
   [x]
-  (when (zero? x) (m/exc-out-of-range x (var gamma')))
+  {:pre [(have? (complement zero?) x)]}
   (if (m/roughly-round? x m/*dbl-close*) 
     (factorial' (int (dec x)))
     (mf/gamma x)))
@@ -161,7 +157,6 @@
 (defn beta' 
   "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt"
   [x y]
-  (when (zero? x) (m/exc-out-of-range x (var beta')))
-  (when (zero? y) (m/exc-out-of-range y (var beta')))
+  {:pre [(have? (complement zero?) x) (have? (complement zero?) y)]}
   (* (gamma' x) (/ (gamma' y) (gamma' (+ x y)))))
 
