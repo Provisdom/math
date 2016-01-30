@@ -902,7 +902,7 @@ Unassigned elements will be 0.0"
 (defn norm1 ^double [m] (esum (map m/abs (flatten (to-nested-vectors m)))))
 
 (defn normp ^double [m ^double p]
-  {:pre [[(have? (>= % 1.0) p)]]}
+  {:pre [[(have? >= p 1.0)]]}
   (m/pow (esum (map #(m/pow (m/abs %) p) (flatten (to-nested-vectors m))))
          (/ p)))
 

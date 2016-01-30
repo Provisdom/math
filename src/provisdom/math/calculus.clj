@@ -565,9 +565,12 @@
 
 (defn- get-central-coeff
   [^long deriv ^long accuracy]
-  (when-not (and (>= accuracy 2) (<= accuracy 8) (even? accuracy)
-                 (or (<= accuracy 6) (<= deriv 2)) (<= deriv 4) (pos? deriv))
-    (co/exc-ill-arg (var get-central-coeff)))
+  {:pre [(have? >= accuracy 2)
+         (have? <= accuracy 8)
+         (have? even? accuracy)
+         (have? #(or (<= %1 6) (<= %2 2)) accuracy deriv)
+         (have? <= deriv 4)
+         (have? pos? deriv)]}
   (let [a (/ accuracy 2),
         v (condp = deriv 1 central-coeff1, 2 central-coeff2, 3 central-coeff3,
                          4 central-coeff4)]

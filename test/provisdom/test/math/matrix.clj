@@ -34,14 +34,6 @@
 (def cl-sym (clatrix se-sym)) 
 (def ap-sym (apache-commons se-sym))
 
-(facts "exceptions"
-       (fact "not a matrix"
-             (exc-not-matrix 1.0 :no-print? true) => (throws))
-       (fact "not a square matrix"
-             (exc-not-square 2.0 :no-print? true) => (throws))
-       (fact "not a vector"
-             (exc-not-vector 1.0 :no-print? true) => (throws)))
-
 (facts "special type helpers"
        (fact "diagonal?"
              (diagonal? se) => false
