@@ -1,6 +1,8 @@
 (ns provisdom.math.format
   (require [clojure.string :as str]
-           [provisdom.utility-belt.format :refer :all]))
+           [provisdom.utility-belt.format :refer :all]
+           [taoensso.truss :as truss :refer (have have! have?)]
+           [provisdom.math.core :as m]))
 
 (set! *warn-on-reflection* true)
 
@@ -23,20 +25,19 @@
 (defn format-float 
   "Formats a number with a non-negative number of decimal places"
   [^double n ^long decimal-places]
-  (when (neg? decimal-places) (m/exc- decimal-places (var format-float)))
+  {:pre [(have? m/non-? decimal-places)]}
   (format (str "%." decimal-places "f") n))
 
 (defn format-exponential 
   "Formats a number into exponential form with a number of digits"
   [n & [digits]]
-  (if digits 
-    (do 
-      (when (m/non+? digits) (m/exc-non+ digits (var format-exponential)))
-      (replace-string 
-        (replace-string 
-          (format (str "%." (long (dec digits)) "E") (double n)) 
-          "E+0" "E+")
-        "E-0" "E-"))
+  {:pre [(have? [:or nil? neg?] digits)]}
+  (if digits
+    (replace-string
+      (replace-string
+        (format (str "%." (long (dec digits)) "E") (double n))
+        "E+0" "E+")
+      "E-0" "E-")
     (let [s (replace-string
               (replace-string 
                 (format (str "%." 15 "E") (double n)) 
@@ -49,7 +50,7 @@
 (defn format-number
   "Formats a number into its best form."
   [n max-length & {:keys [max-decimal-places max-digits]}]
-  (when (neg? max-length) (m/exc- max-length (var format-number)))
+  {:pre [(have? m/non-? max-length)]}
   (let [n (if-not max-decimal-places (double n)
             (double (read-string (format-float n max-decimal-places)))),
         stn (if-not max-digits (str n) (format-exponential n max-digits)),
