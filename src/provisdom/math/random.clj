@@ -3,7 +3,8 @@
             [provisdom.math [core :as m]
              [special-functions :as mf]
              [apache :as ap]]
-            [clojure.core.reducers :as ccr]))
+            [clojure.core.reducers :as ccr]
+            [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
@@ -32,8 +33,8 @@ Good for repeating a run."
 (defn rnd-long
   "low is inclusive and high is exclusive."
   (^long [^double rnd] (m/floor (* m/max-long (dec (* 2 rnd)))))
-  (^long [^double rnd ^long low ^long high] 
-    (when (>= low high) (co/exc-ill-arg (var rnd-long)))
+  (^long [^double rnd ^long low ^long high]
+   {:pre [(have? < low high)]}
     ;;range must be less than m/max-long
     (m/floor (+ low (* (- high low) rnd))))) 
 
