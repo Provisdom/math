@@ -4,7 +4,8 @@
              [special-functions :as mf]
              [matrix :as mx]]
             [clojure.math.combinatorics :as cmc]
-            [clojure.core.reducers :as ccr])
+            [clojure.core.reducers :as ccr]
+            [taoensso.truss :as truss :refer (have have! have?)])
   (:import [cern.jet.math.tdouble DoubleArithmetic]))
 
 (set! *warn-on-reflection* true)
@@ -28,13 +29,13 @@
   "Returns the factorial of x.
 Returns long if possible."
   [^double x]
-  (when (neg? x) (throw (m/exc- x (var factorial))))
+  {:pre [(have? m/non-? x)]}
   (m/maybe-long-able (mf/gamma (inc x))))
 
 (defn log-factorial
   "Returns the log-factorial of x"
   ^double [^double x]
-  (when (neg? x) (throw (m/exc- x (var log-factorial))))
+  {:pre [(have? m/non-? x)]}
   (mf/log-gamma (inc x)))
 
 (defn subfactorial
@@ -42,8 +43,8 @@ Returns long if possible."
 The number of ways that n objects can be arranged where no object appears in 
    its natural position (known as 'derangements.')"
   [^double x]
-  (when (neg? x) (throw (m/exc- x (var subfactorial))))
-  (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x)) 
+  {:pre [(have? m/non-? x)]}
+  (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x))
     (m/round (/ (factorial x) m/E))))
 
 (defn choose-k-from-n
@@ -53,8 +54,7 @@ Returns long if possible.
 k must be able to be a long.
 Otherwise use log-choose-k-from-n."
   [k ^double n]
-  (when-not (m/roughly-round? k 0.0) 
-    (m/exc-not-roughly-round k (var choose-k-from-n)))
+  {:pre [(have? m/roughly-round? k)]}
   (m/maybe-long-able (DoubleArithmetic/binomial n (long k))))
 
 (defn log-choose-k-from-n
@@ -62,18 +62,15 @@ Otherwise use log-choose-k-from-n."
 n must be >= k, and n and k must be non-negative.  
 Otherwise, use choose-k-from-n."
   [^double k ^double n]
-  (when-not (and (m/non-? k) (m/non-? n) (>= n k))
-    (co/exc-ill-arg (var log-choose-k-from-n)))
+  {:pre [(have? m/non-? k) (have? m/non-? n) (have? #(>= %2 %1) k n)]}
   (- (log-factorial n) (log-factorial k) (log-factorial (- n k))))
 
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of n items into k subsets.
 Returns long if possible."
   [n k]
-  (when-not (m/roughly-round-non-? k 0.0) 
-    (m/exc-not-roughly-round-non- k (var stirling-number-of-the-second-kind)))
-  (when-not (m/roughly-round-non-? n 0.0) 
-    (m/exc-not-roughly-round-non- n (var stirling-number-of-the-second-kind)))
+  {:pre [(have? m/roughly-round-non-? k 0.0)
+         (have? m/roughly-round-non-? n 0.0)]}
   (m/maybe-long-able 
     (* (/ (factorial k)) 
        (ccr/fold 
@@ -85,8 +82,7 @@ Returns long if possible."
 (defn bell-number
   "Returns the number of partitions of a set of size n."
   [n]
-  (when-not (m/roughly-round-non-? n 0.0) 
-    (m/exc-not-roughly-round-non- n (var bell-number)))
+  {:pre [(have? m/roughly-round-non-? n 0.0)]}
   (if (< n 27) (bell-numbers (long n)) 
     (ccr/fold + (fn [tot e] (+ tot (stirling-number-of-the-second-kind n e))) 
               (range (inc n)))))
@@ -95,38 +91,40 @@ Returns long if possible."
   "Likelihood of seeing 'successes' out of 'trials' with success-prob.  
 Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   ^double [successes ^double trials ^double success-prob]
-  (when-not (and (m/prob? success-prob) (m/long-able? successes)
-                 (m/non-? trials) (>= trials successes))
-    (co/exc-ill-arg (var binomial-probability)))
+  {:pre [(have? m/prob? success-prob)
+         (have? m/long-able? successes)
+         (have? m/non-? trials)
+         (have? #(>= %2 %1) successes trials)]}
   (* (choose-k-from-n successes trials) (m/pow success-prob successes) 
      (m/pow (m/rev success-prob) (- trials successes))))
 
 (defn log-binomial-probability
   "Log-Likelihood of seeing 'successes' out of 'trials' with success-prob"
   ^double [^double successes ^double trials ^double success-prob]
-  (when-not (and (m/prob? success-prob) (m/roughly-round? successes 0.0)
-                 (m/non-? trials) (>= trials successes))
-    (co/exc-ill-arg (var log-binomial-probability)))
+  {:pre [(have? m/prob? success-prob)
+         (have? m/roughly-round? successes 0.0)
+         (have? m/non-? trials)
+         (have? #(>= %2 %1) successes trials)]}
   (+ (log-choose-k-from-n successes trials) (* successes (m/log success-prob)) 
      (* (- trials successes) (m/log (m/rev success-prob)))))
 
 ;;;HYPERGEOMETRIC FUNCTION
 (defn generalized-hypergeometric
   "p and q should be arrays"
-  [p q z] (co/exc-not-implemented-yet (var generalized-hypergeometric)))
+  [p q z] (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)})))
 
 ;redundancy taken from cmc
 (defn selections 
   "All the ways of taking n (possibly the same) elements from the sequence of 
   items" 
-  [items ^long n] 
-  (when (neg? n) (throw (m/exc- n (var selections))))
+  [items ^long n]
+  {:pre [(have? m/non-? n)]}
   (cmc/selections items n))
 
 (defn combinations 
   "All the unique ways of taking n different elements from items" 
-  [items ^long n] 
-  (when (neg? n) (throw (m/exc- n (var combinations))))
+  [items ^long n]
+  {:pre [(have? m/non-? n)]}
   (cmc/combinations items n))
 
 (defn subsets 
@@ -152,7 +150,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
 
 (defn combinations-with-opposites
   [items ^long n]
-  (when (neg? n) (throw (m/exc- n (var combinations-with-opposites))))
+  {:pre [(have? m/non-? n)]}
   (let [s (cmc/combinations items n), 
         r (reverse (cmc/combinations items (- (count items) n)))] 
     (partition 2 (interleave s r))))
@@ -162,8 +160,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
    pattern, where breakdown is a vector of longs that sum to the number of 
    items."
   [items breakdown]
-  (when-not (= (mx/esum breakdown) (count items))
-    (co/exc-ill-arg (var combinations-using-all)))
+  {:pre [(have? #(= (mx/esum %2) (count %1)) items breakdown)]}
   (if-not (next breakdown) (list (list items))
     (let [cwos (combinations-with-opposites items (first breakdown))]
       (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl)) 
@@ -173,7 +170,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
 (defn unique-unordered-subsets-with-replacement
   "All unique unordered subsets of the items with up to 'n' items in a subset"
   [items ^long n]
-  (when (neg? n) (throw (m/exc- n (var unique-unordered-subsets-with-replacement))))
+  {:pre [(have? m/non-? n)]}
   (filter #(<= (count %) n) 
           (distinct (map sort (subsets (apply concat (repeat n items)))))))
 
@@ -181,14 +178,9 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   "Unique unordered combinations that use all of the items by grouping into 
    partitions of count n"
   [items ^long n]
-  (when (neg? n) (throw (m/exc- n (var unique-unordered-combinations-using-all))))
-  (let [k (count items)]
-    (cond (or (zero? n) 
-              (not (zero? 
-                     (rem k n)))) (co/exc-ill-arg 
-                                    (var 
-                                      unique-unordered-combinations-using-all))
-          (= k n) items       
+  {:pre [(have? m/non-? n)]}
+  (let [k (have #(or (zero? n) (not (zero? (rem % n)))) (count items))]
+    (cond (= k n) items
           :else (map #(map (fn [g] (map second g)) %) 
                      (filter #(apply distinct? (mapcat 
                                                  (fn [g] (map first g)) %)) 
