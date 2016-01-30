@@ -635,7 +635,7 @@
          (default accuracy is 2 for derivative <= 2, else 6"
   [f & {:keys [^long derivative ^double h type ^long accuracy]
         :or   {derivative 1, type :central}}]
-  (when (neg? derivative) (m/exc- derivative (var derivative-fn)))
+  (when (neg? derivative) (throw (m/exc- derivative (var derivative-fn))))
   (when (> derivative 8) (m/exc-out-of-range derivative (var derivative-fn)))
   (cond (zero? derivative) f
         (> derivative 4) (let [exc (- derivative 4),

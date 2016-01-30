@@ -1582,7 +1582,7 @@ The work per iteration is very slightly less if shift = 0."
   "Returns [v rnd-lazy], where v has random elements"
   ([^long size rnd-lazy] (rnd-vec nil size rnd-lazy))
   ([implementation ^long size rnd-lazy] 
-    (when (m/non+? size) (m/exc-non+ size (var rnd-vec)))
+    (when (m/non+? size) (throw (m/exc-non+ size (var rnd-vec))))
     [(into [] (take size rnd-lazy)) (drop size rnd-lazy)]))
 
 (defn rnd-matrix

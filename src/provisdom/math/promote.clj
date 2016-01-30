@@ -56,7 +56,7 @@
   [x]
   (cond 
     (zero? x) 1
-    (neg? x) (m/exc- x 'factorial')
+    (neg? x) (throw (m/exc- x 'factorial'))
     (integer? x) (loop [x x f 1]
                    (if (m/one? x)
                      f
@@ -69,8 +69,8 @@
   (letfn [(ms [s e] (reduce *' (range s e)))]
     (let [k (if (> k (* m/half n)) (- n k) k)] 
       (cond 
-        (neg? k) (m/exc- k 'choose-k-from-n')
-        (neg? n) (m/exc- n 'choose-k-from-n')
+        (neg? k) (throw (m/exc- k 'choose-k-from-n'))
+        (neg? n) (throw (m/exc- n 'choose-k-from-n'))
         (> k n) 0 
         (or (zero? k) (== k n)) 1
         (or (m/one? k) (== k (dec n))) n 
@@ -80,9 +80,9 @@
   "Returns the k-th out of n binomial series factor"
   ([k n prob prob-factor reverse-prob-factor]
     (cond
-      (neg? n) (m/exc- n 'binomial-series-factor')
+      (neg? n) (throw (m/exc- n 'binomial-series-factor'))
       (< n k) (m/exc-out-of-range n 'binomial-series-factor')
-      (neg? prob) (m/exc- prob 'binomial-series-factor')
+      (neg? prob) (throw (m/exc- prob 'binomial-series-factor'))
       (> prob 1) (m/exc-out-of-range prob 'binomial-series-factor')
       :else (*' (choose-k-from-n' k n) (pow' prob prob-factor) 
                 (pow' (m/rev prob) reverse-prob-factor))))      

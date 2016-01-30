@@ -8,27 +8,6 @@
 ;;;exp, log, log10, sqrt, pow, abs, sin, asin, cos, acos, tan, atan, atan2, 
 ;;;hypot
 
-(facts "exceptions"
-       (fact "non+"
-             (exc-non+ -1.0 "err" :no-print? true) => (throws))
-       (fact "negative"
-             (exc- -1.0 "err" :no-print? true) => (throws))
-       (fact "not roughly-round"
-             (exc-not-roughly-round 3.4 "err" :no-print? true) => (throws))
-       (fact "not roughly-round+"
-             (exc-not-roughly-round+ 0.0 "err" :no-print? true) => (throws))
-       (fact "not roughly-round-non-"
-             (exc-not-roughly-round-non- -0.5 "err" :no-print? true) 
-             => (throws))
-       (fact "out of range"
-             (exc-out-of-range 4.0 "err" :no-print? true) => (throws))
-       (fact "not long-able"
-             (exc-not-long-able 3.4 "err" :no-print? true) => (throws))
-       (fact "not long-able+"
-             (exc-not-long-able+ 0.0 "err" :no-print? true) => (throws))
-       (fact "not long-able-non-"
-             (exc-not-long-able-non- 3.4 "err" :no-print? true) => (throws)))
-
 (facts "type tests"
        (fact "long-able?"
              (long-able? 3.3) => false

@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [provisdom/utility-belt "0.1.0"]
+                 [com.taoensso/truss "1.0.0"]
 
                  [provisdom/test "0.1.0" :scope "test"]
                  [midje "1.6.3" :exclusions [org.clojure/clojure] :scope "test"]

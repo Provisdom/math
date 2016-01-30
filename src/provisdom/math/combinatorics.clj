@@ -28,13 +28,13 @@
   "Returns the factorial of x.
 Returns long if possible."
   [^double x]
-  (when (neg? x) (m/exc- x (var factorial)))
+  (when (neg? x) (throw (m/exc- x (var factorial))))
   (m/maybe-long-able (mf/gamma (inc x))))
 
 (defn log-factorial
   "Returns the log-factorial of x"
   ^double [^double x]
-  (when (neg? x) (m/exc- x (var log-factorial)))
+  (when (neg? x) (throw (m/exc- x (var log-factorial))))
   (mf/log-gamma (inc x)))
 
 (defn subfactorial
@@ -42,7 +42,7 @@ Returns long if possible."
 The number of ways that n objects can be arranged where no object appears in 
    its natural position (known as 'derangements.')"
   [^double x]
-  (when (neg? x) (m/exc- x (var subfactorial)))
+  (when (neg? x) (throw (m/exc- x (var subfactorial))))
   (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x)) 
     (m/round (/ (factorial x) m/E))))
 
@@ -120,13 +120,13 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   "All the ways of taking n (possibly the same) elements from the sequence of 
   items" 
   [items ^long n] 
-  (when (neg? n) (m/exc- n (var selections)))
+  (when (neg? n) (throw (m/exc- n (var selections))))
   (cmc/selections items n))
 
 (defn combinations 
   "All the unique ways of taking n different elements from items" 
   [items ^long n] 
-  (when (neg? n) (m/exc- n (var combinations)))
+  (when (neg? n) (throw (m/exc- n (var combinations))))
   (cmc/combinations items n))
 
 (defn subsets 
@@ -152,7 +152,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
 
 (defn combinations-with-opposites
   [items ^long n]
-  (when (neg? n) (m/exc- n (var combinations-with-opposites)))
+  (when (neg? n) (throw (m/exc- n (var combinations-with-opposites))))
   (let [s (cmc/combinations items n), 
         r (reverse (cmc/combinations items (- (count items) n)))] 
     (partition 2 (interleave s r))))
@@ -173,7 +173,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
 (defn unique-unordered-subsets-with-replacement
   "All unique unordered subsets of the items with up to 'n' items in a subset"
   [items ^long n]
-  (when (neg? n) (m/exc- n (var unique-unordered-subsets-with-replacement)))
+  (when (neg? n) (throw (m/exc- n (var unique-unordered-subsets-with-replacement))))
   (filter #(<= (count %) n) 
           (distinct (map sort (subsets (apply concat (repeat n items)))))))
 
@@ -181,7 +181,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   "Unique unordered combinations that use all of the items by grouping into 
    partitions of count n"
   [items ^long n]
-  (when (neg? n) (m/exc- n (var unique-unordered-combinations-using-all)))
+  (when (neg? n) (throw (m/exc- n (var unique-unordered-combinations-using-all))))
   (let [k (count items)]
     (cond (or (zero? n) 
               (not (zero? 

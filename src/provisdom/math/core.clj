@@ -1,77 +1,12 @@
 (ns provisdom.math.core
-  (:require [provisdom.utility-belt.core :as co]))
+  (:require [provisdom.utility-belt.core :as co]
+            [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
 (declare nan? roughly-round? non-?)
 
-;;;EXCEPTIONS
-(defn exc-non+ 
-  "Exception if value is non+."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " must be positive." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc- 
-  "Exception if value is negative."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " must not be negative." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-roughly-round
-  "Exception if value not roughly-round."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " not roughly-round." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-roughly-round+ 
-  "Exception if value is not a positive whole number."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " must not be a non-positive whole number." 
-               (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-roughly-round-non-
-  "Exception if value is not a non-negative whole number."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " must be a non-negative whole number." 
-               (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-out-of-range 
-  "Exception if value outside of range."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " outside of range." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-long-able 
-  "Exception if value not long-able."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " not long-able." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-long-able+ 
-  "Exception if value not long-able+."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " not long-able+." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-
-(defn exc-not-long-able-non- 
-  "Exception if value not long-able-non-."
-  [v fn-var-or-str & {:keys [msg solver? external? no-print?]}]
-  (co/exc (str "Value " v " not long-able-non-." (when msg (str " " msg))) 
-       fn-var-or-str :solver? solver?, :external? external?, 
-       :no-print? no-print?))
-  
 ;;;DYNAMIC VARIABLES
 (def ^:dynamic *sgl-digits* 6)
 (def ^:dynamic *dbl-digits* 15)
@@ -99,7 +34,7 @@
 (def ^:const ^long min-int Integer/MIN_VALUE)
 (def ^:const ^double log-half (Math/log 0.5))
 ;;since marked as const, should use Math/log
-(def ^:const ^double log-two (Math/log 2)) 
+(def ^:const ^double log-two (Math/log 2))
 (def ^:const ^double log-ten (Math/log 10))
 (def ^:const ^double log-pi (Math/log PI))
 (def ^:const ^double log-pi-squared (* 2 log-pi))
@@ -128,7 +63,7 @@
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
 
-(defn long-able? 
+(defn long-able?
   "Returns true if x is a number that can be converted to a long"
   [x] (and (number? x) (roughly-round? x 0.0) (long-range? x)))
 
@@ -137,7 +72,7 @@
    and is positive"
   [x] (and (long-able? x) (pos? x)))
 
-(defn long-able-non-? 
+(defn long-able-non-?
   "Returns true if x is a number that can be converted to a long,
    and is non-"
   [x] (and (long-able? x) (non-? x)))
@@ -146,96 +81,96 @@
   "Returns x as a long if possible.  Otherwise returns x."
   [x] (if (long-able? x) (long x) x))
 
-(defn int? 
+(defn int?
   "Returns true is x is an integer that is within the int range"
   [x] (and (integer? x) (int-range? x)))
 
-(defn inf+? 
+(defn inf+?
   "Returns true if x is inf+"
   [x] (and (number? x) (Double/isInfinite ^double x) (pos? x)))
 
-(defn inf-? 
+(defn inf-?
   "Returns true if x is inf-"
   [x] (and (number? x) (Double/isInfinite ^double x) (neg? x)))
 
-(defn inf? 
+(defn inf?
   "Returns true if x is inf+ or inf-"
   [x] (and (number? x) (Double/isInfinite ^double x)))
 
-(defn nan? 
+(defn nan?
   "Returns true if x is nan"
   [x] (and (number? x) (not (== x x))))
 
-(defn one? 
+(defn one?
   "Returns true if x if equal to one"
   [x] (and (number? x) (== 1 x)))
 
-(defn non-? 
+(defn non-?
   "Returns true is x is non-negative"
   [x] (and (number? x) (>= x 0) (not (nan? x))))
 
-(defn non+? 
+(defn non+?
   "Returns true is x is non-positive"
   [x] (and (number? x) (<= x 0) (not (nan? x))))
 
-(defn prob? 
+(defn prob?
   "Returns true if x is between 0 and 1, inclusive"
   [x] (and (non-? x) (<= x 1) (not (nan? x))))
 
-(defn open-prob? 
+(defn open-prob?
   "Returns true if x is between 0 and 1, exclusive"
   [x] (and (number? x) (pos? x) (< x 1)))
 
-(defn corr? 
+(defn corr?
   "Returns true if x is between -1 and 1, inclusive"
   [x] (and (number? x) (<= x 1) (>= x -1) (not (nan? x))))
 
-(defn open-corr? 
+(defn open-corr?
   "Returns true if x is between -1 and 1, exclusive"
   [x] (and (number? x) (< x 1) (> x -1)))
 
 ;;;BASIC MATH
-(defn rev 
+(defn rev
   "Returns (1 - x)"
   [x] (inc (- x)))
 
-(defn sq 
+(defn sq
   "Returns square of x"
   [x] (* x x))
 
-(defn cube 
+(defn cube
   "Returns cube of x"
   [x] (* x x x))
 
-(defn sgn 
+(defn sgn
   "Returns 1 if x positive, 0 if 0, -1 if negative"
   [x] (cond (zero? x) 0, (neg? x) -1, (pos? x) 1, :else nan))
 
-(defn exp 
+(defn exp
   "Returns e^x"
   ^double [^double x] (Math/exp x))
 
-(defn log 
+(defn log
   "Returns log x"
   ^double [^double x] (Math/log x))
 
-(defn log2 
+(defn log2
   "Returns base 2 log of x"
   ^double [^double x] (/ (Math/log x) log-two))
 
-(defn log10 
+(defn log10
   "Returns base 10 log of x"
   ^double [^double x] (Math/log10 x))
 
-(defn logn 
+(defn logn
   "Returns base n log of x"
   ^double [^double x ^double n] (/ (Math/log x) (Math/log n)))
 
-(defn pow 
+(defn pow
   "Returns x1 to the power of x2"
   ^double [^double x1 ^double x2] (Math/pow x1 x2))
 
-(defn abs 
+(defn abs
   "Returns absolute value of x"
   ^double [^double x] (Math/abs x))
 
@@ -243,32 +178,32 @@
   "Returns absolute value of x as a long if possible"
   [^double x] (maybe-long-able (Math/abs x)))
 
-(defn sqrt 
+(defn sqrt
   "Returns square root of x"
   ^double [^double x] (Math/sqrt x))
 
-(defn cbrt 
+(defn cbrt
   "Returns cube root of x"
   ^double [^double x] (* (sgn x) (pow (abs x) (/ 3.0))))
 
 ;;;TRIGONOMETRY
-(defn sin 
+(defn sin
   "Returns sine of x"
   ^double [^double x] (Math/sin x))
 
-(defn asin 
+(defn asin
   "Returns inverse sine of x"
   ^double [^double x] (Math/asin x))
 
-(defn asinh 
+(defn asinh
   "Returns inverse hyperbolic sine of x"
   ^double [^double x] (-> x sq inc sqrt (+ x) log))
 
-(defn cos 
+(defn cos
   "Returns cosine of x"
   ^double [^double x] (Math/cos x))
 
-(defn acos 
+(defn acos
   "Returns inverse cosine of x"
   ^double [^double x] (Math/acos x))
 
@@ -276,195 +211,195 @@
   "Returns inverse hyperbolic cosine of x"
   ^double [^double x] (if-not (>= x 1) nan (-> x sq dec sqrt (+ x) log)))
 
-(defn tan 
+(defn tan
   "Returns tangent of x"
   ^double [^double x] (Math/tan x))
 
-(defn atan 
+(defn atan
   "Returns inverse tangent of x"
   ^double [^double x] (Math/atan x))
 
-(defn atan2 
+(defn atan2
   "Returns inverse tangent with two arguments"
   ^double [^double x1 ^double x2] (Math/atan2 x1 x2))
 
-(defn atanh 
+(defn atanh
   "Returns inverse hyperbolic tangent"
   ^double [^double x]
-  (cond (not (corr? x)) nan, (one? x) inf+, (== x -1) inf-, 
+  (cond (not (corr? x)) nan, (one? x) inf+, (== x -1) inf-,
         :else (-> x inc log (* -0.5))))
 
-(defn hypot 
+(defn hypot
   "Returns hypotenuse with sides x1 and x2."
   ^double [^double x1 ^double x2] (Math/hypot x1 x2))
 
 ;;;ROUNDING
 (defn round
   "Returns a long if possible.  Otherwise, returns x.
-type can be :up (default), :down, :away (from zero), :toward (zero)" 
+type can be :up (default), :down, :away (from zero), :toward (zero)"
   [x & {:keys [type]}]
-  (when-not (number? x) (co/exc-ill-arg (var round)))
+  {:pre [(have? number? x)]}
   (if-not (long-range? x) x
-    (let [x (case type
-              :down (* -1 (Math/round (- ^double x)))
-              :away (* (sgn x) (Math/round (abs x)))
-              :toward (* -1 (sgn x) (Math/round (- (abs x))))
-              (Math/round ^double x))]
-      (long x))))
+                          (let [x (case type
+                                    :down (* -1 (Math/round (- ^double x)))
+                                    :away (* (sgn x) (Math/round (abs x)))
+                                    :toward (* -1 (sgn x) (Math/round (- (abs x))))
+                                    (Math/round ^double x))]
+                            (long x))))
 
-(defn floor 
-  "Rounds down.  Returns a long if possible, otherwise a double." 
+(defn floor
+  "Rounds down.  Returns a long if possible, otherwise a double."
   [^double x] (maybe-long-range (Math/floor x)))
 
-(defn ceil 
-  "Rounds up.  Returns a long if possible, otherwise a double." 
+(defn ceil
+  "Rounds up.  Returns a long if possible, otherwise a double."
   [^double x] (maybe-long-range (Math/ceil x)))
 
-(defn roughly-floor 
+(defn roughly-floor
   "Rounds down unless within accu, then rounds up.
 Returns a long if possible, otherwise a double."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-floor)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (floor (+ x accu)))
 
-(defn roughly-ceil 
+(defn roughly-ceil
   "Rounds up unless within accu, then rounds down.
 Returns a long if possible, otherwise a double."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-ceil)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (ceil (- x accu)))
 
-(defn roughly? 
+(defn roughly?
   "Returns true if x1 and x2 are within accu of each other, or within double
    accuracy."
-  [^double x1 ^double x2 ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly?)))
+  [^double x1 ^double x2 ^double accu]
+  {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x1) (nan? x2)) false
         (inf+? accu) true
         (or (inf? x1) (inf? x2)) false
         :else (<= (abs (- x1 x2)) accu)))
 
-(defn roughly-round? 
+(defn roughly-round?
   "Returns true if x is equal to a whole number or within accu of a whole 
    number, or within double accuracy."
   [^double x ^double accu]
-  (when (neg? accu) (exc- accu (var roughly-round?)))
+  {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x)) false
         (inf+? accu) true
         (inf? x) false
         :else (<= (abs (- (round x) x)) accu)))
-  
-(defn roughly-round-non-? 
+
+(defn roughly-round-non-?
   "Returns true if x is non- and roughly a whole number, 
    or within double accuracy."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-round-non-?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (non-? x) (roughly-round? x accu)))
 
-(defn roughly-round-non+? 
+(defn roughly-round-non+?
   "Returns true if x is non+ and roughly a whole number, 
    or within double accuracy."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-round-non+?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (non+? x) (roughly-round? x accu)))
 
-(defn roughly-round+? 
+(defn roughly-round+?
   "Returns true if x is positive and roughly a whole number, 
    or within double accuracy."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-round+?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (pos? x) (roughly-round? x accu)))
 
-(defn roughly-round-? 
+(defn roughly-round-?
   "Returns true if x is negative and roughly a whole number, 
    or within double accuracy."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-round-?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (neg? x) (roughly-round? x accu)))
 
-(defn roughly-non-? 
+(defn roughly-non-?
   "Returns true if x is positive or within accu to zero."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-non-?)))
-  (>= x (- accu))) 
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
+  (>= x (- accu)))
 
-(defn roughly-non+? 
+(defn roughly-non+?
   "Returns true if x is negative or within accu to zero."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-non+?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (<= x accu))
 
-(defn roughly-prob? 
+(defn roughly-prob?
   "Returns true if x is a prob or within accu of a prob."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-prob?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (>= x (- accu)) (<= x (inc accu))))
 
-(defn roughly-corr? 
+(defn roughly-corr?
   "Returns true if x is a corr or within accu of a corr."
-  [^double x ^double accu] 
-  (when (neg? accu) (exc- accu (var roughly-corr?)))
+  [^double x ^double accu]
+  {:pre [(have? non-? accu)]}
   (and (>= x (dec (- accu))) (<= x (inc accu))))
 
 ;;;QUOTIENTS
-(defn quot' 
+(defn quot'
   "Quotient of dividing numerator by denominator.  
-Returns a long if possible." 
-  [num div] 
-  (cond (or (nan? num) (nan? div) (and (inf? num) (inf? div))) nan 
+Returns a long if possible."
+  [num div]
+  (cond (or (nan? num) (nan? div) (and (inf? num) (inf? div))) nan
         (inf? num) (/ num div)
         (inf? div) 0
         :else (maybe-long-range (quot num div))))
 
 (defn mod'
   "Modulus of num and div. Truncates toward negative infinity.  
-Has sign of div.  Returns a long if possible." 
-  [num div] 
+Has sign of div.  Returns a long if possible."
+  [num div]
   (cond (inf? div) (if (= (sgn num) (sgn div)) num div)
-        (or (nan? div) (nan? num) (inf? num)) nan 
+        (or (nan? div) (nan? num) (inf? num)) nan
         :else (maybe-long-able (mod num div))))
 
 (defn rem'
   "Remainder of dividing numerator by denominator. 
-Has sign of num.  Returns a long if possible." 
-  [num div] 
-  (cond (inf? div) num, (or (nan? div) (nan? num) (inf? num)) nan 
+Has sign of num.  Returns a long if possible."
+  [num div]
+  (cond (inf? div) num, (or (nan? div) (nan? num) (inf? num)) nan
         :else (maybe-long-able (rem num div))))
 
-(defn quot-and-rem 
+(defn quot-and-rem
   "Returns a tuple of longs if possible.  
 Quotient of dividing numerator by denominator.
-Remainder of dividing numerator by denominator.  Has sign of num." 
+Remainder of dividing numerator by denominator.  Has sign of num."
   [num div] [(quot' num div) (rem' num div)])
 
-(defn quot-and-mod 
+(defn quot-and-mod
   "Returns a tuple of longs if possible.
 Quotient of dividing numerator by denominator.
-Modulus of num and div. Truncates toward negative infinity.  Has sign of div." 
-  [num div] 
-  (let [q (quot' num div), m (mod' num div), 
-        q (if (and (not (zero? num)) (= (sgn num) (- (sgn m)))) (dec q) q)] 
+Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
+  [num div]
+  (let [q (quot' num div), m (mod' num div),
+        q (if (and (not (zero? num)) (= (sgn num) (- (sgn m)))) (dec q) q)]
     [q m]))
 
 ;;;ANGLES
-(defn reduce-angle 
+(defn reduce-angle
   "Returns an angle between 0 and 360.  Returns a long if possible."
   [angle] (mod' angle 360))
 
-(defn reduce-radians 
+(defn reduce-radians
   "Returns radians between 0 and 2 * PI.  Returns a long if possible."
   [radians] (mod' radians two-pi))
 
 (defn radians->angle
   "Returns the reduced angle from radians, where angles = 180 * radians / PI.
 Returns a long if possible."
-  [^double radians] 
+  [^double radians]
   (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (defn angle->radians
   "Returns the reduced radians from the angle, 
    where radians = angle * PI / 180.
 Returns a long if possible."
-  [angle] 
-  (if (inf? angle) angle 
-    (maybe-long-able (Math/toRadians (reduce-angle angle)))))
+  [angle]
+  (if (inf? angle) angle
+                   (maybe-long-able (Math/toRadians (reduce-angle angle)))))

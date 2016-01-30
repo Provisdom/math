@@ -101,8 +101,8 @@ Although gamma is defined for pos x, this function allows for all non-zero x."
   "Returns the lower incomplete gamma function: 
    integral[0, c] (t^(x-1) * e^-t * dt)"
   ^double [^double c ^double x]
-  (when (neg? c) (m/exc- c (var lower-gamma)))
-  (when (m/non+? x) (m/exc-non+ x (var lower-gamma)))
+  (when (neg? c) (throw (m/exc- c (var lower-gamma))))
+  (when (m/non+? x) (throw (m/exc-non+ x (var lower-gamma))))
   (cond (zero? c) 0.0, (m/one? x) (m/rev (m/exp (- c))), 
         :else (* (gamma x) (ap/regularized-gamma-p c x))))
 
@@ -110,56 +110,56 @@ Although gamma is defined for pos x, this function allows for all non-zero x."
   "Returns the upper incomplete gamma function: 
    integral[c, inf] (t^(x-1) * e^-t * dt)"
   ^double [^double c ^double x]
-  (when (neg? c) (m/exc- c (var upper-gamma)))
-  (when (m/non+? x) (m/exc-non+ x (var upper-gamma)))
+  (when (neg? c) (throw (m/exc- c (var upper-gamma))))
+  (when (m/non+? x) (throw (m/exc-non+ x (var upper-gamma))))
   (cond (zero? c) (gamma x), (m/one? x) (m/exp (- c)), 
         :else (* (gamma x) (ap/regularized-gamma-q c x))))
 
 (defn upper-gamma-derivative-c 
   "Returns the upper gamma derivative c"
   ^double [^double c ^double x]
-  (when (neg? c) (m/exc- c (var upper-gamma-derivative-c)))
-  (when (m/non+? x) (m/exc-non+ x (var upper-gamma-derivative-c)))
+  (when (neg? c) (throw (m/exc- c (var upper-gamma-derivative-c))))
+  (when (m/non+? x) (throw (m/exc-non+ x (var upper-gamma-derivative-c))))
   (->> x dec (m/pow c) - (* (m/exp (- c)))))
 
 (defn regularized-gamma-p 
   "Returns the regularized gamma function P(c, x) = 1 - Q(c, x).  
 Equal to lower incomplete gamma function divided by gamma function"
   ^double [^double c ^double x]
-  (when (neg? c) (m/exc- c (var regularized-gamma-p)))
-  (when (m/non+? x) (m/exc-non+ x (var regularized-gamma-p)))
+  (when (neg? c) (throw (m/exc- c (var regularized-gamma-p))))
+  (when (m/non+? x) (throw (m/exc-non+ x (var regularized-gamma-p))))
   (if (zero? c) 0.0 (ap/regularized-gamma-p c x)))
 
 (defn regularized-gamma-q 
   "Returns the regularized gamma function Q(c, x) = 1 - P(c, x).  
 Equal to upper incomplete gamma function divided by gamma function"
   ^double [^double c ^double x]
-  (when (neg? c) (m/exc- c (var regularized-gamma-q)))
-  (when (m/non+? x) (m/exc-non+ x (var regularized-gamma-q)))
+  (when (neg? c) (throw (m/exc- c (var regularized-gamma-q))))
+  (when (m/non+? x) (throw (m/exc-non+ x (var regularized-gamma-q))))
   (if(zero? c) 1.0 (ap/regularized-gamma-q c x)))
 
 (defn log-gamma 
   "Returns the log gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (m/exc-non+ x (var log-gamma)))
+  (when (m/non+? x) (throw (m/exc-non+ x (var log-gamma))))
   (ap/log-gamma x))
 
 (defn log-gamma-derivative
   "Returns the derivative of the log gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (m/exc-non+ x (var log-gamma-derivative)))
+  (when (m/non+? x) (throw (m/exc-non+ x (var log-gamma-derivative))))
   (ap/digamma x))
 
 (defn digamma  
   "Equivalent to log-gamma-derivative" 
   ^double [^double x]
-  (when (m/non+? x) (m/exc-non+ x (var digamma)))
+  (when (m/non+? x) (throw (m/exc-non+ x (var digamma))))
   (log-gamma-derivative x))
 
 (defn gamma-derivative 
   "Returns the derivative of the gamma of x"
   ^double [^double x]
-  (when (m/non+? x) (m/exc-non+ x (var gamma-derivative)))
+  (when (m/non+? x) (throw (m/exc-non+ x (var gamma-derivative))))
   (* (gamma x) (log-gamma-derivative x)))
 
 (defn trigamma  
@@ -196,8 +196,8 @@ Although beta is defined for pos x and y, this function allows for all
 (defn log-beta 
   "Returns the log-beta of x and y"
   ^double [^double x ^double y]
-  (when (m/non+? x) (m/exc-non+ x (var log-beta)))
-  (when (m/non+? y) (m/exc-non+ y (var log-beta)))
+  (when (m/non+? x) (throw (m/exc-non+ x (var log-beta))))
+  (when (m/non+? y) (throw (m/exc-non+ y (var log-beta))))
   (ap/log-beta x y))
 
 (defn regularized-beta 
