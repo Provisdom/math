@@ -312,7 +312,7 @@
           (ftot-val errs)
           (do (when (>= i max-iter)
                 (throw (ex-info (str "Iteration limit reached.  Error: " tot-err
-                              " Value: " (ftot-val errs))
+                                     " Value: " (ftot-val errs))
                                 {:fn (var adaptive-quadrature) :solver? true})))
               (let [[e [h an bn]] (peek errs)
                     mn (* 0.5 (+ an bn))
@@ -565,11 +565,11 @@
 
 (defn- get-central-coeff
   [^long deriv ^long accuracy]
-  {:pre [(have? >= accuracy 2)
-         (have? <= accuracy 8)
+  {:pre [(have? #(>= % 2) accuracy)
+         (have? #(<= % 8) accuracy)
          (have? even? accuracy)
-         (have? #(or (<= %1 6) (<= %2 2)) accuracy deriv)
-         (have? <= deriv 4)
+         (have? (fn [[accuracy deriv]] (or (<= accuracy 6) (<= deriv 2))) [accuracy deriv])
+         (have? #(<= % 4) deriv)
          (have? pos? deriv)]}
   (let [a (/ accuracy 2),
         v (condp = deriv 1 central-coeff1, 2 central-coeff2, 3 central-coeff3,
@@ -610,10 +610,10 @@
 
 (defn- get-forward-coeff
   [^long deriv ^long accuracy]
-  {:pre [(have? #(not (and (pos? %2) (<= %2 6)
-                           (or (<= %2 5) (<= %1 3))
-                           (<= %1 4) (pos? %1)))
-                deriv accuracy)]}
+  {:pre [(have? (fn [[deriv accuracy]] (and (pos? deriv) (<= deriv 6)
+                                            (or (<= deriv 5) (<= accuracy 3))
+                                            (<= accuracy 4) (pos? accuracy)))
+                [deriv accuracy])]}
   (let [v (condp = deriv 1 forward-coeff1, 2 forward-coeff2, 3 forward-coeff3,
                          4 forward-coeff4), coeff (nth v (dec accuracy))]
     (conj coeff [0 (- (mx/esum (map second coeff)))])))
@@ -640,7 +640,7 @@
   [f & {:keys [^long derivative ^double h type ^long accuracy]
         :or   {derivative 1, type :central}}]
   {:pre [(have? m/non-? derivative)
-         (have? #(> % 8) derivative)]}
+         (have? #(<= % 8) derivative)]}
   (cond (zero? derivative) f
         (> derivative 4) (let [exc (- derivative 4),
                                x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]

@@ -34,7 +34,7 @@ Good for repeating a run."
   "low is inclusive and high is exclusive."
   (^long [^double rnd] (m/floor (* m/max-long (dec (* 2 rnd)))))
   (^long [^double rnd ^long low ^long high]
-   {:pre [(have? < low high)]}
+   {:pre [(have? (fn [[low high]] (< low high)) [low high])]}
     ;;range must be less than m/max-long
     (m/floor (+ low (* (- high low) rnd))))) 
 

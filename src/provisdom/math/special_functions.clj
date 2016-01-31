@@ -68,7 +68,7 @@
 (defn inv-erf 
   "Returns the inverse error function"
   ^double [^double x]
-  {:pre [(have? >= x -1) (have? <= x 1)]}
+  {:pre [(have? #(>= % -1) x) (have? #(<= % 1) x)]}
   (cond (m/roughly? 1.0 x m/*dbl-close*) m/inf+, 
         (m/roughly? -1.0 x m/*dbl-close*) m/inf-, 
         (zero? x) 0.0 :else (ap/erf-inv x)))
@@ -76,7 +76,7 @@
 (defn inv-erfc 
   "Returns the inverse complementary error function"
   ^double [^double x]
-  {:pre [(have? m/non-? x) (have? <= x 2)]}
+  {:pre [(have? m/non-? x) (have? #(<= % 2) x)]}
   (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+, 
         (m/roughly? x 2.0 m/*dbl-close*) m/inf-, 
         (m/one? x) 0.0 :else (ap/erfc-inv x)))
@@ -164,14 +164,14 @@ Equal to upper incomplete gamma function divided by gamma function"
 (defn multivariate-gamma
   "Returns the multivariate gamma of x with dimension p"
   ^double [^double x p]
-  {:pre [(have? m/roughly-round? p 0.0) (have? m/non-? p)]}
+  {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
   (* (m/pow m/PI (* 0.25 p (dec p))) 
      (mx/eproduct (fn [i] (gamma (+ x (* 0.5 (m/rev i))))) (range 1 (inc p)))))
 
 (defn multivariate-log-gamma
   "Returns the multivariate log gamma of x with dimension p"
   ^double [^double x p]
-  {:pre [(have? m/roughly-round? p 0.0) (have? m/non-? p)]}
+  {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
    (+ (* m/log-pi 0.25 p (dec p)) 
       (mx/esum (fn [i] (log-gamma (+ x (* 0.5 (m/rev i))))) 
                (range 1 (inc p)))))

@@ -377,10 +377,11 @@ To subtract ticks from dates or to get the total ticks between dates, use '-'."
 (defn mul
   "Multiplies a duration by a long"
   [d1 d2]
-  {:pre [(have? #(let [l1? (m/long-able? %1), l2? (m/long-able? %2)]
-                  (and (or l1? l2?)
-                       (or l1? (first %1))
-                       (or l2? (first %2)))) d1 d2)]}
+  {:pre [(have? (fn [[d1 d2]] (let [l1? (m/long-able? d1), l2? (m/long-able? d2)]
+                                (and (or l1? l2?)
+                                     (or l1? (first d1))
+                                     (or l2? (first d2)))))
+                [d1 d2])]}
   (let [r (mx/mul d1 d2)] (if (number? r) (long r) (vec (map long r)))))
 
 (defn to-ticks
@@ -587,8 +588,8 @@ If 'hr' precision is non-zero, format is finished in hours with 'hr-precision'
 (defn parse-month
   "Returns month number from string"
   [month-string]
-  (let [i (ffirst (filter #(= % month-string) (map vector (range) months-long)))]
-    (if i (inc i) (let [i (ffirst (filter #(= % month-string) (map vector (range) months-short)))]
+  (let [i (ffirst (filter (fn [[i m]] (= m month-string)) (map vector (range) months-long)))]
+    (if i (inc i) (let [i (ffirst (filter (fn [[i m]] (= m month-string)) (map vector (range) months-short)))]
                     (if i (inc i) nil)))))
 
 (defn- parse-full-time

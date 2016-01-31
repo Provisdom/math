@@ -578,8 +578,9 @@ but this function corrects Clatrix's behavior with nil and [] matrices"
   "Also called a 'diagonal-constant' matrix."
   ([first-row first-column] (toeplitz-matrix nil first-row first-column))
   ([implementation first-row first-column]
-   {:pre [(have? #(and (= (first %1) (first %2))
-                       (= (count %1) (count %2))) first-row first-column)]}
+   {:pre [(have? (fn [[first-row first-column]]
+                   (and (= (first first-row) (first first-column))
+                        (= (count first-row) (count first-column)))) [first-row first-column])]}
    (let [rows (count first-row), columns (count first-column)]
      (compute-matrix implementation [columns rows]
                      (fn [r c] (if (<= r c) (mget first-row (- c r))
@@ -726,8 +727,8 @@ Returns a symmetric matrix unless m is not a symmetric matrix."
   [m ^long first-bottom-row ^long first-right-column]
   {:pre [(have? m/non-? first-bottom-row)
          (have? m/non-? first-right-column)
-         (have? #(<= %1 (row-count %2)) first-bottom-row m)
-         (have? #(<= %1 (column-count %2)) first-right-column m)]}
+         (have? #(<= %1 (row-count m)) first-bottom-row)
+         (have? #(<= %1 (column-count m)) first-right-column)]}
   {:top-left     (get-slices-as-matrix m :rows (range first-bottom-row)
                                        :columns (range first-right-column))
    :bottom-left  (get-slices-as-matrix m :except-rows (range first-bottom-row)
@@ -745,20 +746,20 @@ Returns a symmetric matrix unless m is not a symmetric matrix."
    (cond (clatrix? m) (coerce :clatrix (mxc/emap f (to-nested-vectors m))),
          (fn? m) (f m), :else (mxc/emap f m)))
   ([f m a]
-   {:pre [(have? = (row-count m) (row-count a))
-          (have? #(or (and (vec? %1) (vec? %2))
-                      (= (column-count %1) (column-count %2))) m a)]}
+   {:pre [(have? (fn [[m a]] (= (row-count m) (row-count a))) [m a])
+          (have? (fn [[m a]] (or (and (vec? m) (vec? a))
+                                 (= (column-count m) (column-count a)))) [m a])]}
    (if (clatrix? m)
      (coerce :clatrix (mxc/emap f (to-nested-vectors m)
                                 (to-nested-vectors a)))
      (mxc/emap f m a)))
   ([f m a & more]
-   {:pre [(have? (fn [m a more]
+   {:pre [(have? (fn [[m a more]]
                    (let [v (apply vector m a more)]
                      (and (every? #(= (row-count m) (row-count %)) v)
                           (or (every? vec? v) (every? #(= (column-count m)
                                                           (column-count %)) v)))))
-                 m a more)]}
+                 [m a more])]}
    (if (clatrix? m)
      (coerce :clatrix (apply mxc/emap f (map to-nested-vectors
                                              (apply vector m a more))))
@@ -802,11 +803,11 @@ All four must be matrices, not vectors."
              (conj-columns (coerce top-left bottom-left) bottom-right)))
 
 (defn conj-symmetrically [m1 m2]
-  {:pre [(have? (fn [m1 m2]
+  {:pre [(have? (fn [[m1 m2]]
                   (let [nr1 (row-count m1), nr2 (row-count m2),
                         nc2 (if (vec? m2) 1 (column-count m2))]
                     (and (square? m1) (or (= nr2 (+ nc2 nr1)) (= nc2 (+ nr2 nr1))))))
-                m1 m2)]}
+                [m1 m2])]}
   (let [nr1 (row-count m1)
         m2 (if (vec? m2) (row-matrix m2) m2)
         c? (> (row-count m2) (column-count m2))

@@ -54,7 +54,7 @@ Returns long if possible.
 k must be able to be a long.
 Otherwise use log-choose-k-from-n."
   [k ^double n]
-  {:pre [(have? m/roughly-round? k)]}
+  {:pre [(have? #(m/roughly-round? % 0.0) k)]}
   (m/maybe-long-able (DoubleArithmetic/binomial n (long k))))
 
 (defn log-choose-k-from-n
@@ -62,15 +62,15 @@ Otherwise use log-choose-k-from-n."
 n must be >= k, and n and k must be non-negative.  
 Otherwise, use choose-k-from-n."
   [^double k ^double n]
-  {:pre [(have? m/non-? k) (have? m/non-? n) (have? #(>= %2 %1) k n)]}
+  {:pre [(have? m/non-? k) (have? m/non-? n) (have? #(>= n %) k)]}
   (- (log-factorial n) (log-factorial k) (log-factorial (- n k))))
 
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of n items into k subsets.
 Returns long if possible."
   [n k]
-  {:pre [(have? m/roughly-round-non-? k 0.0)
-         (have? m/roughly-round-non-? n 0.0)]}
+  {:pre [(have? #(m/roughly-round-non-? % 0.0) k)
+         (have? #(m/roughly-round-non-? % 0.0) n)]}
   (m/maybe-long-able 
     (* (/ (factorial k)) 
        (ccr/fold 
@@ -82,7 +82,7 @@ Returns long if possible."
 (defn bell-number
   "Returns the number of partitions of a set of size n."
   [n]
-  {:pre [(have? m/roughly-round-non-? n 0.0)]}
+  {:pre [(have? #(m/roughly-round-non-? % 0.0) n)]}
   (if (< n 27) (bell-numbers (long n)) 
     (ccr/fold + (fn [tot e] (+ tot (stirling-number-of-the-second-kind n e))) 
               (range (inc n)))))
@@ -94,7 +94,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   {:pre [(have? m/prob? success-prob)
          (have? m/long-able? successes)
          (have? m/non-? trials)
-         (have? #(>= %2 %1) successes trials)]}
+         (have? #(>= trials %1) successes)]}
   (* (choose-k-from-n successes trials) (m/pow success-prob successes) 
      (m/pow (m/rev success-prob) (- trials successes))))
 
@@ -102,9 +102,9 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   "Log-Likelihood of seeing 'successes' out of 'trials' with success-prob"
   ^double [^double successes ^double trials ^double success-prob]
   {:pre [(have? m/prob? success-prob)
-         (have? m/roughly-round? successes 0.0)
+         (have? #(m/roughly-round? % 0.0) successes)
          (have? m/non-? trials)
-         (have? #(>= %2 %1) successes trials)]}
+         (have? #(>= trials %1) successes)]}
   (+ (log-choose-k-from-n successes trials) (* successes (m/log success-prob)) 
      (* (- trials successes) (m/log (m/rev success-prob)))))
 
@@ -160,7 +160,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
    pattern, where breakdown is a vector of longs that sum to the number of 
    items."
   [items breakdown]
-  {:pre [(have? #(= (mx/esum %2) (count %1)) items breakdown)]}
+  {:pre [(have? #(= (mx/esum breakdown) (count %)) items)]}
   (if-not (next breakdown) (list (list items))
     (let [cwos (combinations-with-opposites items (first breakdown))]
       (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl)) 
@@ -179,7 +179,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
    partitions of count n"
   [items ^long n]
   {:pre [(have? m/non-? n)]}
-  (let [k (have #(or (zero? n) (not (zero? (rem % n)))) (count items))]
+  (let [k (have #(and (not (zero? n)) (zero? (rem % n))) (count items))]
     (cond (= k n) items
           :else (map #(map (fn [g] (map second g)) %) 
                      (filter #(apply distinct? (mapcat 
