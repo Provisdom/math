@@ -387,8 +387,8 @@ The bottom level of the nested vectors will contain the element values.
 The depth of nesting will be equal to the dimensionality of the array."
   [m]
   (let [m (maybe-convert-clatrix-row-or-column m)]
-    (cond (= (dimensionality m) 2) (into [] (map to-nested-vectors
-                                                 (mxc/rows m)))
+    (cond (= (dimensionality m) 2) (if (clatrix? m) (into [] (map to-vector (mxc/rows m)))
+                                                    (into [] (map to-nested-vectors (mxc/rows m))))
           (>= (dimensionality m) 2) (into [] (map to-nested-vectors m))
           :else (mxc/to-nested-vectors m))))
 
