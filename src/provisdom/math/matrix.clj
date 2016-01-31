@@ -946,7 +946,7 @@ The inner-product of two vectors will be scalar."
   ([a b & more] (apply inner-product a b more)))
 
 (defn kronecker-product [m & ms]
-  {:pre [(have? matrix? m ms)]}
+  {:pre [(have? matrix? m) (have? (partial every? matrix?) ms)]}
   (coerce m (reduce (fn [a b]
                       (let [arows (row-count a), acols (column-count a),
                             rows (* arows (row-count b)),
