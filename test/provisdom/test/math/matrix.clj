@@ -4,7 +4,11 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.matrix :refer :all]
             [provisdom.utility-belt.core :as co]
-            [provisdom.math.core :as m]))
+            [provisdom.math.core :as m]
+            [provisdom.math.random :as ra]))
+
+(def test-rnd-lazy "rnd-lazy for testing" (ra/random))
+(def test-rnd "rnd for testing" (first test-rnd-lazy))
 
 ;;;REDUNDANCY
 ;;;matrix? mget mset row-matrix? column-matrix? square? zero-matrix? 

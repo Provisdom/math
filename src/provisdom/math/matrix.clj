@@ -289,7 +289,9 @@ The matrix need not be square."
 
 (comment "MATRIX SPECIAL TYPE HELP")
 (defn diagonal? [m]
-  (nil? (esome (fn [i j e] (not (or (= i j) (zero? e)))) m true)))
+  (nil? (esome (fn [i j e]
+                 {:pre [(have? number? e)]}
+                 (not (or (= i j) (zero? e)))) m true)))
 
 (defn symmetric? [m] (= (transpose m) m))
 

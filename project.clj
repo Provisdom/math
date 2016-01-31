@@ -3,8 +3,6 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :jvm-opts [~(str "-Djava.library.path=native/:"
-                (System/getProperty "java.library.path"))]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [provisdom/utility-belt "0.1.0"]
                  [com.taoensso/truss "1.0.0"]

@@ -37,8 +37,8 @@
 (defn accu-PI 
   "the value of PI with p precision" 
   ^BigDecimal [p] 
-  (when (>= p 101) (co/exc "You don't need more than 100 digits of PI!"
-                           (var accu-PI))) 
+  (when (>= p 101) (throw (ex-info "You don't need more than 100 digits of PI!"
+                                   {:fn (var accu-PI)})))
   (round' big-PI p BigDecimal/ROUND_HALF_EVEN))
 
 ;;;GENERAL VECTOR MATH
@@ -55,9 +55,9 @@
 (defn factorial' 
   "Returns the factorial of x"
   [x]
+  {:pre [(have? m/non-? x)]}
   (cond 
     (zero? x) 1
-    (neg? x) (throw (m/exc- x 'factorial'))
     (integer? x) (loop [x x f 1]
                    (if (m/one? x)
                      f
