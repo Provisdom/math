@@ -151,6 +151,25 @@
                se-col :byrow? false) => [0.5]
              (to-vector-from-symmetric-with-unit-diagonal se-col) => []))
 
+(facts "matrix implementations"
+       (fact "to nested vectors"
+             (to-nested-vectors se) => ve
+             (to-nested-vectors cl) => ve
+             (to-nested-vectors ve) => ve
+             (to-nested-vectors ap) => ve
+             (to-nested-vectors se1D) => ve1D
+             (to-nested-vectors cl1D) => ve1D
+             (to-nested-vectors ve1D) => ve1D
+             (to-nested-vectors ap1D) => ve1D
+             (to-nested-vectors se-row) => ve-row
+             (to-nested-vectors cl-row) => ve-row
+             (to-nested-vectors ve-row) => ve-row
+             (to-nested-vectors ap-row) => ve-row
+             (to-nested-vectors se-col) => ve-col
+             (to-nested-vectors cl-col) => ve-col
+             (to-nested-vectors ve-col) => ve-col
+             (to-nested-vectors ap-col) => ve-col))
+
 (facts "vector constructors"
        (fact "maybe to vector"
              (maybe-to-vector nil) => nil
@@ -174,6 +193,7 @@
              => (clatrix [3.0 2.0])
              (sparse-vector :apache-commons [[0 3.0] [1 2.0]] 2) 
              => (apache-commons [3.0 2.0])))
+
 (facts "matrix constructors"
        (fact "matrix"
              (matrix :apache-commons #(+ % %2) [2 3]) => (apache-commons 
