@@ -131,7 +131,7 @@ Returns a collection of functions that each take a number and return a
 (defn polynomial-2D-count
   (^long [^long end-degree] (polynomial-2D-count 0 end-degree))
   (^long [^long start-degree ^long end-degree]
-   {:pre [(have? m/non-? start-degree) (have? m/non-? end-degree)]}
+   {:pre [(have? m/non-? start-degree end-degree)]}
     (let [d (inc end-degree), f #(* 0.5 (+ % (m/sq %)))]
       (- (f d) (f start-degree)))))
 

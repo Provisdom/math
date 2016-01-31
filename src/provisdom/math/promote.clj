@@ -157,6 +157,6 @@
 (defn beta' 
   "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt"
   [x y]
-  {:pre [(have? (complement zero?) x) (have? (complement zero?) y)]}
+  {:pre [(have? (complement zero?) x y)]}
   (* (gamma' x) (/ (gamma' y) (gamma' (+ x y)))))
 

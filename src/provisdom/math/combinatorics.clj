@@ -62,15 +62,14 @@ Otherwise use log-choose-k-from-n."
 n must be >= k, and n and k must be non-negative.  
 Otherwise, use choose-k-from-n."
   [^double k ^double n]
-  {:pre [(have? m/non-? k) (have? m/non-? n) (have? #(>= n %) k)]}
+  {:pre [(have? m/non-? k n) (have? #(>= n %) k)]}
   (- (log-factorial n) (log-factorial k) (log-factorial (- n k))))
 
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of n items into k subsets.
 Returns long if possible."
   [n k]
-  {:pre [(have? #(m/roughly-round-non-? % 0.0) k)
-         (have? #(m/roughly-round-non-? % 0.0) n)]}
+  {:pre [(have? #(m/roughly-round-non-? % 0.0) k n)]}
   (m/maybe-long-able 
     (* (/ (factorial k)) 
        (ccr/fold 
@@ -94,7 +93,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   {:pre [(have? m/prob? success-prob)
          (have? m/long-able? successes)
          (have? m/non-? trials)
-         (have? #(>= trials %1) successes)]}
+         (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
   (* (choose-k-from-n successes trials) (m/pow success-prob successes) 
      (m/pow (m/rev success-prob) (- trials successes))))
 
@@ -104,7 +103,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   {:pre [(have? m/prob? success-prob)
          (have? #(m/roughly-round? % 0.0) successes)
          (have? m/non-? trials)
-         (have? #(>= trials %1) successes)]}
+         (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
   (+ (log-choose-k-from-n successes trials) (* successes (m/log success-prob)) 
      (* (- trials successes) (m/log (m/rev success-prob)))))
 
@@ -160,7 +159,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
    pattern, where breakdown is a vector of longs that sum to the number of 
    items."
   [items breakdown]
-  {:pre [(have? #(= (mx/esum breakdown) (count %)) items)]}
+  {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
   (if-not (next breakdown) (list (list items))
     (let [cwos (combinations-with-opposites items (first breakdown))]
       (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl)) 

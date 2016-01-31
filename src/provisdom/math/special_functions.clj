@@ -182,25 +182,25 @@ Equal to upper incomplete gamma function divided by gamma function"
 Although beta is defined for pos x and y, this function allows for all 
    non-zero x and y."
   ^double [^double x ^double y]
-  {:pre [(have? (complement zero?) x) (have? (complement zero?) y)]}
+  {:pre [(have? (complement zero?) x y)]}
   (Gamma/beta x y))
 
 (defn log-beta 
   "Returns the log-beta of x and y"
   ^double [^double x ^double y]
-  {:pre [(have? pos? x) (have? pos? y)]}
+  {:pre [(have? pos? x y)]}
   (ap/log-beta x y))
 
 (defn regularized-beta 
   "Returns the regularized beta.  
 Equal to incomplete beta function divided by beta function"
   ^double [^double c ^double x ^double y]
-  {:pre [(have? pos? x) (have? pos? y) (have? m/prob? c)]}
+  {:pre [(have? pos? x y) (have? m/prob? c)]}
   (if (zero? c) 0.0 (Gamma/incompleteBeta x y c))) ;cern misnamed this
 
 (defn incomplete-beta 
   "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt"
   ^double [^double c ^double x ^double y]
-  {:pre [(have? pos? x) (have? pos? y) (have? m/prob? c)]}
+  {:pre [(have? pos? x y) (have? m/prob? c)]}
   ;;cern misnamed this
   (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) 

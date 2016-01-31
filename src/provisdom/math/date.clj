@@ -53,7 +53,7 @@
 (defn days-per-month
   "Returns the number of days in a supplied month"
   ^long [^long year ^long month]
-  {:pre [(have? #(and (pos? %) (<= % 12)) month)]}
+  {:pre [(have? pos? month) (have? #(<= % 12) month)]}
   (if (and (== month 2) (leap-year? year)) 29
                                            (non-leap-year-days-per-month (dec month))))
 
@@ -61,13 +61,13 @@
   "Returns the number of days in a particular year until a supplied month
    starts"
   ^long [^long year ^long month]
-  {:pre [(have? #(and (pos? %) (<= % 12)) month)]}
+  {:pre [(have? pos? month) (have? #(<= % 12) month)]}
   (let [leap (if (and (>= month 3) (leap-year? year)) 1 0)]
     (+ leap (non-leap-year-days-until-month (dec month)))))
 
 (defn- passed-leap-days-since-2000
   ^long [^long year ^long month]
-  {:pre [(have? #(and (pos? %) (<= % 12)) month)]}
+  {:pre [(have? pos? month) (have? #(<= % 12) month)]}
   (let [y (- year 2000), [a1 y1] (m/quot-and-mod y 400),
         [a2 y2] (m/quot-and-mod y1 100),
         [a3 y3] (m/quot-and-mod y2 4), d (+ (* 97 a1) (* 24 a2) a3 1),
@@ -136,11 +136,7 @@ Note that month and day are 1-indexed while the rest are 0-indexed."
   ([year month day-number tick read]
    (read-date year month day-number tick read 0))
   ([year month day-number tick read time-zone]
-   {:pre [(have? m/long-able? year)
-          (have? m/long-able? month)
-          (have? m/long-able? day-number)
-          (have? m/long-able? tick)
-          (have? m/long-able? time-zone)]}
+   {:pre [(have? m/long-able? year month day-number tick time-zone)]}
    (let [[da ti] (m/quot-and-mod (long tick) day),
          da (long (+ day-number da)),
          [yr mo] (m/quot-and-mod (dec (long month)) 12),
@@ -217,11 +213,7 @@ Any precision higher than milliseconds is dropped."
    (let [r (read-date d [:ms]), ms (m/round (+ (:ms r) (/ (:ti r) millisec)))]
      (joda (:yr r) (:mo r) (:da r) ms time-zone)))
   ([year month day-number millisecond time-zone]
-   {:pre [(have? m/long-able? year)
-          (have? m/long-able? month)
-          (have? m/long-able? day-number)
-          (have? m/long-able? millisecond)
-          (have? m/long-able? time-zone)]}
+   {:pre [(have? m/long-able? year month day-number millisecond time-zone)]}
    (let [{hr :hr, mi :mi, se :se, ms :ms, ti :ti}
          (read-ticks (* millisec (long millisecond))
                      (vector :hr :mi :se :ms))]
@@ -243,7 +235,7 @@ Ticks are often used to represent durations that have zero months."
   (^long [^long weeks ^long days] (as-ticks weeks days 0))
   ([weeks days ticks
     & {:keys [hr mi se ms us] :or {hr 0, mi 0, se 0, ms 0, us 0}}]
-   {:pre [(have? m/long-able? weeks) (have? m/long-able? days) (have? m/long-able? ticks)]}
+   {:pre [(have? m/long-able? weeks days ticks)]}
    (+ (* (long weeks) week) (* (long days) day) (* hr hour) (* mi minute)
       (* se sec) (* ms millisec) (* us microsec) (long ticks))))
 
@@ -261,10 +253,7 @@ For durations that do not depend on the calendar,
   ([^long years ^long months ^long days] (duration years months days 0))
   ([years months days ticks
     & {:keys [wk hr mi se ms us] :or {wk 0, hr 0, mi 0, se 0, ms 0, us 0}}]
-   {:pre [(have? m/long-able? years)
-          (have? m/long-able? months)
-          (have? m/long-able? days)
-          (have? m/long-able? ticks)]}
+   {:pre [(have? m/long-able? years months days ticks)]}
    [(+ (long months) (* (long years) 12))
     (+ (as-ticks 0 0 (long ticks) :hr hr :mi mi :se se :ms ms :us us)
        (* wk week) (* (long days) day))]))
@@ -286,10 +275,7 @@ Note that month and day are 1-indexed while the rest are 0-indexed."
    (date year month day-number 0))
   ([year month day-number tick
     & {:keys [hr mi se ms us] :or {hr 0, mi 0, se 0, ms 0, us 0}}]
-   {:pre [(have? m/long-able? year)
-          (have? m/long-able? month)
-          (have? m/long-able? day-number)
-          (have? m/long-able? tick)]}
+   {:pre [(have? m/long-able? year month day-number tick)]}
    (let [{yr :yr, mo :mo, da :da, ti :ti}
          (read-date (long year) (long month) (long day-number)
                     (as-ticks 0 0 (long tick) :hr hr :mi mi :se se :ms ms
@@ -390,7 +376,7 @@ Date can represent the start or end time of the duration"
   ([[months ticks] start-date]
    (to-ticks [months ticks] start-date false))
   ([[months ticks] d end-date?]
-   {:pre [(have? m/long-able? months) (have? m/long-able? ticks) (have? m/long-able? d)]}
+   {:pre [(have? m/long-able? months ticks d)]}
    (let [months (long months), ticks (long ticks), d (long d)]
      (if end-date? (- d (sub-dates d [months ticks]))
                    (- (add-duration d [months ticks]) d)))))

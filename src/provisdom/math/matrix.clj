@@ -725,10 +725,9 @@ Returns a symmetric matrix unless m is not a symmetric matrix."
       :top-right
       :bottom-right"
   [m ^long first-bottom-row ^long first-right-column]
-  {:pre [(have? m/non-? first-bottom-row)
-         (have? m/non-? first-right-column)
-         (have? #(<= %1 (row-count m)) first-bottom-row)
-         (have? #(<= %1 (column-count m)) first-right-column)]}
+  {:pre [(have? m/non-? first-bottom-row first-right-column)
+         (have? (fn [[m first-bottom-row]] (<= first-bottom-row (row-count m))) [m first-bottom-row])
+         (have? (fn [[m first-right-column]] (<= first-right-column (column-count m))) [m first-right-column])]}
   {:top-left     (get-slices-as-matrix m :rows (range first-bottom-row)
                                        :columns (range first-right-column))
    :bottom-left  (get-slices-as-matrix m :except-rows (range first-bottom-row)
@@ -795,10 +794,7 @@ Note that 1D vectors and scalars will be returned unchanged."
   "Returns a Matrix created by binding four matrices together.  
 All four must be matrices, not vectors."
   [top-left bottom-left top-right bottom-right]
-  {:pre [(have? matrix? top-left)
-         (have? matrix? bottom-left)
-         (have? matrix? top-right)
-         (have? matrix? bottom-right)]}
+  {:pre [(have? matrix? top-left bottom-left top-right bottom-right)]}
   (conj-rows (conj-columns top-left top-right)
              (conj-columns (coerce top-left bottom-left) bottom-right)))
 
@@ -840,7 +836,7 @@ Sub must be a matrix, not a vector.
 row and column can be negative.
 Unassigned elements will be 0.0"
   [m sub ^long row ^long column]
-  {:pre [(have? matrix? m) (have? matrix? sub)]}
+  {:pre [(have? matrix? m sub)]}
   (let [sr (row-count sub), sc (column-count sub), tr (+ sr row),
         tc (+ sc column), nr (row-count m), nc (column-count m)]
     (matrix m (for [r (range (min row 0) (max tr nr))]
@@ -905,7 +901,7 @@ Unassigned elements will be 0.0"
 (defn norm1 ^double [m] (esum (map m/abs (flatten (to-nested-vectors m)))))
 
 (defn normp ^double [m ^double p]
-  {:pre [[(have? >= p 1.0)]]}
+  {:pre [(have? #(>= % 1.0) p)]}
   (m/pow (esum (map #(m/pow (m/abs %) p) (flatten (to-nested-vectors m))))
          (/ p)))
 
@@ -950,7 +946,7 @@ The inner-product of two vectors will be scalar."
   ([a b & more] (apply inner-product a b more)))
 
 (defn kronecker-product [m & ms]
-  {:pre [(have? matrix? m) (have? matrix? ms)]}
+  {:pre [(have? matrix? m ms)]}
   (coerce m (reduce (fn [a b]
                       (let [arows (row-count a), acols (column-count a),
                             rows (* arows (row-count b)),
@@ -1000,7 +996,7 @@ x need not be an integer."
                         (map #(mget % r c) ms))))))))
 
 (defn cross-product [v1 v2]
-  {:pre [(have? vec? v1) (have? vec? v2)]}
+  {:pre [(have? vec? v1 v2)]}
   (let [f1 (mget v1 0), f2 (mget v2 0), s1 (mget v1 1), s2 (mget v2 1),
         t (- (* f1 s2) (* f2 s1))]
     (cond
@@ -1014,7 +1010,7 @@ x need not be an integer."
 (defn projection
   "Returns vector of v1 projected onto v2."
   [v1 v2]
-  {:pre [(have? vec? v1) (have? vec? v2)]}
+  {:pre [(have? vec? v1 v2)]}
   (coerce v1 (let [s (/ (inner-product v1 v2) (esum-squares v2))]
                (emap #(* s %) v2))))
 
@@ -1045,7 +1041,7 @@ x need not be an integer."
            val
            (recur (inc c) (reduce-kv g val (first s)) (rest s)))))))
   ([f init m1 m2 byrow?]
-   {:pre [(have? matrix? m1) (have? matrix? m2)]}
+   {:pre [(have? matrix? m1 m2)]}
    (let [mt1 (if byrow? m1 (transpose m1)),
          mt2 (if byrow? m2 (transpose m2)),
          l (min (row-count mt1) (row-count mt2))]
@@ -1056,7 +1052,7 @@ x need not be an integer."
            (recur (inc c) (co/reduce-kv-ext g val (first s1) (first s2))
                   (rest s1) (rest s2)))))))
   ([f init m1 m2 m3 byrow?]
-   {:pre [(have? matrix? m1) (have? matrix? m2) (have? matrix? m3)]}
+   {:pre [(have? matrix? m1 m2 m3)]}
    (let [mt1 (if byrow? m1 (transpose m1))
          mt2 (if byrow? m2 (transpose m2))
          mt3 (if byrow? m3 (transpose m3))

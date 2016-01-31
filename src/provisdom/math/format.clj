@@ -31,7 +31,7 @@
 (defn format-exponential 
   "Formats a number into exponential form with a number of digits"
   [n & [digits]]
-  {:pre [(have? [:or nil? neg?] digits)]}
+  {:pre [(have? [:or nil? m/non-?] digits)]}
   (if digits
     (replace-string
       (replace-string
