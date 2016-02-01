@@ -334,8 +334,8 @@
 (defn- simple-select-dims-fn [errs1d i min-iter]
   (let [m (apply max errs1d)
         ps (map vector (range) errs1d)]
-    (if (< i min-iter) [(ffirst (filter #(= % m) ps))]
-                       (mapv first (filter #(>= % (* m 0.1)) ps)))))
+    (if (< i min-iter) [(ffirst (filter #(= (second %) m) ps))]
+                       (mapv first (filter #(>= (second %) (* m 0.1)) ps)))))
 
 (defn- adaptive-quadrature-ndim
   "sort-fn takes the error of the approx and the sequence of 1-dim errors, 
