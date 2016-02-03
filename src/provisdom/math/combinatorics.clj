@@ -5,7 +5,7 @@
              [matrix :as mx]]
             [clojure.math.combinatorics :as cmc]
             [clojure.core.reducers :as ccr]
-            [taoensso.truss :as truss :refer (have have! have?)])
+            [taoensso.truss :refer (have have! have?)])
   (:import [cern.jet.math.tdouble DoubleArithmetic]))
 
 (set! *warn-on-reflection* true)
@@ -114,8 +114,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
 
 ;redundancy taken from cmc
 (defn selections 
-  "All the ways of taking n (possibly the same) elements from the sequence of 
-  items" 
+  "All the ways of taking n (possibly the same) elements from the sequence of items"
   [items ^long n]
   {:pre [(have? m/non-? n)]}
   (cmc/selections items n))
@@ -126,8 +125,8 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   {:pre [(have? m/non-? n)]}
   (cmc/combinations items n))
 
-(defn subsets 
-  "All the subsets of items" 
+(defn subseqs
+  "All the subseqs of items"
   [items] (cmc/subsets items))
 
 (defn permutations 
@@ -143,11 +142,11 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   [& seqs] (apply cmc/cartesian-product seqs))
 
 ;;;OTHER COMBOS
-(defn subsets-with-opposites
+(defn subseqs-with-complements
   [items]
   (let [s (cmc/subsets items), r (reverse s)] (partition 2 (interleave s r))))
 
-(defn combinations-with-opposites
+(defn combinations-with-complements
   [items ^long n]
   {:pre [(have? m/non-? n)]}
   (let [s (cmc/combinations items n), 
@@ -161,28 +160,26 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   [items breakdown]
   {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
   (if-not (next breakdown) (list (list items))
-    (let [cwos (combinations-with-opposites items (first breakdown))]
+    (let [cwos (combinations-with-complements items (first breakdown))]
       (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl)) 
                              (combinations-using-all 
                                (second cua) (rest breakdown)))) cwos))))
 
-(defn unique-unordered-subsets-with-replacement
-  "All unique unordered subsets of the items with up to 'n' items in a subset"
+(defn unique-unordered-subseqs-with-replacement
+  "All unique unordered subseqs of the items with up to 'n' items in a subseq"
   [items ^long n]
   {:pre [(have? m/non-? n)]}
-  (filter #(<= (count %) n) 
-          (distinct (map sort (subsets (apply concat (repeat n items)))))))
+  (filter #(<= (count %) n)
+          (distinct (map sort (subseqs (apply concat (repeat n items)))))))
 
 (defn unique-unordered-combinations-using-all
-  "Unique unordered combinations that use all of the items by grouping into 
-   partitions of count n"
+  "Unique unordered combinations that use all of the items by grouping into partitions of count n"
   [items ^long n]
   {:pre [(have? m/non-? n)]}
   (let [k (have #(and (not (zero? n)) (zero? (rem % n))) (count items))]
     (cond (= k n) items
           :else (map #(map (fn [g] (map second g)) %) 
-                     (filter #(apply distinct? (mapcat 
-                                                 (fn [g] (map first g)) %)) 
+                     (filter #(apply distinct? (mapcat (fn [g] (map first g)) %))
                              (cmc/combinations 
                                (cmc/combinations 
                                  (map-indexed (fn [idx ele] [idx ele]) items) 

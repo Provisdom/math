@@ -6,7 +6,7 @@
             [provisdom.math [core :as m]]
             [provisdom.utility-belt.core :as co]))
 
-(facts "factorials" 
+(facts "factorials"
        (fact "factorial"
              (factorial -0.1) => (throws)
              (factorial 0) => 1
@@ -16,9 +16,9 @@
              (factorial 1) => 1
              (factorial 1.5) => 1.329340388179137
              (factorial 2.0) => 2
-             (factorial 21) =>  5.109094217170944E19
-             (factorial 22) =>  1.1240007277776077E21
-             (factorial 23) =>  2.585201673888498E22)
+             (factorial 21) => 5.109094217170944E19
+             (factorial 22) => 1.1240007277776077E21
+             (factorial 23) => 2.585201673888498E22)
        (fact "log factorial"
              (log-factorial -0.1) => (throws)
              (log-factorial 0) => 0.0
@@ -29,7 +29,7 @@
              (log-factorial 1.5) => 0.2846828704729192
              (log-factorial 2.0) => 0.6931471805599453
              (log-factorial 23) => 51.60667556776437)
-        (fact "subfactorial"
+       (fact "subfactorial"
              (subfactorial -0.1) => (throws)
              (subfactorial 0) => 1
              (subfactorial 0.1) => 0
@@ -83,7 +83,7 @@
              (stirling-number-of-the-second-kind 1 1.4) => (throws)
              (stirling-number-of-the-second-kind 4.0 1) => 1
              (stirling-number-of-the-second-kind 5 2.0) => 15
-             (stirling-number-of-the-second-kind 200.0 12) 
+             (stirling-number-of-the-second-kind 200.0 12)
              => 1.4318980615233435E207)
        (fact "bell number"
              (bell-number -1) => (throws)
@@ -99,7 +99,7 @@
              (binomial-probability -1 1 0.5) => 0.0
              (binomial-probability 0 0 0.4) => 1.0
              (binomial-probability 1 1 0.4) => 0.4
-             (binomial-probability 1 1.4 0.4) 
+             (binomial-probability 1 1.4 0.4)
              => (test-roughly 0.45650814137931667 1e-14)
              (binomial-probability 1.4 2 0.4) => (throws)
              (binomial-probability 2 1.4 0.4) => (throws)
@@ -127,52 +127,56 @@
 
 (facts "combinations"
        (def items [1 2 3])
-       (fact "basics" 
+       (def items2 [1 1 2])
+       (fact "basics"
              (selections items -1) => (throws)
              (selections items 0) => '(())
-             (selections items 2.0) 
+             (selections items 2.0)
              => '((1 1) (1 2) (1 3) (2 1) (2 2) (2 3) (3 1) (3 2) (3 3))
              (combinations items -1) => (throws)
              (combinations items 0) => '(())
              (combinations items 2.0) => '((1 2) (1 3) (2 3))
-             (subsets items) => '(() (1) (2) (3) (1 2) (1 3) (2 3) (1 2 3))
-             (permutations items) 
+             (subseqs items) => '(() (1) (2) (3) (1 2) (1 3) (2 3) (1 2 3))
+             (permutations items)
              => '((1 2 3) (1 3 2) (2 1 3) (2 3 1) (3 1 2) (3 2 1))
-             (lex-permutations items) 
+             (lex-permutations items)
              => '([1 2 3] [1 3 2] [2 1 3] [2 3 1] [3 1 2] [3 2 1])
-             (cartesian-product items [8.0 9.0]) 
+             (cartesian-product items [8.0 9.0])
              => '((1 8.0) (1 9.0) (2 8.0) (2 9.0) (3 8.0) (3 9.0)))
-       (fact "with opposites"
-             (subsets-with-opposites items) 
-             => '((() (1 2 3)) ((1) (2 3)) ((2) (1 3)) ((3) (1 2)) ((1 2) (3)) 
-                               ((1 3) (2)) ((2 3) (1)) ((1 2 3) ()))
-             (combinations-with-opposites items 2.0) 
+       (fact "with complements"
+             (subseqs-with-complements items)
+             => '((() (1 2 3)) ((1) (2 3)) ((2) (1 3)) ((3) (1 2)) ((1 2) (3))
+                   ((1 3) (2)) ((2 3) (1)) ((1 2 3) ()))
+             (subseqs-with-complements items2)
+             => '((() (1 1 2)) ((1) (1 2)) ((1) (1 2)) ((2) (1 1)) ((1 1) (2))
+                   ((1 2) (1)) ((1 2) (1)) ((1 1 2) ()))
+             (combinations-with-complements items 2.0)
              => '(((1 2) (3)) ((1 3) (2)) ((2 3) (1)))
-             (combinations-with-opposites items 0) => '((() (1 2 3)))
-             (combinations-with-opposites items -1) =>(throws))
+             (combinations-with-complements items 0) => '((() (1 2 3)))
+             (combinations-with-complements items -1) => (throws))
        (fact "combinations using all"
-             (combinations-using-all [1 2 3 4] [2 2]) 
-             => '(((1 2) (3 4)) ((1 3) (2 4)) ((1 4) (2 3)) 
-                                ((2 3) (1 4)) ((2 4) (1 3)) ((3 4) (1 2)))
-             (combinations-using-all [1 2 3 4] [3 1]) 
+             (combinations-using-all [1 2 3 4] [2 2])
+             => '(((1 2) (3 4)) ((1 3) (2 4)) ((1 4) (2 3))
+                   ((2 3) (1 4)) ((2 4) (1 3)) ((3 4) (1 2)))
+             (combinations-using-all [1 2 3 4] [3 1])
              => '(((1 2 3) (4)) ((1 2 4) (3)) ((1 3 4) (2)) ((2 3 4) (1)))
              (combinations-using-all [1 2 3 4] [2 1]) => (throws))
        (fact "unique unordered"
-             (unique-unordered-subsets-with-replacement [1 2 3 4] -1) 
+             (unique-unordered-subseqs-with-replacement [1 2 3 4] -1)
              => (throws)
-             (unique-unordered-subsets-with-replacement [1 2 3 4] 0) => '(())
-             (unique-unordered-subsets-with-replacement [1 2 3 4] 1) 
-             => '(() (1) (2) (3) (4))0.0
-             (unique-unordered-subsets-with-replacement [1 2 3 4] 2) 
-             => '(() (1) (2) (3) (4) (1 2) (1 3) (1 4) (1 1) (2 3) (2 4) (2 2) 
-                     (3 4) (3 3) (4 4))
-             (unique-unordered-subsets-with-replacement [1 2] 3) 
+             (unique-unordered-subseqs-with-replacement [1 2 3 4] 0) => '(())
+             (unique-unordered-subseqs-with-replacement [1 2 3 4] 1)
+             => '(() (1) (2) (3) (4)) 0.0
+             (unique-unordered-subseqs-with-replacement [1 2 3 4] 2)
+             => '(() (1) (2) (3) (4) (1 2) (1 3) (1 4) (1 1) (2 3) (2 4) (2 2)
+                   (3 4) (3 3) (4 4))
+             (unique-unordered-subseqs-with-replacement [1 2] 3)
              => '(() (1) (2) (1 2) (1 1) (2 2) (1 1 2) (1 2 2) (1 1 1) (2 2 2))
              (unique-unordered-combinations-using-all [1 2 3 4] 0) => (throws)
-             (unique-unordered-combinations-using-all [1 2 3 4] 3) 
-             => (throws) ;must be able to partition items into size n
-             (unique-unordered-combinations-using-all [1 2 3 4] 1) 
+             (unique-unordered-combinations-using-all [1 2 3 4] 3)
+             => (throws)                                    ;must be able to partition items into size n
+             (unique-unordered-combinations-using-all [1 2 3 4] 1)
              => '(((1) (2) (3) (4)))
-             (unique-unordered-combinations-using-all [1 2 3 4] 2) 
+             (unique-unordered-combinations-using-all [1 2 3 4] 2)
              => '(((1 2) (3 4)) ((1 3) (2 4)) ((1 4) (2 3)))))
 
