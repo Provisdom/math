@@ -4,7 +4,7 @@
              [special-functions :as mf]
              [apache :as ap]]
             [clojure.core.reducers :as ccr]
-            [taoensso.truss :as truss :refer (have have! have?)]))
+            [taoensso.truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)
 
