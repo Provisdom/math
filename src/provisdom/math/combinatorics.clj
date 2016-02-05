@@ -110,7 +110,8 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
   "p and q should be arrays"
   [p q z] (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)})))
 
-;redundancy taken from an old version of clojure.math.combinatorics
+;;;COMBINATIONS
+;taken from an old version of clojure.math.combinatorics
 (defn- unchunk
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
 lazy with no chunks. Chunks are good for efficiency when the data items are
@@ -143,23 +144,48 @@ collected."
       (step c 1))))
 
 (defn combinations
-  "All the unique ways of taking n different elements from items"
+  "All the unique ways of taking n different elements from items,
+  or all the unique ways of taking different elements from items"
+  ([items]
+   (mapcat (fn [n] (combinations items n)) (unchunk (range (inc (count items))))))
+  ([items ^long n]
+   {:pre [(have? m/non-? n)]}
+   (let [v-items (vec (reverse items))]
+     (if (zero? n)
+       (list ())
+       (let [cnt (count items)]
+         (cond (> n cnt) nil
+               (= n cnt) (list (seq items))
+               :else (map #(map v-items %) (index-combinations n cnt))))))))
+
+(defn combinations-with-complements
+  "All combinations of size 'n' with complements, or all combinations with complements"
+  ([items]
+   (let [s (combinations items), r (reverse s)] (partition 2 (interleave s r))))
+  ([items ^long n]
+   {:pre [(have? m/non-? n)]}
+   (let [s (combinations items n)
+         r (reverse (combinations items (- (count items) n)))]
+     (partition 2 (interleave s r)))))
+
+(defn combinations-using-all
+  "Combinations that use all of the items by grouping into the breakdown 
+   pattern, where breakdown is a vector of longs that sum to the number of items."
+  [items breakdown]
+  {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
+  (if-not (next breakdown)
+    (list (list items))
+    (let [cwos (combinations-with-complements items (first breakdown))]
+      (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl))
+                             (combinations-using-all (second cua) (rest breakdown)))) cwos))))
+
+(defn distinct-combinations-with-replacement
+  "All distinct combinations of the items with replacement of up to 'n' items"
   [items ^long n]
   {:pre [(have? m/non-? n)]}
-  (let [v-items (vec (reverse items))]
-    (if (zero? n)
-      (list ())
-      (let [cnt (count items)]
-        (cond (> n cnt) nil
-              (= n cnt) (list (seq items))
-              :else
-              (map #(map v-items %) (index-combinations n cnt)))))))
+  (filter #(<= (count %) n) (distinct (map sort (combinations (apply concat (repeat n items)))))))
 
-(defn subseqs
-  "All the subseqs of items"
-  [items]
-  (mapcat (fn [n] (combinations items n)) (unchunk (range (inc (count items))))))
-
+;;;WITH ORDERING
 (defn- permute
   "All the permutations of items"
   [items prefix]
@@ -172,7 +198,8 @@ collected."
 (defn permutations
   "All the permutations of items"
   [items]
-  (permute items (if (vector? items) [] '())))
+  (let [p (permute (into [] items) (if (vector? items) [] '()))]
+    (if (vector? items) p (map #(into '() %) p))))
 
 (defn cartesian-product
   "All the ways to take one item from each sequence"
@@ -189,49 +216,4 @@ collected."
   [items ^long n]
   {:pre [(have? m/non-? n)]}
   (apply cartesian-product (take n (repeat items))))
-
-;;;OTHER COMBOS
-(defn subseqs-with-complements
-  [items]
-  (let [s (subseqs items), r (reverse s)] (partition 2 (interleave s r))))
-
-(defn combinations-with-complements
-  "All combinations of size 'n' with complements"
-  [items ^long n]
-  {:pre [(have? m/non-? n)]}
-  (let [s (combinations items n)
-        r (reverse (combinations items (- (count items) n)))]
-    (partition 2 (interleave s r))))
-
-(defn combinations-using-all
-  "Combinations that use all of the items by grouping into the breakdown 
-   pattern, where breakdown is a vector of longs that sum to the number of items."
-  [items breakdown]
-  {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
-  (if-not (next breakdown) (list (list items))
-                           (let [cwos (combinations-with-complements items (first breakdown))]
-                             (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl))
-                                                    (combinations-using-all
-                                                      (second cua) (rest breakdown)))) cwos))))
-
-(defn subsets-with-replacement
-  "All subsets of the items with up to 'n' items in a subset"
-  [items ^long n]
-  {:pre [(have? m/non-? n)]}
-  (filter #(<= (count %) n) (distinct (map sort (subseqs (apply concat (repeat n items)))))))
-
-(defn unique-unordered-combinations-using-all
-  "Unique unordered combinations that use all of the items by grouping into partitions of count n"
-  [items ^long n]
-  {:pre [(have? m/non-? n)]}
-  (let [k (have #(and (not (zero? n)) (zero? (rem % n))) (count items))]
-    (cond (= k n) items
-          :else (map #(map (fn [g] (map second g)) %)
-                     (filter #(apply distinct? (mapcat (fn [g] (map first g)) %))
-                             (combinations
-                               (combinations
-                                 (map-indexed (fn [idx ele] [idx ele]) items)
-                                 n)
-                               (quot k n)))))))
-
 
