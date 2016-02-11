@@ -10,7 +10,6 @@
                  [provisdom/test "0.1.0" :scope "test"]
                  [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
 
-                 [org.clojure/math.combinatorics "0.1.1"]
                  [org.clojure/math.numeric-tower "0.0.4"]
                  [org.apache.commons/commons-math3 "3.6"]
                  [apache-commons-matrix "0.4.0"]
