@@ -239,13 +239,14 @@
 type can be :up (default), :down, :away (from zero), :toward (zero)"
   [x & {:keys [type]}]
   {:pre [(have? number? x)]}
-  (if-not (long-range? x) x
-                          (let [x (case type
-                                    :down (* -1 (Math/round (- ^double x)))
-                                    :away (* (sgn x) (Math/round (abs x)))
-                                    :toward (* -1 (sgn x) (Math/round (- (abs x))))
-                                    (Math/round ^double x))]
-                            (long x))))
+  (if-not (long-range? x)
+    x
+    (let [x (case type
+              :down (* -1 (Math/round (- ^double x)))
+              :away (* (sgn x) (Math/round (abs x)))
+              :toward (* -1 (sgn x) (Math/round (- (abs x))))
+              (Math/round ^double x))]
+      (long x))))
 
 (defn floor
   "Rounds down.  Returns a long if possible, otherwise a double."
