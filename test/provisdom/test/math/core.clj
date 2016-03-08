@@ -21,11 +21,27 @@
        (fact "long-able+?"
              (long-able+? 3.3) => false
              (long-able+? 0.0) => false
-             (long-able+? 1.0) => true)
+             (long-able+? 1.0) => true
+             (long-able+? -1.0) => false
+             (long-able+? -3.3) => false)
+       (fact "long-able-?"
+             (long-able-? 3.3) => false
+             (long-able-? 0.0) => false
+             (long-able-? 1.0) => false
+             (long-able-? -1.0) => true
+             (long-able-? -3.3) => false)
+       (fact "long-able-non+?"
+             (long-able-non+? 3.3) => false
+             (long-able-non+? 0.0) => true
+             (long-able-non+? 1.0) => false
+             (long-able-non+? -1.0) => true
+             (long-able-non+? -3.3) => false)
        (fact "long-able-non-?"
              (long-able-non-? 3.3) => false
+             (long-able-non-? 0.0) => true
+             (long-able-non-? 1.0) => true
              (long-able-non-? -1.0) => false
-             (long-able-non-? 1.0) => true)
+             (long-able-non-? -3.3) => false)
        (fact "maybe-long-able"
              (maybe-long-able 0.0) => 0
              (maybe-long-able 0) => 0

@@ -92,9 +92,9 @@
 ;GAMMA FUNCTIONS
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t^(x-1) * e^-t * dt).
-Although gamma is defined for pos x, this function allows for all non-zero x."
+Although gamma is defined for pos x, this function allows for all non-long-able-non+ x."
   ^double [^double x]
-  {:pre [(have? (complement zero?) x)]}
+  {:pre [(have? (complement m/long-able-non+?) x)]}
   (Gamma/gamma x))
 
 (defn lower-gamma 

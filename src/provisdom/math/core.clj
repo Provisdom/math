@@ -5,7 +5,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
-(declare nan? roughly-round? non-?)
+(declare nan? roughly-round? non-? non+?)
 
 ;;;DYNAMIC VARIABLES
 (def ^:dynamic *sgl-digits* 6)
@@ -71,6 +71,16 @@
   "Returns true if x is a number that can be converted to a long,
    and is positive"
   [x] (and (long-able? x) (pos? x)))
+
+(defn long-able-?
+  "Returns true if x is a number that can be converted to a long,
+   and is negative"
+  [x] (and (long-able? x) (neg? x)))
+
+(defn long-able-non+?
+  "Returns true if x is a number that can be converted to a long,
+   and is non+"
+  [x] (and (long-able? x) (non+? x)))
 
 (defn long-able-non-?
   "Returns true if x is a number that can be converted to a long,
