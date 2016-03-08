@@ -597,12 +597,11 @@ Returns a matrix."
   ([implementation sparse m-or-shape]
    (if (and (not (matrix? m-or-shape)) (= implementation :clatrix))
      (clx/from-sparse (first m-or-shape) (second m-or-shape) sparse)
-     (let [[[rows columns]
-            m] (if (matrix? m-or-shape)
-                 [[(row-count m-or-shape) (column-count m-or-shape)]
-                  m-or-shape]
-                 [m-or-shape (new-matrix implementation (first m-or-shape)
-                                         (second m-or-shape))])]
+     (let [[[rows columns] m] (if (matrix? m-or-shape)
+                                [[(row-count m-or-shape) (column-count m-or-shape)]
+                                 m-or-shape]
+                                [m-or-shape (new-matrix implementation (first m-or-shape)
+                                                        (second m-or-shape))])]
        (reduce #(let [[r c value] %2]
                  (when (or (>= r rows) (>= c columns) (neg? r) (neg? c)) ; TODO - use assert
                    (throw (ex-info "Sparse out of bounds." {:fn (var sparse-matrix)})))

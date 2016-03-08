@@ -14,5 +14,6 @@
                  [org.apache.commons/commons-math3 "3.6"]
                  [apache-commons-matrix "0.4.0"]
                  [clatrix "0.5.0"]
-                 [net.mikera/core.matrix "0.49.0"]]
+                 [net.mikera/core.matrix "0.49.0"]
+                 [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]]
   :plugins [[lein-midje "3.2"]])
