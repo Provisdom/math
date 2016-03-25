@@ -412,5 +412,4 @@ Returns a long if possible."
    where radians = angle * PI / 180.
 Returns a long if possible."
   [angle]
-  (if (inf? angle) angle
-                   (maybe-long-able (Math/toRadians (reduce-angle angle)))))
+  (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
