@@ -1,4 +1,4 @@
-(defproject provisdom/math "0.1.0"
+(defproject provisdom/math "0.1.1"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "(c) 2016 Provisdom Corporation"
@@ -14,6 +14,6 @@
                  [org.apache.commons/commons-math3 "3.6"]
                  [apache-commons-matrix "0.4.0"]
                  [clatrix "0.5.0"]
-                 [net.mikera/core.matrix "0.49.0"]
+                 [net.mikera/core.matrix "0.50.0"]
                  [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]]
   :plugins [[lein-midje "3.2"]])
