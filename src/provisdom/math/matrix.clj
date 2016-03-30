@@ -436,6 +436,7 @@ but this function corrects Clatrix's behavior with nil and [] matrices"
   ([implementation f shape]
    (matrix implementation (co/create-dbl-layered (first shape)
                                                  (second shape) f))))
+
 (defn constant-matrix
   ([shape ^double value] (constant-matrix nil shape value))
   ([implementation shape ^double value]

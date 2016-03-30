@@ -73,8 +73,7 @@ There is an extremely tiny chance (2^-64 perhaps) of non-randomness per split."
 Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)."
   [samplef rnd-lazy ^long ntake]
   (if-not (= :rnd (:r (meta samplef)))
-    (let [s (take 
-              ntake (iterate #(samplef (second %)) (samplef rnd-lazy)))]
+    (let [s (take ntake (iterate #(samplef (second %)) (samplef rnd-lazy)))]
     [(map first s) (second (last s))])
   [(map samplef (take ntake rnd-lazy)), (drop ntake rnd-lazy)]))
 
