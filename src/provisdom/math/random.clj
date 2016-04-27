@@ -91,35 +91,24 @@ Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
 (defn fold-random
   "Returns tuple of value and rnd-lazy.
 This fn is an extension of 'fold' in core.reducers for folding rnd-lazy or rnd.   
-Reduces a collection using a (potentially parallel) reduce-combine
-   strategy. 
-The collection is partitioned into groups of approximately chunk-size 
-   (default 512), each of which is reduced with reducef (with a seed value 
-   obtained by calling (combinef) with no arguments).
-For rnd-lazy, the reducef should take the result and first part of the tuple
-   from the samplef.
-The results of these reductions are then reduced with combinef 
-   (default reducef). 
-combinef must be associative, and, when called with no arguments, 
-   (combinef) must produce its identity element.
-These operations may be performed in parallel, but the results will preserve 
-   order. 
+Reduces a collection using a (potentially parallel) reduce-combine strategy.
+The collection is partitioned into groups of approximately chunk-size (default 512), each of which is reduced
+   with reducef (with a seed value obtained by calling (combinef) with no arguments).
+For rnd-lazy, the reducef should take the result and first part of the tuple from the samplef.
+The results of these reductions are then reduced with combinef (default reducef).
+combinef must be associative, and, when called with no arguments, (combinef) must produce its identity element.
+These operations may be performed in parallel, but the results will preserve order.
 Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
   ([^long min-runs reducef samplef rnd-lazy]
     (fold-random min-runs reducef reducef samplef rnd-lazy))
   ([min-runs combinef reducef samplef rnd-lazy]
     (let [chunk-size 512] 
-      (fold-random chunk-size (m/ceil (/ min-runs chunk-size)) 
-                   combinef reducef samplef rnd-lazy)))
+      (fold-random chunk-size (m/ceil (/ min-runs chunk-size)) combinef reducef samplef rnd-lazy)))
   ([chunk-size chunks combinef reducef samplef rnd-lazy]
     (let [runs (* chunk-size chunks)] 
       (if (= :rnd (:r (meta samplef)))
-        [(ccr/fold 
-           chunk-size combinef #(reducef %1 (samplef %2)) 
-           (take runs rnd-lazy)) 
+        [(ccr/fold chunk-size combinef #(reducef %1 (samplef %2)) (take runs rnd-lazy))
          (drop runs rnd-lazy)]
         (let [[lazies laz] (split-random-lazy rnd-lazy)]
-          [(ccr/fold 
-             chunk-size combinef #(reducef %1 (first (samplef %2))) 
-             (take runs lazies)) 
+          [(ccr/fold chunk-size combinef #(reducef %1 (first (samplef %2))) (take runs lazies))
            laz])))))
