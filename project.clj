@@ -8,6 +8,7 @@
                  [com.taoensso/truss "1.0.0"]
 
                  [provisdom/test "0.1.0" :scope "test"]
+                 [org.clojure/test.check "0.9.0"]
                  [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
 
                  [org.clojure/math.numeric-tower "0.0.4"]
