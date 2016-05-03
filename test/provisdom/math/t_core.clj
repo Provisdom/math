@@ -5,6 +5,8 @@
             [clojure.test.check.properties :as prop]
             [provisdom.math.core :as m]))
 
+(def iter-num 100)
+
 (def simple-type
   (gen/one-of [gen/int gen/large-integer gen/double gen/char
                gen/string gen/ratio gen/boolean gen/keyword gen/symbol]))
@@ -20,27 +22,27 @@
          false))))
 
 (defspec long-able?-check
-         100
+         iter-num
          (prop/for-all [v simple-type] (long-able* m/long-able? v)))
 
 (defspec long-able+?-check
-         100
+         iter-num
          (prop/for-all [v simple-type] (long-able* m/long-able+? v #(pos? %))))
 
 (defspec long-able-?-check
-         100
+         iter-num
          (prop/for-all [v simple-type] (long-able* m/long-able-? v #(neg? %))))
 
 (defspec long-able-non+?-check
-         100
+         iter-num
          (prop/for-all [v simple-type] (long-able* m/long-able-non+? v #(or (neg? %) (zero? %)))))
 
 (defspec long-able-non-?-check
-         100
+         iter-num
          (prop/for-all [v simple-type] (long-able* m/long-able-non-? v #(or (pos? %) (zero? %)))))
 
 (defspec maybe-long-able-check
-         100
+         iter-num
          (prop/for-all [v simple-type]
                        (let [res (m/maybe-long-able v)]
                          (if (m/long-able? v)
