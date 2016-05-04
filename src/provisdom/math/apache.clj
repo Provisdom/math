@@ -847,7 +847,7 @@ BOBYQA could also be considered as a replacement of any derivative-based
   ^double [^double degrees ^double scaling ^double probability]
   (* scaling degrees
      (/ (.inverseCumulativeProbability
-          (ChiSquaredDistribution. degrees) (m/rev probability)))))
+          (ChiSquaredDistribution. degrees) (m/one- probability)))))
 
 (defn students-t-dist-icdf
   ^double [^double location ^double squared-scale ^double degrees

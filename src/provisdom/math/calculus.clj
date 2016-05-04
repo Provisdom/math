@@ -380,10 +380,10 @@
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)]
-                                     (/ (inc s) (m/sq (m/rev s)))),
-                                   #(/ % (m/rev (m/sq %))), [-1 1]]
-    (m/inf+? b) [#(/ (m/sq %)), #(+ a (/ (m/rev %) %)), [0 1]]
-    (m/inf-? a) [#(/ (m/sq %)), #(- b (/ (m/rev %) %)), [0 1]]
+                                     (/ (inc s) (m/sq (m/one- s)))),
+                                   #(/ % (m/one- (m/sq %))), [-1 1]]
+    (m/inf+? b) [#(/ (m/sq %)), #(+ a (/ (m/one- %) %)), [0 1]]
+    (m/inf-? a) [#(/ (m/sq %)), #(- b (/ (m/one- %) %)), [0 1]]
     :else [(fn [v] 1.0), identity, [a b]]))
 
 (defn- change-of-var

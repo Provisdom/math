@@ -116,11 +116,11 @@
   [x] (and (number? x) (== 1 x)))
 
 (defn non-?
-  "Returns true is x is non-negative"
+  "Returns true if x is non-negative"
   [x] (and (number? x) (>= x 0) (not (nan? x))))
 
 (defn non+?
-  "Returns true is x is non-positive"
+  "Returns true if x is non-positive"
   [x] (and (number? x) (<= x 0) (not (nan? x))))
 
 (defn prob?
@@ -140,7 +140,7 @@
   [x] (and (number? x) (< x 1) (> x -1)))
 
 ;;;BASIC MATH
-(defn rev
+(defn one-
   "Returns (1 - x)"
   [x] (inc (- x)))
 

@@ -185,13 +185,13 @@
   open-corr?-test)
 
 (deftest rev-1-x-test
-  (is= -2 (rev 3))
-  (is= 4 (rev -3))
-  (is (nan? (rev nan)))
-  (is= inf- (rev inf+))
-  (is= inf+ (rev inf-))
-  (is= 4.0 (rev -3.0))
-  (is (thrown? Exception (rev nil))))
+  (is= -2 (one- 3))
+  (is= 4 (one- -3))
+  (is (nan? (one- nan)))
+  (is= inf- (one- inf+))
+  (is= inf+ (one- inf-))
+  (is= 4.0 (one- -3.0))
+  (is (thrown? Exception (one- nil))))
 
 (deftest sq-test
   (is= 9 (sq 3))

@@ -93,7 +93,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
          (have? m/non-? trials)
          (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
   (* (choose-k-from-n successes trials) (m/pow success-prob successes)
-     (m/pow (m/rev success-prob) (- trials successes))))
+     (m/pow (m/one- success-prob) (- trials successes))))
 
 (defn log-binomial-probability
   "Log-Likelihood of seeing 'successes' out of 'trials' with success-prob"
@@ -103,7 +103,7 @@ Successes must be able to be a long, otherwise use 'log-binomial-probability'"
          (have? m/non-? trials)
          (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
   (+ (log-choose-k-from-n successes trials) (* successes (m/log success-prob))
-     (* (- trials successes) (m/log (m/rev success-prob)))))
+     (* (- trials successes) (m/log (m/one- success-prob)))))
 
 ;;;HYPERGEOMETRIC FUNCTION
 (defn generalized-hypergeometric
