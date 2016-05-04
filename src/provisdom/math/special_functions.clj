@@ -63,7 +63,7 @@
 
 (defn erfc 
   "Returns the complementary error function"
-  ^double [^double x] (m/rev (erf x)))
+  ^double [^double x] (m/one- (erf x)))
 
 (defn inv-erf 
   "Returns the inverse error function"
@@ -102,7 +102,7 @@ Although gamma is defined for pos x, this function allows for all non-long-able-
    integral[0, c] (t^(x-1) * e^-t * dt)"
   ^double [^double c ^double x]
   {:pre [(have? m/non-? c) (have? pos? x)]}
-  (cond (zero? c) 0.0, (m/one? x) (m/rev (m/exp (- c))),
+  (cond (zero? c) 0.0, (m/one? x) (m/one- (m/exp (- c))),
         :else (* (gamma x) (ap/regularized-gamma-p c x))))
 
 (defn upper-gamma
@@ -165,15 +165,15 @@ Equal to upper incomplete gamma function divided by gamma function"
   "Returns the multivariate gamma of x with dimension p"
   ^double [^double x p]
   {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
-  (* (m/pow m/PI (* 0.25 p (dec p))) 
-     (mx/eproduct (fn [i] (gamma (+ x (* 0.5 (m/rev i))))) (range 1 (inc p)))))
+  (* (m/pow m/PI (* 0.25 p (dec p)))
+     (mx/eproduct (fn [i] (gamma (+ x (* 0.5 (m/one- i))))) (range 1 (inc p)))))
 
 (defn multivariate-log-gamma
   "Returns the multivariate log gamma of x with dimension p"
   ^double [^double x p]
   {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
    (+ (* m/log-pi 0.25 p (dec p)) 
-      (mx/esum (fn [i] (log-gamma (+ x (* 0.5 (m/rev i))))) 
+      (mx/esum (fn [i] (log-gamma (+ x (* 0.5 (m/one- i)))))
                (range 1 (inc p)))))
 
 ;;;BETA FUNCTIONS

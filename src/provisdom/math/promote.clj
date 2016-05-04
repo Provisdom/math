@@ -81,7 +81,7 @@
   ([k n prob prob-factor reverse-prob-factor]
    {:pre [(have? m/non-? n) (have? (fn [[n k]] (>= n k)) [n k]) (have? m/prob? prob)]}
    (*' (choose-k-from-n' k n) (pow' prob prob-factor)
-       (pow' (m/rev prob) reverse-prob-factor)))
+       (pow' (m/one- prob) reverse-prob-factor)))
   ([k n prob] (binomial-series-factor' k n prob k (- n k))))
 
 ;;;SERIES SOLVERS
