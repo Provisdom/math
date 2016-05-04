@@ -47,8 +47,7 @@
              (maybe-long-able 0) => 0
              (maybe-long-able 23423423.00) => 23423423
              (maybe-long-able 234234324234234234234) => 234234324234234234234
-             (maybe-long-able 234234324234234234234.0) 
-             => 234234324234234234234.0
+             (maybe-long-able 234234324234234234234.0) => 234234324234234234234.0
              (maybe-long-able inf+) => inf+
              (maybe-long-able inf-) => inf-
              (maybe-long-able nan) => nan?
@@ -298,10 +297,8 @@
              (roughly-floor 0.99 -0.02) => (throws)
              (roughly-floor 0.99 0.005) => 0
              ;;returns double
-             (roughly-floor 234234234234234234234343242 0.02) 
-             => 2.3423423423423425E26
-             (roughly-floor 234234234234234234234343242.99 0.02) 
-             => 2.3423423423423425E26
+             (roughly-floor 234234234234234234234343242 0.02) => 2.3423423423423425E26
+             (roughly-floor 234234234234234234234343242.99 0.02) => 2.3423423423423425E26
              (roughly-floor -0.01 0.02) => 0
              (roughly-floor inf+ 0.02) => inf+
              (roughly-floor inf- 0.02) => inf- 
@@ -312,10 +309,8 @@
              (roughly-ceil 0.01 -0.02) => (throws)
              (roughly-ceil 0.01 0.005) => 1
              ;;returns double
-             (roughly-ceil 234234234234234234234343242 0.02) 
-             => 2.3423423423423425E26
-             (roughly-ceil 234234234234234234234343242.01 0.02) 
-             => 2.3423423423423425E26
+             (roughly-ceil 234234234234234234234343242 0.02) => 2.3423423423423425E26
+             (roughly-ceil 234234234234234234234343242.01 0.02) => 2.3423423423423425E26
              (roughly-ceil -0.99 0.02) => -1
              (roughly-ceil inf+ 0.02) => inf+
              (roughly-ceil inf- 0.02) => inf- 
@@ -325,11 +320,9 @@
              (roughly? 0.01 0.02 0.005) => false
              (roughly? 0.01 0.02 0.01) => true
              (roughly? 0.01 0.02 0.02) => true
-             (roughly? 234234234234234234234343242.01 
-                       234234234234234234234343242.03 0.03) => true
+             (roughly? 234234234234234234234343242.01 234234234234234234234343242.03 0.03) => true
              ;;within double accuracy
-             (roughly? 234234234234234234234343242.01 
-                       234234234234234234234343242.03 0.005) => true
+             (roughly? 234234234234234234234343242.01 234234234234234234234343242.03 0.005) => true
              (roughly? inf+ inf+ 0.01) => false
              (roughly? inf- 0.02 inf+) => true
              (roughly? nan 0.02 0.01) => false
@@ -354,8 +347,7 @@
              (roughly-round-non-? 0.01 0.005) => false
              (roughly-round-non-? 234234234234234234234343242.01 0.03) => true
              ;;within double accuracy
-             (roughly-round-non-? 234234234234234234234343242.01 0.005) 
-             => true
+             (roughly-round-non-? 234234234234234234234343242.01 0.005) => true
              (roughly-round-non-? inf+ inf+) => true
              (roughly-round-non-? inf- inf+) => false
              (roughly-round-non-? inf+ 0.4) => false
@@ -369,8 +361,7 @@
              (roughly-round-non+? -0.01 0.005) => false
              (roughly-round-non+? -234234234234234234234343242.01 0.03) => true
              ;;within double accuracy
-             (roughly-round-non+? -234234234234234234234343242.01 0.005) 
-             => true
+             (roughly-round-non+? -234234234234234234234343242.01 0.005) => true
              (roughly-round-non+? inf+ inf+) => false
              (roughly-round-non+? inf- inf+) => true
              (roughly-round-non+? inf- 0.4) => false
