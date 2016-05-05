@@ -7,20 +7,18 @@
 (set! *warn-on-reflection* true)
 
 (defn trim-number
-  "Trims number of any unnecessary characters, e.g. -0.3 and 0.30"
+  "Trims number of any unnecessary characters e.g. -0.3 and 0.30"
   [s]
   (let [s (cond (u/starts-with? s "-0") (trim-number
-                                          (str "-" (u/trim-start s "-0"))),
+                                          (str "-" (u/trim-start s "-0")))
                 (u/substring? "." s) (u/trim-end s "0")
                 :else s)]
     (u/trim-start s "0")))
 
-(defn- by-letter [s]
-  (case s
-    "T" 1000000000000
-    "B" 1000000000
-    "M" 1000000
-    "K" 1000))
+(def by-letter {"T" 1000000000000
+                "B" 1000000000
+                "M" 1000000
+                "K" 1000})
 
 (defn format-float
   "Formats a number with a non-negative number of decimal places"
@@ -52,11 +50,11 @@
   [n max-length & {:keys [max-decimal-places max-digits]}]
   {:pre [(have? m/non-? max-length)]}
   (let [n (if-not max-decimal-places (double n)
-                                     (double (read-string (format-float n max-decimal-places)))),
-        stn (if-not max-digits (str n) (format-exponential n max-digits)),
-        n (if-not max-digits n (read-string stn)),
-        ml (min max-length (count stn)),
-        sd (count (str (m/round n :type :toward))),
+                                     (double (read-string (format-float n max-decimal-places))))
+        stn (if-not max-digits (str n) (format-exponential n max-digits))
+        n (if-not max-digits n (read-string stn))
+        ml (min max-length (count stn))
+        sd (count (str (m/round n :type :toward)))
         g? (or (and (> sd ml) (> sd (+ 5.5 (* -0.5 (m/sgn n)))))
                (< (m/abs n) 0.0001))]
     (loop [i (max ml 1)]
@@ -74,18 +72,18 @@
         :else (let [n (if-not max-decimal-places (double n)
                                                  (double
                                                    (read-string
-                                                     (format-float n max-decimal-places)))),
+                                                     (format-float n max-decimal-places))))
                     n (if-not max-digits n
                                          (read-string
-                                           (format-exponential n max-digits))),
-                    ab (m/abs n),
+                                           (format-exponential n max-digits)))
+                    ab (m/abs n)
                     f (fn [x l]
                         (let [stn (str (format-number (/ x (by-letter l))
-                                                      (dec max-length))),
+                                                      (dec max-length)))
                               stn (if (u/ends-with? stn ".0")
                                     (u/butlast-string (u/butlast-string stn))
                                     stn)]
-                          (str stn l))),
+                          (str stn l)))
                     s (cond (>= ab 1e15) (format-number n max-length)
                             (>= ab (by-letter "T")) (f n "T")
                             (>= ab (by-letter "B")) (f n "B")
@@ -99,7 +97,7 @@
 (defn parse-shorthand
   "Converts a shorthand string into a number"
   [s]
-  (let [s (if (u/starts-with? s "$") (u/rest-string s) s),
+  (let [s (if (u/starts-with? s "$") (u/rest-string s) s)
         s (if (u/starts-with? s "-$") (str "-" (u/trim-start s "-$")) s)]
     (case s
       "NaN" m/nan
