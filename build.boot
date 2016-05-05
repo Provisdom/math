@@ -10,6 +10,7 @@
                           [org.clojure/test.check "0.9.0"]
                           [provisdom/test "0.2.0" :scope "test"]
                           [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
+                          [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
                           [provisdom/utility-belt "0.1.0"]
                           [com.taoensso/truss "1.0.0"]
