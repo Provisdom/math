@@ -68,23 +68,19 @@
   [x] (and (number? x) (roughly-round? x 0.0) (long-range? x)))
 
 (defn long-able+?
-  "Returns true if x is a number that can be converted to a long,
-   and is positive"
+  "Returns true if x is a number that can be converted to a long, and is positive"
   [x] (and (long-able? x) (pos? x)))
 
 (defn long-able-?
-  "Returns true if x is a number that can be converted to a long,
-   and is negative"
+  "Returns true if x is a number that can be converted to a long, and is negative"
   [x] (and (long-able? x) (neg? x)))
 
 (defn long-able-non+?
-  "Returns true if x is a number that can be converted to a long,
-   and is non+"
+  "Returns true if x is a number that can be converted to a long, and is non+"
   [x] (and (long-able? x) (non+? x)))
 
 (defn long-able-non-?
-  "Returns true if x is a number that can be converted to a long,
-   and is non-"
+  "Returns true if x is a number that can be converted to a long, and is non-"
   [x] (and (long-able? x) (non-? x)))
 
 (defn maybe-long-able
@@ -246,7 +242,7 @@
 ;;;ROUNDING
 (defn round
   "Returns a long if possible.  Otherwise, returns x.
-type can be :up (default), :down, :away (from zero), :toward (zero)"
+    type: :up (default), :down, :away (from zero), :toward (zero)"
   [x & {:keys [type]}]
   {:pre [(have? number? x)]}
   (if-not (long-range? x)
@@ -267,15 +263,13 @@ type can be :up (default), :down, :away (from zero), :toward (zero)"
   [^double x] (maybe-long-range (Math/ceil x)))
 
 (defn roughly-floor
-  "Rounds down unless within accu, then rounds up.
-Returns a long if possible, otherwise a double."
+  "Rounds down unless within accu, then rounds up. Returns a long if possible, otherwise a double."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (floor (+ x accu)))
 
 (defn roughly-ceil
-  "Rounds up unless within accu, then rounds down.
-Returns a long if possible, otherwise a double."
+  "Rounds up unless within accu, then rounds down. Returns a long if possible, otherwise a double."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (ceil (- x accu)))
@@ -354,8 +348,7 @@ Returns a long if possible, otherwise a double."
 
 ;;;QUOTIENTS
 (defn quot'
-  "Quotient of dividing numerator by denominator.  
-Returns a long if possible."
+  "Quotient of dividing numerator by denominator. Returns a long if possible."
   [num div]
   (cond (or (nan? num) (nan? div) (and (inf? num) (inf? div))) nan
         (inf? num) (/ num div)
@@ -363,30 +356,27 @@ Returns a long if possible."
         :else (maybe-long-range (quot num div))))
 
 (defn mod'
-  "Modulus of num and div. Truncates toward negative infinity.  
-Has sign of div.  Returns a long if possible."
+  "Modulus of num and div. Truncates toward negative infinity. Has sign of div.
+  Returns a long if possible."
   [num div]
   (cond (inf? div) (if (= (sgn num) (sgn div)) num div)
         (or (nan? div) (nan? num) (inf? num)) nan
         :else (maybe-long-able (mod num div))))
 
 (defn rem'
-  "Remainder of dividing numerator by denominator. 
-Has sign of num.  Returns a long if possible."
+  "Remainder of dividing numerator by denominator. Has sign of num.  Returns a long if possible."
   [num div]
   (cond (inf? div) num, (or (nan? div) (nan? num) (inf? num)) nan
         :else (maybe-long-able (rem num div))))
 
 (defn quot-and-rem
-  "Returns a tuple of longs if possible.  
-Quotient of dividing numerator by denominator.
-Remainder of dividing numerator by denominator.  Has sign of num."
+  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
+  Remainder of dividing numerator by denominator.  Has sign of num."
   [num div] [(quot' num div) (rem' num div)])
 
 (defn quot-and-mod
-  "Returns a tuple of longs if possible.
-Quotient of dividing numerator by denominator.
-Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
+  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
+  Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
   [num div]
   (let [q (quot' num div), m (mod' num div),
         q (if (and (not (zero? num)) (= (sgn num) (- (sgn m)))) (dec q) q)]
@@ -403,13 +393,12 @@ Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
 
 (defn radians->angle
   "Returns the reduced angle from radians, where angles = 180 * radians / PI.
-Returns a long if possible."
+  Returns a long if possible."
   [^double radians]
   (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (defn angle->radians
-  "Returns the reduced radians from the angle, 
-   where radians = angle * PI / 180.
-Returns a long if possible."
+  "Returns the reduced radians from the angle, where radians = angle * PI / 180.
+  Returns a long if possible."
   [angle]
   (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
