@@ -1,7 +1,6 @@
 (ns provisdom.math.t-format
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.utility-belt.format :refer :all]
             [provisdom.math.format :refer :all]
             [provisdom.math.core :as m]))
 
