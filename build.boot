@@ -8,7 +8,7 @@
                           [org.clojure/tools.nrepl "0.2.12" :scope "test"]
                           [provisdom/boot-tasks "0.6.0" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
-                          [provisdom/test "0.1.0" :scope "test"]
+                          [provisdom/test "0.2.0" :scope "test"]
                           [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
                           ;;project deps
                           [provisdom/utility-belt "0.1.0"]
