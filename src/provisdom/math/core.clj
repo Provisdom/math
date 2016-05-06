@@ -366,7 +366,7 @@ Returns a long if possible."
   "Modulus of num and div. Truncates toward negative infinity.  
 Has sign of div.  Returns a long if possible."
   [num div]
-  (cond (inf? div) (if (= (sgn num) (sgn div)) num div)
+  (cond (inf? div) (* (sgn div) (abs num))
         (or (nan? div) (nan? num) (inf? num)) nan
         :else (maybe-long-able (mod num div))))
 
