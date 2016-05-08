@@ -366,15 +366,16 @@ Returns a long if possible."
   "Modulus of num and div. Truncates toward negative infinity.  
 Has sign of div.  Returns a long if possible."
   [num div]
-  (cond (inf? div) (* (sgn div) (abs num))
-        (or (nan? div) (nan? num) (inf? num)) nan
+  (cond (or (nan? div) (nan? num) (inf? num) (zero? div)) nan
+        (inf? div) (maybe-long-able (* (sgn div) (abs num)))
         :else (maybe-long-able (mod num div))))
 
 (defn rem'
   "Remainder of dividing numerator by denominator. 
 Has sign of num.  Returns a long if possible."
   [num div]
-  (cond (inf? div) num, (or (nan? div) (nan? num) (inf? num)) nan
+  (cond (or (nan? div) (nan? num) (inf? num) (zero? div)) nan
+        (inf? div) (maybe-long-able num)
         :else (maybe-long-able (rem num div))))
 
 (defn quot-and-rem
