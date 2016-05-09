@@ -4,38 +4,6 @@
 
 (set! *warn-on-reflection* true)
 
-;MACROS
-(defmacro deep-aget
-  "Gets a value from a multidimensional array as if via 'aget', but with automatic application of
-   appropriate type hints to each step in the array traversal as guidedby the hint added to the source array.
-   e.g. (deep-aget ^doubles arr i j)
-   Note: taken from p447-8 of ClojureProgramming (circa 2012)"
-  ([array idx]
-   `(aget ~array ~idx))
-  ([array idx & idxs]
-   `(let [a-sym# (aget ~(vary-meta array assoc :tag 'objects) ~idx)]
-      (deep-aget (~with-meta a-sym# ~{:tag (-> array meta :tag)}) ~@idxs))))
-
-(defmacro deep-aset
-  "Sets a value from a multidimensional array as if via 'aset', but with automatic application of
-  appropriate type hints to each step in the array traversal as guidedby the hint added to the target array.
-  e.g. (deep-aset ^doubles arr i j 1.0)
-  Note: taken from p448 of ClojureProgramming (circa 2012)"
-  [array & idxsv]
-  (let [hints '{booleans boolean, bytes byte, chars char, longs long, ints int,
-                shorts   short, doubles double, floats float}
-        hint (-> array meta :tag)
-        [v idx & sxdi] (reverse idxsv)
-        idxs (reverse sxdi)
-        v (if-let [h (hints hint)] (list h v) v)
-        nested-array (if (seq idxs)
-                       '(deep-aget ~(vary-meta array assoc :tag 'objects)
-                                   ~@idxs)
-                       array)
-        a-sym (gensym "a")]
-    '(let [~a-sym ~nested-array]
-       (aset ~(with-meta a-sym {:tag hint}) ~idx ~v))))
-
 (def double-array-type (Class/forName "[D"))
 (def double-2D-array-type (Class/forName "[[D"))
 (def double-3D-array-type (Class/forName "[[[D"))
@@ -44,7 +12,7 @@
 (defn array?
   "Returns true if `x` is an Array."
   [x]
-  (-> x class .isArray))
+  (if (some? x) (-> x class .isArray) false))
 
 (defn array->seq [x]
   (if (array? x)
@@ -54,14 +22,14 @@
 (def ^:private arr-type-lookup
   {:l :long :b :boolean :c :char :character :char})
 
-(defn arr-type->type
+(defn type->obj
   "Returns the Java type for given keyword type. Keyword types can be:
     :double double (default)
     :long long
     :boolean boolean
     :char char"
   [type]
-  (condp = (arr-type-lookup type)
+  (condp = (or (arr-type-lookup type) type)
     :long Long/TYPE
     :boolean Boolean/TYPE
     :char Character/TYPE
@@ -75,7 +43,7 @@
       :boolean boolean
       :char char"
   [type dim & dims]
-  (let [type (arr-type->type type)]
+  (let [type (type->obj type)]
     (if-not dims (make-array type dim) (apply (partial make-array type dim) dims))))
 
 (defn jagged-2D-array
@@ -86,7 +54,8 @@
       :boolean boolean
       :char char"
   [type coll]
-  (let [type (arr-type->type type)]
+  (assert (sequential? (get coll 0)) "You must pass a 2D collection")
+  (let [type (type->obj type)]
     (into-array (map (partial into-array type) coll))))
 
 (defn jagged-3D-array
@@ -97,12 +66,52 @@
       :boolean boolean
       :char char"
   [type-key coll]
+  (assert (sequential? (get-in coll [0 0])) "You must pass a 3D collection")
   (into-array (map (partial jagged-2D-array type-key) coll)))
 
 ;;;clojure.core.matrix.impl.double-array
 
 ;;;DOUBLE-ARRAYS -- useful for huge vectors or repetitive computation.
 ;;Conversion time is slow.
+(comment
+  ;; Perf comp between aget and aget-d
+  (perf/bench (aget arr (rand-int 3)))
+  ;Evaluation count : 10252620 in 60 samples of 170877 calls.
+  ;Execution time mean : 5.799010 µs
+  ;Execution time std-deviation : 107.785879 ns
+  ;Execution time lower quantile : 5.620088 µs ( 2.5%)
+  ;Execution time upper quantile : 5.990912 µs (97.5%)
+  ;Overhead used : 1.453119 ns
+  ;
+  ;Found 1 outliers in 60 samples (1.6667 %)
+  ;low-severe	 1 (1.6667 %)
+  ;Variance from outliers : 7.8099 % Variance is slightly inflated by outliers
+  (perf/bench (a/aget-d arr (rand-int 3)))
+  ;Evaluation count : 1743407820 in 60 samples of 29056797 calls.
+  ;Execution time mean : 32.368536 ns
+  ;Execution time std-deviation : 0.239115 ns
+  ;Execution time lower quantile : 32.111605 ns ( 2.5%)
+  ;Execution time upper quantile : 32.846321 ns (97.5%)
+  ;Overhead used : 1.453119 ns
+  ;
+  ;Found 5 outliers in 60 samples (8.3333 %)
+  ;low-severe	 2 (3.3333 %)
+  ;low-mild	 3 (5.0000 %)
+  ;Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
+  (perf/bench (aget ^doubles arr (rand-int 3)))
+  ;Evaluation count : 1785795300 in 60 samples of 29763255 calls.
+  ;Execution time mean : 32.860436 ns
+  ;Execution time std-deviation : 0.813892 ns
+  ;Execution time lower quantile : 32.099554 ns ( 2.5%)
+  ;Execution time upper quantile : 35.539697 ns (97.5%)
+  ;Overhead used : 1.453119 ns
+  ;
+  ;Found 5 outliers in 60 samples (8.3333 %)
+  ;low-severe	 2 (3.3333 %)
+  ;low-mild	 3 (5.0000 %)
+  ;Variance from outliers : 12.5787 % Variance is moderately inflated by outliers
+  )
+
 (defn aget-d
   "Returns the value in the collection at the given index"
   ^double [^doubles coll ^long idx]
