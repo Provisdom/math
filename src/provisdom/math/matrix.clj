@@ -914,10 +914,12 @@ Unassigned elements will be 0.0"
 (defn normalise1
   "Returns as length one in norm1."
   [m]
-  (coerce m (let [s (norm1 m), ser (emap #(/ % s) m),
-                  diff (m/one- (esum ser))]
-              (if (zero? diff) ser
-                               (assoc (vec ser) 0 (+ diff (first ser)))))))
+  (coerce m (let [s (norm1 m),
+                  ser (emap #(/ % s) m),
+                  diff (m/rev (esum ser))]
+              (if (zero? diff)
+                ser
+                (assoc (vec ser) 0 (+ diff (first ser)))))))
 
 (defn normalisep
   "Returns as length one in normp."
