@@ -350,25 +350,24 @@
 (defn quot'
   "Quotient of dividing numerator by denominator. Returns a long if possible."
   [num div]
-  (cond (or (nan? num) (nan? div) (and (inf? num) (inf? div))) nan
-        (inf? num) (/ num div)
-        (inf? div) 0
-        :else (maybe-long-range (quot num div))))
+  (if (or (nan? div) (nan? num) (inf? num) (inf? div))
+    nan
+    (maybe-long-range (quot num div))))
 
 (defn mod'
   "Modulus of num and div. Truncates toward negative infinity. Has sign of div.
   Returns a long if possible."
   [num div]
-  (cond (or (nan? div) (nan? num) (inf? num) (zero? div)) nan
-        (inf? div) (maybe-long-able (* (sgn div) (abs num)))
-        :else (maybe-long-able (mod num div))))
+  (if (or (nan? div) (nan? num) (inf? num) (inf? div))
+    nan
+    (maybe-long-able (mod num div))))
 
 (defn rem'
   "Remainder of dividing numerator by denominator. Has sign of num.  Returns a long if possible."
   [num div]
-  (cond (or (nan? div) (nan? num) (inf? num) (zero? div)) nan
-        (inf? div) (maybe-long-able num)
-        :else (maybe-long-able (rem num div))))
+  (if (or (nan? div) (nan? num) (inf? num) (inf? div))
+    nan
+    (maybe-long-able (rem num div))))
 
 (defn quot-and-rem
   "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
@@ -379,7 +378,8 @@
   "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
   Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
   [num div]
-  (let [q (quot' num div), m (mod' num div),
+  (let [q (quot' num div)
+        m (mod' num div)
         q (if (and (not (zero? num)) (= (sgn num) (- (sgn m)))) (dec q) q)]
     [q m]))
 
