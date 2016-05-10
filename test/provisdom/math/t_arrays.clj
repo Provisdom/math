@@ -59,3 +59,10 @@
     (is= 1.0 (aget arr 0 0 0)))
   (is (thrown? Exception (a/jagged-3D-array :char [[[[]]]])))
   (is (thrown? AssertionError (a/jagged-3D-array :char []))))
+
+(deftest aset!-test
+  (let [og (a/avec [1.0 2.0 3.0])
+        arr (a/block-array :double 3)]
+    (is= '(0.0 0.0 0.0) (a/array->seq arr))
+    (is= '(1.0 2.0 3.0) (a/array->seq (a/aset! arr og))))
+  )

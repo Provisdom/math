@@ -117,6 +117,7 @@
   ^double [^doubles coll ^long idx]
   (aget coll idx))
 
+;; TODO: This is the same thing as System.arraycopy. Is there any reason to keep this impl?
 (defn aset!
   "Returns `a` after setting all the values in `new-a` to `a`. Optionally takes an `idx` and `value`
   which sets `value` at `idx` in `a`.
