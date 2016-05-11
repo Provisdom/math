@@ -77,52 +77,50 @@
       ^"[[D" (ar/jagged-2D-array :d (co/create-dbl-layered
                                       (first shape) (second shape) f)))))
 
-(comment "CLOJURE.CORE.MATRIX REDUNDANCY")
+
+;===========================================
+; CLOJURE.CORE.MATRIX REDUNDANCY
+;===========================================
+
 (defn matrix?
   "Returns true if parameter is a valid matrix (dimensionality == 2)"
   [m] (mxc/matrix? m))
 
 (defn mget
-  "Gets a scalar value from an array at the specified position. 
-Supports any number of dimensions."
+  "Gets a scalar value from an array at the specified position. Supports any number of dimensions."
   ([m] (mxc/mget m))
   ([m x] (mxc/mget m x))
   ([m x y] (mxc/mget m x y))
   ([m x y & more] (apply mxc/mget m x y more)))
 
 (defn mset
-  "Sets a scalar value in an array at the specified position, returning a new 
-   matrix and leaving the original unchanged."
+  "Sets a scalar value in an array at the specified position, returning a new matrix and leaving the
+  original unchanged."
   ([m v] (mxc/mset m v))
   ([m x v] (mxc/mset m x v))
   ([m x y v] (mxc/mset m x y v))
   ([m x y v & more] (apply mxc/mset m x y v more)))
 
 (defn mset!
-  "Sets a scalar value in an array at the specified position.
-Supports any number of dimensions.
-Will throw an exception if the matrix is not mutable at the specified position. 
-Note that it is possible for some arrays to be mutable in places and immutable 
-   in others (e.g. sparse arrays)
-Returns the modified matrix (it is guaranteed to return the same instance)."
+  "Sets a scalar value in an array at the specified position. Supports any number of dimensions. Will throw an
+  exception if the matrix is not mutable at the specified position. Note that it is possible for some arrays to be
+  mutable in places and immutable in others (e.g. sparse arrays) Returns the modified matrix (it is guaranteed to
+  return the same instance)."
   ([m v] (mxc/mset! m v))
   ([m x v] (mxc/mset! m x v))
   ([m x y v] (mxc/mset! m x y v))
   ([m x y v & more] (apply mxc/mset! m x y v more)))
 
 (defn row-matrix?
-  "Returns true if a matrix is a row-matrix (i.e. is 2D and has exactly one 
-   row)"
+  "Returns true if a matrix is a row-matrix (i.e. is 2D and has exactly one row)"
   [m] (mxc/row-matrix? m))
 
 (defn column-matrix?
-  "Returns true if a matrix is a column-matrix (i.e. is 2D and has has exactly 
-   one column)"
+  "Returns true if a matrix is a column-matrix (i.e. is 2D and has has exactly one column)"
   [m] (mxc/column-matrix? m))
 
 (defn square?
-  "Returns true if matrix is square (i.e. a 2D array with same number of rows 
-   and columns)"
+  "Returns true if matrix is square (i.e. a 2D array with same number of rows and columns)"
   [m] (mxc/square? m))
 
 (defn zero-matrix?
@@ -130,10 +128,9 @@ Returns the modified matrix (it is guaranteed to return the same instance)."
   [m] (mxc/zero-matrix? m))
 
 (defn identity-matrix
-  "Constructs a 2D identity matrix with the given number of rows.
-Identity matrices constructed with this function may not be fully mutable 
-   because they may be implemented with a specialised identity matrix type. 
-Use (mutable (identity-matrix ...)) if you need to guarantee a mutable matrix."
+  "Constructs a 2D identity matrix with the given number of rows. Identity matrices constructed with this function
+  may not be fully mutable because they may be implemented with a specialised identity matrix type. Use
+  (mutable (identity-matrix ...)) if you need to guarantee a mutable matrix."
   ([dims] (mxc/identity-matrix dims))
   ([implementation dims] (mxc/identity-matrix implementation dims)))
 
@@ -146,37 +143,30 @@ Use (mutable (identity-matrix ...)) if you need to guarantee a mutable matrix."
   [m] (mxc/column-count m))
 
 (defn get-row
-  "Gets a row of a matrix, as a vector.
-Will return a mutable view if supported by the implementation."
-  [m x] (mxc/get-row m x))
+  "Gets a row of a matrix, as a vector. Will return a mutable view if supported by the implementation."
+  [m idx] (mxc/get-row m idx))
 
 (defn get-column
-  "Gets a column of a matrix, as a vector.
-Will return a mutable view if supported by the implementation."
-  [m x] (mxc/get-column m x))
+  "Gets a column of a matrix, as a vector. Will return a mutable view if supported by the implementation."
+  [m idx] (mxc/get-column m idx))
 
 (defn new-vector
-  "Constructs a new vector with the given length.
-New matrix will contain default values as defined by the implementation 
-   (usually null or zero).
-If the implementation supports mutable vectors, then the new vector will be 
-   fully mutable."
+  "Constructs a new vector with the given length. New matrix will contain default values as defined by the
+  implementation (usually null or zero). If the implementation supports mutable vectors, then the new vector
+  will be fully mutable."
   ([length] (mxc/new-vector length))
   ([implementation length] (mxc/new-vector implementation length)))
 
 (defn new-matrix
-  "Constructs a new 2D array (matrix) with the given dimensions.
-The new matrix will contain default values as defined by the implementation 
-   (usually null or zero).
-If the implementation supports mutable matrices, then the new matrix will be 
-   fully mutable."
+  "Constructs a new 2D array (matrix) with the given dimensions. The new matrix will contain default values as defined
+  by the implementation (usually null or zero). If the implementation supports mutable matrices, then the new matrix
+  will be fully mutable."
   ([rows columns] (mxc/new-matrix rows columns))
   ([implementation rows columns] (mxc/new-matrix implementation rows columns)))
 
 (defn compute-matrix
-  "Creates a matrix with the specified shape, and each element specified by 
-   (f i j k...), where i, j, k... are the index positions of each element in 
-   the matrix"
+  "Creates a matrix with the specified shape, and each element specified by (f i j k...), where i, j, k... are the
+  index positions of each element in the matrix"
   ([shape f] (mxc/compute-matrix shape f))
   ([implementation shape f] (mxc/compute-matrix implementation shape f)))
 
@@ -205,18 +195,11 @@ If the implementation supports mutable matrices, then the new matrix will be
   ([a b & more] (apply mxc/sub a b more)))
 
 (defn mul
-  "Performs element-wise multiplication with scalars and numerical arrays.
-Behaves like clojure.core/* for scalar values."
+  "Performs element-wise multiplication with scalars and numerical arrays.  Behaves like clojure.core/* for scalar values."
   ([] (mxc/mul))
   ([a] (mxc/mul a))
   ([a b] (mxc/mul a b))
   ([a b & more] (apply mxc/mul a b more)))
-
-(defn abs
-  "Computes the abs function on all elements of an array, using double 
-   precision values. 
-Returns a new array."
-  [m] (mxc/abs m))
 
 (defn vec?
   "Returns true if the parameter is a vector (1-dimensional array)"
@@ -227,8 +210,7 @@ Returns a new array."
   [m i row] (mxc/set-row m i row))
 
 (defn negate
-  "Calculates the negation of a numerical array. 
-Generally equivalent to (scale m -1.0)"
+  "Calculates the negation of a numerical array. Generally equivalent to (scale m -1.0)"
   [m] (mxc/negate m))
 
 (defn emin
@@ -239,28 +221,9 @@ Generally equivalent to (scale m -1.0)"
   "Gets the maximum element value from a numerical array"
   [m] (mxc/emax m))
 
-(defn exp
-  "Computes the exp function on all elements of an array, using double 
-precision values. 
-Returns a new array."
-  [m] (mxc/exp m))
-
-(defn log
-  "Computes the log function on all elements of an array, using double 
-precision values. 
-Returns a new array."
-  [m] (mxc/log m))
-
-(defn log10
-  "Computes the log10 function on all elements of an array, using double 
-precision values. 
-Returns a new array."
-  [m] (mxc/log10 m))
-
 (defn ecount
-  "Returns the total count of elements in an array.
-Equal to the product of the lengths of each dimension in the array's shape.
-Returns 1 for a zero-dimensional array or scalar."
+  "Returns the total count of elements in an array. Equal to the product of the lengths of each dimension in the
+  array's shape. Returns 1 for a zero-dimensional array or scalar."
   [m] (mxc/ecount m))
 
 (defn eseq
@@ -272,32 +235,36 @@ Returns 1 for a zero-dimensional array or scalar."
   [m] (mxc/square m))
 
 (defn to-vector
-  "Creates a new array representing the elements of array m as a single 
-flattened vector."
+  "Creates a new array representing the elements of array m as a single flattened vector."
   [m] (mxc/to-vector m))
 
 (defn dimensionality
-  "Returns the dimensionality of an array. 
-The dimensionality is equal to the number of dimensions in the array's shape."
+  "Returns the dimensionality of an array. The dimensionality is equal to the number of dimensions in the array's shape."
   [m] (mxc/dimensionality m))
 
 (defn trace
-  "Calculates the trace of a 2D numerical matrix (sum of elements on main 
-   diagonal).
-The matrix need not be square."
+  "Calculates the trace of a 2D numerical matrix (sum of elements on main diagonal). The matrix need not be square."
   [m] (mxc/trace m))
 
-(comment "MATRIX SPECIAL TYPE HELP")
-(defn diagonal? [m]
+;===========================================
+; MATRIX SPECIAL TYPE HELP
+;===========================================
+(defn diagonal?
+  [m]
   (nil? (esome (fn [i j e]
                  {:pre [(have? number? e)]}
                  (not (or (= i j) (zero? e)))) m true)))
 
-(defn symmetric? [m] (= (transpose m) m))
+(defn symmetric?
+  [m]
+  (= (transpose m) m))
 
-(defn unit-diagonal? [m] (every? m/one? (diagonal m)))
+(defn unit-diagonal?
+  [m]
+  (every? m/one? (diagonal m)))
 
-(defn symmetric-with-unit-diagonal? [m]
+(defn symmetric-with-unit-diagonal?
+  [m]
   (and (unit-diagonal? m) (symmetric? m)))
 
 (defn positive?
@@ -315,23 +282,27 @@ The matrix need not be square."
 
 (defn row-or-column-matrix? [m] (or (column-matrix? m) (row-matrix? m)))
 
-(defn size-symmetric ^long [^long ecount]
+(defn ^long size-symmetric
+  [^long ecount]
   (let [s (-> ecount (* 8) inc m/sqrt dec (/ 2.0))]
     (when-not (m/roughly-round? s 1e-6)
       (throw (ex-info "Not a symmetric matrix." {:fn (var size-symmetric)})))
     (long s)))
 
-(defn size-symmetric-with-unit-diagonal ^long [^long ecount]
+(defn ^long size-symmetric-with-unit-diagonal
+  [^long ecount]
   (-> ecount size-symmetric inc))
 
-(defn ecount-symmetric ^long [^long size] (-> size m/sq (+ size) (/ 2)))
+(defn ^long ecount-symmetric
+  [^long size]
+  (-> size m/sq (+ size) (/ 2)))
 
-(defn ecount-symmetric-with-unit-diagonal ^long [^long size]
+(defn ^long ecount-symmetric-with-unit-diagonal
+  [^long size]
   (-> size m/sq (- size) (/ 2)))
 
 (defn to-vector-from-symmetric
-  "Matrix doesn't have to be symmetric.  
-Set byrow to false to get lower triangular values instead of upper."
+  "Matrix doesn't have to be symmetric.  Set byrow to false to get lower triangular values instead of upper."
   [m & {:keys [byrow?] :or {byrow? true}}]
   (let [nr (row-count m), nc (column-count m)]
     (vec (if byrow?
@@ -341,8 +312,8 @@ Set byrow to false to get lower triangular values instead of upper."
              (mget m r c))))))
 
 (defn to-vector-from-symmetric-with-unit-diagonal
-  "Matrix doesn't have to be symmetric, or have a unit diagonal.  
-Set byrow to false to get lower triangular values instead of upper."
+  "Matrix doesn't have to be symmetric, or have a unit diagonal. Set byrow to false to get lower triangular values
+  instead of upper."
   [m & {:keys [byrow?] :or {byrow? true}}]
   (let [nr (row-count m), nc (column-count m)]
     (vec (if byrow?
@@ -916,7 +887,7 @@ Unassigned elements will be 0.0"
   [m]
   (coerce m (let [s (norm1 m),
                   ser (emap #(/ % s) m),
-                  diff (m/rev (esum ser))]
+                  diff (m/one- (esum ser))]
               (if (zero? diff)
                 ser
                 (assoc (vec ser) 0 (+ diff (first ser)))))))
