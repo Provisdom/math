@@ -1,6 +1,7 @@
 (ns provisdom.math.matrix
   (:require [provisdom.utility-belt.core :as co]
-            [provisdom.math [core :as m]
+            [provisdom.math
+             [core :as m]
              [arrays :as ar]]
             [clatrix.core :as clx]
             [clojure.core.matrix :as mxc]
@@ -250,79 +251,108 @@
 ; MATRIX SPECIAL TYPE HELP
 ;===========================================
 (defn diagonal?
+  "Returns true if the matrix is a diagonal matrix (a matrix (usually a square matrix) in which the entries outside the
+  main diagonal are all zero)."
   [m]
   (nil? (esome (fn [i j e]
                  {:pre [(have? number? e)]}
                  (not (or (= i j) (zero? e)))) m true)))
 
 (defn symmetric?
+  "Returns true if the matrix is a symmetric matrix."
   [m]
   (= (transpose m) m))
 
 (defn unit-diagonal?
+  "Returns true if the matrix has a unit diagonal."
   [m]
   (every? m/one? (diagonal m)))
 
 (defn symmetric-with-unit-diagonal?
+  "Returns true if the matrix has a unit diagonal and is symmetric."
   [m]
   (and (unit-diagonal? m) (symmetric? m)))
 
 (defn positive?
+  "Returns true if `m` is a positive definite matrix."
   ([m] (positive? m m/*dbl-close*))
   ([m accu] (and (symmetric? m) (every? #(> % accu) (eigenvalues m)))))
 
 (defn positive-with-unit-diagonal?
+  "Returns true if `m` has a unit diagonal and is a positive definite matrix."
   ([m] (and (unit-diagonal? m) (positive? m)))
   ([m accu] (and (unit-diagonal? m) (positive? m accu))))
 
 (defn non-negative?
+  "Returns true if `m` is a non-negative matrix."
   ([m] (non-negative? m m/*dbl-close*))
   ([m accu]
    (and (symmetric? m) (every? #(m/roughly-non-? % accu) (eigenvalues m)))))
 
-(defn row-or-column-matrix? [m] (or (column-matrix? m) (row-matrix? m)))
+(defn row-or-column-matrix?
+  "Returns true if `m` is a row or a column matrix."
+  [m]
+  (or (column-matrix? m) (row-matrix? m)))
 
-(defn ^long size-symmetric
-  [^long ecount]
+(defn size-symmetric
+  "Returns the size of the matrix given `ecount`. `ecount` is the number of independent symmetric matrix elements (the
+  number of elements on the diagonal plus the number either above or below the diagonal)."
+  ^long [^long ecount]
   (let [s (-> ecount (* 8) inc m/sqrt dec (/ 2.0))]
     (when-not (m/roughly-round? s 1e-6)
       (throw (ex-info "Not a symmetric matrix." {:fn (var size-symmetric)})))
     (long s)))
 
-(defn ^long size-symmetric-with-unit-diagonal
-  [^long ecount]
+(defn size-symmetric-with-unit-diagonal
+  "Returns the size of the matrix given `ecount`. `ecount` is the number of elements above or below the unit diagonal."
+  ^long [^long ecount]
   (-> ecount size-symmetric inc))
 
-(defn ^long ecount-symmetric
-  [^long size]
+(defn ecount-symmetric
+  "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix. This is the number of elements on
+  the diagonal plus the number of elements above or below the diagonal."
+  ^long [^long size]
   (-> size m/sq (+ size) (/ 2)))
 
-(defn ^long ecount-symmetric-with-unit-diagonal
-  [^long size]
+(defn ecount-symmetric-with-unit-diagonal
+  "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix with a unit diagonal. This is the
+  number of elements above or below the diagonal."
+  ^long [^long size]
   (-> size m/sq (- size) (/ 2)))
 
 (defn to-vector-from-symmetric
-  "Matrix doesn't have to be symmetric.  Set byrow to false to get lower triangular values instead of upper."
+  "Returns a vector that contains the upper (defualt) or lower half of the matrix. `m` doesn't have to be symmetric.
+  Options:
+    `:byrow?` (default: *true*) Set to false to get lower triangular values instead of upper."
   [m & {:keys [byrow?] :or {byrow? true}}]
-  (let [nr (row-count m), nc (column-count m)]
+  (let [nr (row-count m)
+        nc (column-count m)]
     (vec (if byrow?
-           (for [r (range nr), c (range r nc)]
+           (for [r (range nr)
+                 c (range r nc)]
              (mget m r c))
-           (for [c (range nc), r (range c nr)]
+           (for [c (range nc)
+                 r (range c nr)]
              (mget m r c))))))
 
 (defn to-vector-from-symmetric-with-unit-diagonal
-  "Matrix doesn't have to be symmetric, or have a unit diagonal. Set byrow to false to get lower triangular values
-  instead of upper."
+  "Returns a vector that contains the upper (defualt) or lower half of the matrix without the diagonal. `m` doesn't have
+   to be symmetric or have a unit diagonal.
+   Options:
+     `:byrow?` (default: *true*) Set to false to get lower triangular values instead of upper."
   [m & {:keys [byrow?] :or {byrow? true}}]
   (let [nr (row-count m), nc (column-count m)]
     (vec (if byrow?
-           (for [r (range nr), c (range (inc r) nc)]
+           (for [r (range nr)
+                 c (range (inc r) nc)]
              (mget m r c))
-           (for [c (range nc), r (range (inc c) nr)]
+           (for [c (range nc)
+                 r (range (inc c) nr)]
              (mget m r c))))))
 
-(comment "MATRIX IMPLEMENTATIONS")
+;===========================================
+; MATRIX IMPLEMENTATIONS
+;===========================================
 (defn apache-commons [data] (mxc/matrix :apache-commons data))
 
 (defn apache-commons? [m] (= (type (apache-commons [[1.0]])) (type m)))
@@ -1057,28 +1087,29 @@ x need not be an integer."
             :else false))))
 
 (defn some-kv
-  "Returns the first logical true value of (pred index x) for any x in coll, 
-   else nil."
+  "Returns the first logical true value of (pred index x) for any x in coll, else nil."
   [pred coll]
-  (loop [c 0, s coll]
+  (loop [idx 0
+         s coll]
     (when (seq s)
-      (or (pred c (first s)) (recur (inc c) (next s))))))
+      (or (pred idx (first s)) (recur (inc idx) (next s))))))
 
 (defn esome
-  "Returns the first logical true value of (pred row col e) for any e 
-   in matrix, else nil."
+  "Returns the first logical true value of (pred row col e) for any e in matrix, else nil."
   [pred m byrow?]
   {:pre [(have? matrix? m)]}
-  (let [mt (if byrow? m (transpose m)), nr (row-count mt)]
-    (loop [c 0, s (rows mt)]
-      (if (>= c nr) nil
-                    (or (some-kv #(pred c % %2) (first s)) (recur (inc c) (next s)))))))
+  (let [mt (if byrow? m (transpose m))
+        num-rows (row-count mt)]
+    (loop [c 0
+           s (rows mt)]
+      (if (>= c num-rows)
+        nil
+        (or (some-kv #(pred c % %2) (first s)) (recur (inc c) (next s)))))))
 
 
 (comment "FILTER MATRICES")
 (defn filter-kv
-  "Returns a vector of the items in coll for which (pred item) returns true. 
-   pred must be free of side-effects."
+  "Returns a vector of the items in coll for which (pred item) returns true. pred must be free of side-effects."
   [pred coll]
   (persistent! (reduce-kv #(if (pred %2 %3) (conj! % %3) %) (transient [])
                           (vec coll))))
@@ -1090,14 +1121,13 @@ x need not be an integer."
   (let [mt (if byrow? m (transpose m))] (filter pred (eseq mt))))
 
 (defn efilter-kv
-  "Returns a sequence of filtered values.  
-pred takes two indexes and an element"
+  "Returns a sequence of filtered values. pred takes two indexes and an element"
   [m pred & {:keys [byrow?] :or {byrow? true}}]
   {:pre [(have? matrix? m)]}
   (ereduce-kv #(if (pred %2 %3 %4) (conj % %4) %) [] m byrow?))
 
 (defn sparse-efilter
-  "Returns a vector of [row column value].  pred takes an element"
+  "Returns a vector of [row column value]. pred takes an element"
   [m pred & {:keys [byrow?] :or {byrow? true}}]
   {:pre [(have? matrix? m)]}
   (ereduce-kv #(if (pred %4) (conj % [%2 %3 %4]) %) [] m byrow?))
