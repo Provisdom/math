@@ -242,7 +242,11 @@
 ;;;ROUNDING
 (defn round
   "Returns a long if possible.  Otherwise, returns x.
-    type: :up (default), :down, :away (from zero), :toward (zero)"
+    type:
+      :up (default)
+      :down
+      :away (from zero)
+      :toward (zero)"
   [x & {:keys [type]}]
   {:pre [(have? number? x)]}
   (if-not (long-range? x)
@@ -275,8 +279,7 @@
   (ceil (- x accu)))
 
 (defn roughly?
-  "Returns true if x1 and x2 are within accu of each other, or within double
-   accuracy."
+  "Returns true if x1 and x2 are within accu of each other, or within double accuracy."
   [^double x1 ^double x2 ^double accu]
   {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x1) (nan? x2)) false
@@ -285,8 +288,7 @@
         :else (<= (abs (- x1 x2)) accu)))
 
 (defn roughly-round?
-  "Returns true if x is equal to a whole number or within accu of a whole 
-   number, or within double accuracy."
+  "Returns true if x is equal to a whole number or within accu of a whole number, or within double accuracy."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x)) false
@@ -295,29 +297,25 @@
         :else (<= (abs (- (round x) x)) accu)))
 
 (defn roughly-round-non-?
-  "Returns true if x is non- and roughly a whole number, 
-   or within double accuracy."
+  "Returns true if x is non- and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (and (non-? x) (roughly-round? x accu)))
 
 (defn roughly-round-non+?
-  "Returns true if x is non+ and roughly a whole number, 
-   or within double accuracy."
+  "Returns true if x is non+ and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (and (non+? x) (roughly-round? x accu)))
 
 (defn roughly-round+?
-  "Returns true if x is positive and roughly a whole number, 
-   or within double accuracy."
+  "Returns true if x is positive and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (and (pos? x) (roughly-round? x accu)))
 
 (defn roughly-round-?
-  "Returns true if x is negative and roughly a whole number, 
-   or within double accuracy."
+  "Returns true if x is negative and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
   {:pre [(have? non-? accu)]}
   (and (neg? x) (roughly-round? x accu)))
@@ -355,8 +353,7 @@
     (maybe-long-range (quot num div))))
 
 (defn mod'
-  "Modulus of num and div. Truncates toward negative infinity. Has sign of div.
-  Returns a long if possible."
+  "Modulus of num and div. Truncates toward negative infinity. Has sign of div. Returns a long if possible."
   [num div]
   (if (or (nan? div) (nan? num) (inf? num) (inf? div))
     nan
@@ -370,13 +367,13 @@
     (maybe-long-able (rem num div))))
 
 (defn quot-and-rem
-  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
-  Remainder of dividing numerator by denominator.  Has sign of num."
+  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator. Remainder of dividing numerator
+  by denominator.  Has sign of num."
   [num div] [(quot' num div) (rem' num div)])
 
 (defn quot-and-mod
-  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator.
-  Modulus of num and div. Truncates toward negative infinity.  Has sign of div."
+  "Returns a tuple of longs if possible. Quotient of dividing numerator by denominator. Modulus of num and div.
+  Truncates toward negative infinity.  Has sign of div."
   [num div]
   (let [q (quot' num div)
         m (mod' num div)
@@ -393,13 +390,11 @@
   [radians] (mod' radians two-pi))
 
 (defn radians->angle
-  "Returns the reduced angle from radians, where angles = 180 * radians / PI.
-  Returns a long if possible."
+  "Returns the reduced angle from radians, where angles = 180 * radians / PI. Returns a long if possible."
   [^double radians]
   (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (defn angle->radians
-  "Returns the reduced radians from the angle, where radians = angle * PI / 180.
-  Returns a long if possible."
+  "Returns the reduced radians from the angle, where radians = angle * PI / 180. Returns a long if possible."
   [angle]
   (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
