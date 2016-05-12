@@ -236,7 +236,7 @@
   [m] (mxc/square m))
 
 (defn to-vector
-  "Creates a new array representing the elements of array m as a single flattened vector."
+  "Creates a new array representing the elements of array `m` as a single flattened vector."
   [m] (mxc/to-vector m))
 
 (defn dimensionality
@@ -353,82 +353,132 @@
 ;===========================================
 ; MATRIX IMPLEMENTATIONS
 ;===========================================
-(defn apache-commons [data] (mxc/matrix :apache-commons data))
+(defn apache-commons
+  "Returns a matrix using the apache-commoms matrix implementation."
+  [data]
+  (mxc/matrix :apache-commons data))
 
-(defn apache-commons? [m] (= (type (apache-commons [[1.0]])) (type m)))
+;; NOTE: This function was previously written to see if the type of the matrix was = to Array2DRowRealMatrix.
+;; That comparison is faster than the instance? check, however it is less general. Same applies for apache-commons-vec?.
+(defn apache-commons?
+  "Returns true if `m` is an apache commons matrix."
+  [m]
+  (instance? RealMatrix m))
 
-(defn apache-commons-vec? [m] (= (type (apache-commons [1.0])) (type m)))
+(defn apache-commons-vec?
+  "Returns true if `m` is an apache commons matrix."
+  [m]
+  (instance? RealVector m))
 
-(defn clatrix [data]
-  (cond (= data []) (clx/matrix []),
-        (nil? data) nil,
+(defn clatrix
+  "Returns a matrix using the Clatrix matrix implementation."
+  [data]
+  (cond (= data []) (clx/matrix [])
+        (nil? data) nil
         :else (mxc/matrix :clatrix data)))
 
-(defn clatrix? [m] (clx/matrix? m))
+(defn clatrix?
+  "Returns true if `m` is a Clatrix matrix."
+  [m]
+  (clx/matrix? m))
 
-(defn clatrix-vec? [m] (clx/vec? m))
+(defn clatrix-impl?
+  "Returns true if `impl` is a Clatrix implementation. This can be either :clatrix or a matrix that is an instance of a
+  Clatrix matrix."
+  [impl]
+  (or (= impl :clatrix) (clatrix? impl)))
 
-(defn- maybe-convert-clatrix-row-or-column [m]
-  (cond (not (clatrix? m)) m,
-        (row-matrix? m) [(to-vector m)],
+(defn clatrix-vec?
+  "Returns true if `m` is a Clatrix vector."
+  [m]
+  (clx/vec? m))
+
+;; Not entirely sure why this exists. Clatxi may have problems handling row, column, and zero element matrices
+(defn- maybe-convert-clatrix-row-or-column
+  [m]
+  (cond (not (clatrix? m)) m
+        (row-matrix? m) [(to-vector m)]
         (column-matrix? m) (mxc/to-nested-vectors
-                             (column-matrix :persistent-vector (to-vector m))),
+                             (column-matrix :persistent-vector (to-vector m)))
         (zero? (ecount m)) []
         :else m))
 
 (defn coerce
-  "coerces param into the provided implementation or matrix type"
+  "Coerces `param` into the provided implementation or matrix type"
   [matrix-or-implementation param]
   (mxc/coerce matrix-or-implementation
               (maybe-convert-clatrix-row-or-column param)))
 
 (defn to-nested-vectors
-  "Converts an array to an idiomatic, immutable nested Clojure vector format. 
-The bottom level of the nested vectors will contain the element values.
-The depth of nesting will be equal to the dimensionality of the array."
+  "Converts an array to an idiomatic, immutable nested Clojure vector format. The bottom level of the nested vectors
+  will contain the element values. The depth of nesting will be equal to the dimensionality of the array."
   [m]
   (let [m (maybe-convert-clatrix-row-or-column m)]
-    (cond (= (dimensionality m) 2) (if (clatrix? m) (into [] (map to-vector (mxc/rows m)))
-                                                    (into [] (map to-nested-vectors (mxc/rows m))))
+    (cond (= (dimensionality m) 2) (if (clatrix? m)
+                                     (into [] (map to-vector (mxc/rows m)))
+                                     (into [] (map to-nested-vectors (mxc/rows m))))
           (>= (dimensionality m) 2) (into [] (map to-nested-vectors m))
           :else (mxc/to-nested-vectors m))))
 
-(comment "CONSTRUCTORS")
+;===========================================
+; CONSTRUCTORS
+;===========================================
 (defn maybe-to-vector
-  "converts to vector unless x is nil"
-  [x] (if (nil? x) nil (to-vector x)))
+  "Returns `x` as a vector (by calling [[to-vector]]) unless `x` is `nil`"
+  [x]
+  (when x (to-vector x)))
 
 (defn create-vector
+  "Returns a vector from `data`.
+  Optional params:
+    `implementation`: The core.matrix implementation to use to create the vector
+    `size`: The size of the vector to create
+    `f-or-val`: A function or a value used to create the result vector. If passed a function, the function will be called
+    like `(f-or-val idx)` => value at the index. If passed a value then that value will be used to create the vector."
   ([data] (create-vector nil data))
   ([implementation data]
-   (coerce implementation (if (number? data) (to-vector data)
-                                             (to-nested-vectors data))))
+   (coerce implementation (if (number? data)
+                            (to-vector data)
+                            (to-nested-vectors data))))
   ([implementation size f-or-val]
-   (coerce implementation (if (number? f-or-val) (repeat size f-or-val)
-                                                 (co/create-seq size f-or-val)))))
+   (coerce implementation (if (number? f-or-val)
+                            (repeat size f-or-val)
+                            (co/create-seq size f-or-val)))))
 
 (defn sparse-vector
-  "A sparse representation is a seq of seqs, each inner seq having the 
-   form `[index value]`.  
-Later values will override prior overlapping values.
-v-or-length can be a starting vector or the length.
-Returns a vector."
+  "Returns a vector after applying `sparse` to `v-or-length`. `sparse` is a seq of seqs, each inner seq having the
+  form `[index value]`. Later values will override prior overlapping values. `v-or-length` can be a starting vector or
+  the length of the vector that will be created using [[new-vector]]. Optionally takes a core.matrix implementation."
   ([sparse v-or-length] (sparse-vector nil sparse v-or-length))
   ([implementation sparse v-or-length]
    (if (and (not (vec? v-or-length)) (= implementation :clatrix))
      (clx/from-sparse v-or-length 1 (map (fn [[i v]] [i 0 v]) sparse))
-     (let [[length v] (if (vec? v-or-length) [(count v-or-length) v-or-length]
-                                             [v-or-length
-                                              (new-vector implementation v-or-length)])]
-       (reduce #(let [[i value] %2]
+     (let [[length v] (if (vec? v-or-length)
+                        [(count v-or-length) v-or-length]
+                        [v-or-length (new-vector implementation v-or-length)])]
+       (reduce (fn [m [i value]]
                  (when (or (>= i length) (neg? i))          ;TODO - replace with assert
                    (throw (ex-info "Sparse out of bounds." {:fn (var sparse-vector)})))
-                 (mset % i value))
+                 (mset m i value))
                v sparse)))))
 
 (defn matrix
-  "similar to clojure.core.matrix's matrix function, 
-but this function corrects Clatrix's behavior with nil and [] matrices"
+  "Constructs a new 2-dimensional matrix from the given numerical data.
+
+   The data may be in one of the following forms:
+   - A valid existing numerical array
+   - Nested sequences of scalar values, e.g. Clojure vectors
+   - A sequence of slices, each of which must be valid matrix data
+
+   If implementation is not specified, uses the current matrix library as specified
+   in *matrix-implementation*
+
+   Optionally takes `f` and `shape`. `f` is a function: `(f i j)` => value at `i`, `j`. `shape` is the shape of the
+   matix (n x m).
+
+   `matrix` works as a synonym for `array`
+   NOTE: this function is similar to core.matrix's matrix function but it corrects Clatrix's behavior with nil
+         and [] matrices."
   ([data] (matrix nil data))
   ([implementation data]
    (if (or (clatrix? implementation) (= implementation :clatrix))
@@ -439,9 +489,11 @@ but this function corrects Clatrix's behavior with nil and [] matrices"
                                                  (second shape) f))))
 
 (defn constant-matrix
+  "Returns a matrix where every element has the value `value`. `shape` is a vector `[n m]` which describes the shape of
+  the returned matrix."
   ([shape ^double value] (constant-matrix nil shape value))
   ([implementation shape ^double value]
-   (if (or (clatrix? implementation) (= implementation :clatrix))
+   (if (clatrix-impl? implementation)
      (let [[r c] shape] (clx/constant r c value))
      (compute-matrix implementation shape (fn [r c] value)))))
 
