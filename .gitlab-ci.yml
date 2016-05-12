@@ -1,0 +1,5 @@
+image: provisdom/docker-clojure:0.1.2
+
+deploy_to_s3:
+  script:
+    - boot release -u $AWS_ACCESS_KEY -p $AWS_SECRET_KEY
