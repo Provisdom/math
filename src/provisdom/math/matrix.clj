@@ -473,9 +473,6 @@
    If implementation is not specified, uses the current matrix library as specified
    in *matrix-implementation*
 
-   Optionally takes `f` and `shape`. `f` is a function: `(f i j)` => value at `i`, `j`. `shape` is the shape of the
-   matix (n x m).
-
    `matrix` works as a synonym for `array`
    NOTE: this function is similar to core.matrix's matrix function but it corrects Clatrix's behavior with nil
          and [] matrices."
@@ -483,10 +480,7 @@
   ([implementation data]
    (if (or (clatrix? implementation) (= implementation :clatrix))
      (clatrix data)
-     (mxc/matrix implementation data)))
-  ([implementation f shape]
-   (matrix implementation (co/create-dbl-layered (first shape)
-                                                 (second shape) f))))
+     (mxc/matrix implementation data))))
 
 (defn constant-matrix
   "Returns a matrix where every element has the value `value`. `shape` is a vector `[n m]` which describes the shape of
@@ -498,6 +492,9 @@
      (compute-matrix implementation shape (fn [r c] value)))))
 
 (defn sequence-to-matrix
+  "Returns a matrix that is created from `coll`. `coll` is a 1D vector which will be converted into the matrix determined
+  by `rows` and `byrow?`. `rows` is the number of rows the returned matrix will have. `byrow?` is true if the elements
+  are in row order, false if they are in column order."
   ([coll ^long rows byrow?] (sequence-to-matrix nil coll rows byrow?))
   ([implementation coll ^long rows byrow?]
    {:pre [(have? [:or seq? vec?] coll)]}
@@ -513,6 +510,11 @@
        (matrix implementation (co/flip-dbl-layered (partition rows c)))))))
 
 (defn square-matrix
+  "Returns a square matrix. If given a matrix `m` it will return a square version of the given matrix my truncating
+  values from the matrix. Otherwise takes a `size`, `f-or-val`, and, optionally, an `implementation`. `size` is the size
+  of the square matrix. `f-or-val` is a function or a value. If passed a function the function will be called with
+  arguments i,j and should return the element at i,j. If passed a value that value will be placed at every index in the
+  matrix."
   ([m]
    (let [size (min (column-count m) (row-count m))]
      (get-slices-as-matrix m :rows (range size) :columns (range size))))
@@ -524,6 +526,10 @@
                                              f-or-val))))
 
 (defn column-matrix
+  "Returns a column matrix created from `data` or `size` and `f-or-val`. `data` is a 1D vector where each element in the
+  vector will be used as a column in the column matrix. `size` is the size of the returned matrix. `f-or-val` is either
+  a function or value. If passed a function the function will be called with `i` and should return the element at `i`,
+  where `i` is the row index in the matrix."
   ([data]
    (if (apache-commons-vec? data) (column-matrix :apache-commons data)
                                   (mxc/column-matrix data)))
@@ -537,6 +543,9 @@
          (number? f-or-val) (constant-matrix implementation [size 1] f-or-val))))
 
 (defn row-matrix
+  "Returns a row matrix created from `data` or `size` and `f-or-val`. `data` is a 1D vector which will be the row in the
+  matrix. `size` is the size of the returned matrix. `f-or-val` is either a function or value. If passed a function the
+  function will be passed no arguments and should return a value."
   ([data]
    (if (apache-commons-vec? data) (row-matrix :apache-commons data)
                                   (mxc/row-matrix data)))
@@ -550,6 +559,10 @@
          (number? f-or-val) (constant-matrix implementation [1 size] f-or-val))))
 
 (defn diagonal-matrix
+  "Returns a diagonal matrix (a matrix with all elements not on the diagonal being 0) with the values on the diagonal
+  given by `diagonal-values`, a 1D vector. `size` is the size of the matrix given by a single number. `f-or-val` is
+  either a function or value. If given a function, the function will be called with `i` and should return the element
+  at `i`, where `i` is the index of the diagonal element."
   ([diagonal-values]
    (if (apache-commons-vec? diagonal-values)
      (diagonal-matrix :apache-commons diagonal-values)
@@ -563,9 +576,9 @@
          :else (mxc/diagonal-matrix implementation diagonal-values)))
   ([implementation ^long size f-or-val]
    {:pre [(have? [:or fn? number?] f-or-val)]}
-   (let [i (if (nil? implementation) :persistent-vector implementation)]
-     (cond (fn? f-or-val) (diagonal-matrix i (co/create-seq size f-or-val))
-           (number? f-or-val) (diagonal-matrix i (repeat size f-or-val))))))
+   (let [impl (or implementation :persistent-vector)]
+     (cond (fn? f-or-val) (diagonal-matrix impl (co/create-seq size f-or-val))
+           (number? f-or-val) (diagonal-matrix impl (repeat size f-or-val))))))
 
 (defn triangular-matrix
   ([coll upper?] (triangular-matrix nil coll upper?))
