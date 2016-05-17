@@ -581,32 +581,43 @@
            (number? f-or-val) (diagonal-matrix impl (repeat size f-or-val))))))
 
 (defn triangular-matrix
+  "Returns a triangular matrix created from `coll`. `coll` is a 1D vector where each element will be used to create the
+  triangular matrix. `upper?` is set to true to create an upper triangular matrix, false for a lower triangular matrix.
+  `diagonal` is a 1D vector of elements on the diagonal. `off-diagonal` is a 1D vector of upper or lower matrix elements."
   ([coll upper?] (triangular-matrix nil coll upper?))
   ([implementation coll upper?]
-   (let [size (size-symmetric (count coll)),
-         val-fn (fn [r c] (mget coll (+ c (* r size)
-                                        (* -0.5 (+ r (m/sq r)))))),
-         f (fn [r c] (if (> r c) 0.0 (val-fn r c))),
+   (let [size (size-symmetric (count coll))
+         val-fn (fn [r c]
+                  (mget coll (+ c (* r size)
+                                (* -0.5 (+ r (m/sq r))))))
+         f (fn [r c]
+             (if (> r c) 0.0 (val-fn r c)))
          f (if upper? f (fn [r c] (f c r)))]
      (compute-matrix implementation [size size] f)))
   ([implementation diagonal off-diagonal upper?]
-   (let [size (size-symmetric-with-unit-diagonal (count off-diagonal)),
+   (let [size (size-symmetric-with-unit-diagonal (count off-diagonal))
          val-fn (fn [r c]
                   (mget off-diagonal
                         (+ c (* r size)
-                           (* -0.5 (+ (inc r) (m/sq (inc r))))))),
-         f (fn [r c] (cond (= r c) (nth diagonal r),
-                           (> r c) 0.0,
-                           :else (val-fn r c))),
+                           (* -0.5 (+ (inc r) (m/sq (inc r)))))))
+         f (fn [r c] (cond (= r c) (nth diagonal r)
+                           (> r c) 0.0
+                           :else (val-fn r c)))
          f (if upper? f (fn [r c] (f c r)))]
      (compute-matrix implementation [size size] f))))
 
 (defn symmetric-matrix
+  "Returns a symmetric matrix created from `coll`. `coll` has the elements on the diagonal and the elements from the
+  upper or lower half of the matrix. `byrow?` is true if `coll` is row major order, false if `coll` is col major order.
+  You can pass `f` and `size` which will create a symmetric matrix of size `size` by calling `f` with r,c which should
+  return the element at r,c. `f` is only called for each element on the diagonal and either the upper or lower half of
+  the matrix, depending on `byrow?`."
   ([coll] (symmetric-matrix nil coll))
   ([implementation coll]
-   (let [size (size-symmetric (count coll)),
-         val-fn (fn [r c] (mget coll (+ c (* r size)
-                                        (* -0.5 (+ r (m/sq r)))))),
+   (let [size (size-symmetric (count coll))
+         val-fn (fn [r c]
+                  (mget coll (+ c (* r size)
+                                (* -0.5 (+ r (m/sq r))))))
          f (fn [r c] (if (<= r c) (val-fn r c) (val-fn c r)))]
      (compute-matrix implementation [size size] f)))
   ([f ^long size byrow?] (symmetric-matrix nil f size byrow?))
@@ -617,83 +628,95 @@
                  (f r c) (f c r))))))
 
 (defn symmetric-with-unit-diagonal-matrix
+  "Returns a symmetric matrix created from `coll`. `coll` has the elements from the upper or lower half of the matrix.
+  `byrow?` is true if `coll` is row major order, false if `coll` is col major order. You can pass `f` and `size` which
+  will create a symmetric matrix of size `size` by calling `f` with r,c which should return the element at r,c. `f` is
+  only called for each element on either the upper or lower half of the matrix, depending on `byrow?`."
   ([coll] (symmetric-with-unit-diagonal-matrix nil coll))
   ([implementation coll]
-   (let [size (size-symmetric-with-unit-diagonal (count coll)),
+   (let [size (size-symmetric-with-unit-diagonal (count coll))
          val-fn (fn [r c]
                   (mget coll (+ c (* r size)
-                                (* -0.5 (+ (inc r) (m/sq (inc r))))))),
-         f (fn [r c] (cond (= r c) 1.0,
-                           (< r c) (val-fn r c),
+                                (* -0.5 (+ (inc r) (m/sq (inc r)))))))
+         f (fn [r c] (cond (= r c) 1.0
+                           (< r c) (val-fn r c)
                            :else (val-fn c r)))]
      (compute-matrix implementation [size size] f)))
   ([implementation ^long size f byrow?]
    (compute-matrix implementation [size size]
-                   (fn [r c] (cond (= r c) 1.0,
+                   (fn [r c] (cond (= r c) 1.0
                                    (or (and (not byrow?) (> r c))
-                                       (and byrow? (< r c))) (f r c),
+                                       (and byrow? (< r c))) (f r c)
                                    :else (f c r))))))
 
-(defn symmetric-by-averaging-matrix [m]
+(defn symmetric-by-averaging-matrix
+  "Returns a symmetric matrix where each element above or below the diagonal is equal to the average of the matrix `m`
+  at r,c and c,r."
+  [m]
   {:pre [(have? square? m)]}
   (symmetric-matrix
     m (let [size (row-count m)]
-        (for [r (range size), c (range r size)]
-          (if (== c r) (mget m r c) (* 0.5 (+ (mget m r c) (mget m c r))))))))
+        (for [r (range size)
+              c (range r size)]
+          (if (== c r)
+            (mget m r c)
+            (* 0.5 (+ (mget m r c) (mget m c r))))))))
 
 (defn toeplitz-matrix
-  "Also called a 'diagonal-constant' matrix."
+  "Returns a toeplitz matrix (also called a diagonal-constant matrix) computed by `first-row` and `first-column` where
+  `first-row` is the first row in the matrix and `first-column` is the first column in the matrix."
   ([first-row first-column] (toeplitz-matrix nil first-row first-column))
   ([implementation first-row first-column]
    {:pre [(have? (fn [[first-row first-column]]
                    (and (= (first first-row) (first first-column))
                         (= (count first-row) (count first-column)))) [first-row first-column])]}
-   (let [rows (count first-row), columns (count first-column)]
-     (compute-matrix implementation [columns rows]
-                     (fn [r c] (if (<= r c) (mget first-row (- c r))
-                                            (mget first-column (- r c))))))))
+   (let [size (count first-row)]
+     (square-matrix implementation size
+                    (fn [r c]
+                      (if (<= r c)
+                        (mget first-row (- c r))
+                        (mget first-column (- r c))))))))
+
+(def ^{:doc "See [[toeplitz-matrix]]"} diagonal-constant toeplitz-matrix)
 
 (defn sparse-matrix
-  "A sparse representation is a seq of seqs, each inner seq having the 
-   form `[row column value]`.  
-Later values will override prior overlapping values.
-m-or-shape can be a starting matrix or a tuple with the number of rows and
-   cols.
-Returns a matrix."
+  "Returns a matrix created from a sparse representation. A sparse representation is a seq of seqs, each inner seq
+  having the form `[row column value]`. Later values will override prior overlapping values.
+  `m-or-shape` can be a starting matrix or a tuple with the number of rows and cols."
   ([sparse m-or-shape] (sparse-matrix nil sparse m-or-shape))
   ([implementation sparse m-or-shape]
+   {:pre [(have? (or (matrix? m-or-shape) (and (sequential? m-or-shape) (= (count m-or-shape) 2))))]}
    (if (and (not (matrix? m-or-shape)) (= implementation :clatrix))
      (clx/from-sparse (first m-or-shape) (second m-or-shape) sparse)
      (let [[[rows columns] m] (if (matrix? m-or-shape)
                                 [[(row-count m-or-shape) (column-count m-or-shape)]
                                  m-or-shape]
-                                [m-or-shape (new-matrix implementation (first m-or-shape)
-                                                        (second m-or-shape))])]
-       (reduce #(let [[r c value] %2]
-                 (when (or (>= r rows) (>= c columns) (neg? r) (neg? c)) ; TODO - use assert
-                   (throw (ex-info "Sparse out of bounds." {:fn (var sparse-matrix)})))
-                 (mset % r c value))
+                                [m-or-shape
+                                 (new-matrix implementation
+                                             (first m-or-shape)
+                                             (second m-or-shape))])]
+       (reduce (fn [m [r c value]]
+                 (let [r (have [:or (< r rows) (m/non-? r)] r :data "Sparse row idx out of bounds")
+                       c (have [:or (< c columns) (m/non-? c)] c :data "Sparse col idx out of bounds")]
+                   (mset m r c value)))
                m sparse)))))
 
 (defn sparse-symmetric-matrix
-  "A sparse representation is a seq of seqs, each inner seq having the 
-   form `[row column value]`.  
-Later values will override prior overlapping values.
-Each off-diagonal inner sparse form is applied twice, with the row and column
-   switched.
-m-or-size can be a matrix or the size of the matrix.
-Returns a symmetric matrix unless m is not a symmetric matrix."
+  "Returns a symmetric matrix (unless `m` is not a symmetric matrix) created from a sparse representation. A sparse
+  representation is a seq of seqs, each inner seq having the form `[row column value]`. Later values will override
+  prior overlapping values.
+  `m-or-shape` can be a starting matrix or a tuple with the number of rows and cols.
+  Each off-diagonal inner sparse form is applied twice, with the row and column switched."
   ([sparse m-or-size] (sparse-symmetric-matrix nil sparse m-or-size))
   ([implementation sparse m-or-size]
    (let [[size m] (if (matrix? m-or-size)
                     [(row-count m-or-size) m-or-size]
                     [m-or-size (new-matrix implementation m-or-size
                                            m-or-size)])]
-     (reduce #(let [[r c value] %2]
-               (when (or (>= r size) (>= c size) (neg? r) (neg? c)) ; TODO - use assert
-                 (throw (ex-info "Sparse out of bounds."
-                                 {:fn (var sparse-symmetric-matrix)})))
-               (mset (mset % r c value) c r value))
+     (reduce (fn [m [r c value]]
+               (let [r (have [:or (< r size) (m/non-? r)] r :data "Sparse row idx out of bounds")
+                     c (have [:or (< c size) (m/non-? c)] c :data "Sparse col idx out of bounds")]
+                 (mset (mset m r c value) c r value)))
              m sparse))))
 
 (comment "MATRIX GET")
