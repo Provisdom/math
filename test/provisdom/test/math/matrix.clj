@@ -195,9 +195,6 @@
              => (apache-commons [3.0 2.0])))
 
 (facts "matrix constructors"
-       (fact "matrix"
-             (matrix :apache-commons #(+ % %2) [2 3]) => (apache-commons 
-                                                           [[0 1 2][1 2 3]]))
        (fact "constant"
              (constant-matrix [2 2] 1.0) => [[1.0 1.0][1.0 1.0]]
              (constant-matrix :clatrix [2 2] 1.0) 
