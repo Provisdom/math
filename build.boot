@@ -14,12 +14,12 @@
                           [criterium "0.4.4" :scope "test"]
                           ;;project deps
                           [provisdom/utility-belt "0.1.0"]
-                          [com.taoensso/truss "1.0.0"]
+                          [com.taoensso/truss "1.2.0"]
                           [org.clojure/math.numeric-tower "0.0.4"]
-                          [org.apache.commons/commons-math3 "3.6"]
-                          [apache-commons-matrix "0.4.0"]
+                          [org.apache.commons/commons-math3 "3.6.1"]
+                          [apache-commons-matrix "0.4.1"]
                           [clatrix "0.5.0"]
-                          [net.mikera/core.matrix "0.50.0"]
+                          [net.mikera/core.matrix "0.52.0"]
                           [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]])
 
 (require
