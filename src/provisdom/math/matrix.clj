@@ -7,7 +7,7 @@
             [clojure.core.matrix :as mxc]
             [clojure.core.matrix.protocols :as mp]
             [apache-commons-matrix.core :as acm]
-            [taoensso.truss :as truss :refer (have have! have?)]
+            [taoensso.truss :refer [have have?]]
     ;[kublai.core :as ku]
             )
   (:import [clatrix.core Matrix]
@@ -55,25 +55,12 @@
 (declare eigenvalues column-matrix transpose rrqr-decomposition diagonal
          get-slices-as-matrix esome)
 
-(comment "APACHE MATRIX")
-(extend-protocol mp/PMatrixOps
-  RealMatrix
-  (trace [m] (.getTrace m))
-  (determinant [m] (.getDeterminant (LUDecomposition. m)))
-  (inverse [m] (.getInverse (.getSolver (LUDecomposition. m)))))
-
-(extend-protocol mp/PConversion
-  RealMatrix
-  (convert-to-nested-vectors [m] (vec (map vec (.getData m)))))
-
-(extend-protocol mp/PDoubleArrayOutput
-  RealMatrix
-  (to-double-array [m] (.getData m))
-  (as-double-array [m] (.getData m)))
-
+;===========================================
+; APACHE MATRIX
+;===========================================
 (extend-protocol mp/PComputeMatrix
   RealMatrix
-  (compute-matrix [m shape f]
+  (compute-matrix [_ shape f]
     (Array2DRowRealMatrix.
       ^"[[D" (ar/jagged-2D-array :d (co/create-dbl-layered
                                       (first shape) (second shape) f)))))
@@ -489,7 +476,7 @@
   ([implementation shape ^double value]
    (if (clatrix-impl? implementation)
      (let [[r c] shape] (clx/constant r c value))
-     (compute-matrix implementation shape (fn [r c] value)))))
+     (compute-matrix implementation shape (fn [_ _] value)))))
 
 (defn sequence-to-matrix
   "Returns a matrix that is created from `coll`. `coll` is a 1D vector which will be converted into the matrix determined
@@ -696,8 +683,8 @@
                                              (first m-or-shape)
                                              (second m-or-shape))])]
        (reduce (fn [m [r c value]]
-                 (let [r (have [:or (< r rows) (m/non-? r)] r :data "Sparse row idx out of bounds")
-                       c (have [:or (< c columns) (m/non-? c)] c :data "Sparse col idx out of bounds")]
+                 (let [r (have [:and #(< % rows) m/non-?] r :data "Sparse row idx out of bounds")
+                       c (have [:and #(< % columns) m/non-?] c :data "Sparse col idx out of bounds")]
                    (mset m r c value)))
                m sparse)))))
 
@@ -714,25 +701,32 @@
                     [m-or-size (new-matrix implementation m-or-size
                                            m-or-size)])]
      (reduce (fn [m [r c value]]
-               (let [r (have [:or (< r size) (m/non-? r)] r :data "Sparse row idx out of bounds")
-                     c (have [:or (< c size) (m/non-? c)] c :data "Sparse col idx out of bounds")]
+               (let [r (have [:and #(< % size) m/non-?] r :data "Sparse row idx out of bounds")
+                     c (have [:and #(< % size) m/non-?] c :data "Sparse col idx out of bounds")]
                  (mset (mset m r c value) c r value)))
              m sparse))))
 
 (comment "MATRIX GET")
 ;;(mxc/rows m)) ;mxc/rows outputs 'slice-wrappers' instead of rows
-(defn rows [m]
+(defn rows
+  "Returns a vector of the rows of the matrix, essentially returns the "
+  [m]
   {:pre [(have? matrix? m)]}
   (to-nested-vectors m))
 
 ;;mxc/columns returns lazy instead of nested vectors
-(defn columns [m]
+(defn columns
+  [m]
   {:pre [(have? matrix? m)]}
-  (vec (map #(into [] %) (mxc/columns m))))
+  (mxc/columns m))
 
-(defn get-row-as-matrix [m ^long i] (row-matrix m (get-row m i)))
+(defn get-row-as-matrix
+  [m ^long i]
+  (row-matrix m (get-row m i)))
 
-(defn get-column-as-matrix [m ^long i] (column-matrix m (get-column m i)))
+(defn get-column-as-matrix
+  [m ^long i]
+  (column-matrix m (get-column m i)))
 
 (defn diagonal
   "Returns the specified diagonal of a 2D matrix as a vector.
@@ -1243,13 +1237,13 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] (rows m)))
 
 (defn filter-by-column
-  "Returns a matrix.  pred takes a column"
+  "Returns a matrix. pred takes a column"
   [m pred]
   {:pre [(have? matrix? m)]}
   (matrix m (transpose (filter pred (columns m)))))
 
 (defn sparse-filter-by-column
-  "Returns a vector of [column column-value].  pred takes a column"
+  "Returns a vector of [column column-value]. pred takes a column"
   [m pred]
   {:pre [(have? matrix? m)]}
   (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] (columns m)))
