@@ -234,9 +234,23 @@
   "Calculates the trace of a 2D numerical matrix (sum of elements on main diagonal). The matrix need not be square."
   [m] (mxc/trace m))
 
+(defn columns
+  "Gets the columns of a matrix, as a sequence of 1D vectors.
+
+   If the array has more than 2 dimensions, will return the columns from all slices in order."
+  [m]
+  (mxc/columns m))
+
 ;===========================================
 ; MATRIX SPECIAL TYPE HELP
 ;===========================================
+;; TODO: Add tests for mempty?
+(defn mempty?
+  "Returns true if the matrix is an empty matrix."
+  [m]
+  {:pre [(have? matrix? m)]}
+  (-> m (mget 0) empty?))
+
 (defn diagonal?
   "Returns true if the matrix is a diagonal matrix (a matrix (usually a square matrix) in which the entries outside the
   main diagonal are all zero)."
@@ -706,7 +720,9 @@
                  (mset (mset m r c value) c r value)))
              m sparse))))
 
-(comment "MATRIX GET")
+;===========================================
+; MATRIX GET
+;===========================================
 ;;(mxc/rows m)) ;mxc/rows outputs 'slice-wrappers' instead of rows
 (defn rows
   "Returns a vector of the rows of the matrix, essentially returns the "
@@ -714,71 +730,72 @@
   {:pre [(have? matrix? m)]}
   (to-nested-vectors m))
 
-;;mxc/columns returns lazy instead of nested vectors
 (defn columns
+  "Returns a vector of vectors containing the columns in matrix `m`."
   [m]
   {:pre [(have? matrix? m)]}
   (mxc/columns m))
 
 (defn get-row-as-matrix
+  "Returns row `i` in matrix `m` as a row matrix."
   [m ^long i]
   (row-matrix m (get-row m i)))
 
 (defn get-column-as-matrix
+  "Returns column `i` in matrix `m` as a column matrix."
   [m ^long i]
   (column-matrix m (get-column m i)))
 
 (defn diagonal
   "Returns the specified diagonal of a 2D matrix as a vector.
-   If k>0, returns a diagonal above the main diagonal.
-   If k<0, returns a diagonal below the main diagonal.
-   works on both square and rectangular matrices."
+   If `k`>0, returns a diagonal above the main diagonal.
+   If `k`<0, returns a diagonal below the main diagonal.
+   works on both square and rectangular matrices.
+   Returns `nil` if value of `k` is out of range (outside matrix)"
   ([m]
    {:pre [(have? matrix? m)]}
-   (vec (clx/diag (clatrix m))))                            ;(mxc/diagonal m))
+    ;; It is faster to get the diagonal using mget, however, it makes more sense to call the protocol for the
+    ;; matrix to get the diagonal because the matrix impl may have special considerations.
+   (mxc/main-diagonal m))
   ([m k]
    {:pre [(have? matrix? m)]}
-   (let [r (if (neg? k) (- k) 0),
-         c (if (pos? k) k 0),
-         nc (- (column-count m) c),
-         nr (- (row-count m) r),
+   (let [r (if (neg? k) (- k) 0)
+         c (if (pos? k) k 0)
+         nc (- (column-count m) c)
+         nr (- (row-count m) r)
          n (min nc nr)]
-     (if (pos? n)
-       (vec (for [i (range n)] (mget m i i)))
-       nil))))                                              ;(mxc/diagonal m k)))
+     (when (pos? n)
+       (vec (for [i (range n)] (mget m (+ i r) (+ i c))))))))
 
 (defn get-slices-as-matrix
-  "Options:
-    :rows returns all rows by default, can pass a row index or sequence of 
-          row indices
-    :columns returns all columns by default, can pass a column index or 
-             sequence of column indices
-    :except-rows can pass a row index or sequence of row indices to exclude
-    :except-columns can pass a column index or sequence of column indices 
-                    to exclude"
+  "Performs a slice on the matrix given by the options.
+  Options:
+    `:rows` returns all rows by default, can pass a row index or sequence of row indices
+    `:columns` returns all columns by default, can pass a column index or sequence of column indices
+    `:except-rows` can pass a row index or sequence of row indices to exclude
+    `:except-columns` can pass a column index or sequence of column indices to exclude"
   [m & {:keys [rows columns except-rows except-columns]}]
-  (let [calc-fn (fn [i ei n]
-                  (cond (and (not i) (not ei)) true
-                        (not ei) i
-                        (number? i) (if (number? ei)
-                                      (if (= ei i) [] i)
-                                      (if (contains? (vec ei) i) [] i))
-                        :else (let [i (if i i (range n))]
-                                (if (number? ei)
-                                  (remove #(= ei %) i)
+  (let [calc-fn (fn [i except-i n]
+                  (cond (and (not i) (not except-i)) true
+                        (not except-i) i
+                        (number? i) (if (number? except-i)
+                                      (if (= except-i i) [] i)
+                                      (if (contains? (set except-i) i) [] i))
+                        :else (let [i (if i i (range n))]   ; i is a seq of idxs
+                                (if (number? except-i)
+                                  (remove #(= except-i %) i)
                                   (reduce
                                     (fn [tot e]
-                                      (if (first (filter (fn [ee] (= ee e)) ei))
+                                      (if (first (filter #(= % e) except-i))
                                         tot
                                         (conj tot e)))
                                     [] i)))))
-        rows (calc-fn rows except-rows (row-count m)),
+        rows (calc-fn rows except-rows (row-count m))
         columns (calc-fn columns except-columns (column-count m))]
     (cond
-      (or (and (coll? rows) (nil? (first rows)))
-          (and (coll? columns) (nil? (first columns)))) (matrix m [[]])
-      (and (number? rows) (number? columns)) (matrix m [[(mget m rows
-                                                               columns)]])
+      (or (and (coll? rows) (empty? rows))
+          (and (coll? columns) (empty? columns))) (matrix m [[]])
+      (and (number? rows) (number? columns)) (matrix m [[(mget m rows columns)]])
       (and (number? rows) (coll? columns)) (row-matrix
                                              m (let [r (get-row m rows)]
                                                  (map #(mget r %) columns)))
@@ -790,8 +807,7 @@
                                            m (map
                                                (fn [e]
                                                  (nth (co/flip-dbl-layered
-                                                        (map #(get-column m %)
-                                                             columns))
+                                                        (map #(get-column m %) columns))
                                                       e))
                                                rows))
       (and (coll? rows) (true? columns)) (matrix m (map #(get-row m %) rows))
@@ -802,26 +818,29 @@
       (and (true? rows) (true? columns)) m)))
 
 (defn matrix-partition
-  "Returns a map containing the four sub-matrices labeled:
-      :top-left
-      :bottom-left 
-      :top-right
-      :bottom-right"
+  "Returns a map containing the four sub-matrices labeled `:top-left`, `:bottom-left`, `:top-right`, and
+  `:bottom-right`. `first-bottom-row` is the bottom of where the slice will occur. `first-right-column` is
+  the right edge of where the slice will occur."
   [m ^long first-bottom-row ^long first-right-column]
   {:pre [(have? m/non-? first-bottom-row first-right-column)
          (have? (fn [[m first-bottom-row]] (<= first-bottom-row (row-count m))) [m first-bottom-row])
          (have? (fn [[m first-right-column]] (<= first-right-column (column-count m))) [m first-right-column])]}
-  {:top-left     (get-slices-as-matrix m :rows (range first-bottom-row)
+  {:top-left     (get-slices-as-matrix m
+                                       :rows (range first-bottom-row)
                                        :columns (range first-right-column))
-   :bottom-left  (get-slices-as-matrix m :except-rows (range first-bottom-row)
+   :bottom-left  (get-slices-as-matrix m
+                                       :except-rows (range first-bottom-row)
                                        :columns (range first-right-column))
-   :top-right    (get-slices-as-matrix m :rows (range first-bottom-row)
+   :top-right    (get-slices-as-matrix m
+                                       :rows (range first-bottom-row)
                                        :except-columns (range first-right-column))
-   :bottom-right (get-slices-as-matrix
-                   m :except-rows (range first-bottom-row)
-                   :except-columns (range first-right-column))})
+   :bottom-right (get-slices-as-matrix m
+                                       :except-rows (range first-bottom-row)
+                                       :except-columns (range first-right-column))})
 
-(comment "MATRIX MANIPULATION")
+;===========================================
+; MATRIX MANIPULATION
+;===========================================
 (defn emap
   "Can also map onto a number, multiple numbers, or a single fn"
   ([f m]
