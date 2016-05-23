@@ -46,12 +46,17 @@ Good for repeating a run."
   "Returns a value drawn from a standard normal distribution"
   ^double [^double rnd] (mf/inv-cdf-standard-normal rnd))
 
+(defn seed$
+  "Returns a pseudo-random number"
+  []
+  (rnd-long (ap/next-double! (ap/mersenne-twister$))))
+
 (defn random$ 
   "Returns [rnd-lazy seed], where seed is a pseudo-random number.  
 The seed is generated from a random without a seed, and can be stored for 
    repeatability."
   [] 
-  (let [seed (rnd-long (ap/next-double! (ap/mersenne-twister$)))] 
+  (let [seed (seed$)]
     [(random seed) seed]))
 
 (defn split-random-lazy
