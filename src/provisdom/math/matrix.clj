@@ -756,7 +756,7 @@
    {:pre [(have? matrix? m)]}
     ;; It is faster to get the diagonal using mget, however, it makes more sense to call the protocol for the
     ;; matrix to get the diagonal because the matrix impl may have special considerations.
-   (mxc/main-diagonal m))
+   (to-nested-vectors (mxc/main-diagonal m)))
   ([m k]
    {:pre [(have? matrix? m)]}
    (let [r (if (neg? k) (- k) 0)
@@ -842,18 +842,18 @@
 ; MATRIX MANIPULATION
 ;===========================================
 (defn emap
-  "Can also map onto a number, multiple numbers, or a single fn"
+  "Element-wise map over all elements of one or more arrays. Can also map
+  onto a number, multiple numbers, or a single fn. `f` is called with every
+  element in the matrix."
   ([f m]
-   (cond (clatrix? m) (coerce :clatrix (mxc/emap f (to-nested-vectors m))),
-         (fn? m) (f m), :else (mxc/emap f m)))
+   (if (clatrix? m)
+     (coerce :clatrix (mxc/emap f (to-nested-vectors m)))
+     (mxc/emap f m)))
   ([f m a]
    {:pre [(have? (fn [[m a]] (= (row-count m) (row-count a))) [m a])
           (have? (fn [[m a]] (or (and (vec? m) (vec? a))
                                  (= (column-count m) (column-count a)))) [m a])]}
-   (if (clatrix? m)
-     (coerce :clatrix (mxc/emap f (to-nested-vectors m)
-                                (to-nested-vectors a)))
-     (mxc/emap f m a)))
+   (mxc/emap f m a))
   ([f m a & more]
    {:pre [(have? (fn [[m a more]]
                    (let [v (apply vector m a more)]
@@ -866,27 +866,29 @@
                                              (apply vector m a more))))
      (apply mxc/emap f m a more))))
 
-;;clatrix row/column matrices don't keep the type
 (defn transpose
-  "Transposes a matrix, returning a new matrix. 
-For 2D matrices, rows and columns are swapped.
-More generally, the dimension indices are reversed for any shape of array. 
-Note that 1D vectors and scalars will be returned unchanged."
+  "Transposes a matrix, returning a new matrix. For 2D matrices, rows and
+  columns are swapped. More generally, the dimension indices are reversed
+  for any shape of array. Note that 1D vectors and scalars will be returned
+  unchanged."
   ;;If ordering is provided, will re-order dimensions according to the provided
   ;;   order. -- ORDERING not yet implemented in mxc
-  ([m] (coerce m (mxc/transpose m))))
+  ([m] (mxc/transpose m)))
 ;([m ordering] (coerce m (mxc/transpose m ordering))))
 
-(defn conj-rows [& ms]
+(defn conj-rows
+  "Appends rows from all the matrices after the first to the first matrix."
+  [& ms]
   (let [cl (map #(if (vec? %) (row-matrix :clatrix %) (clatrix %)) ms)
-        cc (map column-count cl)
-        mc (apply max cc)]
-    (when-not (every? #(= mc %) cc)                         ; TODO - use truss or assert
+        col-count (map column-count cl)
+        max-cols (apply max col-count)]
+    (when-not (every? #(= max-cols %) col-count)            ; TODO - use truss or assert
       (throw (ex-info "Column counts must be the same." {:fn (var conj-rows)})))
     (coerce (first ms) (apply clx/vstack cl))))
 
-(defn conj-columns [& ms]
-  (let [cl (map #(if (vec? %) (column-matrix :clatrix %) (clatrix %)) ms),
+(defn conj-columns
+  [& ms]
+  (let [cl (map #(if (vec? %) (column-matrix :clatrix %) (clatrix %)) ms)
         rc (map row-count cl), mc (apply max rc)]
     (when-not (every? #(= mc %) rc)                         ; TODO - use truss or assert
       (throw (ex-info "row counts must be the same" {:fn (var conj-columns)})))
