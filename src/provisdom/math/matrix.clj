@@ -189,6 +189,12 @@
   ([a b] (mxc/mul a b))
   ([a b & more] (apply mxc/mul a b more)))
 
+(defn abs
+  "Computes the abs function on all elements of an array, using double precision
+  values. Returns a new array."
+  [m]
+  (mp/abs m))
+
 (defn vec?
   "Returns true if the parameter is a vector (1-dimensional array)"
   [m] (mxc/vec? m))
