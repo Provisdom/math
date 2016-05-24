@@ -39,7 +39,8 @@
                                                   LinearObjectiveFunction LinearConstraintSet LinearConstraint
                                                   Relationship NonNegativeConstraint]
            [org.apache.commons.math3.optim.nonlinear.scalar GoalType
-                                                            ObjectiveFunction MultivariateOptimizer ObjectiveFunctionGradient]
+                                                            ObjectiveFunction
+                                                            MultivariateOptimizer ObjectiveFunctionGradient]
            [org.apache.commons.math3.optim.nonlinear.scalar.noderiv
             SimplexOptimizer MultiDirectionalSimplex NelderMeadSimplex
             PowellOptimizer BOBYQAOptimizer CMAESOptimizer CMAESOptimizer$Sigma

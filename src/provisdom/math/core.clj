@@ -281,8 +281,7 @@ Returns a long if possible, otherwise a double."
   (ceil (- x accu)))
 
 (defn roughly?
-  "Returns true if x1 and x2 are within accu of each other, or within double
-   accuracy."
+  "Returns true if x1 and x2 are within accu of each other, or within double accuracy."
   [^double x1 ^double x2 ^double accu]
   {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x1) (nan? x2)) false

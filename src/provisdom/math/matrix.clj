@@ -649,7 +649,7 @@ Returns a symmetric matrix unless m is not a symmetric matrix."
   "Returns the specified diagonal of a 2D matrix as a vector.
    If k>0, returns a diagonal above the main diagonal.
    If k<0, returns a diagonal below the main diagonal.
-   works on both square and rectangular matrices."
+   Works on both square and rectangular matrices."
   ([m]
    {:pre [(have? matrix? m)]}
    (vec (clx/diag (clatrix m))))                            ;(mxc/diagonal m))
