@@ -2,7 +2,8 @@
   (:require [midje.sweet :refer :all]
             [criterium.core :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.random :refer :all]))
+            [provisdom.math.random :refer :all]
+            [clojure.test :refer [deftest is]]))
 
 (facts "random"
        (fact "random draws"
