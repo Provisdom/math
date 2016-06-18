@@ -67,6 +67,18 @@
   "Returns true if x is a number that is positive."
   [x] (and (number? x) (clojure.core/pos? x)))
 
+(defn neg?
+  "Returns true if x is a number that is negative."
+  [x] (and (number? x) (clojure.core/neg? x)))
+
+(defn non-?
+  "Returns true if x is non-negative"
+  [x] (and (number? x) (>= x 0) (not (nan? x))))
+
+(defn non+?
+  "Returns true if x is non-positive"
+  [x] (and (number? x) (<= x 0) (not (nan? x))))
+
 (defn long?
   "Returns true if x is a long."
   [x] (and (number? x) (instance? Long x)))
@@ -75,9 +87,37 @@
   "Returns true if x is a long and is positive."
   [x] (and (pos? x) (long? x)))
 
+(defn long-?
+  "Returns true if x is a long and is negative."
+  [x] (and (neg? x) (long? x)))
+
 (defn long-non-?
   "Returns true if x is a long and is non-negative."
   [x] (and (non-? x) (long? x)))
+
+(defn long-non+?
+  "Returns true if x is a long and is non-positive."
+  [x] (and (non+? x) (long? x)))
+
+(defn int?
+  "Returns true is x is an integer that is within the int range"
+  [x] (and (integer? x) (int-range? x)))
+
+(defn int+?
+  "Returns true if x is an int and is positive."
+  [x] (and (int? x) (pos? x)))
+
+(defn int-?
+  "Returns true if x is an int and is negative."
+  [x] (and (int? x) (pos? x)))
+
+(defn int-non-?
+  "Returns true if x is an int and is non-negative."
+  [x] (and (int? x) (non-? x)))
+
+(defn int-non+?
+  "Returns true if x is an int and is non-positive."
+  [x] (and (int? x) (non-? x)))
 
 (defn long-able?
   "Returns true if x is a number that can be converted to a long"
@@ -103,10 +143,6 @@
   "Returns x as a long if possible.  Otherwise returns x."
   [x] (if (long-able? x) (long x) x))
 
-(defn int?
-  "Returns true is x is an integer that is within the int range"
-  [x] (and (integer? x) (int-range? x)))
-
 (defn inf+?
   "Returns true if x is inf+"
   [x] (and (number? x) (Double/isInfinite ^double x) (pos? x)))
@@ -126,14 +162,6 @@
 (defn one?
   "Returns true if x if equal to one"
   [x] (and (number? x) (== 1 x)))
-
-(defn non-?
-  "Returns true if x is non-negative"
-  [x] (and (number? x) (>= x 0) (not (nan? x))))
-
-(defn non+?
-  "Returns true if x is non-positive"
-  [x] (and (number? x) (<= x 0) (not (nan? x))))
 
 (defn prob?
   "Returns true if x is between 0 and 1, inclusive"
