@@ -1,8 +1,7 @@
 (ns provisdom.math.t-core
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.core :refer :all]
-            [provisdom.math.core :as m]))
+            [provisdom.math.core :refer :all]))
 
 (deftest pos?-test
   (is-not (pos? "A"))
@@ -43,7 +42,7 @@
   (is (long? 3))
   (is-not (long? 3.0))
   (is-not (long? "A"))
-  (is (long? 3.4E15))
+  (is-not (long? 3.4E15))
   (is-not (long? 3.3E30))
   (is-not (long? -3.3E30))
   (is-not (long? nan)))
@@ -54,7 +53,7 @@
   (is-not (long+? -3))
   (is-not (long+? 3.0))
   (is-not (long+? "A"))
-  (is (long+? 3.4E15))
+  (is-not (long+? 3.4E15))
   (is-not (long+? 3.3E30))
   (is-not (long+? -3.3E30))
   (is-not (long+? nan)))
@@ -65,7 +64,7 @@
   (is (long-? -3))
   (is-not (long-? 3.0))
   (is-not (long-? "A"))
-  (is (long-? -3.4E15))
+  (is-not (long-? -3.4E15))
   (is-not (long-? 3.3E30))
   (is-not (long-? -3.3E30))
   (is-not (long-? nan)))
@@ -74,10 +73,10 @@
   (is-not (long-non-? 3.3))
   (is (long-non-? 3))
   (is-not (long-non-? -3))
-  (is-not (long-non-? 0))
+  (is (long-non-? 0))
   (is-not (long-non-? 3.0))
   (is-not (long-non-? "A"))
-  (is (long-non-? 3.4E15))
+  (is-not (long-non-? 3.4E15))
   (is-not (long-non-? 3.3E30))
   (is-not (long-non-? -3.3E30))
   (is-not (long-non-? nan)))
@@ -86,10 +85,10 @@
   (is-not (long-non+? 3.3))
   (is-not (long-non+? 3))
   (is (long-non+? -3))
-  (is-not (long-non+? 0))
+  (is (long-non+? 0))
   (is-not (long-non+? 3.0))
   (is-not (long-non+? "A"))
-  (is (long-non+? 3.4E15))
+  (is-not (long-non+? 3.4E15))
   (is-not (long-non+? 3.3E30))
   (is-not (long-non+? -3.3E30))
   (is-not (long-non+? nan)))
@@ -99,7 +98,7 @@
   (is (int? 3))
   (is-not (int? 3.0))
   (is-not (int? "A"))
-  (is (int? 3.4E15))
+  (is-not (int? 3.4E15))
   (is-not (int? 3.3E30))
   (is-not (int? -3.3E30))
   (is-not (int? nan)))
@@ -110,7 +109,7 @@
   (is-not (int+? -3))
   (is-not (int+? 3.0))
   (is-not (int+? "A"))
-  (is (int+? 3.4E15))
+  (is-not (int+? 3.4E15))
   (is-not (int+? 3.3E30))
   (is-not (int+? -3.3E30))
   (is-not (int+? nan)))
@@ -121,7 +120,7 @@
   (is (int-? -3))
   (is-not (int-? 3.0))
   (is-not (int-? "A"))
-  (is (int-? -3.4E15))
+  (is-not (int-? -3.4E15))
   (is-not (int-? 3.3E30))
   (is-not (int-? -3.3E30))
   (is-not (int-? nan)))
@@ -130,10 +129,10 @@
   (is-not (int-non-? 3.3))
   (is (int-non-? 3))
   (is-not (int-non-? -3))
-  (is-not (int-non-? 0))
+  (is (int-non-? 0))
   (is-not (int-non-? 3.0))
   (is-not (int-non-? "A"))
-  (is (int-non-? 3.4E15))
+  (is-not (int-non-? 3.4E15))
   (is-not (int-non-? 3.3E30))
   (is-not (int-non-? -3.3E30))
   (is-not (int-non-? nan)))
@@ -142,10 +141,10 @@
   (is-not (int-non+? 3.3))
   (is-not (int-non+? 3))
   (is (int-non+? -3))
-  (is-not (int-non+? 0))
+  (is (int-non+? 0))
   (is-not (int-non+? 3.0))
   (is-not (int-non+? "A"))
-  (is (int-non+? 3.4E15))
+  (is-not (int-non+? 3.4E15))
   (is-not (int-non+? 3.3E30))
   (is-not (int-non+? -3.3E30))
   (is-not (int-non+? nan)))
@@ -283,35 +282,35 @@
   (is-not (open-corr? "A")))
 
 (deftest type-tests-test
-  pos?-test
-  neg?-test
-  non-?-test
-  non+?-test
-  long?-test
-  long+?-test
-  long-?-test
-  long-non-?-test
-  long-non+?-test
-  int?-test
-  int+?-test
-  int-?-test
-  int-non-?-test
-  int-non+?-test
-  long-able?-test
-  long-able+?-test
-  long-able-?-test
-  long-able-non+?-test
-  long-able-non-?-test
-  maybe-long-able-test
-  inf+?-test
-  inf-?-test
-  inf?-test
-  nan?-test
-  one?-test
-  prob?-test
-  open-prob?-test
-  corr?-test
-  open-corr?-test)
+  (pos?-test)
+  (neg?-test)
+  (non-?-test)
+  (non+?-test)
+  (long?-test)
+  (long+?-test)
+  (long-?-test)
+  (long-non-?-test)
+  (long-non+?-test)
+  (int?-test)
+  (int+?-test)
+  (int-?-test)
+  (int-non-?-test)
+  (int-non+?-test)
+  (long-able?-test)
+  (long-able+?-test)
+  (long-able-?-test)
+  (long-able-non+?-test)
+  (long-able-non-?-test)
+  (maybe-long-able-test)
+  (inf+?-test)
+  (inf-?-test)
+  (inf?-test)
+  (nan?-test)
+  (one?-test)
+  (prob?-test)
+  (open-prob?-test)
+  (corr?-test)
+  (open-corr?-test))
 
 (deftest one--test
   (is= -2 (one- 3))

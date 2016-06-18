@@ -109,7 +109,7 @@
 
 (defn int-?
   "Returns true if x is an int and is negative."
-  [x] (and (int? x) (pos? x)))
+  [x] (and (int? x) (neg? x)))
 
 (defn int-non-?
   "Returns true if x is an int and is non-negative."
@@ -117,7 +117,7 @@
 
 (defn int-non+?
   "Returns true if x is an int and is non-positive."
-  [x] (and (int? x) (non-? x)))
+  [x] (and (int? x) (non+? x)))
 
 (defn long-able?
   "Returns true if x is a number that can be converted to a long"
