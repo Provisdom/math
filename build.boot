@@ -1,7 +1,7 @@
 (def project 'provisdom/math)
 (def version "0.2.0-SNAPSHOT")
 
-(set-env! :resource-paths #{"resources" "src" "scss"}
+(set-env! :resource-paths #{"resources" "src"}
           :source-paths #{"test"}
           :dependencies '[[org.clojure/clojure "1.9.0-alpha7"]
                           [adzerk/boot-test "1.1.1" :scope "test"]

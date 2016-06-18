@@ -4,22 +4,6 @@
             [provisdom.math.core :refer :all]
             [provisdom.math.core :as m]))
 
-(defn pos?
-  "Returns true if x is a number that is positive."
-  [x] (and (number? x) (clojure.core/pos? x)))
-
-(defn long?
-  "Returns true if x is a long."
-  [x] (and (number? x) (instance? Long x)))
-
-(defn long+?
-  "Returns true if x is a long and is positive."
-  [x] (and (pos? x) (long? x)))
-
-(defn long-non-?
-  "Returns true if x is a long and is non-negative."
-  [x] (and (non-? x) (long? x)))
-
 (deftest pos?-test
   (is-not (pos? "A"))
   (is (pos? 3.3E30))
