@@ -1,4 +1,5 @@
 (ns provisdom.math.t-core
+  (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
             [provisdom.math.core :refer :all]))

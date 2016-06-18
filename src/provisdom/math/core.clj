@@ -1,4 +1,5 @@
 (ns provisdom.math.core
+  (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [provisdom.utility-belt.core :as co]
             [taoensso.truss :as truss :refer (have have! have?)]))
 
