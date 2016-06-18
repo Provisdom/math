@@ -4,6 +4,63 @@
             [provisdom.math.core :refer :all]
             [provisdom.math.core :as m]))
 
+(defn pos?
+  "Returns true if x is a number that is positive."
+  [x] (and (number? x) (clojure.core/pos? x)))
+
+(defn long?
+  "Returns true if x is a long."
+  [x] (and (number? x) (instance? Long x)))
+
+(defn long+?
+  "Returns true if x is a long and is positive."
+  [x] (and (pos? x) (long? x)))
+
+(defn long-non-?
+  "Returns true if x is a long and is non-negative."
+  [x] (and (non-? x) (long? x)))
+
+(deftest pos?-test
+  (is-not (pos? "A"))
+  (is (pos? 3.3E30))
+  (is-not (pos? -3.3E30))
+  (is (pos? inf+))
+  (is-not (pos? inf-))
+  (is-not (pos? nan)))
+
+(deftest long?-test
+  (is-not (long? 3.3))
+  (is (long? 3))
+  (is-not (long? 3.0))
+  (is-not (long? "A"))
+  (is (long? 3.4E15))
+  (is-not (long? 3.3E30))
+  (is-not (long? -3.3E30))
+  (is-not (long? nan)))
+
+(deftest long+?-test
+  (is-not (long+? 3.3))
+  (is (long+? 3))
+  (is-not (long? -3))
+  (is-not (long+? 3.0))
+  (is-not (long+? "A"))
+  (is (long+? 3.4E15))
+  (is-not (long+? 3.3E30))
+  (is-not (long+? -3.3E30))
+  (is-not (long+? nan)))
+
+(deftest long-non-?-test
+  (is-not (long-non-? 3.3))
+  (is (long-non-? 3))
+  (is-not (long-non-? -3))
+  (is-not (long-non-? 0))
+  (is-not (long-non-? 3.0))
+  (is-not (long-non-? "A"))
+  (is (long-non-? 3.4E15))
+  (is-not (long-non-? 3.3E30))
+  (is-not (long-non-? -3.3E30))
+  (is-not (long-non-? nan)))
+
 (deftest long-able?-test
   (is-not (long-able? 3.3))
   (is (long-able? 3))
@@ -166,6 +223,10 @@
   (is-not (open-corr? "A")))
 
 (deftest type-tests-test
+  pos?-test
+  long?-test
+  long+?-test
+  long-non-?-test
   long-able?-test
   long-able+?-test
   long-able-?-test
@@ -185,7 +246,7 @@
   corr?-test
   open-corr?-test)
 
-(deftest rev-1-x-test
+(deftest one--test
   (is= -2 (one- 3))
   (is= 4 (one- -3))
   (is (nan? (one- nan)))
@@ -269,7 +330,7 @@
   (is (thrown? Exception (cbrt nil))))
 
 (deftest basic-math-test
-  rev-1-x-test
+  one--test
   sq-test
   cube-test
   sgn-test

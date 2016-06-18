@@ -3,7 +3,7 @@
 
 (set-env! :resource-paths #{"resources" "src" "scss"}
           :source-paths #{"test"}
-          :dependencies '[[org.clojure/clojure "1.8.0"]
+          :dependencies '[[org.clojure/clojure "1.9.0-alpha7"]
                           [adzerk/boot-test "1.1.1" :scope "test"]
                           [org.clojure/tools.nrepl "0.2.12" :scope "test"]
                           [provisdom/boot-tasks "0.6.0" :scope "test"]

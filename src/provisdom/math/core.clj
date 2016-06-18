@@ -63,6 +63,22 @@
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
 
+(defn pos?
+  "Returns true if x is a number that is positive."
+  [x] (and (number? x) (clojure.core/pos? x)))
+
+(defn long?
+  "Returns true if x is a long."
+  [x] (and (number? x) (instance? Long x)))
+
+(defn long+?
+  "Returns true if x is a long and is positive."
+  [x] (and (pos? x) (long? x)))
+
+(defn long-non-?
+  "Returns true if x is a long and is non-negative."
+  [x] (and (non-? x) (long? x)))
+
 (defn long-able?
   "Returns true if x is a number that can be converted to a long"
   [x] (and (number? x) (roughly-round? x 0.0) (long-range? x)))
