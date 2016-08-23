@@ -384,7 +384,7 @@
                                    #(/ % (m/one- (m/sq %))), [-1 1]]
     (m/inf+? b) [#(/ (m/sq %)), #(+ a (/ (m/one- %) %)), [0 1]]
     (m/inf-? a) [#(/ (m/sq %)), #(- b (/ (m/one- %) %)), [0 1]]
-    :else [(fn [v] 1.0), identity, [a b]]))
+    :else [(constantly 1.0), identity, [a b]]))
 
 (defn- change-of-var
   "Returns the new function and range as a tuple"

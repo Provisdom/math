@@ -4,8 +4,10 @@
              [arrays :as ar]
              [matrix :as mx]])
   (:import [java.util ArrayList]
-           [org.apache.commons.math3.exception TooManyEvaluationsException
-                                               TooManyIterationsException]
+           [org.apache.commons.math3.analysis.integration RombergIntegrator SimpsonIntegrator TrapezoidIntegrator]
+           [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException
+                                               MaxCountExceededException MathIllegalArgumentException
+                                               NullArgumentException]
            [org.apache.commons.math3.analysis UnivariateFunction
                                               MultivariateFunction MultivariateVectorFunction
                                               MultivariateMatrixFunction]
@@ -125,6 +127,21 @@
      (FiniteDifferencesDifferentiator.
        points step-size var-low-bound var-high-bound)
      (univariate-function deriv))))
+
+;;;INTEGRATION --------------------untested and unused for now -- compare to calculus ns?
+(defn univariate-integration
+  "Univariate Integration using Romberg by default (:simpson and :trapezoid are alternative type-keys)"
+  [f ^double lower-bound ^double upper-bound ^long max-eval type-key]
+  (let [integrator (condp = type-key
+                          :simpson (SimpsonIntegrator.)
+                          :trapezoid (TrapezoidIntegrator.)
+                          (RombergIntegrator.))]
+    (try (.integrate integrator max-eval (univariate-function f) lower-bound upper-bound)
+         (catch TooManyEvaluationsException e (str "caught exception: " (.getMessage e)))
+         (catch MaxCountExceededException e (str "caught exception: " (.getMessage e)))
+         (catch MathIllegalArgumentException e (str "caught exception: " (.getMessage e)))
+         (catch NullArgumentException e (str "caught exception: " (.getMessage e)))
+         (catch Exception e (str "caught exception: " (.getMessage e))))))
 
 ;;;INTERPOLATION
 (defn interpolation-1D
