@@ -4,7 +4,8 @@
             [provisdom.math [core :as m]
              [matrix :as mx]
              [combinatorics :as mc]]
-            [taoensso.truss :as truss :refer (have have! have?)]))
+            [taoensso.truss :as truss :refer (have have! have?)]
+            [clojure.spec :as s]))
 
 (set! *warn-on-reflection* true)
 
@@ -793,3 +794,80 @@
   [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
   (fn [x y] (joint-central-derivative
               #(fxy (first %) (second %)) [x y] 0 1 (m/sqrt h) (/ h))))
+
+;;COMPARE AGAINST THE FOLLOWING
+; Implements the adaptive quadrature described on page 511 of Numerical Analysis Kinkade et al.
+; ## License
+; Copyright (C) 2014 Daniel Aaron Phelps
+; Distributed under the Eclipse Public License, the same as Clojure.
+
+(defn- simpsons-estimate
+  "Equation '8.5' page 509 - approximates the integral of f over [a b]."
+  ^double
+  [f ^double a ^double b ^double h]
+  (* (/ h 3.) (+ (f a) (* 4 (f (+ a h))) (f b))))
+
+(defn- close-enough?
+  "Finds if |a - b| < |error|."
+  [^double a ^double b ^double error]
+  (< (Math/abs (- a b)) (Math/abs error)))
+
+(defn- insured-approximation
+  "Equation 7 page 509 in Kinkade et al."
+  ^double
+  [^double S* ^double S** ^double S]
+  (+ S* S** (* (/ 1. 15.) (+ S* S** (* -1. S)))))
+
+(defn- adapt-quad-internal
+  "Do not call this fn directly.  Start with adaptive-quadrature instead."
+  [f delta eps n k sigma a h fa fc fb S]
+  (let [delta (double delta) eps (double eps)
+        n (long n) k (long k)
+        sigma (double sigma) a (double a)
+        h (double h) fa (double fa)
+        fc (double fc) fb (double fb)
+        S (double S)
+        b (+ a (* 2. h))
+        c (+ a h)
+        h (/ h 2.)
+        S-left (simpsons-estimate f a c h)
+        S-right (simpsons-estimate f c b h)]
+    (cond
+      (close-enough? (+ S-left S-right) S (/ (* 60. eps h) delta))
+      (+ sigma (insured-approximation S-left S-right S))
+      (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
+      :else (+ (adapt-quad-internal                         ;From a to the midpoint
+                 f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
+               (adapt-quad-internal
+                 f delta eps n (inc k)                      ;From the midpoint to b
+                 sigma (+ a (* 2. h)) h fc (f (+ a (* 3. h))) fb S-right)))))
+
+(defn- adaptive-quadrature
+  "Approximates the definite integral of f over [a b] with an error less
+  or equal than eps.  f is a real valued function of one real argument.
+  The parameter n specifies how many recursive calls are allowed.  An
+  exception is thrown before the n+1st recursive call."
+  [f a b eps n]
+  (let [a (double a) b (double b)
+        eps (double eps) n (long n)
+        delta (- b a) sigma 0
+        h (/ delta 2.) c (/ (+ a b) 2.)
+        k 1 fa (f a)
+        fb (f b) fc (f c)
+        S (simpsons-estimate f a b h)]
+    (adapt-quad-internal f delta eps n k sigma a h fa fc fb S)))
+
+(defn univariate-integration
+  "Univariate Integration using Romberg."
+  ^double
+  [f ^double lower-bound ^double upper-bound]
+  (let [max-eval 100]
+    (if (= lower-bound upper-bound)
+      0.0
+      (adaptive-quadrature f lower-bound upper-bound 1e-6 max-eval))))
+
+(s/fdef univariate-integration
+        :args (s/and
+                (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?) :lower-bound double? :upper-bound double?)
+                #(> (:upper-bound %) (:lower-bound %)))
+        :ret double?)
