@@ -842,7 +842,7 @@
                  f delta eps n (inc k)                      ;From the midpoint to b
                  sigma (+ a (* 2. h)) h fc (f (+ a (* 3. h))) fb S-right)))))
 
-(defn- adaptive-quadrature
+(defn- adaptive-quadrature-test
   "Approximates the definite integral of f over [a b] with an error less
   or equal than eps.  f is a real valued function of one real argument.
   The parameter n specifies how many recursive calls are allowed.  An
@@ -857,16 +857,16 @@
         S (simpsons-estimate f a b h)]
     (adapt-quad-internal f delta eps n k sigma a h fa fc fb S)))
 
-(defn univariate-integration
+(defn- univariate-integration-test
   "Univariate Integration using Romberg."
   ^double
   [f ^double lower-bound ^double upper-bound]
   (let [max-eval 100]
     (if (= lower-bound upper-bound)
       0.0
-      (adaptive-quadrature f lower-bound upper-bound 1e-6 max-eval))))
+      (adaptive-quadrature-test f lower-bound upper-bound 1e-6 max-eval))))
 
-(s/fdef univariate-integration
+(s/fdef univariate-integration-test
         :args (s/and
                 (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?) :lower-bound double? :upper-bound double?)
                 #(> (:upper-bound %) (:lower-bound %)))
