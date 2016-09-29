@@ -1,8 +1,9 @@
 (ns provisdom.math.format
-  (require [clojure.string :as str]
-           [provisdom.utility-belt.format :as u]
-           [provisdom.math.core :as m]
-           [taoensso.truss :as truss :refer (have have! have?)]))
+  (:require
+    [clojure.string :as str]
+    [taoensso.truss :as truss :refer [have have! have?]]
+    [provisdom.utility-belt.format :as u]
+    [provisdom.math.core :as m]))
 
 (set! *warn-on-reflection* true)
 
