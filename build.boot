@@ -4,14 +4,15 @@
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
           :dependencies '[[org.clojure/clojure "1.9.0-alpha13"]
-                          [adzerk/boot-test "1.1.2" :scope "test"]
                           [org.clojure/tools.nrepl "0.2.12" :scope "test"]
-                          [provisdom/boot-tasks "0.7.0" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
-                          [provisdom/test "0.2.0" :scope "test"]
+                          [adzerk/boot-test "1.1.2" :scope "test"]
                           [midje "1.9.0-alpha5" :exclusions [org.clojure/clojure] :scope "test"]
-                          [provisdom/translate-midje "0.1.0" :scope "test"]
                           [criterium "0.4.4" :scope "test"]
+
+                          [provisdom/boot-tasks "0.7.0" :scope "test"]
+                          [provisdom/test "0.2.0" :scope "test"]
+                          [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
                           [provisdom/utility-belt "0.1.1"]
                           [com.taoensso/truss "1.3.6"]
