@@ -1,8 +1,154 @@
 (ns provisdom.math.t-core
+  (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.core :refer :all]
-            [provisdom.math.core :as m]))
+            [provisdom.math.core :refer :all]))
+
+(deftest pos?-test
+  (is-not (pos? "A"))
+  (is (pos? 3.3E30))
+  (is-not (pos? -3.3E30))
+  (is (pos? inf+))
+  (is-not (pos? inf-))
+  (is-not (pos? nan)))
+
+(deftest neg?-test
+  (is-not (neg? "A"))
+  (is-not (neg? 3.3E30))
+  (is (neg? -3.3E30))
+  (is-not (neg? inf+))
+  (is (neg? inf-))
+  (is-not (neg? nan)))
+
+(deftest non-?-test
+  (is (non-? 0))
+  (is (non-? 1))
+  (is-not (non-? -1))
+  (is (non-? inf+))
+  (is-not (non-? inf-))
+  (is-not (non-? nan))
+  (is-not (non-? "A")))
+
+(deftest non+?-test
+  (is (non+? 0))
+  (is-not (non+? 1))
+  (is (non+? -1))
+  (is-not (non+? inf+))
+  (is (non+? inf-))
+  (is-not (non+? nan))
+  (is-not (non+? "A")))
+
+(deftest long?-test
+  (is-not (long? 3.3))
+  (is (long? 3))
+  (is-not (long? 3.0))
+  (is-not (long? "A"))
+  (is-not (long? 3.4E15))
+  (is-not (long? 3.3E30))
+  (is-not (long? -3.3E30))
+  (is-not (long? nan)))
+
+(deftest long+?-test
+  (is-not (long+? 3.3))
+  (is (long+? 3))
+  (is-not (long+? -3))
+  (is-not (long+? 3.0))
+  (is-not (long+? "A"))
+  (is-not (long+? 3.4E15))
+  (is-not (long+? 3.3E30))
+  (is-not (long+? -3.3E30))
+  (is-not (long+? nan)))
+
+(deftest long-?-test
+  (is-not (long-? 3.3))
+  (is-not (long-? 3))
+  (is (long-? -3))
+  (is-not (long-? 3.0))
+  (is-not (long-? "A"))
+  (is-not (long-? -3.4E15))
+  (is-not (long-? 3.3E30))
+  (is-not (long-? -3.3E30))
+  (is-not (long-? nan)))
+
+(deftest long-non-?-test
+  (is-not (long-non-? 3.3))
+  (is (long-non-? 3))
+  (is-not (long-non-? -3))
+  (is (long-non-? 0))
+  (is-not (long-non-? 3.0))
+  (is-not (long-non-? "A"))
+  (is-not (long-non-? 3.4E15))
+  (is-not (long-non-? 3.3E30))
+  (is-not (long-non-? -3.3E30))
+  (is-not (long-non-? nan)))
+
+(deftest long-non+?-test
+  (is-not (long-non+? 3.3))
+  (is-not (long-non+? 3))
+  (is (long-non+? -3))
+  (is (long-non+? 0))
+  (is-not (long-non+? 3.0))
+  (is-not (long-non+? "A"))
+  (is-not (long-non+? 3.4E15))
+  (is-not (long-non+? 3.3E30))
+  (is-not (long-non+? -3.3E30))
+  (is-not (long-non+? nan)))
+
+(deftest int?-test
+  (is-not (int? 3.3))
+  (is (int? 3))
+  (is-not (int? 3.0))
+  (is-not (int? "A"))
+  (is-not (int? 3.4E15))
+  (is-not (int? 3.3E30))
+  (is-not (int? -3.3E30))
+  (is-not (int? nan)))
+
+(deftest int+?-test
+  (is-not (int+? 3.3))
+  (is (int+? 3))
+  (is-not (int+? -3))
+  (is-not (int+? 3.0))
+  (is-not (int+? "A"))
+  (is-not (int+? 3.4E15))
+  (is-not (int+? 3.3E30))
+  (is-not (int+? -3.3E30))
+  (is-not (int+? nan)))
+
+(deftest int-?-test
+  (is-not (int-? 3.3))
+  (is-not (int-? 3))
+  (is (int-? -3))
+  (is-not (int-? 3.0))
+  (is-not (int-? "A"))
+  (is-not (int-? -3.4E15))
+  (is-not (int-? 3.3E30))
+  (is-not (int-? -3.3E30))
+  (is-not (int-? nan)))
+
+(deftest int-non-?-test
+  (is-not (int-non-? 3.3))
+  (is (int-non-? 3))
+  (is-not (int-non-? -3))
+  (is (int-non-? 0))
+  (is-not (int-non-? 3.0))
+  (is-not (int-non-? "A"))
+  (is-not (int-non-? 3.4E15))
+  (is-not (int-non-? 3.3E30))
+  (is-not (int-non-? -3.3E30))
+  (is-not (int-non-? nan)))
+
+(deftest int-non+?-test
+  (is-not (int-non+? 3.3))
+  (is-not (int-non+? 3))
+  (is (int-non+? -3))
+  (is (int-non+? 0))
+  (is-not (int-non+? 3.0))
+  (is-not (int-non+? "A"))
+  (is-not (int-non+? 3.4E15))
+  (is-not (int-non+? 3.3E30))
+  (is-not (int-non+? -3.3E30))
+  (is-not (int-non+? nan)))
 
 (deftest long-able?-test
   (is-not (long-able? 3.3))
@@ -53,17 +199,6 @@
   (is (nan? (maybe-long-able nan)))
   (is (nil? (maybe-long-able nil))))
 
-(deftest int?-test
-  (is-not (int? 3.3))
-  (is (int? 3))
-  (is-not (int? 3.0))
-  (is-not (int? "A"))
-  (is-not (int? 3400.0))
-  (is-not (int? 3.4E15))
-  (is-not (int? 3.3E30))
-  (is-not (int? -3.3E30))
-  (is-not (int? nan)))
-
 (deftest inf+?-test
   (is-not (inf+? 3.3))
   (is-not (inf+? "A"))
@@ -98,24 +233,6 @@
   (is-not (one? "A"))
   (is-not (one? -1))
   (is-not (one? nan)))
-
-(deftest non-?-test
-  (is (non-? 0))
-  (is (non-? 1))
-  (is-not (non-? -1))
-  (is (non-? inf+))
-  (is-not (non-? inf-))
-  (is-not (non-? nan))
-  (is-not (non-? "A")))
-
-(deftest non+?-test
-  (is (non+? 0))
-  (is-not (non+? 1))
-  (is (non+? -1))
-  (is-not (non+? inf+))
-  (is (non+? inf-))
-  (is-not (non+? nan))
-  (is-not (non+? "A")))
 
 (deftest prob?-test
   (is-not (prob? -0.5))
@@ -166,26 +283,37 @@
   (is-not (open-corr? "A")))
 
 (deftest type-tests-test
-  long-able?-test
-  long-able+?-test
-  long-able-?-test
-  long-able-non+?-test
-  long-able-non-?-test
-  maybe-long-able-test
-  int?-test
-  inf+?-test
-  inf-?-test
-  inf?-test
-  nan?-test
-  one?-test
-  non-?-test
-  non+?-test
-  prob?-test
-  open-prob?-test
-  corr?-test
-  open-corr?-test)
+  (pos?-test)
+  (neg?-test)
+  (non-?-test)
+  (non+?-test)
+  (long?-test)
+  (long+?-test)
+  (long-?-test)
+  (long-non-?-test)
+  (long-non+?-test)
+  (int?-test)
+  (int+?-test)
+  (int-?-test)
+  (int-non-?-test)
+  (int-non+?-test)
+  (long-able?-test)
+  (long-able+?-test)
+  (long-able-?-test)
+  (long-able-non+?-test)
+  (long-able-non-?-test)
+  (maybe-long-able-test)
+  (inf+?-test)
+  (inf-?-test)
+  (inf?-test)
+  (nan?-test)
+  (one?-test)
+  (prob?-test)
+  (open-prob?-test)
+  (corr?-test)
+  (open-corr?-test))
 
-(deftest rev-1-x-test
+(deftest one--test
   (is= -2 (one- 3))
   (is= 4 (one- -3))
   (is (nan? (one- nan)))
@@ -269,7 +397,7 @@
   (is (thrown? Exception (cbrt nil))))
 
 (deftest basic-math-test
-  rev-1-x-test
+  one--test
   sq-test
   cube-test
   sgn-test

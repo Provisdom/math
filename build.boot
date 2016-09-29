@@ -1,12 +1,12 @@
 (def project 'provisdom/math)
-(def version "0.2.0-SNAPSHOT")
+(def version "0.2.1-SNAPSHOT")
 
-(set-env! :resource-paths #{"resources" "src" "scss"}
+(set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
-          :dependencies '[[org.clojure/clojure "1.8.0"]
-                          [adzerk/boot-test "1.1.1" :scope "test"]
+          :dependencies '[[org.clojure/clojure "1.9.0-alpha7"]
+                          [adzerk/boot-test "1.1.2" :scope "test"]
                           [org.clojure/tools.nrepl "0.2.12" :scope "test"]
-                          [provisdom/boot-tasks "0.6.0" :scope "test"]
+                          [provisdom/boot-tasks "0.7.0" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
                           [provisdom/test "0.2.0" :scope "test"]
                           [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
@@ -24,7 +24,7 @@
 
 (require
   '[adzerk.boot-test :refer [test]]
-  '[provisdom.boot-tasks.core :refer [build release]])
+  '[provisdom.boot-tasks.core :refer [build push-jar]])
 
 (task-options!
   pom {:project     project

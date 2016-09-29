@@ -4,8 +4,7 @@
              [arrays :as ar]
              [matrix :as mx]])
   (:import [java.util ArrayList]
-           [org.apache.commons.math3.exception TooManyEvaluationsException
-                                               TooManyIterationsException]
+           [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
            [org.apache.commons.math3.analysis UnivariateFunction
                                               MultivariateFunction MultivariateVectorFunction
                                               MultivariateMatrixFunction]
