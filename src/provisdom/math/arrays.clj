@@ -54,7 +54,7 @@
       :boolean boolean
       :char char"
   [type coll]
-  (assert (sequential? (nth coll 0)) "You must pass a 2D collection")
+  (assert (sequential? (first coll)) "You must pass a 2D collection")
   (let [type (type->obj type)]
     (into-array (map (partial into-array type) coll))))
 
@@ -66,7 +66,7 @@
       :boolean boolean
       :char char"
   [type-key coll]
-  (assert (sequential? (nth (nth coll 0) 0)) "You must pass a 3D collection")
+  (assert (sequential? (ffirst coll)) "You must pass a 3D collection")
   (into-array (map (partial jagged-2D-array type-key) coll)))
 
 ;;;clojure.core.matrix.impl.double-array
