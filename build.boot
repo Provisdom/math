@@ -1,20 +1,21 @@
 (def project 'provisdom/math)
-(def version "0.2.0-SNAPSHOT")
+(def version "0.2.1-SNAPSHOT")
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
-          :dependencies '[[org.clojure/clojure "1.9.0-alpha7"]
-                          [adzerk/boot-test "1.1.1" :scope "test"]
+          :dependencies '[[org.clojure/clojure "1.9.0-alpha13"]
                           [org.clojure/tools.nrepl "0.2.12" :scope "test"]
-                          [provisdom/boot-tasks "0.6.0" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
-                          [provisdom/test "0.2.0" :scope "test"]
-                          [midje "1.8.3" :exclusions [org.clojure/clojure] :scope "test"]
-                          [provisdom/translate-midje "0.1.0" :scope "test"]
+                          [adzerk/boot-test "1.1.2" :scope "test"]
+                          [midje "1.9.0-alpha5" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
+
+                          [provisdom/boot-tasks "0.7.0" :scope "test"]
+                          [provisdom/test "0.2.0" :scope "test"]
+                          [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
-                          [provisdom/utility-belt "0.1.0"]
-                          [com.taoensso/truss "1.2.0"]
+                          [provisdom/utility-belt "0.1.1"]
+                          [com.taoensso/truss "1.3.6"]
                           [org.clojure/math.numeric-tower "0.0.4"]
                           [org.apache.commons/commons-math3 "3.6.1"]
                           [apache-commons-matrix "0.4.1"]
@@ -24,7 +25,7 @@
 
 (require
   '[adzerk.boot-test :refer [test]]
-  '[provisdom.boot-tasks.core :refer [build release]])
+  '[provisdom.boot-tasks.core :refer [build push-jar]])
 
 (task-options!
   pom {:project     project
@@ -33,4 +34,6 @@
        :url         "http://example/FIXME"
        :scm         {:url "https://github.com/Provisdom/math"}
        :license     {"Eclipse Public License"
-                     "http://www.eclipse.org/legal/epl-v10.html"}})
+                     "http://www.eclipse.org/legal/epl-v10.html"}}
+  ;; TODO: replace this when all namespaces are converted to clojure.test
+  test {:namespaces #{'provisdom.math.t-arrays 'provisdom.math.t-core 'provisdom.math.t-format}})
