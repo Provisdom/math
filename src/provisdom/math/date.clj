@@ -6,7 +6,8 @@
              [matrix :as mx]]
             [clj-time [core :as ti]
              [format :as tf]]
-            [taoensso.truss :as truss :refer (have have! have?)]))
+            [taoensso.truss :as truss :refer (have have! have?)])
+  (:import (java.util Date)))
 
 (set! *warn-on-reflection* true)
 
@@ -166,7 +167,7 @@ Note that month and day are 1-indexed while the rest are 0-indexed."
 ;;;CONVERTERS
 (defn time-millis$
   "Returns a TimeMillis of now.  Loses precision below millisecond"
-  ^long [] (.getTime ^java.util.Date (instant$)))
+  ^long [] (.getTime ^Date (instant$)))
 
 (defn time-millis
   "Returns a TimeMillis.  Loses precision below millisecond"
@@ -178,15 +179,15 @@ Note that month and day are 1-indexed while the rest are 0-indexed."
 
 (defn instant$
   "Returns an instant literal of now.  Loses precision below millisecond."
-  [] (java.util.Date.))
+  [] (Date.))
 
 (defn instant
   "Returns an instant literal.  Loses precision below millisecond."
-  [^long d] (java.util.Date. ^long (time-millis d)))
+  [^long d] (Date. ^long (time-millis d)))
 
 (defn instant->date
   "Converts an instant literal to a date"
-  ^long [ins] (time-millis->date (.getTime ^java.util.Date ins)))
+  ^long [ins] (time-millis->date (.getTime ^Date ins)))
 
 (defn- subtract-joda->ticks
   ^long [dt1 dt2]
