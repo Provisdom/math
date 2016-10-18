@@ -1,10 +1,13 @@
 (ns provisdom.math.date
-  (:require [provisdom.utility-belt [core :as co]
+  (:require [provisdom.utility-belt
+             [core :as co]
              [format :as fo]]
-            [provisdom.math [core :as m]
+            [provisdom.math
+             [core :as m]
              [calculus :as ca]
              [matrix :as mx]]
-            [clj-time [core :as ti]
+            [clj-time
+             [core :as ti]
              [format :as tf]]
             [taoensso.truss :as truss :refer (have have! have?)])
   (:import (java.util Date)))
@@ -226,8 +229,9 @@ Any precision higher than milliseconds is dropped."
 (defn period
   "Returns period from ticks or interval"
   ^double [ticks-or-interval]
-  (if (number? ticks-or-interval) (/ ticks-or-interval average-year)
-                                  (period (- (second ticks-or-interval) (first ticks-or-interval)))))
+  (if (number? ticks-or-interval)
+    (/ ticks-or-interval average-year)
+    (period (- (second ticks-or-interval) (first ticks-or-interval)))))
 
 (defn as-ticks
   "Returns ticks as a long.  

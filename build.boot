@@ -11,7 +11,7 @@
                           [criterium "0.4.4" :scope "test"]
 
                           [provisdom/boot-tasks "0.7.0" :scope "test"]
-                          [provisdom/test "0.2.0" :scope "test"]
+                          [provisdom/test "0.2.1" :scope "test"]
                           [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
                           [provisdom/utility-belt "0.1.1"]
@@ -20,7 +20,7 @@
                           [org.apache.commons/commons-math3 "3.6.1"]
                           [apache-commons-matrix "0.4.1"]
                           [clatrix "0.5.0"]
-                          [net.mikera/core.matrix "0.52.0"]
+                          [net.mikera/core.matrix "0.56.0"]
                           [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]])
 
 (require

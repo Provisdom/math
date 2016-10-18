@@ -58,7 +58,7 @@
              (read-date -9223305062400000000) => 
              {:da 9, :hr 0, :mi 0, :mo 7, :ms 0, :se 0, :ti 0, :tz 0, :us 0,
               :yr 1814}
-             (read-date 9223305062400000000 ) => 
+             (read-date 9223305062400000000) =>
              {:da 28, :hr 0, :mi 0, :mo 6, :ms 0, :se 0, :ti 0, :tz 0, :us 0, 
               :yr 2325}
              (read-date -2015676748786905120) => 
@@ -186,8 +186,7 @@
              (read-date (add-duration (date 2014) (duration -1 2 3) 
                                       (duration 1 1 1)) []) => 
              {:da 5, :mo 4, :ti 0, :tz 0, :yr 2014})
-       (fact "subtracting -- use 'sub-dates' for subtracting with dates and 
-                 durations.  
+       (fact "subtracting -- use 'sub-dates' for subtracting with dates and durations.
               'sub-ticks' for ticks with durations.  
               '-' for ticks and dates."
              (- (as-ticks 13) 12321993) => 8994585587678007 ;subtract ticks
@@ -238,8 +237,7 @@
 
 (facts "time zones"
        (fact "time zone for current environment" 
-             ;(environment-time-zone) => -8) ;-8 in PST
-       ))
+             (environment-time-zone) => -8)) ;-8 in PST
 
 (facts "periodic"
        (fact "lazy period"
