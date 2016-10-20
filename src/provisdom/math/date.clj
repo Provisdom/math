@@ -5,11 +5,13 @@
             [provisdom.math
              [core :as m]
              [calculus :as ca]
-             [matrix :as mx]]
+             [matrix :as mx]
+             [core-specs :as specs]]
             [clj-time
              [core :as ti]
              [format :as tf]]
-            [taoensso.truss :as truss :refer (have have! have?)])
+            [taoensso.truss :as truss :refer (have have! have?)]
+            [clojure.spec :as s])
   (:import (java.util Date)))
 
 (set! *warn-on-reflection* true)
@@ -54,20 +56,32 @@
   (or (zero? (mod year 400)) (and (zero? (mod year 4))
                                   (not (zero? (mod year 100))))))
 
+(s/fdef leap-year?
+        :args (s/cat :year ::specs/year)
+        :ret boolean?)
+
 (defn days-per-month
   "Returns the number of days in a supplied month"
   ^long [^long year ^long month]
   {:pre [(have? pos? month) (have? #(<= % 12) month)]}
-  (if (and (== month 2) (leap-year? year)) 29
-                                           (non-leap-year-days-per-month (dec month))))
+  (if (and (== month 2) (leap-year? year))
+    29
+    (non-leap-year-days-per-month (dec month))))
+
+(s/fdef days-per-month
+        :args (s/cat :year ::specs/year :month ::specs/month)
+        :ret ::specs/days-per-month)
 
 (defn days-until-month
-  "Returns the number of days in a particular year until a supplied month
-   starts"
+  "Returns the number of days in a particular year until a supplied month starts"
   ^long [^long year ^long month]
   {:pre [(have? pos? month) (have? #(<= % 12) month)]}
   (let [leap (if (and (>= month 3) (leap-year? year)) 1 0)]
     (+ leap (non-leap-year-days-until-month (dec month)))))
+
+(s/fdef days-until-month
+        :args (s/cat :year ::specs/year :month ::specs/month)
+        :ret (s/int-in 0 335))
 
 (defn- passed-leap-days-since-2000
   ^long [^long year ^long month]
@@ -85,6 +99,11 @@
   (^long [^long year1 ^long month1 ^long year2 ^long month2]
    (- (passed-leap-days-since-2000 year2 month2)
       (passed-leap-days-since-2000 year1 month1))))
+
+(s/fdef passed-leap-days
+        :args (s/? (s/or (s/cat :year ::specs/year :month ::specs/month)
+                         (s/cat :year1 ::specs/year :month1 ::specs/month :year2 ::specs/year :month2 ::specs/month)))
+        :ret (s/int-in 0 127))                              ;;127 is perhaps slightly generous cap
 
 ;;;READING
 (def ^:const full-date-map
@@ -127,14 +146,15 @@
   "A date can be read as a map of the keys :yr (year), :mo (month), :da (day), 
    :ti (tick), :tz (time zone), and those supplied from the 'read' coll as a 
    subset of the keywords :hr (hour) :mi (minute) :se (second) 
-   :ms (millisecond), :us (microsecond).  
+   :ms (millisecond), :us (microsecond).
 Note that month and day are 1-indexed while the rest are 0-indexed."
   ([^long d] (read-date d (vector :hr :mi :se :ms :us)))
   ([^long d read] (read-date d read 0))
   ([^long d read time-zone]
     ;;probably a little faster starting from 2015 than 2070 most of the time
-   (if (< d date-2045) (read-date 2015 1 1 (- d date-2015) read time-zone)
-                       (read-date epoch 1 1 d read time-zone)))
+   (if (< d date-2045)
+     (read-date 2015 1 1 (- d date-2015) read time-zone)
+     (read-date epoch 1 1 d read time-zone)))
   ([^long year ^long month ^long day-number ^long tick]
    (read-date year month day-number tick (vector :hr :mi :se :ms :us)))
   ([year month day-number tick read]
@@ -233,6 +253,10 @@ Any precision higher than milliseconds is dropped."
     (/ ticks-or-interval average-year)
     (period (- (second ticks-or-interval) (first ticks-or-interval)))))
 
+(s/fdef period
+        :args (s/cat :ticks-or-interval (s/or :ticks ::specs/ticks :interval ::specs/interval))
+        :ret ::specs/period)
+
 (defn as-ticks
   "Returns ticks as a long.  
 Ticks are often used to represent durations that have zero months."
@@ -243,6 +267,13 @@ Ticks are often used to represent durations that have zero months."
    {:pre [(have? m/long-able? weeks days ticks)]}
    (+ (* (long weeks) week) (* (long days) day) (* hr hour) (* mi minute)
       (* se sec) (* ms millisec) (* us microsec) (long ticks))))
+
+(s/fdef as-ticks
+        :args (s/? (s/or (s/cat :weeks ::specs/weeks)
+                         (s/cat :weeks ::specs/weeks :days ::specs/days)
+                         (s/cat :weeks ::specs/weeks :days ::specs/days :ticks ::specs/ticks
+                                :opts (s/keys* :opt-un [::specs/hr ::specs/mi ::specs/se ::specs/ms ::specs/us]))))
+        :ret ::specs/ticks)
 
 (defn maybe-duration-as-ticks
   "Returns ticks as a long if duration has zero months."
@@ -263,32 +294,46 @@ For durations that do not depend on the calendar,
     (+ (as-ticks 0 0 (long ticks) :hr hr :mi mi :se se :ms ms :us us)
        (* wk week) (* (long days) day))]))
 
+(s/fdef duration
+        :args (s/? (s/or (s/cat :years ::specs/years)
+                         (s/cat :years ::specs/years :months ::specs/months)
+                         (s/cat :years ::specs/years :months ::specs/months :days ::specs/days)
+                         (s/cat :years ::specs/years :months ::specs/months :days ::specs/days :ticks ::specs/ticks
+                                :opts (s/keys* :opt-un [::specs/wk ::specs/hr ::specs/mi ::specs/se ::specs/ms
+                                                        ::specs/us]))))
+        :ret ::specs/duration)
+
 (defn date$
   "Now, returned to the nearest millisecond"
   ^long [] (first (joda->date-with-time-zone (ti/now))))
 
 (defn date
-  "A date is a long in tick units representing the number of ticks starting 
-   from 'epoch' in the UTC time zone.
-A date is often paired as a tuple with a long representing the time zone 
-   offset in hours from the UTC.
+  "A date is a long in tick units representing the number of ticks starting from 'epoch' in the UTC time zone.
+A date is often paired as a tuple with a long representing the time zone offset in hours from the UTC.
 A date must be later than 7/8/1814 and earlier than 6/29/2325.
 Note that month and day are 1-indexed while the rest are 0-indexed."
   (^long [^long year] (date year 1 1 0))
   (^long [^long year ^long month] (date year month 1 0))
-  (^long [^long year ^long month ^long day-number]
-   (date year month day-number 0))
-  ([year month day-number tick
+  (^long [^long year ^long month ^long day-number] (date year month day-number 0))
+  ([year month day-number ticks
     & {:keys [hr mi se ms us] :or {hr 0, mi 0, se 0, ms 0, us 0}}]
-   {:pre [(have? m/long-able? year month day-number tick)]}
+   {:pre [(have? m/long-able? year month day-number ticks)]}
    (let [{yr :yr, mo :mo, da :da, ti :ti}
          (read-date (long year) (long month) (long day-number)
-                    (as-ticks 0 0 (long tick) :hr hr :mi mi :se se :ms ms
-                              :us us)
+                    (as-ticks 0 0 (long ticks) :hr hr :mi mi :se se :ms ms :us us)
                     []),
          td (+ (passed-leap-days yr mo) (* 365 (- yr epoch))
                (days-until-month yr mo) (dec da))]
      (+ (* day td) ti))))
+
+(s/fdef date                                                ;;also: A date must be entered as later than 7/8/1814 and earlier than 6/29/2325.
+        :args (s/? (s/or (s/cat :year ::specs/year)
+                         (s/cat :year ::specs/year :month ::specs/month)
+                         (s/cat :year ::specs/year :month ::specs/month :day-number ::specs/day-number)
+                         (s/cat :year ::specs/year :month ::specs/month :day-number ::specs/day-number
+                                :ticks ::specs/ticks
+                                :opts (s/keys* :opt-un [::specs/hr ::specs/mi ::specs/se ::specs/ms ::specs/us]))))
+        :ret ::specs/date)
 
 (def year "A year's duration" (duration 1))
 (def month "A month's duration" (duration 0 1))
@@ -383,8 +428,9 @@ Date can represent the start or end time of the duration"
   ([[months ticks] d end-date?]
    {:pre [(have? m/long-able? months ticks d)]}
    (let [months (long months), ticks (long ticks), d (long d)]
-     (if end-date? (- d (sub-dates d [months ticks]))
-                   (- (add-duration d [months ticks]) d)))))
+     (if end-date?
+       (- d (sub-dates d [months ticks]))
+       (- (add-duration d [months ticks]) d)))))
 
 (defn to-duration
   "Returns ticks from a supplied duration and date
@@ -412,8 +458,7 @@ A time zone is a long representing the number of hours offset from the UTC time
   ([^long start ^long steps ticks-or-duration]
    (if (number? ticks-or-duration)
      (vec (map (fn [d] (vector d (+ d ticks-or-duration)))
-               (range start (+ start (* steps ticks-or-duration))
-                      ticks-or-duration)))
+               (range start (+ start (* steps ticks-or-duration)) ticks-or-duration)))
      (intervals identity start steps ticks-or-duration)))
   ([f ^long start ^long steps ticks-or-duration]
    (vec (if (number? ticks-or-duration)

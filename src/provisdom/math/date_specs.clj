@@ -1,0 +1,23 @@
+(ns provisdom.math.date-specs
+  (:require [clojure.spec :as s]]))
+
+(s/def ::date int?)
+(s/def ::year (s/int-in 1814 2325))
+(s/def ::month (s/int-in 1 12))
+(s/def ::day-number (s/int-in 1 31))
+(s/def ::years int?)
+(s/def ::months int?)
+(s/def ::weeks int?)
+(s/def ::days int?)
+(s/def ::wk int?)
+(s/def ::hr int?)
+(s/def ::mi int?)
+(s/def ::se int?)
+(s/def ::ms int?)
+(s/def ::us int?)
+(s/def ::ticks int?)
+(s/def ::duration (s/tuple ::months ::ticks))
+(s/def ::period number?)
+(s/def ::interval (s/tuple ::date ::date))
+(s/def ::days-per-month (s/int-in 28 31))
+
