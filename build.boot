@@ -3,17 +3,18 @@
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
-          :dependencies '[[org.clojure/clojure "1.9.0-alpha13"]
-                          [org.clojure/tools.nrepl "0.2.12" :scope "test"]
+          :dependencies '[[org.clojure/tools.nrepl "0.2.12" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
                           [adzerk/boot-test "1.1.2" :scope "test"]
-                          [midje "1.9.0-alpha5" :exclusions [org.clojure/clojure] :scope "test"]
+                          [midje "1.9.0-alpha6" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
 
                           [provisdom/boot-tasks "0.7.0" :scope "test"]
                           [provisdom/test "0.2.1" :scope "test"]
                           [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
+                          [org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
+                          [org.clojure/core.async "0.2.395"]
                           [provisdom/utility-belt "0.1.1"]
                           [com.taoensso/truss "1.3.6"]
                           [org.clojure/math.numeric-tower "0.0.4"]
