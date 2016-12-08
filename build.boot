@@ -21,7 +21,7 @@
                           [org.apache.commons/commons-math3 "3.6.1"]
                           [apache-commons-matrix "0.4.1"]
                           [clatrix "0.5.0"]
-                          [net.mikera/core.matrix "0.56.0"]
+                          [net.mikera/core.matrix "0.57.0"]
                           [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]])
 
 (require
