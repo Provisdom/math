@@ -182,8 +182,33 @@ provisdom.math.random2
         (.set thread-local rng2)
         rng1))))
 
+(def ^:dynamic *rng* nil)
+
 (defn make-random
   "Given an optional Long seed, returns an object that satisfies the
   IRandom protocol."
-  ([] (next-rng))
+  ([] (or *rng* (next-rng)))
   ([seed] (make-java-util-splittable-random seed)))
+
+(defn rng-lazy
+  "Returns a lazy sequence of RNG where each iteration is split from the previous."
+  ([] (rng-lazy (make-random)))
+  ([rng]
+   (iterate (comp first split) rng)))
+
+(defn rand-lazy*
+  ([f] (rand-lazy* f (make-random)))
+  ([f rng]
+   (map f (rng-lazy rng))))
+
+(defn rand-double-lazy
+  "Returns a lazy seq of random doubles"
+  ([] (rand-double-lazy (make-random)))
+  ([rng]
+   (rand-lazy* rand-double rng)))
+
+(defn rand-long-lazy
+  "Returns a lazy seq of random longs"
+  ([] (rand-long-lazy (make-random)))
+  ([rng]
+   (rand-lazy* rand-long rng)))
