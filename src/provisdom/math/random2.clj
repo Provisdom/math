@@ -182,13 +182,23 @@ provisdom.math.random2
         (.set thread-local rng2)
         rng1))))
 
-(def ^:dynamic *rng* nil)
+(def ^:dynamic *rng-gen* nil)
 
 (defn make-random
   "Given an optional Long seed, returns an object that satisfies the
   IRandom protocol."
-  ([] (or *rng* (next-rng)))
+  ([] (if *rng-gen* (*rng-gen*) (next-rng)))
   ([seed] (make-java-util-splittable-random seed)))
+
+(defn double$
+  "Makes a new RNG and returns a random double"
+  []
+  (-> (make-random) rand-double))
+
+(defn long$
+  "Makes a new RNG and returns a random long."
+  []
+  (-> (make-random) rand-long))
 
 (defn rng-lazy
   "Returns a lazy sequence of RNG where each iteration is split from the previous."
@@ -212,3 +222,19 @@ provisdom.math.random2
   ([] (rand-long-lazy (make-random)))
   ([rng]
    (rand-lazy* rand-long rng)))
+
+(defn rng-gen
+  "Returns a function that will generate random numbers from a static RNG."
+  ([] (rng-gen (make-random)))
+  ([rng]
+   (let [gens (volatile! (rng-lazy rng))]
+     (fn []
+       (let [rng (first @gens)]
+         (vswap! gens rest)
+         rng)))))
+
+;; TODO: Is there a better way to set the default value for *rng-gen*?
+;; This is needed due to a circular dependency on functions when initially compiled.
+;; You will get an "Attempting to call unbound fn" error if you try to directly set
+;; *rng-gen* to `(rng-gen)`.
+(alter-var-root (var *rng-gen*) (constantly (rng-gen)))
