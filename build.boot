@@ -37,4 +37,5 @@
        :license     {"Eclipse Public License"
                      "http://www.eclipse.org/legal/epl-v10.html"}}
   ;; TODO: replace this when all namespaces are converted to clojure.test
-  test {:namespaces #{'provisdom.math.t-arrays 'provisdom.math.t-core 'provisdom.math.t-format}})
+  test {:namespaces '#{provisdom.math.t-arrays provisdom.math.t-core provisdom.math.t-format
+                       provisdom.math.random2}})
