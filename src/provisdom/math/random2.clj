@@ -233,8 +233,20 @@ provisdom.math.random2
          (vswap! gens rest)
          rng)))))
 
+(defn set-seed!
+  "Sets the RNG generator to `seed`. If seed is not provided then the current clock time is used."
+  ([] (set-seed! (System/currentTimeMillis)))
+  ([seed]
+   (alter-var-root (var *rng-gen*) (constantly (rng-gen (make-random seed))))))
+
+(defmacro bind-seed
+  "Sets the seed for the RNGs to `seed` for the code in `body`"
+  [seed & body]
+  `(binding [*rng-gen* (rng-gen (make-random ~seed))]
+     ~@body))
+
 ;; TODO: Is there a better way to set the default value for *rng-gen*?
 ;; This is needed due to a circular dependency on functions when initially compiled.
 ;; You will get an "Attempting to call unbound fn" error if you try to directly set
 ;; *rng-gen* to `(rng-gen)`.
-(alter-var-root (var *rng-gen*) (constantly (rng-gen)))
+(set-seed!)
