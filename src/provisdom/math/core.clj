@@ -1,7 +1,8 @@
 (ns provisdom.math.core
   (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [provisdom.utility-belt.core :as co]
-            [taoensso.truss :as truss :refer (have have! have?)]))
+            [clojure.spec :as s]
+            [clojure.spec.gen :as sg]))
 
 (set! *warn-on-reflection* true)
 
@@ -64,81 +65,121 @@
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
 
+(defn next-after [start direction] (Math/nextAfter start direction))
+
 (defn pos?
   "Returns true if x is a number that is positive."
   [x] (and (number? x) (clojure.core/pos? x)))
+
+(s/def ::pos? (s/spec pos? :gen #(s/gen (s/double-in :min tiny-dbl :NaN? false))))
 
 (defn neg?
   "Returns true if x is a number that is negative."
   [x] (and (number? x) (clojure.core/neg? x)))
 
+(s/def ::neg? (s/spec neg? :gen #(s/gen (s/double-in :max (- tiny-dbl) :NaN? false))))
+
 (defn non-?
   "Returns true if x is non-negative"
   [x] (and (number? x) (>= x 0) (not (nan? x))))
+
+(s/def ::non-? (s/spec non-? :gen #(s/gen (s/double-in :min 0.0 :NaN? false))))
 
 (defn non+?
   "Returns true if x is non-positive"
   [x] (and (number? x) (<= x 0) (not (nan? x))))
 
+(s/def ::non+? (s/spec non+? :gen #(s/gen (s/double-in :max 0.0 :NaN? false))))
+
 (defn long?
   "Returns true if x is a long."
   [x] (and (number? x) (instance? Long x)))
+
+(s/def ::long? (s/spec long? :gen (fn [] sg/large-integer)))
 
 (defn long+?
   "Returns true if x is a long and is positive."
   [x] (and (pos? x) (long? x)))
 
+(s/def ::long+? (s/and ::long? ::pos?))
+
 (defn long-?
   "Returns true if x is a long and is negative."
   [x] (and (neg? x) (long? x)))
+
+(s/def ::long-? (s/and ::long? ::neg?))
 
 (defn long-non-?
   "Returns true if x is a long and is non-negative."
   [x] (and (non-? x) (long? x)))
 
+(s/def ::long-non-? (s/and ::long? ::non-?))
+
 (defn long-non+?
   "Returns true if x is a long and is non-positive."
   [x] (and (non+? x) (long? x)))
+
+(s/def ::long-non+? (s/and ::long? ::non+?))
 
 (defn int?
   "Returns true is x is an integer that is within the int range"
   [x] (and (integer? x) (int-range? x)))
 
+(s/def ::int? (s/spec int? :gen (fn [] sg/int)))
+
 (defn int+?
   "Returns true if x is an int and is positive."
   [x] (and (int? x) (pos? x)))
+
+(s/def ::int+? (s/and ::int? ::pos?))
 
 (defn int-?
   "Returns true if x is an int and is negative."
   [x] (and (int? x) (neg? x)))
 
+(s/def ::int-? (s/and ::int? ::neg?))
+
 (defn int-non-?
   "Returns true if x is an int and is non-negative."
   [x] (and (int? x) (non-? x)))
+
+(s/def ::int-non-? (s/and ::int? ::non-?))
 
 (defn int-non+?
   "Returns true if x is an int and is non-positive."
   [x] (and (int? x) (non+? x)))
 
+(s/def ::int-non+? (s/and ::int? ::non+?))
+
 (defn long-able?
   "Returns true if x is a number that can be converted to a long"
   [x] (and (number? x) (roughly-round? x 0.0) (long-range? x)))
+
+(s/def ::long-able? (s/spec long-able? :gen (s/double-in :min min-long :max max-long :infinite? false :NaN? false)))
 
 (defn long-able+?
   "Returns true if x is a number that can be converted to a long, and is positive"
   [x] (and (long-able? x) (pos? x)))
 
+(s/def ::long-able+? (s/and ::long-able? ::pos?))
+
 (defn long-able-?
   "Returns true if x is a number that can be converted to a long, and is negative"
   [x] (and (long-able? x) (neg? x)))
+
+(s/def ::long-able-? (s/and ::long-able? ::neg?))
 
 (defn long-able-non+?
   "Returns true if x is a number that can be converted to a long, and is non+"
   [x] (and (long-able? x) (non+? x)))
 
+(s/def ::long-able-non+? (s/and ::long-able? ::non+?))
+
 (defn long-able-non-?
   "Returns true if x is a number that can be converted to a long, and is non-"
   [x] (and (long-able? x) (non-? x)))
+
+(s/def ::long-able-non-? (s/and ::long-able? ::non-?))
 
 (defn maybe-long-able
   "Returns x as a long if possible.  Otherwise returns x."
@@ -168,17 +209,25 @@
   "Returns true if x is between 0 and 1, inclusive"
   [x] (and (non-? x) (<= x 1) (not (nan? x))))
 
+(s/def ::prob (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
+
 (defn open-prob?
   "Returns true if x is between 0 and 1, exclusive"
   [x] (and (number? x) (pos? x) (< x 1)))
+
+(s/def ::open-prob (s/spec open-prob? :gen #(s/gen (s/double-in :min (next-after 0.0 1.0) :max (next-after 1.0 0.0) :NaN? false))))
 
 (defn corr?
   "Returns true if x is between -1 and 1, inclusive"
   [x] (and (number? x) (<= x 1) (>= x -1) (not (nan? x))))
 
+(s/def ::corr (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
+
 (defn open-corr?
   "Returns true if x is between -1 and 1, exclusive"
   [x] (and (number? x) (< x 1) (> x -1)))
+
+(s/def ::open-corr (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-after -1.0 1.0) :max (next-after 1.0 -1.0) :NaN? false))))
 
 ;;;BASIC MATH
 (defn one-

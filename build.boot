@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.0-alpha2")
+(def version "1.0-alpha3")
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
@@ -13,8 +13,8 @@
                           [provisdom/test "0.2.1" :scope "test"]
                           [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
-                          [org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
-                          [org.clojure/core.async "0.2.395"]
+                          [org.clojure/clojure "1.9.0-alpha15" :scope "provided"]
+                          [org.clojure/core.async "0.3.442"]
                           [provisdom/utility-belt "0.1.1"]
                           [com.taoensso/truss "1.3.6"]
                           [org.clojure/math.numeric-tower "0.0.4"]
