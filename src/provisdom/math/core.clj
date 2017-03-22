@@ -65,7 +65,7 @@
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
 
-(defn next-after [start direction] (Math/nextAfter start direction))
+(defn next-after [^double start ^double direction] (Math/nextAfter start direction))
 
 (defn pos?
   "Returns true if x is a number that is positive."
@@ -342,7 +342,6 @@
       :away (from zero)
       :toward (zero)"
   [x & {:keys [type]}]
-  {:pre [(have? number? x)]}
   (if-not (long-range? x)
     x
     (let [x (case type
@@ -363,80 +362,112 @@
 (defn roughly-floor
   "Rounds down unless within accu, then rounds up. Returns a long if possible, otherwise a double."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (floor (+ x accu)))
 
 (defn roughly-ceil
   "Rounds up unless within accu, then rounds down. Returns a long if possible, otherwise a double."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (ceil (- x accu)))
+
+(s/fdef roughly-ceil
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double)
 
 (defn roughly?
   "Returns true if x1 and x2 are within accu of each other, or within double accuracy."
   [^double x1 ^double x2 ^double accu]
-  {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x1) (nan? x2)) false
         (inf+? accu) true
         (or (inf? x1) (inf? x2)) false
         :else (<= (abs (- x1 x2)) accu)))
 
+(s/fdef roughly?
+        :args (s/cat :x1 double? :x2 double? :accu ::non-?)
+        :ret double?)
+
 (defn roughly-round?
   "Returns true if x is equal to a whole number or within accu of a whole number, or within double accuracy."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (cond (or (nan? accu) (nan? x)) false
         (inf+? accu) true
         (inf? x) false
         :else (<= (abs (- (round x) x)) accu)))
 
+(s/fdef roughly-round?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
+
 (defn roughly-round-non-?
   "Returns true if x is non- and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (non-? x) (roughly-round? x accu)))
+
+(s/fdef roughly-round-non-?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-round-non+?
   "Returns true if x is non+ and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (non+? x) (roughly-round? x accu)))
+
+(s/fdef roughly-round-non+?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-round+?
   "Returns true if x is positive and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (pos? x) (roughly-round? x accu)))
+
+(s/fdef roughly-round+?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-round-?
   "Returns true if x is negative and roughly a whole number, or within double accuracy."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (neg? x) (roughly-round? x accu)))
+
+(s/fdef roughly-round-?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-non-?
   "Returns true if x is positive or within accu to zero."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (>= x (- accu)))
+
+(s/fdef roughly-non-?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-non+?
   "Returns true if x is negative or within accu to zero."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (<= x accu))
+
+(s/fdef roughly-non+?
+        :args (s/cat :x double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-prob?
   "Returns true if x is a prob or within accu of a prob."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (>= x (- accu)) (<= x (inc accu))))
+
+(s/fdef roughly-prob?
+        :args (s/cat :prob double? :accu ::non-?)
+        :ret double?)
 
 (defn roughly-corr?
   "Returns true if x is a corr or within accu of a corr."
   [^double x ^double accu]
-  {:pre [(have? non-? accu)]}
   (and (>= x (dec (- accu))) (<= x (inc accu))))
+
+(s/fdef roughly-corr?
+        :args (s/cat :prob double? :accu ::non-?)
+        :ret double?)
 
 ;;;QUOTIENTS
 (defn quot'
