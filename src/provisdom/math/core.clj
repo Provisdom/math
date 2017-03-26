@@ -95,7 +95,7 @@
   "Returns true if x is a long."
   [x] (and (number? x) (instance? Long x)))
 
-(s/def ::long? (s/spec long? :gen (fn [] sg/large-integer)))
+(s/def ::long? (s/spec long? :gen sg/large-integer))
 
 (defn long+?
   "Returns true if x is a long and is positive."
@@ -125,7 +125,7 @@
   "Returns true is x is an integer that is within the int range"
   [x] (and (integer? x) (int-range? x)))
 
-(s/def ::int? (s/spec int? :gen (fn [] sg/int)))
+(s/def ::int? (s/spec int? :gen sg/int))
 
 (defn int+?
   "Returns true if x is an int and is positive."
