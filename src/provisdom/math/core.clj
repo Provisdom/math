@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [provisdom.utility-belt.core :as co]
             [clojure.spec :as s]
-            [clojure.spec.gen :as sg]))
+            [clojure.spec.gen :as sg]
+            [clojure.spec.test :as st]))
 
 (set! *warn-on-reflection* true)
 
@@ -361,21 +362,25 @@
 
 (defn roughly-floor
   "Rounds down unless within accu, then rounds up. Returns a long if possible, otherwise a double."
-  [^double x ^double accu]
+  [x accu]
   (floor (+ x accu)))
+
+(s/fdef roughly-floor
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-ceil
   "Rounds up unless within accu, then rounds down. Returns a long if possible, otherwise a double."
-  [^double x ^double accu]
+  [x accu]
   (ceil (- x accu)))
 
 (s/fdef roughly-ceil
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly?
   "Returns true if x1 and x2 are within accu of each other, or within double accuracy."
-  [^double x1 ^double x2 ^double accu]
+  [x1 x2 accu]
   (cond (or (nan? accu) (nan? x1) (nan? x2)) false
         (inf+? accu) true
         (or (inf? x1) (inf? x2)) false
@@ -387,73 +392,73 @@
 
 (defn roughly-round?
   "Returns true if x is equal to a whole number or within accu of a whole number, or within double accuracy."
-  [^double x ^double accu]
+  [x accu]
   (cond (or (nan? accu) (nan? x)) false
         (inf+? accu) true
         (inf? x) false
         :else (<= (abs (- (round x) x)) accu)))
 
 (s/fdef roughly-round?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-round-non-?
   "Returns true if x is non- and roughly a whole number, or within double accuracy."
-  [^double x ^double accu]
+  [x accu]
   (and (non-? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-non-?
-        :args (s/cat :x double? :accu ::non-?)
+        :args (s/cat :x number? :accu ::non-?)
         :ret double?)
 
 (defn roughly-round-non+?
   "Returns true if x is non+ and roughly a whole number, or within double accuracy."
-  [^double x ^double accu]
+  [x accu]
   (and (non+? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-non+?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-round+?
   "Returns true if x is positive and roughly a whole number, or within double accuracy."
-  [^double x ^double accu]
+  [x accu]
   (and (pos? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round+?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-round-?
   "Returns true if x is negative and roughly a whole number, or within double accuracy."
-  [^double x ^double accu]
+  [x accu]
   (and (neg? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-non-?
   "Returns true if x is positive or within accu to zero."
-  [^double x ^double accu]
+  [x accu]
   (>= x (- accu)))
 
 (s/fdef roughly-non-?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-non+?
   "Returns true if x is negative or within accu to zero."
-  [^double x ^double accu]
+  [x accu]
   (<= x accu))
 
 (s/fdef roughly-non+?
-        :args (s/cat :x double? :accu ::non-?)
-        :ret double?)
+        :args (s/cat :x number? :accu ::non-?)
+        :ret number?)
 
 (defn roughly-prob?
   "Returns true if x is a prob or within accu of a prob."
-  [^double x ^double accu]
+  [x accu]
   (and (>= x (- accu)) (<= x (inc accu))))
 
 (s/fdef roughly-prob?
@@ -462,7 +467,7 @@
 
 (defn roughly-corr?
   "Returns true if x is a corr or within accu of a corr."
-  [^double x ^double accu]
+  [x accu]
   (and (>= x (dec (- accu))) (<= x (inc accu))))
 
 (s/fdef roughly-corr?

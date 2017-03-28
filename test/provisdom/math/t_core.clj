@@ -2,7 +2,10 @@
   (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.core :refer :all]))
+            [provisdom.math.core :refer :all]
+            [clojure.spec.test :as st]))
+
+(st/instrument)
 
 (deftest pos?-test
   (is-not (pos? "A"))
@@ -813,3 +816,4 @@
   radians->angle-test
   angle->radians-test)
 
+#_(st/unstrument)
