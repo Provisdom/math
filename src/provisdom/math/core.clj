@@ -210,13 +210,13 @@
   "Returns true if x is between 0 and 1, inclusive"
   [x] (and (non-? x) (<= x 1) (not (nan? x))))
 
-(s/def ::prob (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
+(s/def ::prob? (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
 
 (defn open-prob?
   "Returns true if x is between 0 and 1, exclusive"
   [x] (and (number? x) (pos? x) (< x 1)))
 
-(s/def ::open-prob (s/spec open-prob? :gen #(s/gen (s/double-in :min (next-after 0.0 1.0) :max (next-after 1.0 0.0) :NaN? false))))
+(s/def ::open-prob? (s/spec open-prob? :gen #(s/gen (s/double-in :min (next-after 0.0 1.0) :max (next-after 1.0 0.0) :NaN? false))))
 
 (defn corr?
   "Returns true if x is between -1 and 1, inclusive"
