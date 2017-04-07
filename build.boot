@@ -11,7 +11,6 @@
 
                           [provisdom/boot-tasks "0.7.0" :scope "test"]
                           [provisdom/test "0.2.1" :scope "test"]
-                          [provisdom/translate-midje "0.1.0" :scope "test"]
                           ;;project deps
                           [org.clojure/clojure "1.9.0-alpha15" :scope "provided"]
                           [org.clojure/core.async "0.3.442"]
