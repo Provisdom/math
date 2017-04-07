@@ -9,7 +9,7 @@
                           [midje "1.9.0-alpha6" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
 
-                          [provisdom/boot-tasks "1.1" :scope "test"]
+                          [provisdom/boot-tasks "1.2" :scope "test"]
                           [provisdom/test "0.2.4" :scope "test"]
                           ;;project deps
                           [org.clojure/clojure "1.9.0-alpha15" :scope "provided"]
