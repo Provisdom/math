@@ -233,7 +233,8 @@
 ;;;BASIC MATH
 (defn one-
   "Returns (1 - x)"
-  [x] (inc (- x)))
+  ([x] (inc (- x)))
+  ([& x] (inc (- (apply + x)))))
 
 (defn sq
   "Returns square of x"
