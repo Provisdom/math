@@ -234,7 +234,7 @@
 (defn one-
   "Returns (1 - x)"
   ([x] (inc (- x)))
-  ([& x] (inc (- (apply + x)))))
+  ([x & y] (inc (- (+ x (apply + y))))))
 
 (defn sq
   "Returns square of x"
