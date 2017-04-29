@@ -108,38 +108,38 @@ Although gamma is defined for pos x, this function allows for all non-long-able-
 (defn lower-gamma
   "Returns the lower incomplete gamma function: 
    integral[0, c] (t^(x-1) * e^-t * dt)"
-  ^double [^double c ^double x]
+  ^double [^double x ^double c]
   {:pre [(have? m/non-? c) (have? pos? x)]}
   (cond (zero? c) 0.0, (m/one? x) (m/one- (m/exp (- c))),
-        :else (* (gamma x) (ap/regularized-gamma-p c x))))
+        :else (* (gamma x) (ap/regularized-gamma-p x c))))
 
 (defn upper-gamma
   "Returns the upper incomplete gamma function: 
    integral[c, inf] (t^(x-1) * e^-t * dt)"
-  ^double [^double c ^double x]
+  ^double [^double x ^double c]
   {:pre [(have? m/non-? c) (have? pos? x)]}
   (cond (zero? c) (gamma x), (m/one? x) (m/exp (- c)),
-        :else (* (gamma x) (ap/regularized-gamma-q c x))))
+        :else (* (gamma x) (ap/regularized-gamma-q x c))))
 
 (defn upper-gamma-derivative-c
   "Returns the upper gamma derivative c"
-  ^double [^double c ^double x]
+  ^double [^double x ^double c]
   {:pre [(have? m/non-? c) (have? pos? x)]}
   (->> x dec (m/pow c) - (* (m/exp (- c)))))
 
 (defn regularized-gamma-p
   "Returns the regularized gamma function P(c, x) = 1 - Q(c, x).  
 Equal to lower incomplete gamma function divided by gamma function"
-  ^double [^double c ^double x]
+  ^double [^double x ^double c]
   {:pre [(have? m/non-? c) (have? pos? x)]}
-  (if (zero? c) 0.0 (ap/regularized-gamma-p c x)))
+  (if (zero? c) 0.0 (ap/regularized-gamma-p x c)))
 
 (defn regularized-gamma-q
   "Returns the regularized gamma function Q(c, x) = 1 - P(c, x).  
 Equal to upper incomplete gamma function divided by gamma function"
-  ^double [^double c ^double x]
+  ^double [^double x ^double c]
   {:pre [(have? m/non-? c) (have? pos? x)]}
-  (if (zero? c) 1.0 (ap/regularized-gamma-q c x)))
+  (if (zero? c) 1.0 (ap/regularized-gamma-q x c)))
 
 (defn log-gamma
   "Returns the log gamma of x"
@@ -202,13 +202,13 @@ Although beta is defined for pos x and y, this function allows for all
 (defn regularized-beta
   "Returns the regularized beta.  
 Equal to incomplete beta function divided by beta function"
-  ^double [^double c ^double x ^double y]
+  ^double [^double x ^double y ^double c]
   {:pre [(have? pos? x y) (have? m/prob? c)]}
   (if (zero? c) 0.0 (Gamma/incompleteBeta x y c)))          ;cern misnamed this
 
 (defn incomplete-beta
   "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt"
-  ^double [^double c ^double x ^double y]
+  ^double [^double x ^double y ^double c]
   {:pre [(have? pos? x y) (have? m/prob? c)]}
   ;;cern misnamed this
   (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) 
