@@ -1574,8 +1574,7 @@ Returns a map containing:
   "Returns a vector"
   [m1 m2]
   {:pre [(have? matrix? m1)]}
-  (let [^DecompositionSolver s (.getSolver (QRDecomposition.
-                                             (apache-commons m1))),
+  (let [^DecompositionSolver s (.getSolver (QRDecomposition. (apache-commons m1))),
         m (apache-commons m2)]
     (vec (.toArray (if (vec? m) ^RealVector (.solve s ^RealVector m)
                                 ^RealVector (.solve s ^RealMatrix m))))))

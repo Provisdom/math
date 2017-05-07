@@ -89,13 +89,13 @@
              (upper-gamma -0.1 1) => (throws)
              (upper-gamma 0.0 1) => 1.0)
        (fact "upper gamma derivative c"
-             (upper-gamma-derivative-c 1 1.1) => -0.36787944117144233
-             (upper-gamma-derivative-c 1 1) => -0.36787944117144233
-             (upper-gamma-derivative-c 1 0) => (throws)
-             (upper-gamma-derivative-c 1 -0.1) => (throws)
-             (upper-gamma-derivative-c 0.1 1) => -0.9048374180359595
-             (upper-gamma-derivative-c -0.1 1) => (throws)
-             (upper-gamma-derivative-c 0.0 1) => -1.0)
+             (upper-gamma-derivative-x 1 1.1) => -0.36787944117144233
+             (upper-gamma-derivative-x 1 1) => -0.36787944117144233
+             (upper-gamma-derivative-x 1 0) => (throws)
+             (upper-gamma-derivative-x 1 -0.1) => (throws)
+             (upper-gamma-derivative-x 0.1 1) => -0.9048374180359595
+             (upper-gamma-derivative-x -0.1 1) => (throws)
+             (upper-gamma-derivative-x 0.0 1) => -1.0)
        (fact "regularized-gamma-p"
              (regularized-gamma-p 1 1.1) => 0.6671289163019202
              (regularized-gamma-p 1 1) => 0.6321205588285578
