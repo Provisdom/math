@@ -54,13 +54,17 @@
 
 ;;;SPECS
 (s/def ::num-or-inf (s/double-in :NaN? false))
+(s/def ::nan m/nan?)
 (s/def ::nan-or-non-                                        ;;note that spec wasn't working with both :NaN? and :min.
-  (s/or :non-nan (s/double-in :infinite? false :min 0.0) :nan #(m/nan? %)))
-(s/def ::nan-or-corr (s/or :corr (s/double-in :infinite? false :min -1.0 :max 1.0) :nan #(m/nan? %)))
+  (s/or :non-nan (s/double-in :infinite? false :min 0.0) :nan ::nan))
+(s/def ::corr (s/double-in :infinite? false :NaN? false :min -1.0 :max 1.0))
+(s/def ::nan-or-corr (s/or :corr ::corr :nan ::nan))
 (s/def ::num (s/double-in :infinite? false :NaN? false))
 (s/def ::num-non- (s/double-in :infinite? false :NaN? false :min 0.0))
 (s/def ::num+ (s/double-in :infinite? false :NaN? false :min (m/next-after 0.0 1.0)))
-(s/def ::nan-or-prob (s/or :prob (s/double-in :infinite? false :min 0.0 :max 1.0) :nan #(m/nan? %)))
+(s/def ::prob (s/double-in :infinite? false :NaN? false :min 0.0 :max 1.0))
+(s/def ::nan-or-prob (s/or :prob ::prob :nan ::nan))
+
 
 ;;;ERROR FUNCTIONS
 (defn erf
@@ -93,6 +97,10 @@
         (zero? x) 0.0
         :else (ap/erf-inv x)))
 
+(s/fdef inv-erf
+        :args (s/cat :x ::corr)
+        :ret ::num-or-inf)
+
 (defn inv-erfc
   "Returns the inverse complementary error function"
   ^double [^double x]
@@ -109,6 +117,10 @@
         (m/one? cumul-prob) m/inf+
         (== 0.5 cumul-prob) 0.0
         :else (* m/sqrt-two (inv-erf (dec (* 2 cumul-prob))))))
+
+(s/fdef inv-cdf-standard-normal
+        :args (s/cat :cumul-prob ::prob)
+        :ret ::num-or-inf)
 
 (defn cdf-standard-normal
   "Returns the standard Normal cdf"
