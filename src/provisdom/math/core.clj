@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [pos? neg? int? boolean?])
   (:require [provisdom.utility-belt.core :as co]
             [clojure.spec :as s]
-            [clojure.spec.gen :as sg]
+            [clojure.spec.gen :as gen]
             [clojure.spec.test :as st]))
 
 (set! *warn-on-reflection* true)
@@ -138,7 +138,7 @@
   "Returns true if x is a long."
   [x] (and (number? x) (instance? Long x)))
 
-(s/def ::long? (s/spec long? :gen sg/large-integer))
+(s/def ::long? (s/spec long? :gen gen/large-integer))
 
 (defn long+?
   "Returns true if x is a long and is positive."
