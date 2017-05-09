@@ -68,29 +68,71 @@
 
 (defn next-after [^double start ^double direction] (Math/nextAfter start direction))
 
+(s/def ::number? (s/spec number? :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::nan-or-number? (s/spec #(or (nan? %) (number? %)) :gen #(s/gen (s/double-in))))
+
 (defn pos?
   "Returns true if x is a number that is positive."
   [x] (and (number? x) (clojure.core/pos? x)))
 
 (s/def ::pos? (s/spec pos? :gen #(s/gen (s/double-in :min tiny-dbl :NaN? false))))
+(s/def ::nan-or-pos? (s/spec #(or (nan? %) (pos? %)) :gen #(s/gen (s/double-in :min tiny-dbl))))
 
 (defn neg?
   "Returns true if x is a number that is negative."
   [x] (and (number? x) (clojure.core/neg? x)))
 
 (s/def ::neg? (s/spec neg? :gen #(s/gen (s/double-in :max (- tiny-dbl) :NaN? false))))
+(s/def ::nan-or-neg? (s/spec #(or (nan? %) (neg? %)) :gen #(s/gen (s/double-in :max (- tiny-dbl)))))
 
 (defn non-?
   "Returns true if x is non-negative"
-  [x] (and (number? x) (>= x 0) (not (nan? x))))
+  [x] (and (number? x) (>= x 0)))
 
 (s/def ::non-? (s/spec non-? :gen #(s/gen (s/double-in :min 0.0 :NaN? false))))
+(s/def ::nan-or-non-? (s/spec #(or (nan? %) (non-? %)) :gen #(s/gen (s/double-in :min 0.0))))
 
 (defn non+?
   "Returns true if x is non-positive"
-  [x] (and (number? x) (<= x 0) (not (nan? x))))
+  [x] (and (number? x) (<= x 0)))
 
 (s/def ::non+? (s/spec non+? :gen #(s/gen (s/double-in :max 0.0 :NaN? false))))
+(s/def ::nan-or-non+? (s/spec #(or (nan? %) (non+? %)) :gen #(s/gen (s/double-in :max 0.0))))
+
+(defn finite?
+  "Returns true if x is a finite number."
+  [x] (and (number? x) (not (Double/isInfinite ^double x))))
+
+(s/def ::finite? (s/spec finite? :gen #(s/gen (s/double-in :infinite? false :NaN? false))))
+(s/def ::nan-or-finite? (s/spec #(or (nan? %) (finite? %)) :gen #(s/gen (s/double-in :infinite? false))))
+
+(defn finite+?
+  "Returns true if x is a positive finite number."
+  [x] (and (pos? x) (not (Double/isInfinite ^double x))))
+
+(s/def ::finite+? (s/spec finite+? :gen #(s/gen (s/double-in :min tiny-dbl :infinite? false :NaN? false))))
+(s/def ::nan-or-finite+? (s/spec #(or (nan? %) (finite+? %)) :gen #(s/gen (s/double-in :min tiny-dbl :infinite? false))))
+
+(defn finite-?
+  "Returns true if x is a negative finite number."
+  [x] (and (neg? x) (not (Double/isInfinite ^double x))))
+
+(s/def ::finite-? (s/spec finite-? :gen #(s/gen (s/double-in :max (- tiny-dbl) :infinite? false :NaN? false))))
+(s/def ::nan-or-finite-? (s/spec #(or (nan? %) (finite-? %)) :gen #(s/gen (s/double-in :max (- tiny-dbl) :infinite? false))))
+
+(defn finite-non-?
+  "Returns true if x is a non-negative finite number."
+  [x] (and (non-? x) (not (Double/isInfinite ^double x))))
+
+(s/def ::finite-non-? (s/spec finite-non-? :gen #(s/gen (s/double-in :min 0.0 :infinite? false :NaN? false))))
+(s/def ::nan-or-finite-non-? (s/spec #(or (nan? %) (finite-non-? %)) :gen #(s/gen (s/double-in :min 0.0 :infinite? false))))
+
+(defn finite-non+?
+  "Returns true if x is a non-positive finite number."
+  [x] (and (non+? x) (not (Double/isInfinite ^double x))))
+
+(s/def ::finite-non+? (s/spec finite-non+? :gen #(s/gen (s/double-in :max 0.0 :infinite? false :NaN? false))))
+(s/def ::nan-or-finite-non+? (s/spec #(or (nan? %) (finite-non+? %)) :gen #(s/gen (s/double-in :max 0.0 :infinite? false))))
 
 (defn long?
   "Returns true if x is a long."
@@ -211,24 +253,28 @@
   [x] (and (non-? x) (<= x 1) (not (nan? x))))
 
 (s/def ::prob? (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
+(s/def ::nan-or-prob? (s/spec #(or (nan? %) (prob? %)) :gen #(s/gen (s/double-in :min 0.0 :max 1.0))))
 
 (defn open-prob?
   "Returns true if x is between 0 and 1, exclusive"
   [x] (and (number? x) (pos? x) (< x 1)))
 
-(s/def ::open-prob? (s/spec open-prob? :gen #(s/gen (s/double-in :min (next-after 0.0 1.0) :max (next-after 1.0 0.0) :NaN? false))))
+(s/def ::open-prob? (s/spec open-prob? :gen #(s/gen (s/double-in :min tiny-dbl :max (next-after 1.0 0.0) :NaN? false))))
+(s/def ::nan-or-open-prob? (s/spec #(or (nan? %) (open-prob? %)) :gen #(s/gen (s/double-in :min tiny-dbl :max (next-after 1.0 0.0)))))
 
 (defn corr?
   "Returns true if x is between -1 and 1, inclusive"
   [x] (and (number? x) (<= x 1) (>= x -1) (not (nan? x))))
 
-(s/def ::corr (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
+(s/def ::corr? (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
+(s/def ::nan-or-corr? (s/spec #(or (nan? %) (corr? %)) :gen #(s/gen (s/double-in :min -1.0 :max 1.0))))
 
 (defn open-corr?
   "Returns true if x is between -1 and 1, exclusive"
   [x] (and (number? x) (< x 1) (> x -1)))
 
-(s/def ::open-corr (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-after -1.0 1.0) :max (next-after 1.0 -1.0) :NaN? false))))
+(s/def ::open-corr? (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-after -1.0 1.0) :max (next-after 1.0 -1.0) :NaN? false))))
+(s/def ::nan-or-open-corr? (s/spec #(or (nan? %) (open-corr? %)) :gen #(s/gen (s/double-in :min (next-after -1.0 1.0) :max (next-after 1.0 -1.0)))))
 
 ;;;BASIC MATH
 (defn one-

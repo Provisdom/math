@@ -52,20 +52,6 @@
    [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
-;;;SPECS
-(s/def ::num-or-inf (s/double-in :NaN? false))
-(s/def ::nan m/nan?)
-(s/def ::nan-or-non-                                        ;;note that spec wasn't working with both :NaN? and :min.
-  (s/or :non-nan (s/double-in :infinite? false :min 0.0) :nan ::nan))
-(s/def ::corr (s/double-in :infinite? false :NaN? false :min -1.0 :max 1.0))
-(s/def ::nan-or-corr (s/or :corr ::corr :nan ::nan))
-(s/def ::num (s/double-in :infinite? false :NaN? false))
-(s/def ::num-non- (s/double-in :infinite? false :NaN? false :min 0.0))
-(s/def ::num+ (s/double-in :infinite? false :NaN? false :min (m/next-after 0.0 1.0)))
-(s/def ::prob (s/double-in :infinite? false :NaN? false :min 0.0 :max 1.0))
-(s/def ::nan-or-prob (s/or :prob ::prob :nan ::nan))
-
-
 ;;;ERROR FUNCTIONS
 (defn erf
   "Returns the error function: 2 / (sqrt PI) * integral[0, x] (e^-(t*t) * dt)"
@@ -77,8 +63,8 @@
   (^double [^double x1 ^double x2] (ap/erf x1 x2)))
 
 (s/fdef erf
-        :args (s/cat :x ::num-or-inf)
-        :ret ::nan-or-corr)
+        :args (s/cat :x ::m/number?)
+        :ret ::m/nan-or-corr?)
 
 (defn erf-derivative
   "Returns the derivative of the error function"
@@ -98,8 +84,8 @@
         :else (ap/erf-inv x)))
 
 (s/fdef inv-erf
-        :args (s/cat :x ::corr)
-        :ret ::num-or-inf)
+        :args (s/cat :x ::m/corr?)
+        :ret ::m/number?)
 
 (defn inv-erfc
   "Returns the inverse complementary error function"
@@ -119,8 +105,8 @@
         :else (* m/sqrt-two (inv-erf (dec (* 2 cumul-prob))))))
 
 (s/fdef inv-cdf-standard-normal
-        :args (s/cat :cumul-prob ::prob)
-        :ret ::num-or-inf)
+        :args (s/cat :cumul-prob ::m/prob?)
+        :ret ::m/number?)
 
 (defn cdf-standard-normal
   "Returns the standard Normal cdf"
@@ -131,8 +117,8 @@
         :else (* 0.5 (inc (erf (* x m/inv-sqrt-two))))))
 
 (s/fdef cdf-standard-normal
-        :args (s/cat :x ::num-or-inf)
-        :ret ::nan-or-prob)
+        :args (s/cat :x ::m/number?)
+        :ret ::m/nan-or-prob?)
 
 ;GAMMA FUNCTIONS
 (defn gamma
@@ -174,14 +160,14 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   "Returns the regularized gamma function P(a, x) = 1 - Q(a, x).
 Equal to lower incomplete gamma function (a, x) divided by gamma function (a)"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? pos? a)]}
+  {:pre [(have? m/non-? x) (have? m/finite+? a)]}
   (cond (zero? x) 0.0
         (> x 1.0e150) 1.0
         :else (ap/regularized-gamma-p a x)))
 
 (s/fdef regularized-gamma-p
-        :args (s/cat :a ::num+ :x ::num-non-)
-        :ret ::nan-or-non-)
+        :args (s/cat :a ::m/finite+? :x ::m/non-?)
+        :ret ::m/nan-or-non-?)
 
 (defn regularized-gamma-q
   "Returns the regularized gamma function Q(a, x) = 1 - P(a, x).
