@@ -168,7 +168,7 @@
   "Returns true is x is an integer that is within the int range"
   [x] (and (integer? x) (int-range? x)))
 
-(s/def ::int? (s/spec int? :gen sg/int))
+(s/def ::int? (s/spec int? :gen gen/int))
 
 (defn int+?
   "Returns true if x is an int and is positive."
