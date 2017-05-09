@@ -55,24 +55,39 @@
 ;;;ERROR FUNCTIONS
 (defn erf
   "Returns the error function: 2 / (sqrt PI) * integral[0, x] (e^-(t*t) * dt)"
-  (^double [^double x]
+  ^double [^double x]
    (cond (zero? x) 0.0
          (m/inf+? x) 1.0
          (m/inf-? x) -1.0
          :else (* (m/sgn x) (->> x m/sq (regularized-gamma-p m/half)))))
-  (^double [^double x1 ^double x2] (ap/erf x1 x2)))
 
 (s/fdef erf
         :args (s/cat :x ::m/number?)
         :ret ::m/nan-or-corr?)
 
+(defn erf2
+  ""
+  ^double [^double x1 ^double x2] (ap/erf x1 x2))
+
+(s/fdef erf2
+        :args (s/cat :x1 ::m/number? :x2 ::m/number?)
+        :ret (s/double-in :min -2.0 :max 2.0 :Nan? false))
+
 (defn erf-derivative
   "Returns the derivative of the error function"
   ^double [^double x] (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
 
+(s/fdef erf-derivative
+        :args (s/cat :x ::m/number?)
+        :ret ::m/non-?)
+
 (defn erfc
   "Returns the complementary error function"
   ^double [^double x] (m/one- (erf x)))
+
+(s/fdef erfc
+        :args (s/cat :x ::m/number?)
+        :ret (s/double-in :min 0.0 :max 2.0))
 
 (defn inv-erf
   "Returns the inverse error function"
@@ -89,10 +104,14 @@
 (defn inv-erfc
   "Returns the inverse complementary error function"
   ^double [^double x]
-  {:pre [(have? m/non-? x) (have? #(<= % 2) x)]}
   (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+
         (m/roughly? x 2.0 m/*dbl-close*) m/inf-
-        (m/one? x) 0.0 :else (ap/erfc-inv x)))
+        (m/one? x) 0.0
+        :else (ap/erfc-inv x)))
+
+(s/fdef inv-erfc
+        :args (s/cat :x (s/double-in :min 0.0 :max 2.0))
+        :ret ::m/number?)
 
 (defn inv-cdf-standard-normal
   "Returns the standard Normal inverse cdf"
@@ -123,36 +142,49 @@
   "Returns the gamma function: integral[0, inf] (t^(a-1) * e^-t * dt).
 Although gamma is defined for pos a, this function allows for all non-long-able-non+ a."
   ^double [^double a]
-  {:pre [(have? (complement m/long-able-non+?) a)]}
   (cond (> a 709.7) m/inf+
         (< a -709.7) 0.0
         :else (Gamma/gamma a)))
+
+(s/fdef gamma
+        :args (s/cat :a ::m/non-long-able-non+?)
+        :ret ::m/non-inf-?)
 
 (defn lower-gamma
   "Returns the lower incomplete gamma function: 
    integral[0, x] (t^(a-1) * e^-t * dt)"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? pos? a)]}
   (cond (zero? x) 0.0
         (m/one? a) (m/one- (m/exp (- x)))
-        (< a -709.7) 0.0
-        :else (* (gamma a) (ap/regularized-gamma-p a x))))
+        (> x 1.0e150) 1.0
+        :else (* (gamma a) (min 0.0 (max 1.0 (ap/regularized-gamma-p a x))))))
+
+(s/fdef lower-gamma
+        :args (s/cat :a ::m/pos? :x ::m/non-?)
+        :ret ::m/nan-or-non-?)
 
 (defn upper-gamma
   "Returns the upper incomplete gamma function: 
    integral[x, inf] (t^(a-1) * e^-t * dt)"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? pos? a)]}
   (cond (zero? x) (gamma a)
         (m/one? a) (m/exp (- x))
-        (< a -709.7) 1.0
-        :else (* (gamma a) (ap/regularized-gamma-q a x))))
+        (> x 1.0e150) 0.0
+        :else (* (gamma a) (min 0.0 (max 1.0 (ap/regularized-gamma-q a x))))))
+
+(s/fdef upper-gamma
+        :args (s/cat :a ::m/pos? :x ::m/non-?)
+        :ret ::m/nan-or-non-?)
 
 (defn upper-gamma-derivative-x
   "Returns the upper gamma derivative x"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? pos? a)]}
-  (->> a dec (m/pow a) - (* (m/exp (- x)))))
+    (let [v (* (m/exp (- x)) (m/pow x (dec a)) (/ (gamma a)))]
+      (if (m/inf-? v) m/inf+ v)))
+
+(s/fdef upper-gamma-derivative-x
+        :args (s/cat :a ::m/pos? :x ::m/non-?)
+        :ret ::m/nan-or-non-?)
 
 (defn regularized-gamma-p
   "Returns the regularized gamma function P(a, x) = 1 - Q(a, x).
@@ -163,7 +195,7 @@ Equal to lower incomplete gamma function (a, x) divided by gamma function (a)"
         :else (min 0.0 (max 1.0 (ap/regularized-gamma-p a x)))))
 
 (s/fdef regularized-gamma-p
-        :args (s/cat :a ::m/finite+? :x ::m/non-?)
+        :args (s/cat :a ::m/pos? :x ::m/non-?)
         :ret ::m/nan-or-prob?)
 
 (defn regularized-gamma-q
@@ -175,7 +207,7 @@ Equal to upper incomplete gamma function (a, x) divided by gamma function (a)"
         :else (min 0.0 (max 1.0 (ap/regularized-gamma-q a x)))))
 
 (s/fdef regularized-gamma-q
-        :args (s/cat :a ::m/finite+? :x ::m/non-?)
+        :args (s/cat :a ::m/pos? :x ::m/non-?)
         :ret ::m/nan-or-prob?)
 
 (defn log-gamma

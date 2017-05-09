@@ -198,7 +198,7 @@
   "Returns true if x is a number that can be converted to a long"
   [x] (and (number? x) (roughly-round? x 0.0) (long-range? x)))
 
-(s/def ::long-able? (s/spec long-able? :gen (s/double-in :min min-long :max max-long :infinite? false :NaN? false)))
+(s/def ::long-able? (s/spec long-able? :gen #(s/gen (s/double-in :min min-long :max max-long :infinite? false :NaN? false))))
 
 (defn long-able+?
   "Returns true if x is a number that can be converted to a long, and is positive"
@@ -217,6 +217,9 @@
   [x] (and (long-able? x) (non+? x)))
 
 (s/def ::long-able-non+? (s/and ::long-able? ::non+?))
+(s/def ::non-long-able-non+?
+  (s/spec #(and (number? %) (not (long-able-non+? %)))
+          :gen #(s/gen (s/double-in :NaN? false))))
 
 (defn long-able-non-?
   "Returns true if x is a number that can be converted to a long, and is non-"
@@ -235,6 +238,8 @@
 (defn inf-?
   "Returns true if x is inf-"
   [x] (and (number? x) (Double/isInfinite ^double x) (neg? x)))
+
+(s/def ::non-inf-? (s/spec #(and (number? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? false))))
 
 (defn inf?
   "Returns true if x is inf+ or inf-"
