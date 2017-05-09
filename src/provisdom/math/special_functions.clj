@@ -157,7 +157,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   (cond (zero? x) 0.0
         (m/one? a) (m/one- (m/exp (- x)))
         (> x 1.0e150) 1.0
-        :else (* (gamma a) (min 0.0 (max 1.0 (ap/regularized-gamma-p a x))))))
+        :else (* (gamma a) (min 1.0 (max 0.0 (ap/regularized-gamma-p a x))))))
 
 (s/fdef lower-gamma
         :args (s/cat :a ::m/pos? :x ::m/non-?)
@@ -170,7 +170,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   (cond (zero? x) (gamma a)
         (m/one? a) (m/exp (- x))
         (> x 1.0e150) 0.0
-        :else (* (gamma a) (min 0.0 (max 1.0 (ap/regularized-gamma-q a x))))))
+        :else (* (gamma a) (min 1.0 (max 0.0 (ap/regularized-gamma-q a x))))))
 
 (s/fdef upper-gamma
         :args (s/cat :a ::m/pos? :x ::m/non-?)
@@ -192,7 +192,7 @@ Equal to lower incomplete gamma function (a, x) divided by gamma function (a)"
   ^double [^double a ^double x]
   (cond (zero? x) 0.0
         (> x 1.0e150) 1.0
-        :else (min 0.0 (max 1.0 (ap/regularized-gamma-p a x)))))
+        :else (min 1.0 (max 0.0 (ap/regularized-gamma-p a x)))))
 
 (s/fdef regularized-gamma-p
         :args (s/cat :a ::m/pos? :x ::m/non-?)
@@ -204,7 +204,7 @@ Equal to upper incomplete gamma function (a, x) divided by gamma function (a)"
   ^double [^double a ^double x]
   (cond (zero? x) 1.0
         (> x 1.0e150) 0.0
-        :else (min 0.0 (max 1.0 (ap/regularized-gamma-q a x)))))
+        :else (min 1.0 (max 0.0 (ap/regularized-gamma-q a x)))))
 
 (s/fdef regularized-gamma-q
         :args (s/cat :a ::m/pos? :x ::m/non-?)

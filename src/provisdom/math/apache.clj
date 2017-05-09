@@ -488,7 +488,7 @@ Increasing the population size improves global search properties at the
                         {:fn (var optimize-cma-evolution) :solver? true :external? true})))
       (catch TooManyIterationsException e
         (throw (ex-info (format "Max iterations (%d) exceeded." iter),
-                         {:fn (var optimize-cma-evolution) :solver? true :external? true}))))))
+                        {:fn (var optimize-cma-evolution) :solver? true :external? true}))))))
 
 (defn optimize-bobyqa
   "Powell's BOBYQA algorithm  (Bound Optimization BY Quadratic Approximation).  
@@ -507,8 +507,7 @@ BOBYQA could also be considered as a replacement of any derivative-based
               (InitialGuess. (double-array start))
               (SimpleBounds. (double-array lower-bounds)
                              (double-array upper-bounds))],
-        p (if interpolation-points interpolation-points
-                                   (m/ceil (* 1.5 (inc (count start))))),
+        p (or interpolation-points (m/ceil (* 1.5 (inc (count start))))),
         s (BOBYQAOptimizer. p)]
     (try
       (let [pv (.optimize s (into-array OptimizationData data))]
