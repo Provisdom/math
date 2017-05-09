@@ -77,7 +77,6 @@
 (defn inv-erf
   "Returns the inverse error function"
   ^double [^double x]
-  {:pre [(have? #(>= % -1) x) (have? #(<= % 1) x)]}
   (cond (m/roughly? 1.0 x m/*dbl-close*) m/inf+
         (m/roughly? -1.0 x m/*dbl-close*) m/inf-
         (zero? x) 0.0
@@ -98,7 +97,6 @@
 (defn inv-cdf-standard-normal
   "Returns the standard Normal inverse cdf"
   [^double cumul-prob]
-  {:pre [(have? m/prob? cumul-prob)]}
   (cond (zero? cumul-prob) m/inf-
         (m/one? cumul-prob) m/inf+
         (== 0.5 cumul-prob) 0.0
@@ -160,21 +158,25 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   "Returns the regularized gamma function P(a, x) = 1 - Q(a, x).
 Equal to lower incomplete gamma function (a, x) divided by gamma function (a)"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? m/finite+? a)]}
   (cond (zero? x) 0.0
         (> x 1.0e150) 1.0
-        :else (ap/regularized-gamma-p a x)))
+        :else (min 0.0 (max 1.0 (ap/regularized-gamma-p a x)))))
 
 (s/fdef regularized-gamma-p
         :args (s/cat :a ::m/finite+? :x ::m/non-?)
-        :ret ::m/nan-or-non-?)
+        :ret ::m/nan-or-prob?)
 
 (defn regularized-gamma-q
   "Returns the regularized gamma function Q(a, x) = 1 - P(a, x).
 Equal to upper incomplete gamma function (a, x) divided by gamma function (a)"
   ^double [^double a ^double x]
-  {:pre [(have? m/non-? x) (have? pos? a)]}
-  (if (zero? x) 1.0 (ap/regularized-gamma-q a x)))
+  (cond (zero? x) 1.0
+        (> x 1.0e150) 0.0
+        :else (min 0.0 (max 1.0 (ap/regularized-gamma-q a x)))))
+
+(s/fdef regularized-gamma-q
+        :args (s/cat :a ::m/finite+? :x ::m/non-?)
+        :ret ::m/nan-or-prob?)
 
 (defn log-gamma
   "Returns the log gamma of a"
