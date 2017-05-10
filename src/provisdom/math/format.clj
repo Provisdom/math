@@ -55,7 +55,7 @@
         stn (if-not max-digits (str n) (format-exponential n max-digits))
         n (if-not max-digits n (read-string stn))
         ml (min max-length (count stn))
-        sd (count (str (m/round n :type :toward)))
+        sd (count (str (m/round n :toward)))
         g? (or (and (> sd ml) (> sd (+ 5.5 (* -0.5 (m/sgn n)))))
                (< (m/abs n) 0.0001))]
     (loop [i (max ml 1)]
