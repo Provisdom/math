@@ -8,7 +8,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
-(declare nan? roughly-round? non-? non+?)
+(declare nan? roughly-round? non-? non+? tiny-up tiny-down)
 
 ;;;DYNAMIC VARIABLES
 (def ^:dynamic *sgl-digits* 6)
@@ -66,22 +66,7 @@
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
 
-(defn- maybe-int-range [x] (if (int-range? x) (int x) x))
-
-(defn tiny-up [^double start] (+ start tiny-dbl))
-
-(defn tiny-down [^double start] (- start tiny-dbl))
-
-(defn boolean?
-  "Returns true if x is true or false"
-  [x] (or (true? x) (false? x)))
-
-(s/def ::boolean (s/spec boolean? :gen #(gen/boolean)))
-
-(defn number?
-  "Returns true if x is a number"
-  [x] (clojure.core/number? x))
-
+(s/def ::boolean (s/spec clojure.core/boolean? :gen #(gen/boolean)))
 (s/def ::number (s/spec number? :gen #(s/gen (s/double-in))))
 
 (defn num?
@@ -309,6 +294,14 @@
   [x] (if (long-able? x) (long x) x))
 
 ;;;BASIC MATH
+(defn tiny-up
+  "Returns x plus tiny-dbl"
+  [^double x] (+ x tiny-dbl))
+
+(defn tiny-down
+  "Returns x minus tiny-dbl"
+  [^double x] (- x tiny-dbl))
+
 (defn one-
   "Returns (1 - x)"
   ([x] (inc (- x)))
