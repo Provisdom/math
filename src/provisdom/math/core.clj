@@ -1,5 +1,5 @@
 (ns provisdom.math.core
-  (:refer-clojure :exclude [pos? neg? int? boolean?])
+  (:refer-clojure :exclude [pos? neg? int?])
   (:require [provisdom.utility-belt.core :as co]
             [clojure.spec :as s]
             [clojure.spec.gen :as gen]
