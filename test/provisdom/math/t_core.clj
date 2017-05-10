@@ -7,6 +7,21 @@
 
 (st/instrument)
 
+(deftest num?-test
+  (is-not (num? "A"))
+  (is (num? 3.3E30))
+  (is (num? -3.3E30))
+  (is (num? inf+))
+  (is (num? inf-))
+  (is-not (num? nan)))
+
+(deftest nan?-test
+  (is-not (nan? 3.3))
+  (is-not (nan? "A"))
+  (is-not (nan? inf+))
+  (is-not (nan? inf-))
+  (is (nan? nan)))
+
 (deftest pos?-test
   (is-not (pos? "A"))
   (is (pos? 3.3E30))
@@ -40,6 +55,48 @@
   (is (non+? inf-))
   (is-not (non+? nan))
   (is-not (non+? "A")))
+
+(deftest finite?-test
+  (is-not (finite? "A"))
+  (is (finite? 3.3E30))
+  (is (finite? -3.3E30))
+  (is-not (finite? inf+))
+  (is-not (finite? inf-))
+  (is-not (finite? nan)))
+
+(deftest finite+?-test
+  (is-not (finite+? "A"))
+  (is (finite+? 3.3E30))
+  (is-not (finite+? -3.3E30))
+  (is-not (finite+? inf+))
+  (is-not (finite+? inf-))
+  (is-not (finite+? nan)))
+
+(deftest finite-?-test
+  (is-not (finite-? "A"))
+  (is-not (finite-? 3.3E30))
+  (is (finite-? -3.3E30))
+  (is-not (finite-? inf+))
+  (is-not (finite-? inf-))
+  (is-not (finite-? nan)))
+
+(deftest finite-non-?-test
+  (is (finite-non-? 0))
+  (is (finite-non-? 1))
+  (is-not (finite-non-? -1))
+  (is-not (finite-non-? inf+))
+  (is-not (finite-non-? inf-))
+  (is-not (finite-non-? nan))
+  (is-not (finite-non-? "A")))
+
+(deftest finite-non+?-test
+  (is (finite-non+? 0))
+  (is-not (finite-non+? 1))
+  (is (finite-non+? -1))
+  (is-not (finite-non+? inf+))
+  (is-not (finite-non+? inf-))
+  (is-not (finite-non+? nan))
+  (is-not (finite-non+? "A")))
 
 (deftest long?-test
   (is-not (long? 3.3))
@@ -191,17 +248,6 @@
   (is-not (long-able-non-? -1.0))
   (is-not (long-able-non-? -3.3)))
 
-(deftest maybe-long-able-test
-  (is (zero? (maybe-long-able 0.0)))
-  (is (zero? (maybe-long-able 0)))
-  (is= 23423423 (maybe-long-able 2.3423423E7))
-  (is= 234234324234234234234N (maybe-long-able 234234324234234234234N))
-  (is= 2.3423432423423423E20 (maybe-long-able 2.3423432423423423E20))
-  (is= inf+ (maybe-long-able inf+))
-  (is= inf- (maybe-long-able inf-))
-  (is (nan? (maybe-long-able nan)))
-  (is (nil? (maybe-long-able nil))))
-
 (deftest inf+?-test
   (is-not (inf+? 3.3))
   (is-not (inf+? "A"))
@@ -222,13 +268,6 @@
   (is (inf? inf+))
   (is (inf? inf-))
   (is-not (inf? nan)))
-
-(deftest nan?-test
-  (is-not (nan? 3.3))
-  (is-not (nan? "A"))
-  (is-not (nan? inf+))
-  (is-not (nan? inf-))
-  (is (nan? nan)))
 
 (deftest one?-test
   (is (one? 1))
@@ -285,11 +324,29 @@
   (is-not (open-corr? nan))
   (is-not (open-corr? "A")))
 
+(deftest maybe-long-able-test
+  (is (zero? (maybe-long-able 0.0)))
+  (is (zero? (maybe-long-able 0)))
+  (is= 23423423 (maybe-long-able 2.3423423E7))
+  (is= 234234324234234234234N (maybe-long-able 234234324234234234234N))
+  (is= 2.3423432423423423E20 (maybe-long-able 2.3423432423423423E20))
+  (is= inf+ (maybe-long-able inf+))
+  (is= inf- (maybe-long-able inf-))
+  (is (nan? (maybe-long-able nan)))
+  (is (nil? (maybe-long-able nil))))
+
 (deftest type-tests-test
+  (num?-test)
+  (nan?-test)
   (pos?-test)
   (neg?-test)
   (non-?-test)
   (non+?-test)
+  (finite?-test)
+  (finite+?-test)
+  (finite-?-test)
+  (finite-non-?-test)
+  (finite-non+?-test)
   (long?-test)
   (long+?-test)
   (long-?-test)
@@ -305,19 +362,40 @@
   (long-able-?-test)
   (long-able-non+?-test)
   (long-able-non-?-test)
-  (maybe-long-able-test)
   (inf+?-test)
   (inf-?-test)
   (inf?-test)
-  (nan?-test)
   (one?-test)
   (prob?-test)
   (open-prob?-test)
   (corr?-test)
-  (open-corr?-test))
+  (open-corr?-test)
+  (maybe-long-able-test))
+
+(deftest tiny-up-test
+  (is= (+ 3 tiny-dbl) (tiny-up 3))
+  (is= (- tiny-dbl 3) (tiny-up -3))
+  (is (nan? (tiny-up nan)))
+  (is= inf+ (tiny-up inf+))
+  (is= inf- (tiny-up inf-))
+  (is= (- tiny-dbl 3) (tiny-up -3.0))
+  (is (thrown? Exception (tiny-up nil))))
+
+(deftest tiny-down-test
+  (is= (- 3 tiny-dbl) (tiny-down 3))
+  (is= (- -3 tiny-dbl) (tiny-down -3))
+  (is (nan? (tiny-down nan)))
+  (is= inf+ (tiny-down inf+))
+  (is= inf- (tiny-down inf-))
+  (is= (- -3 tiny-dbl) (tiny-down -3.0))
+  (is (thrown? Exception (tiny-down nil))))
 
 (deftest one--test
   (is= -2 (one- 3))
+  (is= 0 (one- 3 -2))
+  (is= -16 (one- 3 4 2 8))
+  (is (thrown? Exception (one- 3 "A")))
+  (is (thrown? Exception (one- "A" 3)))
   (is= 4 (one- -3))
   (is (nan? (one- nan)))
   (is= inf- (one- inf+))
@@ -378,7 +456,7 @@
   (is= 0.0 (logn 0.9 0))
   (is= -0.0 (logn 0.9 inf+)))
 
-(deftest abs-returns-long-if-possible-test
+(deftest abs'-test
   (is= 3.3 (abs' -3.3))
   (is= 3 (abs' -3))
   (is= 300000000 (abs' 3.0E8))
@@ -400,16 +478,18 @@
   (is (thrown? Exception (cbrt nil))))
 
 (deftest basic-math-test
-  one--test
-  sq-test
-  cube-test
-  sgn-test
-  log2-test
-  logn-test
-  abs-returns-long-if-possible-test
-  cbrt-test)
+  (tiny-up-test)
+  (tiny-down-test)
+  (one--test)
+  (sq-test)
+  (cube-test)
+  (sgn-test)
+  (log2-test)
+  (logn-test)
+  (abs'-test)
+  (cbrt-test))
 
-(deftest asinh-inverse-hyperbolic-sine-test
+(deftest asinh-test
   (is= 0.0 (asinh 0.0))
   (is= 0.48121182505960347 (asinh 0.5))
   (is= -0.8813735870195428 (asinh -1.0))
@@ -421,7 +501,7 @@
   (is (nan? (asinh nan)))
   (is (thrown? Exception (asinh nil))))
 
-(deftest acosh-x->=-1-test
+(deftest acosh-test
   (is (nan? (acosh 0.0)))
   (is= 0.0 (acosh 1.0))
   (is= 1.3169578969248166 (acosh 2.0))
@@ -429,7 +509,7 @@
   (is (nan? (acosh nan)))
   (is (thrown? Exception (acosh nil))))
 
-(deftest atanh-must-be-a-corr-test
+(deftest atanh-test
   (is= 0.0 (atanh 0.0))
   (is= -0.2027325540540822 (atanh 0.5))
   (is= inf- (atanh -1.0))
@@ -439,24 +519,24 @@
   (is (thrown? Exception (atanh nil))))
 
 (deftest trigonometry-test
-  asinh-inverse-hyperbolic-sine-test
-  acosh-x->=-1-test
-  atanh-must-be-a-corr-test)
+  (asinh-test)
+  (acosh-test)
+  (atanh-test))
 
 (deftest round-test
-  (is= 1 (round 0.5))
-  (is= 2.342342342342342E22 (round 2.342342342342342E22))
-  (is (zero? (round -0.5)))
-  (is= -1 (round -0.5 :type :down))
-  (is= -1 (round -0.5 :type :away))
-  (is (zero? (round -0.5 :type :toward)))
-  (is (zero? (round 0.5 :type :down)))
-  (is= 1 (round 0.5 :type :away))
-  (is (zero? (round 0.5 :type :toward)))
-  (is= inf+ (round inf+))
-  (is= inf- (round inf-))
-  (is (nan? (round nan)))
-  (is (thrown? Exception (round nil))))
+  (is= 1 (round 0.5 :up))
+  (is= 2.342342342342342E22 (round 2.342342342342342E22 :up))
+  (is (zero? (round -0.5 :up)))
+  (is= -1 (round -0.5 :down))
+  (is= -1 (round -0.5 :away))
+  (is (zero? (round -0.5 :toward)))
+  (is (zero? (round 0.5 :down)))
+  (is= 1 (round 0.5 :away))
+  (is (zero? (round 0.5 :toward)))
+  (is= inf+ (round inf+ :up))
+  (is= inf- (round inf- :up))
+  (is (nan? (round nan :up)))
+  (is (thrown? Exception (round nil :up))))
 
 (deftest floor-test
   (is (zero? (floor 0.4)))
@@ -638,23 +718,39 @@
   (is (thrown? Exception (roughly-corr? nil 0.02))))
 
 (deftest rounding-test
-  round-test
-  floor-test
-  ceil-test
-  roughly-floor-test
-  roughly-ceil-test
-  roughly?-test
-  roughly-round?-test
-  roughly-round-non-?-test
-  roughly-round-non+?-test
-  roughly-round+?-test
-  roughly-round-?-test
-  roughly-non-?-test
-  roughly-non+?-test
-  roughly-prob?-test
-  roughly-corr?-test)
+  (round-test)
+  (floor-test)
+  (ceil-test)
+  (roughly-floor-test)
+  (roughly-ceil-test)
+  (roughly?-test)
+  (roughly-round?-test)
+  (roughly-round-non-?-test)
+  (roughly-round-non+?-test)
+  (roughly-round+?-test)
+  (roughly-round-?-test)
+  (roughly-non-?-test)
+  (roughly-non+?-test)
+  (roughly-prob?-test)
+  (roughly-corr?-test))
 
-(deftest quot-returns-long-if-possible-test
+(defspec-test test-round `round)
+(defspec-test test-floor `floor)
+(defspec-test test-ceil `ceil)
+(defspec-test test-roughly-floor `roughly-floor)
+(defspec-test test-roughly-ceil `roughly-ceil)
+(defspec-test test-roughly? `roughly?)
+(defspec-test test-roughly-round? `roughly-round?)
+(defspec-test test-roughly-round-non-? `roughly-round-non-?)
+(defspec-test test-roughly-round-non+? `roughly-round-non+?)
+(defspec-test test-roughly-round+? `roughly-round+?)
+(defspec-test test-roughly-round-? `roughly-round-?)
+(defspec-test test-roughly-non-? `roughly-non-?)
+(defspec-test test-roughly-non+? `roughly-non+?)
+(defspec-test test-roughly-prob? `roughly-prob?)
+(defspec-test test-roughly-corr? `roughly-corr?)
+
+(deftest quot'-test
   (is= 1 (quot' 3 2))
   (is= -1 (quot' -3 2))
   (is= -1 (quot' 3 -2))
@@ -673,7 +769,7 @@
   (is (nan? (quot' 2 nan)))
   (is (thrown? Exception (quot' nil -2))))
 
-(deftest mod-returns-long-if-possible-test
+(deftest mod'-test
   (is= 1 (mod' 3 2))
   (is= 1 (mod' -3 2))
   (is= -1 (mod' 3 -2))
@@ -692,7 +788,7 @@
   (is (nan? (mod' 2 nan)))
   (is (thrown? Exception (mod' nil -2))))
 
-(deftest rem-returns-long-if-possible-test
+(deftest rem'-test
   (is= 1 (rem' 3 2))
   (is= -1 (rem' -3 2))
   (is= 1 (rem' 3 -2))
@@ -725,20 +821,20 @@
   (is= [1 1] (quot-and-rem 3 2.0))
   (is= [1 0.8799999999999999] (quot-and-rem 3 2.12))
   (is= [1.4150943396226415E40 0] (quot-and-rem 3.0E40 2.12))
-  ;(is (just [inf+ nan?] (quot-and-rem inf+ 3)))
-  ;(is (just [inf- nan?] (quot-and-rem inf- 4)))
-  ;(is (just [nan? nan?] (quot-and-rem nan 2)))
-  ;(is (just [nan? nan?] (quot-and-rem 3 inf+)))
-  ;(is (just [nan? nan?] (quot-and-rem 2 nan)))
+  (is (every? nan? (quot-and-rem inf+ 3)))
+  (is (every? nan? (quot-and-rem inf- 4)))
+  (is (every? nan? (quot-and-rem nan 2)))
+  (is (every? nan? (quot-and-rem 3 inf+)))
+  (is (every? nan? (quot-and-rem 2 nan)))
   (is (thrown? Exception (quot-and-rem nil -2))))
 
-(deftest quot-and-mod-this-is-the-quotient-associated-with-the-mod-test
+(deftest quot-and-mod-test
   (is= [4 0] (quot-and-mod 16 4))
   (is= [0 0] (quot-and-mod 0 4))
   (is= [0 0] (quot-and-mod 0 -4))
-  (is (thrown? Exception (quot-and-mod 4 0)))
-  (is (thrown? Exception (quot-and-mod -4 0)))
-  (is (thrown? Exception (quot-and-mod 0 0)))
+  (is (every? nan? (quot-and-mod 4 0)))
+  (is (every? nan? (quot-and-mod -4 0)))
+  (is (every? nan? (quot-and-mod 0 0)))
   (is= [1 1] (quot-and-mod 3 2))
   (is= [-2 1] (quot-and-mod -3 2))
   (is= [-2 -1] (quot-and-mod 3 -2))
@@ -751,22 +847,28 @@
   (is= [1 1] (quot-and-mod 3 2.0))
   (is= [1 0.8799999999999999] (quot-and-mod 3 2.12))
   (is= [1.4150943396226415E40 0] (quot-and-mod 3.0E40 2.12))
-  ;(is (just [inf+ nan?] (quot-and-mod inf+ 3)))
-  ;(is (just [inf- nan?] (quot-and-mod inf- 4)))
-  ;(is (just [nan? nan?] (quot-and-mod nan 2)))
-  ; (is (just [nan? nan?] (quot-and-mod 3 inf+)))
-  ;(is (just [nan? nan?] (quot-and-mod 4 inf-)))
-  ;(is (just [nan? nan?] (quot-and-mod -3 inf+)))
-  ;(is (just [nan? nan?] (quot-and-mod -4 inf-)))
-  ;(is (just [nan? nan?] (quot-and-mod 2 nan)))
+  (is (every? nan? (quot-and-mod inf+ 3)))
+  (is (every? nan? (quot-and-mod inf- 4)))
+  (is (every? nan? (quot-and-mod nan 2)))
+  (is (every? nan? (quot-and-mod 3 inf+)))
+  (is (every? nan? (quot-and-mod 4 inf-)))
+  (is (every? nan? (quot-and-mod -3 inf+)))
+  (is (every? nan? (quot-and-mod -4 inf-)))
+  (is (every? nan? (quot-and-mod 2 nan)))
   (is (thrown? Exception (quot-and-mod nil -2))))
 
 (deftest quotients-test
-  quot-returns-long-if-possible-test
-  mod-returns-long-if-possible-test
-  rem-returns-long-if-possible-test
-  quot-and-rem-test
-  quot-and-mod-this-is-the-quotient-associated-with-the-mod-test)
+  (quot'-test)
+  (mod'-test)
+  (rem'-test)
+  (quot-and-rem-test)
+  (quot-and-mod-test))
+
+(defspec-test test-quot' `quot')
+(defspec-test test-mod' `mod')
+(defspec-test test-rem' `rem')
+(defspec-test test-quot-and-rem `quot-and-rem)
+(defspec-test test-quot-and-mod `quot-and-mod)
 
 (deftest reduce-angle-test
   (is= 30.4 (reduce-angle 30.4))
@@ -811,9 +913,14 @@
   (is (thrown? Exception (angle->radians nil))))
 
 (deftest angles-test
-  reduce-angle-test
-  reduce-radians-test
-  radians->angle-test
-  angle->radians-test)
+  (reduce-angle-test)
+  (reduce-radians-test)
+  (radians->angle-test)
+  (angle->radians-test))
+
+(defspec-test test-reduce-angle `reduce-angle)
+(defspec-test test-reduce-radians `reduce-radians)
+(defspec-test test-radians->angle `radians->angle)
+(defspec-test test-angle->radians `angle->radians)
 
 #_(st/unstrument)

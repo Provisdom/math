@@ -429,7 +429,7 @@
 
 (defn floor
   "Rounds down.  Returns a long if possible, otherwise a double."
-  [^double x] (maybe-long-range (Math/floor x)))
+  [x] (maybe-long-range (Math/floor x)))
 
 (s/fdef floor
         :args (s/cat :x ::number)
@@ -437,7 +437,7 @@
 
 (defn ceil
   "Rounds up.  Returns a long if possible, otherwise a double."
-  [^double x] (maybe-long-range (Math/ceil x)))
+  [x] (maybe-long-range (Math/ceil x)))
 
 (s/fdef ceil
         :args (s/cat :x ::number)
@@ -661,14 +661,14 @@
 
 (s/fdef reduce-radians
         :args (s/cat :radians ::number)
-        :ret (s/or :int (s/int-in 0 6)
+        :ret (s/or :int (s/int-in 0 7)
                    :dbl (s/double-in :min 0.0 :max two-pi)
                    :nan ::nan
                    :inf ::inf))
 
 (defn radians->angle
   "Returns the reduced angle from radians, where angles = 180 * radians / PI. Returns a long if possible."
-  [^double radians]
+  [radians]
   (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (s/fdef radians->angle
@@ -685,7 +685,7 @@
 
 (s/fdef angle->radians
         :args (s/cat :angle ::number)
-        :ret (s/or :int (s/int-in 0 6)
+        :ret (s/or :int (s/int-in 0 7)
                    :dbl (s/double-in :min 0.0 :max two-pi)
                    :nan ::nan
                    :inf ::inf))
