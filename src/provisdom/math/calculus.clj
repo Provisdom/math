@@ -859,8 +859,7 @@
 
 (defn- univariate-integration-test
   "Univariate Integration using Romberg."
-  ^double
-  [f ^double lower-bound ^double upper-bound]
+  [f lower-bound upper-bound]
   (let [max-eval 100]
     (if (= lower-bound upper-bound)
       0.0

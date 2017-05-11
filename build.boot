@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.0-alpha6")
+(def version "1.0-alpha7")
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
