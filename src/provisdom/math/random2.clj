@@ -227,10 +227,10 @@ provisdom.math.random2
   "Returns a function that will generate random numbers from a static RNG."
   ([] (rng-gen (make-random)))
   ([rng]
-   (let [gens (volatile! (rng-lazy rng))]
-     (fn []
+   (let [gens (atom (rng-lazy rng))]
+     (fn [] volatile!
        (let [rng (first @gens)]
-         (vswap! gens rest)
+         (swap! gens rest)
          rng)))))
 
 (defn set-seed!
@@ -240,7 +240,9 @@ provisdom.math.random2
    (alter-var-root (var *rng-gen*) (constantly (rng-gen (make-random seed))))))
 
 (defmacro bind-seed
-  "Sets the seed for the RNGs to `seed` for the code in `body`"
+  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a lazy sequence,
+  ensure the seq is realized within the scope of the binding otherwise you will get inconsistent
+  results."
   [seed & body]
   `(binding [*rng-gen* (rng-gen (make-random ~seed))]
      ~@body))
