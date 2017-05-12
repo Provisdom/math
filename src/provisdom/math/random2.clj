@@ -247,6 +247,13 @@ provisdom.math.random2
   `(binding [*rng-gen* (rng-gen (make-random ~seed))]
      ~@body))
 
+(defmacro do-set-seed
+  "Runs [[set-seed!]] with `seed` and then executes `body`."
+  [seed & body]
+  `(do
+     (set-seed! ~seed)
+     ~@body))
+
 ;; TODO: Is there a better way to set the default value for *rng-gen*?
 ;; This is needed due to a circular dependency on functions when initially compiled.
 ;; You will get an "Attempting to call unbound fn" error if you try to directly set
