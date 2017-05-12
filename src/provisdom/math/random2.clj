@@ -247,7 +247,7 @@ provisdom.math.random2
   `(binding [*rng-gen* (rng-gen (make-random ~seed))]
      ~@body))
 
-(defmacro do-set-seed
+(defmacro do-set-seed!
   "Runs [[set-seed!]] with `seed` and then executes `body`."
   [seed & body]
   `(do
