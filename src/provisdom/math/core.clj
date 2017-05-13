@@ -31,6 +31,9 @@
 (def ^:const ^double max-dbl Double/MAX_VALUE)
 (def ^:const ^double tiny-dbl Double/MIN_VALUE)
 (def ^:const ^double min-dbl (- max-dbl))
+(def ^:const ^float max-sgl Float/MAX_VALUE)
+(def ^:const ^float tiny-sgl Float/MIN_VALUE)
+(def ^:const ^float min-sgl (- max-sgl))
 (def ^:const ^long max-long Long/MAX_VALUE)
 (def ^:const ^long min-long Long/MIN_VALUE)
 (def ^:const ^long max-int Integer/MAX_VALUE)
@@ -65,6 +68,8 @@
 (defn- maybe-long-range [x] (if (long-range? x) (long x) x))
 
 (defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
+
+(defn- sgl-range? [x] (and (<= x max-sgl) (>= x min-sgl)))
 
 (s/def ::boolean (s/spec clojure.core/boolean? :gen #(gen/boolean)))
 (s/def ::number (s/spec number? :gen #(s/gen (s/double-in))))
@@ -143,6 +148,36 @@
 
 (s/def ::finite-non+ (s/spec finite-non+? :gen #(s/gen (s/double-in :max 0.0 :infinite? false :NaN? false))))
 (s/def ::nan-or-finite-non+ (s/spec #(or (nan? %) (finite-non+? %)) :gen #(s/gen (s/double-in :max 0.0 :infinite? false))))
+
+(defn single?
+  "Returns true if x is a single."
+  [x] (and (number? x) (or (sgl-range? x) (not (== x x)) (Double/isInfinite ^double x))))
+
+(s/def ::single (s/spec single? :gen #(s/gen (s/double-in))))
+
+(defn single+?
+  "Returns true if x is a positive single."
+  [x] (and (pos? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
+
+(s/def ::single+ (s/spec single+? :gen #(s/gen (s/double-in :min tiny-sgl :NaN? false))))
+
+(defn single-?
+  "Returns true if x is a negative single."
+  [x] (and (neg? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
+
+(s/def ::single- (s/spec single-? :gen #(s/gen (s/double-in :max (- tiny-sgl) :NaN? false))))
+
+(defn single-non-?
+  "Returns true if x is a non-negative single."
+  [x] (and (non-? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
+
+(s/def ::single-non- (s/spec single-non-? :gen #(s/gen (s/double-in :min 0.0 :NaN? false))))
+
+(defn single-non+?
+  "Returns true if x is a non-positive single."
+  [x] (and (non+? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
+
+(s/def ::single-non+ (s/spec single-non+? :gen #(s/gen (s/double-in :max 0.0 :NaN? false))))
 
 (defn long?
   "Returns true if x is a long."
