@@ -155,29 +155,11 @@
 
 (s/def ::single (s/spec single? :gen #(s/gen (s/double-in))))
 
-(defn single+?
-  "Returns true if x is a positive single."
-  [x] (and (pos? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
+(defn single-finite?
+  "Returns true if x is a single and finite."
+  [x] (and (number? x) (sgl-range? x)))
 
-(s/def ::single+ (s/spec single+? :gen #(s/gen (s/double-in :min tiny-sgl :NaN? false))))
-
-(defn single-?
-  "Returns true if x is a negative single."
-  [x] (and (neg? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
-
-(s/def ::single- (s/spec single-? :gen #(s/gen (s/double-in :max (- tiny-sgl) :NaN? false))))
-
-(defn single-non-?
-  "Returns true if x is a non-negative single."
-  [x] (and (non-? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
-
-(s/def ::single-non- (s/spec single-non-? :gen #(s/gen (s/double-in :min 0.0 :NaN? false))))
-
-(defn single-non+?
-  "Returns true if x is a non-positive single."
-  [x] (and (non+? x) (or (sgl-range? x) (Double/isInfinite ^double x))))
-
-(s/def ::single-non+ (s/spec single-non+? :gen #(s/gen (s/double-in :max 0.0 :NaN? false))))
+(s/def ::single-finite (s/spec single-finite? :gen #(s/gen (s/double-in :infinite? false :NaN? false))))
 
 (defn long?
   "Returns true if x is a long."
@@ -677,7 +659,10 @@
   (let [m (mod' angle 360)]
     (if (or (nan? m) (inf? m) (and (pos? m) (< m 360.0)))
       m
-      (mod' m 360))))
+      (let [m2 (mod' m 360)]
+        (if (or (nan? m2) (inf? m2) (and (pos? m2) (< m2 360.0)))
+          m2
+          (mod' m2 360))))))
 
 (s/fdef reduce-angle
         :args (s/cat :angle ::number)
@@ -692,7 +677,10 @@
   (let [m (mod' radians two-pi)]
     (if (or (nan? m) (inf? m) (and (pos? m) (< m two-pi)))
       m
-      (mod' m two-pi))))
+      (let [m2 (mod' m two-pi)]
+        (if (or (nan? m2) (inf? m2) (and (pos? m2) (< m2 two-pi)))
+          m2
+          (mod' m2 two-pi))))))
 
 (s/fdef reduce-radians
         :args (s/cat :radians ::number)
