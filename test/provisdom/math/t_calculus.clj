@@ -46,7 +46,12 @@
   ;;seventh deriv: 148.413159103
   (is= 148.4122348483652 ((ca/derivative-fn der-f ::ca/derivative 7) 5.0))
   ;;eighth deriv: 148.413159103
-  (is= 148.37917386236595 ((ca/derivative-fn der-f ::ca/derivative 8) 5.0)))
+  (is= 148.37917386236595 ((ca/derivative-fn der-f ::ca/derivative 8) 5.0))
+  ;;example issues
+  (is= 2.0E8 ((ca/derivative-fn m/sq) 1e8))                 ;good
+  (is= 1.92E9 ((ca/derivative-fn m/sq) 1e9))                ;bad
+  (is= 3.2768E10 ((ca/derivative-fn m/sq) 1e10))            ;ugly
+  (is= 0.0 ((ca/derivative-fn m/sq) 1e11)))                 ;crazy
 
 (deftest calculus-test
   (derivative-fn-test))
