@@ -639,8 +639,8 @@
 (defn derivative-fn
   "Returns a numerical derivative function.  
    Function f takes a number.
-   Note that derivative-fn will not be accurate when inputs or outputs are so large when divided by ::h
-   that they lose precision.
+   Note that derivative-fn will not be accurate when inputs or outputs are so large when
+   divided by ::h that they lose precision.
    Options:
       derivative can be 0 or 1 (default) to 8
       h (default is m/*sgl-close* for 1st deriv, 10x less for others) 
@@ -650,7 +650,8 @@
       type can be :central (default), :forward, or :backward
       accuracy can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv), 
          and 1-6 for forward or backward (no 6 for 4th deriv).
-         (default accuracy is 2 for derivative <= 2, else 6"
+         (default accuracy is 2 for derivative <= 2, else 6.
+         Accuracy is ignored for derivative > 4 and default accuracies are used."
   [f & {::keys [derivative h type accuracy]
         :or    {derivative 1, type :central}}]
   (let [derivative (int derivative)
@@ -663,17 +664,16 @@
                                  f
                                  ::derivative exc
                                  ::h (* x (m/pow 10 (/ (+ 3 exc) -2)))
-                                 ::type type
-                                 ::accuracy accuracy)
+                                 ::type type)
                                ::derivative 4
                                ::h (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
-                               ::type type
-                               ::accuracy accuracy))
+                               ::type type))
           :else (let [h (cond h h
                               (m/one? derivative) m/*sgl-close*
                               :else (/ m/*sgl-close* 10))
                       accuracy (cond accuracy accuracy
                                      (<= derivative 2) 2
+                                     (and (== derivative 4) (not= type :central)) 5
                                      :else 6)
                       coeff-fn (condp = type
                                  :central get-central-coeff

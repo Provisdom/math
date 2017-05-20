@@ -130,65 +130,6 @@
                (fn [a b] [0.0 1.0]) (fn [a b c] [0.0 1.0])) 
              => 2.0000000000000004))
 
-(facts "numerical derivative function"
-       (def derf #(+ (m/exp %) (* 7 (m/pow % 6)) (* 3 (m/pow % 3)) %))
-       (fact "zeroth derivative"
-             ((derivative-fn derf) 4.0) => 43207.59815709607)
-       (fact "first derivative"
-             ((derivative-fn derf) 5.0) => 131624.41317399498 ;131624.413159103
-             ((derivative-fn derf ::h 1e-5) 5.0) => 131624.41315653265
-             ((derivative-fn derf ::h 1e-7) 5.0) => 131624.41340682562
-             ((derivative-fn derf ::accuracy 8) 5.0) => 131624.4131885469
-             ((derivative-fn derf ::type :forward) 5.0) => 131624.41315944307
-             ((derivative-fn derf ::type :backward) 5.0) => 131624.4131885469)
-       (fact "second derivative"
-             ((derivative-fn derf ::derivative 2) 5.0)
-             => 131488.41360816732 ;131488.413159103
-             ((derivative-fn derf ::derivative 2 ::h 1e-6) 5.0)
-             => 131488.41841029935
-             ((derivative-fn derf ::derivative 2 ::h 1e-8) 5.0)
-             => 131488.41389920563
-             ((derivative-fn derf ::derivative 2 ::type :forward) 5.0)
-             => 131488.41040674597
-             ((derivative-fn #(m/log %) ::derivative 2 ::accuracy 2) 5.0)
-             => -0.03999999886872274
-             ((derivative-fn #(m/log %) ::derivative 2 ::accuracy 8) 5.0)
-             => -0.039999989986938544)
-       (fact "third derivative"
-             ((derivative-fn derf ::derivative 3) 5.0)
-             => 105166.41574213281 ;105166.413159103
-             ((derivative-fn derf ::derivative 3 ::h 1e-7) 5.0)
-             => 105166.41574213281
-             ((derivative-fn derf ::derivative 3 ::h 1e-9) 5.0)
-             => 105166.13838262855
-             ((derivative-fn derf ::derivative 3 ::accuracy 6) 5.0)
-             => 105166.41574213281)
-       (fact "fourth derivative"
-             ((derivative-fn derf ::derivative 4) 5.0)
-             => 63148.41448329389 ;63148.413159103
-             ((derivative-fn derf ::derivative 4 ::h 1e-7) 5.0)
-             => 63148.41448329389
-             ((derivative-fn derf ::derivative 4 ::h 1e-9) 5.0)
-             => 63148.56000244617
-             ((derivative-fn derf ::derivative 4 ::accuracy 4) 5.0)
-             => 63148.41448329389
-             ((derivative-fn derf ::derivative 4 ::accuracy 6) 5.0)
-             => 63148.41448329389)
-       (fact "fifth derivative (and higher)" ;25348.41315903
-             ((derivative-fn derf ::derivative 5) 5.0)
-             => (test-roughly 25348.41462038457 1e-14)
-             ((derivative-fn derf ::derivative 5 ::accuracy 2) 5.0)
-             => (test-roughly 25348.493357887488 1e-14)
-             ((derivative-fn derf ::derivative 5 ::h 1e-8) 5.0)
-             => (test-roughly 25348.537368699905 1e-14)
-             ((derivative-fn derf ::derivative 5 ::h 1e-6) 5.0)
-             => 25348.660635063425
-             ((derivative-fn derf ::derivative 6) 5.0)
-             => (test-roughly 5188.451371035215 1e-14) ;5188.4131591
-             ((derivative-fn derf ::derivative 7) 5.0)
-             => (test-roughly 148.4122348483652 1e-14) ;148.413159103
-             ((derivative-fn derf ::derivative 8) 5.0)
-             => (test-roughly 148.37917386236595 1e-14))) ;148.413159103
 (def gf 
   #(let [a (first %), b (second %)] (+ (* a b) (* 2 (m/sq a)) (m/pow b 3))))
 
