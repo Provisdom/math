@@ -90,8 +90,8 @@ Can optionally use first kind (default) or second kind."
               #(mx/inner-product 
                  chebyshev-factors 
                  ((polynomial-fn 
-                    (dec n) :chebyshev-kind (if second-kind? 2 1)) %)) 
-              :derivative i) 0.0)) 
+                    (dec n) :chebyshev-kind (if second-kind? 2 1)) %))
+              ::derivative i) 0.0))
          (range n))))
 
 ;;;SERIES
