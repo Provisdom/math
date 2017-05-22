@@ -51,7 +51,11 @@
   (is= 2.0E8 ((ca/derivative-fn m/sq) 1e8))                 ;good
   (is= 1.92E9 ((ca/derivative-fn m/sq) 1e9))                ;bad
   (is= 3.2768E10 ((ca/derivative-fn m/sq) 1e10))            ;ugly
-  (is= 0.0 ((ca/derivative-fn m/sq) 1e11)))                 ;crazy
+  (is= 0.0 ((ca/derivative-fn m/sq) 1e11))                  ;crazy
+  (is= 2.0E11 ((ca/derivative-fn m/sq ::ca/h 1e8) 1e11))    ;fixed
+  (is= 0.0 ((ca/derivative-fn m/sq) 1e110))                 ;crazy
+  (is= 1.999999999999999E110 ((ca/derivative-fn m/sq ::ca/h 1e108) 1e110)) ;fixed
+  )
 
 (deftest calculus-test
   (derivative-fn-test))
