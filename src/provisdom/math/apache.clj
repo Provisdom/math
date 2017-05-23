@@ -258,10 +258,10 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 (s/def ::exception (partial instance? Exception))
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
 (s/def ::guess ::m/finite)
-(s/def ::bounds (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u))))
-(s/def ::root-f-with-guess-and-bounds
+(s/def ::nilable-bounds (s/nilable (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u)))))
+(s/def ::root-f-with-guess-and-nilable-bounds
   (s/with-gen
-    (s/and (s/tuple ::root-f ::guess ::bounds) (fn [[_ g [l u]]] (and (< g u) (> g l))))
+    (s/and (s/tuple ::root-f ::guess ::nilable-bounds) (fn [[_ g [l u]]] (and (< g u) (> g l))))
     #(gen/one-of (map (partial apply gen/tuple)
                       (partition 3 (map gen/return
                                         (list identity 3.0 [-5.0 5.0]
@@ -302,7 +302,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
                    (catch Exception e (ex-info (.getMessage e) {:fn (var root-solver)})))))))
 
 (s/fdef root-solver
-        :args (s/cat :f-with-guess-and-bounds ::root-f-with-guess-and-bounds
+        :args (s/cat :f-with-guess-and-nilable-bounds ::root-f-with-guess-and-nilable-bounds
                      :opts (s/keys* :opt [::max-iter ::root-solver ::rel-accu ::abs-accu]))
         :ret (s/nilable (s/or :finite ::m/finite :exception ::exception)))
 
