@@ -282,25 +282,27 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 :newton-raphson, :pegasus, :regula, :ridders, :secant"
   [[f guess [lower upper]] & {::keys [max-iter root-solver rel-accu abs-accu]
                               :or   {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
-  (if (= root-solver :newton-raphson)
-    (.solve (NewtonRaphsonSolver. abs-accu) max-iter
-            (univariate-differentiable-function f 2 0.25) lower upper)
-    (let [^BaseUnivariateSolver s
-          (case root-solver
-            :bisection (BisectionSolver. rel-accu abs-accu)
-            :bracketing-brent (BracketingNthOrderBrentSolver. rel-accu abs-accu 5)
-            :brent (BrentSolver. rel-accu abs-accu)
-            :illinois (IllinoisSolver. rel-accu abs-accu)
-            :muller (MullerSolver. rel-accu abs-accu)
-            :muller2 (MullerSolver2. rel-accu abs-accu)
-            :pegasus (PegasusSolver. rel-accu abs-accu)
-            :regula (RegulaFalsiSolver. rel-accu abs-accu)
-            :ridders (RiddersSolver. rel-accu abs-accu)
-            :secant (SecantSolver. rel-accu abs-accu)
-            nil)
-          uni-fn (univariate-function f)]
-      (when s (try (.solve s max-iter uni-fn lower upper guess)
-                   (catch Exception e (ex-info (.getMessage e) {:fn (var root-solver)})))))))
+  (let [ex-d {:fn (var root-solver)}]
+    (if (= root-solver :newton-raphson)
+      (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
+                   (univariate-differentiable-function f 2 0.25) lower upper)
+           (catch Exception e (ex-info (.getMessage e) ex-d)))
+      (let [^BaseUnivariateSolver s
+            (case root-solver
+              :bisection (BisectionSolver. rel-accu abs-accu)
+              :bracketing-brent (BracketingNthOrderBrentSolver. rel-accu abs-accu 5)
+              :brent (BrentSolver. rel-accu abs-accu)
+              :illinois (IllinoisSolver. rel-accu abs-accu)
+              :muller (MullerSolver. rel-accu abs-accu)
+              :muller2 (MullerSolver2. rel-accu abs-accu)
+              :pegasus (PegasusSolver. rel-accu abs-accu)
+              :regula (RegulaFalsiSolver. rel-accu abs-accu)
+              :ridders (RiddersSolver. rel-accu abs-accu)
+              :secant (SecantSolver. rel-accu abs-accu)
+              nil)
+            uni-fn (univariate-function f)]
+        (when s (try (.solve s max-iter uni-fn lower upper guess)
+                     (catch Exception e (ex-info (.getMessage e) ex-d))))))))
 
 (s/fdef root-solver
         :args (s/cat :f-with-guess-and-nilable-bounds ::root-f-with-guess-and-nilable-bounds
