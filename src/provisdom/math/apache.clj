@@ -258,7 +258,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 (s/def ::exception (partial instance? Exception))
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
 (s/def ::guess ::m/finite)
-(s/def ::nilable-bounds (s/nilable (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u)))))
+(s/def ::bounds (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u))))
+(s/def ::nilable-bounds (s/nilable ::bounds))
 (s/def ::root-f-with-guess-and-nilable-bounds
   (s/with-gen
     (s/and (s/tuple ::root-f ::guess ::nilable-bounds) (fn [[_ g [l u]]] (and (< g u) (> g l))))
