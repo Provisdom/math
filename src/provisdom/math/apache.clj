@@ -267,7 +267,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
                                         (list identity 3.0 [-5.0 5.0]
                                               (fn [v] (- (m/cube v) (* 3 v))) 3.0 [-50.0 50.0]
                                               (fn [v] (- (m/exp v) (* 5 v))) 3.0 [-50.0 50.0])))))))
-(s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 10000))))
+(s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::rel-accu ::m/finite+)
 (s/def ::abs-accu
   (s/with-gen ::m/finite+
