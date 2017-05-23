@@ -1,5 +1,7 @@
 (ns provisdom.math.apache
-  (:require [provisdom.utility-belt [core :as co]]
+  (:require [clojure.spec :as s]
+            [clojure.spec.gen :as gen]
+            [clojure.spec.test :as st]
             [provisdom.math [core :as m]
              [arrays :as ar]
              [matrix :as mx]])
@@ -108,8 +110,7 @@
   [f] (reify MultivariateVectorFunction (value [_ x] (double-array (f x)))))
 
 (defn- ^MultivariateMatrixFunction multivariate-matrix-function
-  "f is a function accepting a vector (doubles) and returning a double-layered 
-   collection of doubles"
+  "f is a function accepting a vector (doubles) and returning a double-layered collection of doubles"
   [f]
   (reify MultivariateMatrixFunction
     (value [_ x] (ar/jagged-2D-array :d (f x)))))
@@ -254,31 +255,56 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
                           (SimplePointChecker. rel abs)))
 
 ;;;ROOT SOLVERS
+(s/def ::exception (partial instance? Exception))
+(s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
+(s/def ::guess ::m/finite)
+(s/def ::bounds (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u))))
+(s/def ::root-f-with-guess-and-bounds
+  (s/with-gen
+    (s/and (s/tuple ::root-f ::guess ::bounds) (fn [[_ g [l u]]] (and (< g u) (> g l))))
+    #(gen/one-of (map (partial apply gen/tuple)
+                      (partition 3 (map gen/return
+                                        (list identity 3.0 [-5.0 5.0]
+                                              (fn [v] (- (m/cube v) (* 3 v))) 3.0 [-50.0 50.0]
+                                              (fn [v] (- (m/exp v) (* 5 v))) 3.0 [-50.0 50.0])))))))
+(s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 10000))))
+(s/def ::rel-accu ::m/finite+)
+(s/def ::abs-accu
+  (s/with-gen ::m/finite+
+              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
+(s/def ::root-solver #{:bisection :bracketing-brent :brent :illinois :muller :muller2
+                       :pegasus :regula :ridders :secant :newton-raphson})
+
 (defn root-solver
   "solver options:
 :bisection, :bracketing-brent, :brent, :illinois, :muller, :muller2, 
 :newton-raphson, :pegasus, :regula, :ridders, :secant"
-  [f start min max & {:keys [max-iter solver rel abs]
-                      :or   {max-iter 1000, solver :brent, rel 1e-14, abs 1e-6}}]
-  (if (= solver :newton-raphson)
-    (.solve (NewtonRaphsonSolver. abs) max-iter
-            (univariate-differentiable-function f 2 0.25) min max)
+  [[f guess [lower upper]] & {::keys [max-iter root-solver rel-accu abs-accu]
+                              :or   {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
+  (if (= root-solver :newton-raphson)
+    (.solve (NewtonRaphsonSolver. abs-accu) max-iter
+            (univariate-differentiable-function f 2 0.25) lower upper)
     (let [^BaseUnivariateSolver s
-          (case solver
-            :bisection (BisectionSolver. rel abs),
-            :bracketing-brent (BracketingNthOrderBrentSolver. rel abs),
-            :brent (BrentSolver. rel abs),
-            :illinois (IllinoisSolver. rel abs),
-            :muller (MullerSolver. rel abs),
-            :muller2 (MullerSolver2. rel abs),
-            :pegasus (PegasusSolver. rel abs),
-            :regula (RegulaFalsiSolver. rel abs),
-            :ridders (RiddersSolver. rel abs),
-            :secant (SecantSolver. rel abs),
-            (throw (ex-info (format "Invalid solver type specified %s" solver)
-                            {:fn (var root-solver)})))
+          (case root-solver
+            :bisection (BisectionSolver. rel-accu abs-accu)
+            :bracketing-brent (BracketingNthOrderBrentSolver. rel-accu abs-accu 5)
+            :brent (BrentSolver. rel-accu abs-accu)
+            :illinois (IllinoisSolver. rel-accu abs-accu)
+            :muller (MullerSolver. rel-accu abs-accu)
+            :muller2 (MullerSolver2. rel-accu abs-accu)
+            :pegasus (PegasusSolver. rel-accu abs-accu)
+            :regula (RegulaFalsiSolver. rel-accu abs-accu)
+            :ridders (RiddersSolver. rel-accu abs-accu)
+            :secant (SecantSolver. rel-accu abs-accu)
+            nil)
           uni-fn (univariate-function f)]
-      (.solve s max-iter uni-fn min max start))))
+      (when s (try (.solve s max-iter uni-fn lower upper guess)
+                   (catch Exception e (ex-info (.getMessage e) {:fn (var root-solver)})))))))
+
+(s/fdef root-solver
+        :args (s/cat :f-with-guess-and-bounds ::root-f-with-guess-and-bounds
+                     :opts (s/keys* :opt [::max-iter ::root-solver ::rel-accu ::abs-accu]))
+        :ret (s/nilable (s/or :finite ::m/finite :exception ::exception)))
 
 ;;;UNIVARIATE OPTIMIZE
 (defn optimize-univariate
