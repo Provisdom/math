@@ -259,15 +259,15 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
 (s/def ::guess ::m/finite)
 (s/def ::bounds (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u))))
-(s/def ::nilable-bounds (s/nilable ::bounds))
-(s/def ::root-f-with-guess-and-nilable-bounds
+(s/def ::root-f-with-guess-and-bounds
   (s/with-gen
-    (s/and (s/tuple ::root-f ::guess ::nilable-bounds) (fn [[_ g [l u]]] (and (< g u) (> g l))))
-    #(gen/one-of (map (partial apply gen/tuple)
-                      (partition 3 (map gen/return
-                                        (list identity 3.0 [-5.0 5.0]
-                                              (fn [v] (- (m/cube v) (* 3 v))) 3.0 [-50.0 50.0]
-                                              (fn [v] (- (m/exp v) (* 5 v))) 3.0 [-50.0 50.0])))))))
+    (s/and (s/keys :req [::root-f ::guess] :opt [::bounds]) (fn [m] (let [[l u] (::bounds m)
+                                                                          g (::guess m)]
+                                                                      (if l (and (< g u) (> g l)) true))))
+    #(gen/one-of (map gen/return
+                      (list {::root-f identity ::guess 3.0 ::bounds [-5.0 5.0]}
+                            {::root-f (fn [v] (- (m/cube v) (* 3 v))) ::guess 3.0 ::bounds [-50.0 50.0]}
+                            {::root-f (fn [v] (- (m/exp v) (* 5 v))) ::guess 3.0 ::bounds [-50.0 50.0]})))))
 (s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::rel-accu ::m/finite+)
 (s/def ::abs-accu
@@ -280,12 +280,14 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   "solver options:
 :bisection, :bracketing-brent, :brent, :illinois, :muller, :muller2, 
 :newton-raphson, :pegasus, :regula, :ridders, :secant"
-  [[f guess [lower upper]] & {::keys [max-iter root-solver rel-accu abs-accu]
-                              :or   {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
-  (let [ex-d {:fn (var root-solver)}]
+  [{::keys [root-f guess bounds]}
+   & {::keys [max-iter root-solver rel-accu abs-accu]
+      :or    {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
+  (let [ex-d {:fn (var root-solver)}
+        [lower upper] bounds]
     (if (= root-solver :newton-raphson)
       (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
-                   (univariate-differentiable-function f 2 0.25) lower upper)
+                   (univariate-differentiable-function root-f 2 0.25) lower upper)
            (catch Exception e (ex-info (.getMessage e) ex-d)))
       (let [^BaseUnivariateSolver s
             (case root-solver
@@ -300,12 +302,12 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
               :ridders (RiddersSolver. rel-accu abs-accu)
               :secant (SecantSolver. rel-accu abs-accu)
               nil)
-            uni-fn (univariate-function f)]
+            uni-fn (univariate-function root-f)]
         (when s (try (.solve s max-iter uni-fn lower upper guess)
                      (catch Exception e (ex-info (.getMessage e) ex-d))))))))
 
 (s/fdef root-solver
-        :args (s/cat :f-with-guess-and-nilable-bounds ::root-f-with-guess-and-nilable-bounds
+        :args (s/cat :root-f-with-guess-and-bounds ::root-f-with-guess-and-bounds
                      :opts (s/keys* :opt [::max-iter ::root-solver ::rel-accu ::abs-accu]))
         :ret (s/nilable (s/or :finite ::m/finite :exception ::exception)))
 

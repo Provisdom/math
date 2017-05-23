@@ -7,10 +7,11 @@
 
 (st/instrument)
 
-(def fgb0 [identity -5.0 [-100.0 100.0]])
-(def fgb1 [(fn [v] (- (* v v) (* 20 v))) -5.0 [-10.0 10.0]])
-(def fgb2 [(fn [v] (- (m/exp v) (* 2000 v))) -3.0 [-5.0 5.0]])
-(def fgb3 [(comp inc m/sq) -5.0 [-10.0 10.0]])
+(def fgb0 {::ap/root-f identity ::ap/guess -5.0 ::ap/bounds [-100.0 100.0]})
+(def fgb1 {::ap/root-f (fn [v] (- (* v v) (* 20 v))) ::ap/guess -5.0 ::ap/bounds [-10.0 10.0]})
+(def fgb2 {::ap/root-f (fn [v] (- (m/exp v) (* 2000 v))) ::ap/guess -3.0 ::ap/bounds [-5.0 5.0]})
+(def fgb3 {::ap/root-f (comp inc m/sq) ::ap/guess -5.0 ::ap/bounds [-10.0 10.0]})
+
 (deftest root-solver-test
   ;;test 0
   (is= 0.0 (ap/root-solver fgb0))
