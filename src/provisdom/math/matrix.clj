@@ -1,5 +1,8 @@
 (ns provisdom.math.matrix
-  (:require [provisdom.utility-belt.core :as co]
+  (:require [clojure.spec :as s]
+            [clojure.spec.gen :as gen]
+            [clojure.spec.test :as st]
+            [provisdom.utility-belt.core :as co]
             [provisdom.math
              [core :as m]
              [arrays :as ar]]
@@ -18,7 +21,10 @@
                                             DecompositionSolver ConjugateGradient SymmLQ
                                             PreconditionedIterativeLinearSolver RealLinearOperator]))
 
-(set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)                            ;move to test
+
+(s/def ::matrix (s/coll-of (s/coll-of ::m/number)))
+(s/def ::matrix-finite (s/coll-of (s/coll-of ::m/finite)))
 
 ;;;;(defmethod print-method DoubleMatrix [mat ^java.io.Writer w] 
 ;;;;(print-method (cl mat) w))
@@ -1337,7 +1343,7 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   [m accu]
   {:pre [(have? matrix? m)]}
   (matrix m (map #(if ((roughly-zero-row-fn accu) %)
-                   (repeat (column-count m) 0.0) %)
+                    (repeat (column-count m) 0.0) %)
                  (rows m))))
 
 (defn round-roughly-zero-columns
@@ -1346,7 +1352,7 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   {:pre [(have? matrix? m)]}
   (matrix m (co/flip-dbl-layered
               (map #(if ((roughly-zero-row-fn accu) %)
-                     (repeat (row-count m) 0.0) %)
+                      (repeat (row-count m) 0.0) %)
                    (columns m)))))
 
 (defn round-roughly-zero-rows-and-columns

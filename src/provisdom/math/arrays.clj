@@ -1,8 +1,13 @@
 (ns provisdom.math.arrays
-  (:require [provisdom.math.core :as m])
+  (:require [clojure.spec :as s]
+            [clojure.spec.gen :as gen]
+            [clojure.spec.test :as st]
+            [provisdom.math.core :as m])
   (:import [java.util Arrays]))
 
 (set! *warn-on-reflection* true)
+
+(declare avec)
 
 (def double-array-type (Class/forName "[D"))
 (def double-2D-array-type (Class/forName "[[D"))
@@ -11,12 +16,11 @@
 ;;;UTILITIES ; http://clj-me.cgrand.net/2009/10/15/multidim-arrays/
 (defn array?
   "Returns true if `x` is an Array."
-  [x]
-  (if (some? x) (-> x class .isArray) false))
+  [x] (if (some? x) (-> x class .isArray) false))
 
-(defn array->seq [x]
-  (if (array? x)
-    (map array->seq x) x))
+(s/def ::array (s/with-gen array? #(gen/fmap avec (gen/vector (s/gen ::m/number)))))
+
+(defn array->seq [x] (if (array? x) (map array->seq x) x))
 
 ;;;DEEP-ARRAYS
 (def ^:private arr-type-lookup
