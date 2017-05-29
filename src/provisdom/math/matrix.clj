@@ -379,9 +379,8 @@
   (instance? RealMatrix m))
 
 (defn apache-commons-vec?
-  "Returns true if `m` is an apache commons matrix."
-  [m]
-  (instance? RealVector m))
+  "Returns true if `m` is an apache commons vector."
+  [m] (instance? RealVector m))
 
 (defn clatrix
   "Returns a matrix using the Clatrix matrix implementation."
@@ -406,7 +405,7 @@
   [m]
   (clx/vec? m))
 
-;; Not entirely sure why this exists. Clatxi may have problems handling row, column, and zero element matrices
+;; Not entirely sure why this exists. Clatrix may have problems handling row, column, and zero element matrices
 (defn- maybe-convert-clatrix-row-or-column
   [m]
   (cond (not (clatrix? m)) m
@@ -438,8 +437,7 @@
 ;===========================================
 (defn maybe-to-vector
   "Returns `x` as a vector (by calling [[to-vector]]) unless `x` is `nil`"
-  [x]
-  (when x (to-vector x)))
+  [x] (when x (to-vector x)))
 
 (defn create-vector
   "Returns a vector from `data`.

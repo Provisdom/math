@@ -18,18 +18,5 @@
       ((:valid-fn? (interpolation-2D xs ys fxy true)) 2.1 20.0) => false 
       ((:val-fn (interpolation-2D xs ys fxy false)) 3 20) => 496.6707017028581
       ((:valid-fn? (interpolation-2D xs ys fxy false)) 3 20) => true )
-
-(fact "nonlinear least squares"
-      (defn- constraints-fn [x] 
-        (let [a (first x), b (second x)] 
-          [(- a b 0.5) (- (m/sq a) (m/sq b) 0.5)]))
-      (def ncons 2)
-      (defn- jac [x]
-        (let [a (first x), b (second x)] 
-          [[1 -1][(* 2 a) (* 2 b)]]))
-      (def guess [1.0 1.0])
-      (nonlinear-least-squares constraints-fn ncons jac guess) 
-      => {:errors [0.0 -6.801038283654748E-7], 
-          :point [0.7500006801038284 0.25000068010382837]})
        
       

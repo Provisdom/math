@@ -18,7 +18,28 @@
   "Returns true if `x` is an Array."
   [x] (if (some? x) (-> x class .isArray) false))
 
-(s/def ::array (s/with-gen array? #(gen/fmap avec (gen/vector (s/gen ::m/number)))))
+(defn num-array?
+  "Returns true if 'x' is an Array and each element is a num"
+  [x] (and (array? x) (every? m/num? x)))
+
+(defn finite-array?
+  "Returns true if 'x' is an Array and each element is finite"
+  [x] (and (array? x) (every? m/finite? x)))
+
+(defn number-array-gen
+  ([] (gen/fmap avec (gen/vector (s/gen ::m/number))))
+  ([count] (gen/fmap avec (gen/vector (s/gen ::m/number) count))))
+(s/def ::array (s/with-gen array? number-array-gen))
+
+(defn num-array-gen
+  ([] (gen/fmap avec (gen/vector (s/gen ::m/num))))
+  ([count] (gen/fmap avec (gen/vector (s/gen ::m/num) count))))
+(s/def ::num-array (s/with-gen num-array? num-array-gen))
+
+(defn finite-array-gen
+  ([] (gen/fmap avec (gen/vector (s/gen ::m/finite))))
+  ([count] (gen/fmap avec (gen/vector (s/gen ::m/finite) count))))
+(s/def ::finite-array (s/with-gen finite-array? finite-array-gen))
 
 (defn array->seq [x] (if (array? x) (map array->seq x) x))
 
@@ -153,14 +174,12 @@
 (defn avec
   "Creates a new double-array containing the contents of `coll`.
   Note: This is faster than avector."
-  ^doubles [coll]
-  (double-array coll))
+  ^doubles [coll] (double-array coll))
 
 (defn avector
   "Creates a new double-array containing the args.
   Note: This is slower than avec."
-  ^doubles [& args]
-  (double-array (apply vector args)))
+  ^doubles [& args] (double-array (apply vector args)))
 
 (defn arepeat
   "Creates a new double-array of length 'size' and value 'v'"
@@ -209,18 +228,15 @@ First array must be the shortest."
 
 (defn ^double afirst
   "Returns the first element in `a`"
-  [^doubles a]
-  (aget a 0))
+  [^doubles a] (aget a 0))
 
 (defn ^double alast
   "Returns the last element in `a`"
-  [^doubles a]
-  (aget a (dec (alength a))))
+  [^doubles a] (aget a (dec (alength a))))
 
 (defn afind-all
   "Returns a vector with all the indices where `item` is found in `a`."
-  [^doubles a ^double item]
-  (areduce-kv #(if (= %3 item) (conj % %2) %) [] a))
+  [^doubles a ^double item] (areduce-kv #(if (= %3 item) (conj % %2) %) [] a))
 
 (defn ^doubles asort
   "Returns a sorted array of `a`. This function will create a copy of `a` before sorting it."
@@ -233,8 +249,7 @@ First array must be the shortest."
   sorted, the results are undefined. If the array contains multiple elements with the specified value,
   there is no guarantee which one will be found. This method considers all NaN values to be equivalent
   and equal."
-  [^doubles a ^double item]
-  (Arrays/binarySearch a item))
+  [^doubles a ^double item] (Arrays/binarySearch a item))
 
 (defn ^doubles afill!
   "Assigns the specified double value to each element of the specified array of doubles.
@@ -242,8 +257,7 @@ First array must be the shortest."
   range of the specified array of doubles. The range to be filled extends from index fromIndex, inclusive,
   to index toIndex, exclusive. (If fromIndex==toIndex, the range to be filled is empty.)"
   ([^doubles a ^double item] (Arrays/fill a item))
-  ([^doubles a ^long from ^long to ^double item]
-   (Arrays/fill a from to item)))
+  ([^doubles a ^long from ^long to ^double item] (Arrays/fill a from to item)))
 
 ;;;DOUBLE-ARRAY MATH
 (defn ain-place

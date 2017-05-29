@@ -42,9 +42,25 @@
   ;;test 3
   (is (instance? Exception (ap/root-solver fgb3))))
 
+(defn- constraints-fn [[a b]] [(- a b 0.5) (- (m/sq a) (m/sq b) 0.5)])
+(def ncons 2)
+(defn- jacobian-fn [[a b]] [[1 -1] [(* 2 a) (* 2 b)]])
+(def guesses [1.0 1.0])
+
+(deftest nonlinear-least-squares-test
+  (is= {::ap/errors [0.0 -6.801038283654748E-7],
+        ::ap/point  [0.7500006801038284 0.25000068010382837]}
+       (ap/nonlinear-least-squares
+         {::ap/constraints-fn constraints-fn
+          ::ap/ncons          ncons
+          ::ap/jacobian-fn    jacobian-fn
+          ::ap/guesses        guesses})))
+
 (deftest apache-test
-  (root-solver-test))
+  (root-solver-test)
+  (nonlinear-least-squares-test))
 
 (defspec-test test-root-solver `ap/root-solver)
+(defspec-test test-nonlinear-least-squares-test 'ap/nonlinear-least-squares)
 
 #_(st/unstrument)

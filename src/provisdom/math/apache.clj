@@ -105,13 +105,12 @@
   [f] (reify MultivariateFunction (value [_ x] (f x))))
 
 (defn- ^MultivariateVectorFunction multivariate-vector-function
-  "f is a function accepting a vector (doubles) and returning a collection of 
-   doubles"
+  "f is a function accepting a vector (doubles) and returning a collection of doubles"
   [f] (reify MultivariateVectorFunction (value [_ x] (double-array (f x)))))
 
 (defn- ^MultivariateMatrixFunction multivariate-matrix-function
   "f is a function accepting a vector (doubles) and returning a double-layered collection of doubles"
-  [f] (reify MultivariateMatrixFunction (value [_ x] (ar/jagged-2D-array :d (f x)))))
+  [f] (reify MultivariateMatrixFunction (value [_ x] (ar/jagged-2D-array :double (f x)))))
 
 (defn- ^UnivariateDifferentiableFunction univariate-differentiable-function
   "deriv is a function accepting a single variable (double) returning a double"
@@ -235,8 +234,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   {:value (.getValue pv), :point (vec (.getPoint pv))})
 
 (defn- errors-vector-point [^LeastSquaresProblem$Evaluation e]
-  {::point  (vec (.toArray (.getPoint e))),
-   ::errors (vec (.toArray (.getResiduals e)))})
+  {::point  (mx/coerce :persistent-vector (.getPoint e))
+   ::errors (mx/coerce :persistent-vector (.getResiduals e))})
 
 (defn- uni-value-point [^UnivariatePointValuePair pv]
   {:value (.getValue pv), :point (.getPoint pv)})
@@ -357,8 +356,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 jacobian-fn is the jacobian matrix function that takes an array and returns a double-layered vector.
 solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
 Returns map of ::point and ::errors."
-  [{:keys [constraints-fn ncons jacobian-fn guesses]}
-   & {:keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
+  [{::keys [constraints-fn ncons jacobian-fn guesses]}
+   & {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
       :or   {max-eval 1000, max-iter 1000, nls-solver :lm, rel-accu 1e-14, abs-accu 1e-6}}]
   (let [ex-d {:fn (var nonlinear-least-squares)}
         c (multivariate-vector-function constraints-fn)
@@ -369,11 +368,11 @@ Returns map of ::point and ::errors."
             nil)
         checker (LeastSquaresFactory/evaluationChecker (checker-fn check-by-objective? rel-accu abs-accu))
         multivariate-jacobian-fn (LeastSquaresFactory/model c j)
-        observed (if target
+        observed (if (and (some? target) (= (count target) ncons))
                    (mx/create-vector :apache-commons target)
                    (mx/create-vector :apache-commons ncons 0.0))
         start (mx/create-vector :apache-commons guesses)
-        weights (if weights
+        weights (if (and (some? weights) (= (count weights) ncons))
                   (mx/diagonal-matrix :apache-commons weights)
                   (mx/diagonal-matrix :apache-commons ncons 1.0))
         problem (LeastSquaresFactory/create
@@ -384,27 +383,26 @@ Returns map of ::point and ::errors."
         (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
       (catch Exception e (ex-info (.getMessage e) ex-d)))))
 
-(s/def ::constraints-fn (s/fspec :args (s/cat :a ::ar/array)
+(s/def ::constraints-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
                                  :ret (s/coll-of ::m/finite :kind vector?)))
 (s/def ::ncons ::m/long+)
-(s/def ::jacobian-fn (s/fspec :args (s/cat :a ::ar/array)
+(s/def ::jacobian-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
                               :ret ::mx/matrix-finite))
 (s/def ::guesses (s/coll-of ::guess))
 (s/def ::target (s/coll-of ::m/finite))
 (s/def ::max-eval (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::nls-solver #{:lm :gauss-newton})
 (s/def ::check-by-objective? boolean?)
-(s/def ::weights (s/coll-of ::m/finite))
-(s/def ::errors (s/coll-of ::m/finite :kind vector?))
-(s/def ::point (s/coll-of ::m/finite :kind vector?))
+(s/def ::weights (s/coll-of ::m/finite+))
+(s/def ::errors (s/coll-of ::m/nan-or-finite :kind vector?))
+(s/def ::point (s/coll-of ::m/nan-or-finite :kind vector?))
+(s/def ::errors-vector-point (s/keys :req [::errors ::point]))
 (s/def ::constraints-with-jacobian
   (s/with-gen
-    (s/and (s/keys :req [::constraints-fn ::ncons ::jacobian-fn ::guesses])
-           #(fn [{:keys [ncons guesses]}] (let [c (count guesses)] (== ncons c))))
+    (s/keys :req [::constraints-fn ::ncons ::jacobian-fn ::guesses])
     #(gen/one-of
        (map gen/return
-            (list {::constraints-fn (fn [a] (let [[a1 a2] a]
-                                              [(+ a1 (m/sq a2)) (- (m/cube a1) a2)]))
+            (list {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/sq a2)) (- (m/cube a1) a2)])
                    ::ncons          2
                    ::jacobian-fn    (fn [[a1 a2]] [[1.0 (* 3 (m/sq a1))]
                                                    [(* 2 a2) -1.0]])
@@ -417,9 +415,9 @@ Returns map of ::point and ::errors."
 
 (s/fdef nonlinear-least-squares
         :args (s/cat :constraints-with-jacobian ::constraints-with-jacobian
-                     :options (s/keys* :opt [::target ::max-eval ::max-iter ::nls-solver ::check-by-objective?
-                                             ::rel-accu ::abs-accu ::weights]))
-        :ret (s/nilable (s/or :ret (s/keys :req [::point ::errors]) :exception ::exception)))
+                     :options (s/keys* :opt [::target ::max-eval ::max-iter ::nls-solver
+                                             ::check-by-objective? ::rel-accu ::abs-accu ::weights]))
+        :ret (s/nilable (s/or :ret ::errors-vector-point :exception ::exception)))
 
 ;;;OPTIMIZE WITH GRADIENT
 (defn optimize-with-gradient
