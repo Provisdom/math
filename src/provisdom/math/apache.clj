@@ -32,7 +32,7 @@
                                                   LaplaceDistribution, LogisticDistribution, NakagamiDistribution]
            [org.apache.commons.math3.optim OptimizationData InitialGuess
                                            SimpleBounds MaxEval MaxIter PointValuePair PointVectorValuePair
-                                           SimpleValueChecker SimplePointChecker]
+                                           SimpleValueChecker SimplePointChecker SimpleVectorValueChecker]
            [org.apache.commons.math3.optim.univariate BrentOptimizer
                                                       SearchInterval UnivariateObjectiveFunction
                                                       UnivariatePointValuePair]
@@ -249,6 +249,10 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   (if check-by-objective? (SimpleValueChecker. rel abs)
                           (SimplePointChecker. rel abs)))
 
+(defn- vector-checker-fn [check-by-objective? rel abs]
+  (if check-by-objective? (SimpleVectorValueChecker. rel abs)
+                          (SimplePointChecker. rel abs)))
+
 ;;;ROOT SOLVERS
 (s/def ::exception (partial instance? Exception))
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
@@ -366,36 +370,36 @@ Returns map of ::point and ::errors."
             :lm (LevenbergMarquardtOptimizer.)
             :gauss-newton (GaussNewtonOptimizer.)
             nil)
-        checker (LeastSquaresFactory/evaluationChecker (checker-fn check-by-objective? rel-accu abs-accu))
-        multivariate-jacobian-fn (LeastSquaresFactory/model c j)
+        checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
         observed (if (and (some? target) (= (count target) ncons))
                    (mx/create-vector :apache-commons target)
                    (mx/create-vector :apache-commons ncons 0.0))
         start (mx/create-vector :apache-commons guesses)
         weights (if (and (some? weights) (= (count weights) ncons))
                   (mx/diagonal-matrix :apache-commons weights)
-                  (mx/diagonal-matrix :apache-commons ncons 1.0))
-        problem (LeastSquaresFactory/create
-                  multivariate-jacobian-fn observed start weights checker max-eval max-iter)]
+                  (mx/diagonal-matrix :apache-commons ncons 1.0))]
     (try
-      (when s (let [e (.optimize s problem)] (errors-vector-point e)))
+      (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
+                    problem (LeastSquaresFactory/create
+                              multivariate-jacobian-fn observed start weights checker max-eval max-iter)
+                    e (.optimize s problem)] (errors-vector-point e)))
       (catch TooManyEvaluationsException _
         (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
       (catch Exception e (ex-info (.getMessage e) ex-d)))))
 
 (s/def ::constraints-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                                 :ret (s/coll-of ::m/finite :kind vector?)))
+                                 :ret (s/coll-of ::m/finite)))
 (s/def ::ncons ::m/long+)
 (s/def ::jacobian-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
                               :ret ::mx/matrix-finite))
 (s/def ::guesses (s/coll-of ::guess))
-(s/def ::target (s/coll-of ::m/finite))
+(s/def ::target (s/nilable (s/coll-of ::m/finite)))
 (s/def ::max-eval (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::nls-solver #{:lm :gauss-newton})
-(s/def ::check-by-objective? boolean?)
-(s/def ::weights (s/coll-of ::m/finite+))
-(s/def ::errors (s/coll-of ::m/nan-or-finite :kind vector?))
-(s/def ::point (s/coll-of ::m/nan-or-finite :kind vector?))
+(s/def ::check-by-objective? (s/nilable boolean?))
+(s/def ::weights (s/nilable (s/coll-of ::m/finite+)))
+(s/def ::errors (s/coll-of ::m/number :kind vector?))
+(s/def ::point (s/coll-of ::m/number :kind vector?))
 (s/def ::errors-vector-point (s/keys :req [::errors ::point]))
 (s/def ::constraints-with-jacobian
   (s/with-gen
@@ -404,13 +408,11 @@ Returns map of ::point and ::errors."
        (map gen/return
             (list {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/sq a2)) (- (m/cube a1) a2)])
                    ::ncons          2
-                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (* 3 (m/sq a1))]
-                                                   [(* 2 a2) -1.0]])
+                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (* 3 (m/sq a1))] [(* 2 a2) -1.0]])
                    ::guesses        [2.0 -2.0]}
                   {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/exp a2)) (- (m/log a1) a2)])
                    ::ncons          2
-                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (- (/ a1))]
-                                                   [(m/exp a2) -1.0]])
+                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (- (/ a1))] [(m/exp a2) -1.0]])
                    ::guesses        [2.0 -2.0]})))))
 
 (s/fdef nonlinear-least-squares

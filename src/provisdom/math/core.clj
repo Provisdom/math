@@ -415,7 +415,10 @@
 (defn atanh
   "Returns inverse hyperbolic tangent"
   ^double [^double x]
-  (cond (not (corr? x)) nan, (one? x) inf+, (== x -1) inf-, :else (-> x inc log (* -0.5))))
+  (cond (not (corr? x)) nan
+        (one? x) inf+
+        (== x -1) inf-
+        :else (-> x inc log (* -0.5))))
 
 (defn hypot
   "Returns hypotenuse with sides x1 and x2."
@@ -461,8 +464,7 @@
 
 (defn roughly-floor
   "Rounds down unless within accu, then rounds up. Returns a long if possible, otherwise a double."
-  [x accu]
-  (floor (+ x accu)))
+  [x accu] (floor (+ x accu)))
 
 (s/fdef roughly-floor
         :args (s/cat :x ::number :accu ::non-)
@@ -470,8 +472,7 @@
 
 (defn roughly-ceil
   "Rounds up unless within accu, then rounds down. Returns a long if possible, otherwise a double."
-  [x accu]
-  (ceil (- x accu)))
+  [x accu] (ceil (- x accu)))
 
 (s/fdef roughly-ceil
         :args (s/cat :x ::number :accu ::non-)
@@ -503,8 +504,7 @@
 
 (defn roughly-round-non-?
   "Returns true if x is non- and roughly a whole number, or within double accuracy."
-  [x accu]
-  (and (non-? x) (roughly-round? x accu)))
+  [x accu] (and (non-? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-non-?
         :args (s/cat :x ::number :accu ::non-)
@@ -512,8 +512,7 @@
 
 (defn roughly-round-non+?
   "Returns true if x is non+ and roughly a whole number, or within double accuracy."
-  [x accu]
-  (and (non+? x) (roughly-round? x accu)))
+  [x accu] (and (non+? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-non+?
         :args (s/cat :x ::number :accu ::non-)
@@ -521,8 +520,7 @@
 
 (defn roughly-round+?
   "Returns true if x is positive and roughly a whole number, or within double accuracy."
-  [x accu]
-  (and (pos? x) (roughly-round? x accu)))
+  [x accu] (and (pos? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round+?
         :args (s/cat :x ::number :accu ::non-)
@@ -530,8 +528,7 @@
 
 (defn roughly-round-?
   "Returns true if x is negative and roughly a whole number, or within double accuracy."
-  [x accu]
-  (and (neg? x) (roughly-round? x accu)))
+  [x accu] (and (neg? x) (roughly-round? x accu)))
 
 (s/fdef roughly-round-?
         :args (s/cat :x ::number :accu ::non-)
@@ -539,8 +536,7 @@
 
 (defn roughly-non-?
   "Returns true if x is positive or within accu to zero."
-  [x accu]
-  (>= x (- accu)))
+  [x accu] (>= x (- accu)))
 
 (s/fdef roughly-non-?
         :args (s/cat :x ::number :accu ::non-)
@@ -548,8 +544,7 @@
 
 (defn roughly-non+?
   "Returns true if x is negative or within accu to zero."
-  [x accu]
-  (<= x accu))
+  [x accu] (<= x accu))
 
 (s/fdef roughly-non+?
         :args (s/cat :x ::number :accu ::non-)
@@ -557,8 +552,7 @@
 
 (defn roughly-prob?
   "Returns true if x is a prob or within accu of a prob."
-  [x accu]
-  (and (>= x (- accu)) (<= x (inc accu))))
+  [x accu] (and (>= x (- accu)) (<= x (inc accu))))
 
 (s/fdef roughly-prob?
         :args (s/cat :x ::number :accu ::non-)
@@ -566,8 +560,7 @@
 
 (defn roughly-corr?
   "Returns true if x is a corr or within accu of a corr."
-  [x accu]
-  (and (>= x (dec (- accu))) (<= x (inc accu))))
+  [x accu] (and (>= x (dec (- accu))) (<= x (inc accu))))
 
 (s/fdef roughly-corr?
         :args (s/cat :x ::number :accu ::non-)
@@ -690,8 +683,7 @@
 
 (defn radians->angle
   "Returns the reduced angle from radians, where angles = 180 * radians / PI. Returns a long if possible."
-  [radians]
-  (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
+  [radians] (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (s/fdef radians->angle
         :args (s/cat :radians ::number)
@@ -702,8 +694,7 @@
 
 (defn angle->radians
   "Returns the reduced radians from the angle, where radians = angle * PI / 180. Returns a long if possible."
-  [angle]
-  (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
+  [angle] (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
 
 (s/fdef angle->radians
         :args (s/cat :angle ::number)

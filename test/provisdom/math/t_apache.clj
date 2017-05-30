@@ -61,6 +61,6 @@
   (nonlinear-least-squares-test))
 
 (defspec-test test-root-solver `ap/root-solver)
-(defspec-test test-nonlinear-least-squares-test 'ap/nonlinear-least-squares)
+(defspec-test test-nonlinear-least-squares-test `ap/nonlinear-least-squares)
 
 #_(st/unstrument)

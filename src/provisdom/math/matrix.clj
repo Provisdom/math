@@ -24,7 +24,9 @@
 (set! *warn-on-reflection* true)                            ;move to test
 
 (s/def ::matrix (s/coll-of (s/coll-of ::m/number)))
+(s/def ::nan-or-matrix (s/or :nan ::m/nan :matrix ::matrix))
 (s/def ::matrix-finite (s/coll-of (s/coll-of ::m/finite)))
+(s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :matrix-finite ::matrix-finite))
 
 ;;;;(defmethod print-method DoubleMatrix [mat ^java.io.Writer w] 
 ;;;;(print-method (cl mat) w))
@@ -299,13 +301,11 @@
 (defn non-negative?
   "Returns true if `m` is a non-negative matrix."
   ([m] (non-negative? m m/*dbl-close*))
-  ([m accu]
-   (and (symmetric? m) (every? #(m/roughly-non-? % accu) (eigenvalues m)))))
+  ([m accu] (and (symmetric? m) (every? #(m/roughly-non-? % accu) (eigenvalues m)))))
 
 (defn row-or-column-matrix?
   "Returns true if `m` is a row or a column matrix."
-  [m]
-  (or (column-matrix? m) (row-matrix? m)))
+  [m] (or (column-matrix? m) (row-matrix? m)))
 
 (defn size-symmetric
   "Returns the size of the matrix given `ecount`. `ecount` is the number of independent symmetric matrix elements (the
