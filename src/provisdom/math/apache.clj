@@ -4,7 +4,8 @@
             [clojure.spec.test :as st]
             [provisdom.math.core :as m]
             [provisdom.math.arrays :as ar]
-            [provisdom.math.matrix :as mx])
+            [provisdom.math.matrix :as mx]
+            [provisdom.math.bounds :as bo])
   (:import [java.util ArrayList]
            [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
            [org.apache.commons.math3.analysis UnivariateFunction
