@@ -1,9 +1,16 @@
 (ns provisdom.math.bounds
-  (:require [provisdom.utility-belt.core :as co]
+  (:require [clojure.spec :as s]
+            [clojure.spec.gen :as gen]
+            [clojure.spec.test :as st]
+            [provisdom.utility-belt.core :as co]
             [provisdom.math [core :as m]
              [matrix :as mx]]))
 
 (set! *warn-on-reflection* true)
+
+(s/def ::interval (s/and (s/tuple ::m/number ::m/number) (fn [[x1 x2]] (or (and (m/nan? x1) (m/nan? x2)) (>= x2 x1)))))
+(s/def ::num-interval (s/and (s/tuple ::m/num ::m/num) (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::finite-interval (s/and (s/tuple ::m/finite ::m/finite) (fn [[x1 x2]] (>= x2 x1))))
 
 (defprotocol Range
   (out-of-range? [r v])
@@ -17,9 +24,9 @@
     (or
       (if open-lower? (<= v lower) (< v lower))
       (if open-upper? (>= v upper) (> v upper))))
-  (bracket [r] [lower upper])
-  (lower-bound [r] [lower open-lower?])
-  (upper-bound [r] [upper open-upper?]))
+  (bracket [_] [lower upper])
+  (lower-bound [_] [lower open-lower?])
+  (upper-bound [_] [upper open-upper?]))
 
 ;;;BOUNDS CONSTRUCTORS
 (defn bounds
@@ -27,8 +34,7 @@
 Bounds are closed by default."
   ([] (bounds m/inf- m/inf+))
   ([lower upper] (bounds lower upper false false))
-  ([lower upper open-lower? open-upper?] 
-    (Bounds. lower upper open-lower? open-upper?)))
+  ([lower upper open-lower? open-upper?] (Bounds. lower upper open-lower? open-upper?)))
 
 (def bounds-open (bounds m/inf- m/inf+ true true))
 (def bounds+ (bounds 0 m/inf+ true false))
@@ -52,8 +58,8 @@ Bounds are closed by default."
 (defn- min-bound 
   [bound-coll] 
   (reduce (fn [[b1 ob1?] [b2 ob2?]] 
-            (cond (< b1 b2) [b1 ob1?], 
-                  (< b2 b1) [b2 ob2?], 
+            (cond (< b1 b2) [b1 ob1?]
+                  (< b2 b1) [b2 ob2?]
                   :else [b1 (and ob1? ob2?)])) [m/inf+ false] bound-coll))
 
 (defn- max-bound 
@@ -75,9 +81,9 @@ Bounds are closed by default."
 (defn intersection 
   "Returns the bounds intersection or nil."
   [bounds-coll] 
-  (let [[l lo?] (max-bound (map #(lower-bound %) bounds-coll)), 
+  (let [[l lo?] (max-bound (map #(lower-bound %) bounds-coll))
         [u uo?] (min-bound (map #(upper-bound %) bounds-coll))]
-    (if (or (> l u) (and (= u l) lo? (not uo?))) nil
+    (when-not (or (> l u) (and (= u l) lo? (not uo?)))
       (bounds l u lo? uo?))))
 
 (defn union 
@@ -91,7 +97,7 @@ Bounds are closed by default."
 (defn encompassing-bounds
   "Returns smallest bounds the encompass the bounds-coll"
   [bounds-coll] 
-  (let [[l lo?] (min-bound (map #(lower-bound %) bounds-coll)), 
+  (let [[l lo?] (min-bound (map #(lower-bound %) bounds-coll))
         [u uo?] (max-bound (map #(upper-bound %) bounds-coll))]
     (bounds l u lo? uo?)))
   

@@ -257,7 +257,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 (s/def ::exception (partial instance? Exception))
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
 (s/def ::guess ::m/finite)
-(s/def ::bounds (s/and (s/tuple ::m/finite ::m/finite) (fn [[l u]] (< l u))))
+(s/def ::bounds ::bo/finite-interval)
 (s/def ::root-f-with-guess-and-bounds
   (s/with-gen
     (s/and (s/keys :req [::root-f ::guess] :opt [::bounds]) (fn [m] (let [[l u] (::bounds m)
