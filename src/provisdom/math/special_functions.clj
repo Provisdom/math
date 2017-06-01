@@ -2,10 +2,9 @@
   (:require [clojure.spec :as s]
             [clojure.spec.test :as st]
             [clojure.spec.gen :as gen]
-            [provisdom.utility-belt.core :as co]
-            [provisdom.math [core :as m]
-             [matrix :as mx]
-             [apache :as ap]]
+            [provisdom.math.core :as m]
+            [provisdom.math.matrix :as mx]
+            [provisdom.math.apache :as ap]
             [taoensso.truss :as truss :refer (have have! have?)])
   (:import [cern.jet.stat.tdouble Gamma]))
 

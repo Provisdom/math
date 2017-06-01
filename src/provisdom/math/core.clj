@@ -421,7 +421,7 @@
 
 (defn atanh
   "Returns inverse hyperbolic tangent"
-  ^double [^double x]
+  ^double [x]
   (cond (not (corr? x)) nan
         (one? x) inf+
         (== x -1) inf-

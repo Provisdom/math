@@ -3,9 +3,8 @@
             [clojure.spec.gen :as gen]
             [clojure.spec.test :as st]
             [provisdom.utility-belt.core :as co]
-            [provisdom.math
-             [core :as m]
-             [arrays :as ar]]
+            [provisdom.math.core :as m]
+            [provisdom.math.arrays :as ar]
             [clatrix.core :as clx]
             [clojure.core.matrix :as mxc]
             [clojure.core.matrix.protocols :as mp]
@@ -61,7 +60,25 @@
 
 ;;;DECLARATIONS
 (declare eigenvalues column-matrix transpose rrqr-decomposition diagonal
-         get-slices-as-matrix esome)
+         get-slices-as-matrix esome esum)
+
+;;;FLOATING-POINT FAST SUM
+(defn kahan-sum
+  "Kahan Summation algorithm -- for greater floating-point summation accuracy,
+as fast alternative to bigDecimal"
+  [coll]
+  (loop [[h & t] coll, sum 0.0, carry 0.0]
+    (if-not h
+      sum
+      (if (m/inf? h)
+        (esum coll)
+        (let [y (- h carry)
+              new-sum (+ y sum)]
+          (recur t new-sum (- new-sum sum y)))))))
+
+(s/fdef kahan-sum
+        :args (s/cat :coll (s/coll-of ::m/number))
+        :ret ::m/number)
 
 ;===========================================
 ; APACHE MATRIX
@@ -318,20 +335,17 @@
 
 (defn size-symmetric-with-unit-diagonal
   "Returns the size of the matrix given `ecount`. `ecount` is the number of elements above or below the unit diagonal."
-  ^long [^long ecount]
-  (-> ecount size-symmetric inc))
+  ^long [^long ecount] (-> ecount size-symmetric inc))
 
 (defn ecount-symmetric
   "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix. This is the number of elements on
   the diagonal plus the number of elements above or below the diagonal."
-  ^long [^long size]
-  (-> size m/sq (+ size) (/ 2)))
+  ^long [^long size] (-> size m/sq (+ size) (/ 2)))
 
 (defn ecount-symmetric-with-unit-diagonal
   "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix with a unit diagonal. This is the
   number of elements above or below the diagonal."
-  ^long [^long size]
-  (-> size m/sq (- size) (/ 2)))
+  ^long [^long size] (-> size m/sq (- size) (/ 2)))
 
 (defn to-vector-from-symmetric
   "Returns a vector that contains the upper (defualt) or lower half of the matrix. `m` doesn't have to be symmetric.
@@ -368,15 +382,13 @@
 ;===========================================
 (defn apache-commons
   "Returns a matrix using the apache-commoms matrix implementation."
-  [data]
-  (mxc/matrix :apache-commons data))
+  [data] (mxc/matrix :apache-commons data))
 
 ;; NOTE: This function was previously written to see if the type of the matrix was = to Array2DRowRealMatrix.
 ;; That comparison is faster than the instance? check, however it is less general. Same applies for apache-commons-vec?.
 (defn apache-commons?
   "Returns true if `m` is an apache commons matrix."
-  [m]
-  (instance? RealMatrix m))
+  [m] (instance? RealMatrix m))
 
 (defn apache-commons-vec?
   "Returns true if `m` is an apache commons vector."
@@ -391,19 +403,16 @@
 
 (defn clatrix?
   "Returns true if `m` is a Clatrix matrix."
-  [m]
-  (clx/matrix? m))
+  [m] (clx/matrix? m))
 
 (defn clatrix-impl?
   "Returns true if `impl` is a Clatrix implementation. This can be either :clatrix or a matrix that is an instance of a
   Clatrix matrix."
-  [impl]
-  (or (= impl :clatrix) (clatrix? impl)))
+  [impl] (or (= impl :clatrix) (clatrix? impl)))
 
 (defn clatrix-vec?
   "Returns true if `m` is a Clatrix vector."
-  [m]
-  (clx/vec? m))
+  [m] (clx/vec? m))
 
 ;; Not entirely sure why this exists. Clatrix may have problems handling row, column, and zero element matrices
 (defn- maybe-convert-clatrix-row-or-column
@@ -996,15 +1005,18 @@ Unassigned elements will be 0.0"
   "Returns the average of the elements"
   [m] (/ (esum m) (ecount m)))
 
-(defn esum-squares [m]
-  (if (number? m) (m/sq m)
-                  (reduce #(+ % (m/sq %2)) 0 (flatten (to-nested-vectors m)))))
+(defn esum-squares
+  [m]
+  (if (number? m)
+    (m/sq m)
+    (reduce #(+ % (m/sq %2)) 0 (flatten (to-nested-vectors m)))))
 
 (defn eproduct
   ([m] (reduce * 1 (flatten (to-nested-vectors m))))
   ([f m]
-   (if (number? m) (f m)
-                   (reduce #(* % (f %2)) 1 (flatten (to-nested-vectors m))))))
+   (if (number? m)
+     (f m)
+     (reduce #(* % (f %2)) 1 (flatten (to-nested-vectors m))))))
 
 (defn norm
   "This is the standard norm2"
@@ -1180,8 +1192,7 @@ x need not be an integer."
                   (rest s2) (rest s3))))))))
 
 (defn every-kv?
-  "Returns true if (pred index e) is logical true for every element in coll, 
-   else false."
+  "Returns true if (pred index e) is logical true for every element in coll, else false."
   [pred coll]
   (loop [c 0, s coll]
     (cond (nil? (seq s)) true
@@ -1189,8 +1200,7 @@ x need not be an integer."
           :else false)))
 
 (defn eevery?
-  "Returns true if (pred row col e) is logical true for every element in m, 
-   else false."
+  "Returns true if (pred row col e) is logical true for every element in m, else false."
   [pred m]
   {:pre [(have? matrix? m)]}
   (let [nr (row-count m)]
@@ -1491,8 +1501,7 @@ Returns a map containing:
   "Returns the norm2 condition number, which is max(s) / min(s), 
       where s is the diagonal matrix of singular values from an SVD 
       decomposition."
-  ^double [s]
-  (/ (emax s) (emin s)))
+  ^double [s] (/ (emax s) (emin s)))
 
 (defn lu-decomposition-with-permutation-matrix
   "Returns a map containing:
@@ -1705,5 +1714,4 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
                    [(mmul (transpose m) m), s])"
   ([^long size rnd-lazy] (rnd-positive-matrix nil size rnd-lazy))
   ([implementation ^long size rnd-lazy]
-   (rnd-spectral-matrix implementation (take size rnd-lazy)
-                        (drop size rnd-lazy))))
+   (rnd-spectral-matrix implementation (take size rnd-lazy) (drop size rnd-lazy))))

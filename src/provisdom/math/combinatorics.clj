@@ -1,7 +1,7 @@
 (ns provisdom.math.combinatorics
-  (:require [provisdom.math [core :as m]
-             [special-functions :as mf]
-             [matrix :as mx]]
+  (:require [provisdom.math.core :as m]
+            [provisdom.math.special-functions :as mf]
+            [provisdom.math.matrix :as mx]
             [clojure.core.reducers :as ccr]
             [taoensso.truss :refer (have have! have?)])
   (:import [cern.jet.math.tdouble DoubleArithmetic]))

@@ -2,11 +2,11 @@
   (:require [clojure.spec :as s]
             [clojure.spec.gen :as gen]
             [clojure.spec.test :as st]
-            [provisdom.utility-belt [core :as co]
-             [async :as as]]
-            [provisdom.math [core :as m]
-             [matrix :as mx]
-             [combinatorics :as mc]]
+            [provisdom.utility-belt.core :as co]
+            [provisdom.utility-belt.async :as as]
+            [provisdom.math.core :as m]
+            [provisdom.math.matrix :as mx]
+            [provisdom.math.combinatorics :as mc]
             [taoensso.truss :as truss :refer (have have! have?)]))
 
 (set! *warn-on-reflection* true)

@@ -1,0 +1,20 @@
+(ns provisdom.math.t-matrix
+  (:require [clojure.test :refer :all]
+            [provisdom.test.core :refer :all]
+            [provisdom.math.matrix :as mx]
+            [provisdom.math.core :as m]
+            [clojure.spec.test :as st]))
+
+(st/instrument)
+
+(deftest kahan-sum-test
+  (is= m/inf+ (mx/kahan-sum [m/inf+ m/inf+]))
+  (is (m/nan? (mx/kahan-sum [m/inf+ m/inf-])))
+  (is= 17.340604306430002 (mx/kahan-sum '(-3.0 6.34060430643 14.0))))
+
+(deftest matrix-test
+  (kahan-sum-test))
+
+(defspec-test test-kahan-sum `mx/kahan-sum)
+
+#_(st/unstrument)
