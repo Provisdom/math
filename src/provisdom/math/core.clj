@@ -71,13 +71,13 @@
 (defn- sgl-range? [x] (and (<= x max-sgl) (>= x min-sgl)))
 
 (s/def ::boolean (s/spec clojure.core/boolean? :gen #(gen/boolean)))
-(s/def ::number (s/spec number? :gen #(s/gen (s/double-in))))
+(s/def ::number (s/spec number? :gen #(gen/one-of [(gen/double) (gen/large-integer)])))
 
 (defn num?
   "Returns true if x is a number and not nan"
   [x] (and (number? x) (== x x)))
 
-(s/def ::num (s/spec num? :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::num (s/spec num? :gen #(gen/one-of [(gen/double* {:NaN? false}) (gen/large-integer)])))
 
 (defn nan?
   "Returns true if x is nan"
@@ -89,80 +89,104 @@
   "Returns true if x is a number that is positive."
   [x] (and (number? x) (clojure.core/pos? x)))
 
-(s/def ::pos (s/spec pos? :gen #(s/gen (s/double-in :min tiny-dbl :NaN? false))))
-(s/def ::nan-or-pos (s/spec #(or (nan? %) (pos? %)) :gen #(s/gen (s/double-in :min tiny-dbl))))
+(s/def ::pos (s/spec pos? :gen #(gen/one-of [(gen/double* {:min tiny-dbl :NaN? false}) (gen/large-integer* {:min 1})])))
+(s/def ::nan-or-pos (s/spec #(or (nan? %) (pos? %))
+                            :gen #(gen/one-of [(gen/double* {:min tiny-dbl}) (gen/large-integer* {:min 1})])))
 
 (defn neg?
   "Returns true if x is a number that is negative."
   [x] (and (number? x) (clojure.core/neg? x)))
 
-(s/def ::neg (s/spec neg? :gen #(s/gen (s/double-in :max (- tiny-dbl) :NaN? false))))
-(s/def ::nan-or-neg (s/spec #(or (nan? %) (neg? %)) :gen #(s/gen (s/double-in :max (- tiny-dbl)))))
+(s/def ::neg (s/spec neg? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :NaN? false}) (gen/large-integer* {:max -1})])))
+(s/def ::nan-or-neg (s/spec #(or (nan? %) (neg? %))
+                            :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl)}) (gen/large-integer* {:max -1})])))
 
 (defn non-?
   "Returns true if x is non-negative"
   [x] (and (number? x) (>= x 0)))
 
-(s/def ::non- (s/spec non-? :gen #(s/gen (s/double-in :min 0.0 :NaN? false))))
-(s/def ::nan-or-non- (s/spec #(or (nan? %) (non-? %)) :gen #(s/gen (s/double-in :min 0.0))))
+(s/def ::non- (s/spec non-? :gen #(gen/one-of [(gen/double* {:min 0.0 :NaN? false}) (gen/large-integer* {:min 0})])))
+(s/def ::nan-or-non- (s/spec #(or (nan? %) (non-? %))
+                             :gen #(gen/one-of [(gen/double* {:min 0.0}) (gen/large-integer* {:min 0})])))
 
 (defn non+?
   "Returns true if x is non-positive"
   [x] (and (number? x) (<= x 0)))
 
-(s/def ::non+ (s/spec non+? :gen #(s/gen (s/double-in :max 0.0 :NaN? false))))
-(s/def ::nan-or-non+ (s/spec #(or (nan? %) (non+? %)) :gen #(s/gen (s/double-in :max 0.0))))
+(s/def ::non+ (s/spec non+? :gen #(gen/one-of [(gen/double* {:max 0.0 :NaN? false}) (gen/large-integer* {:max 0})])))
+(s/def ::nan-or-non+ (s/spec #(or (nan? %) (non+? %))
+                             :gen #(gen/one-of [(gen/double* {:max 0.0}) (gen/large-integer* {:max 0})])))
 
 (defn finite?
   "Returns true if x is a finite number."
   [x] (and (num? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite (s/spec finite? :gen #(s/gen (s/double-in :infinite? false :NaN? false))))
-(s/def ::nan-or-finite (s/spec #(or (nan? %) (finite? %)) :gen #(s/gen (s/double-in :infinite? false))))
+(s/def ::finite (s/spec finite? :gen #(gen/one-of [(gen/double* {:infinite? false :NaN? false}) (gen/large-integer)])))
+(s/def ::nan-or-finite (s/spec #(or (nan? %) (finite? %))
+                               :gen #(gen/one-of [(gen/double* {:infinite? false}) (gen/large-integer)])))
 
 (defn finite+?
   "Returns true if x is a positive finite number."
   [x] (and (pos? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite+ (s/spec finite+? :gen #(s/gen (s/double-in :min tiny-dbl :infinite? false :NaN? false))))
+(s/def ::finite+
+  (s/spec finite+? :gen #(gen/one-of [(gen/double* {:min tiny-dbl :infinite? false :NaN? false})
+                                      (gen/large-integer* {:min 1})])))
 (s/def ::nan-or-finite+
-  (s/spec #(or (nan? %) (finite+? %)) :gen #(s/gen (s/double-in :min tiny-dbl :infinite? false))))
+  (s/spec #(or (nan? %) (finite+? %)) :gen #(gen/one-of [(gen/double* {:min tiny-dbl :infinite? false})
+                                                         (gen/large-integer* {:min 1})])))
 
 (defn finite-?
   "Returns true if x is a negative finite number."
   [x] (and (neg? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite- (s/spec finite-? :gen #(s/gen (s/double-in :max (- tiny-dbl) :infinite? false :NaN? false))))
+(s/def ::finite-
+  (s/spec finite-? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :infinite? false :NaN? false})
+                                      (gen/large-integer* {:max -1})])))
 (s/def ::nan-or-finite-
-  (s/spec #(or (nan? %) (finite-? %)) :gen #(s/gen (s/double-in :max (- tiny-dbl) :infinite? false))))
+  (s/spec #(or (nan? %) (finite-? %)) :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :infinite? false})
+                                                         (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
   "Returns true if x is a non-negative finite number."
   [x] (and (non-? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite-non- (s/spec finite-non-? :gen #(s/gen (s/double-in :min 0.0 :infinite? false :NaN? false))))
+(s/def ::finite-non- (s/spec finite-non-? :gen #(gen/one-of [(gen/double* {:min 0.0 :infinite? false :NaN? false})
+                                                             (gen/large-integer* {:min 0})])))
 (s/def ::nan-or-finite-non-
-  (s/spec #(or (nan? %) (finite-non-? %)) :gen #(s/gen (s/double-in :min 0.0 :infinite? false))))
+  (s/spec #(or (nan? %) (finite-non-? %)) :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
+                                                             (gen/large-integer* {:max 0})])))
 
 (defn finite-non+?
   "Returns true if x is a non-positive finite number."
   [x] (and (non+? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite-non+ (s/spec finite-non+? :gen #(s/gen (s/double-in :max 0.0 :infinite? false :NaN? false))))
+(s/def ::finite-non+ (s/spec finite-non+? :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false :NaN? false})
+                                                             (gen/large-integer* {:max 0})])))
 (s/def ::nan-or-finite-non+
-  (s/spec #(or (nan? %) (finite-non+? %)) :gen #(s/gen (s/double-in :max 0.0 :infinite? false))))
+  (s/spec #(or (nan? %) (finite-non+? %)) :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
+                                                             (gen/large-integer* {:max 0})])))
+
+(s/def ::double (s/spec double? :gen #(gen/double)))
+
+(defn double-finite?
+  "Returns true if x is a double and finite."
+  [x] (and (double? x) (== x x) (not (Double/isInfinite ^double x))))
+
+(s/def ::double-finite (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
 
 (defn single?
   "Returns true if x is a single."
-  [x] (and (number? x) (or (sgl-range? x) (not (== x x)) (Double/isInfinite ^double x))))
+  [x] (and (double? x) (or (sgl-range? x) (not (== x x)) (Double/isInfinite ^double x))))
 
-(s/def ::single (s/spec single? :gen #(s/gen (s/double-in))))
+(s/def ::single (s/spec single? :gen #(gen/double)))
 
 (defn single-finite?
   "Returns true if x is a single and finite."
-  [x] (and (number? x) (sgl-range? x)))
+  [x] (and (double? x) (sgl-range? x)))
 
-(s/def ::single-finite (s/spec single-finite? :gen #(s/gen (s/double-in :infinite? false :NaN? false))))
+(s/def ::single-finite (s/spec single-finite?
+                               :gen #(gen/double* {:infinite? false :NaN? false :min min-sgl :max max-sgl})))
 
 (defn long?
   "Returns true if x is a long."

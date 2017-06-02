@@ -655,7 +655,8 @@
   [f & {::keys [derivative h type accuracy]
         :or    {derivative 1, type :central}}]
   (let [derivative (int derivative)
-        accuracy (when accuracy (int accuracy))]
+        accuracy (when accuracy (int accuracy))
+        h (when h (double h))]
     (cond (zero? derivative) f
           (> derivative 4) (let [exc (- derivative 4)
                                  x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]
