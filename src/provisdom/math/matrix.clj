@@ -23,6 +23,7 @@
 (set! *warn-on-reflection* true)                            ;move to test
 
 (s/def ::matrix (s/coll-of (s/coll-of ::m/number)))
+(s/def ::matrix-num (s/coll-of (s/coll-of ::m/num)))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :matrix ::matrix))
 (s/def ::matrix-finite (s/coll-of (s/coll-of ::m/finite)))
 (s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :matrix-finite ::matrix-finite))
@@ -62,7 +63,7 @@
 (declare eigenvalues column-matrix transpose rrqr-decomposition diagonal
          get-slices-as-matrix esome esum)
 
-;;;FLOATING-POINT FAST SUM
+;;;FLOATING-POINT FAST SUM -- figure out when this helps and write into documentation below
 (defn kahan-sum
   "Kahan Summation algorithm -- for greater floating-point summation accuracy,
 as fast alternative to bigDecimal"
@@ -79,6 +80,12 @@ as fast alternative to bigDecimal"
 (s/fdef kahan-sum
         :args (s/cat :coll (s/coll-of ::m/number))
         :ret ::m/number)
+
+;;;NEEDED THIS...
+(defn replace-nan
+  "Takes a coll and returns a list with any NaN replaced with 'replacement'.
+  Necessary because clojure's replace doesn't work with NaN"
+  [replacement coll] (reduce (fn [tot e] (conj tot (if (m/nan? e) replacement e))) '() coll))
 
 ;===========================================
 ; APACHE MATRIX

@@ -279,7 +279,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 (defn root-solver
   "solver options:
 :bisection, :bracketing-brent, :brent, :illinois, :muller, :muller2, 
-:newton-raphson, :pegasus, :regula, :ridders, :secant"
+:newton-raphson, :pegasus, :regula, :ridders, :secant.
+'root-f' should return NaN when out of range."
   [{::keys [root-f guess bounds]}
    & {::keys [max-iter root-solver rel-accu abs-accu]
       :or    {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
@@ -360,8 +361,9 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   "constraints-fn takes an array and returns a vector.
 jacobian-fn is the jacobian matrix function that takes an array and returns a double-layered vector.
 solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
+Each constraints-fn and jacobian-fn element should return m/inf+ or m/inf- when out of range.
 Returns map of ::point and ::errors."
-  [{::keys [constraints-fn ncons jacobian-fn guesses]}
+  [{::keys [constraints-fn n-cons jacobian-fn guesses]}
    & {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
       :or   {max-eval 1000, max-iter 1000, nls-solver :lm, rel-accu 1e-14, abs-accu 1e-6}}]
   (let [ex-d {:fn (var nonlinear-least-squares)}
@@ -372,13 +374,13 @@ Returns map of ::point and ::errors."
             :gauss-newton (GaussNewtonOptimizer.)
             nil)
         checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
-        observed (if (and (some? target) (= (count target) ncons))
+        observed (if (and (some? target) (= (count target) n-cons))
                    (mx/create-vector :apache-commons target)
-                   (mx/create-vector :apache-commons ncons 0.0))
+                   (mx/create-vector :apache-commons n-cons 0.0))
         start (mx/create-vector :apache-commons guesses)
-        weights (if (and (some? weights) (= (count weights) ncons))
+        weights (if (and (some? weights) (= (count weights) n-cons))
                   (mx/diagonal-matrix :apache-commons weights)
-                  (mx/diagonal-matrix :apache-commons ncons 1.0))]
+                  (mx/diagonal-matrix :apache-commons n-cons 1.0))]
     (try
       (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                     problem (LeastSquaresFactory/create
@@ -389,10 +391,10 @@ Returns map of ::point and ::errors."
       (catch Exception e (ex-info (.getMessage e) ex-d)))))
 
 (s/def ::constraints-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                                 :ret (s/coll-of ::m/finite)))
-(s/def ::ncons ::m/long+)
+                                 :ret (s/coll-of ::m/num)))
+(s/def ::n-cons ::m/long+)
 (s/def ::jacobian-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                              :ret ::mx/matrix-finite))
+                              :ret ::mx/matrix-num))
 (s/def ::guesses (s/coll-of ::guess))
 (s/def ::target (s/nilable (s/coll-of ::m/finite)))
 (s/def ::max-eval (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
@@ -404,17 +406,17 @@ Returns map of ::point and ::errors."
 (s/def ::errors-vector-point (s/keys :req [::errors ::point]))
 (s/def ::constraints-with-jacobian
   (s/with-gen
-    (s/keys :req [::constraints-fn ::ncons ::jacobian-fn ::guesses])
+    (s/keys :req [::constraints-fn ::n-cons ::jacobian-fn ::guesses])
     #(gen/one-of
        (map gen/return
             (list {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/sq a2)) (- (m/cube a1) a2)])
-                   ::ncons          2
+                   ::n-cons          2
                    ::jacobian-fn    (fn [[a1 a2]] [[1.0 (* 3 (m/sq a1))] [(* 2 a2) -1.0]])
                    ::guesses        [2.0 -2.0]}
-                  {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/exp a2)) (- (m/log a1) a2)])
-                   ::ncons          2
-                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (- (/ a1))] [(m/exp a2) -1.0]])
-                   ::guesses        [2.0 -2.0]})))))
+                  {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/exp a2)) (if (m/non+? a1) m/inf- (- (m/log a1) a2))])
+                   ::n-cons         2
+                   ::jacobian-fn    (fn [[a1 a2]] [[1.0 (if (not (zero? a1)) (- (/ a1)) m/inf-)] [(m/exp a2) -1.0]])
+                   ::guesses        [1.9 -1.9]})))))
 
 (s/fdef nonlinear-least-squares
         :args (s/cat :constraints-with-jacobian ::constraints-with-jacobian
