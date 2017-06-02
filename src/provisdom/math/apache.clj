@@ -361,7 +361,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   "constraints-fn takes an array and returns a vector.
 jacobian-fn is the jacobian matrix function that takes an array and returns a double-layered vector.
 solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
-Each constraints-fn and jacobian-fn element should return m/inf+ or m/inf- when out of range.
+Each constraints-fn should return m/inf+ or m/inf- when out of range.
+Jacobian-fn should return m/nan when out of range.
 Returns map of ::point and ::errors."
   [{::keys [constraints-fn n-cons jacobian-fn guesses]}
    & {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
@@ -394,7 +395,7 @@ Returns map of ::point and ::errors."
                                  :ret (s/coll-of ::m/num)))
 (s/def ::n-cons ::m/long+)
 (s/def ::jacobian-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                              :ret ::mx/matrix-num))
+                              :ret ::mx/matrix))
 (s/def ::guesses (s/coll-of ::guess))
 (s/def ::target (s/nilable (s/coll-of ::m/finite)))
 (s/def ::max-eval (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
