@@ -77,7 +77,7 @@ Will use numerical derivative when necessary."
                                       (* (/ 3) (m/pow (m/sgn %) n)
                                          (- (m/pow n 4) (m/sq n))))
           :else (ca/derivative-fn (chebyshev-polynomial-fn n second-kind?)
-                                  :derivative deriv))))
+                                  {::ca/derivative deriv}))))
 
 (defn chebyshev-polynomial-factors-to-regular-polynomial-factors
   "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...) 
@@ -91,7 +91,7 @@ Can optionally use first kind (default) or second kind."
                  chebyshev-factors
                  ((polynomial-fn
                     (dec n) :chebyshev-kind (if second-kind? 2 1)) %))
-              ::derivative i) 0.0))
+              {::ca/derivative i}) 0.0))
          (range n))))
 
 ;;;SERIES

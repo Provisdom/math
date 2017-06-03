@@ -281,35 +281,36 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 :bisection, :bracketing-brent, :brent, :illinois, :muller, :muller2, 
 :newton-raphson, :pegasus, :regula, :ridders, :secant.
 'root-f' should return NaN when out of range."
-  [{::keys [root-f guess bounds]}
-   & {::keys [max-iter root-solver rel-accu abs-accu]
-      :or    {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
-  (let [ex-d {:fn (var root-solver)}
-        [lower upper] bounds]
-    (if (= root-solver :newton-raphson)
-      (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
-                   (univariate-differentiable-function root-f 2 0.25) lower upper)
-           (catch Exception e (ex-info (.getMessage e) ex-d)))
-      (let [^BaseUnivariateSolver s
-            (case root-solver
-              :bisection (BisectionSolver. rel-accu abs-accu)
-              :bracketing-brent (BracketingNthOrderBrentSolver. rel-accu abs-accu 5)
-              :brent (BrentSolver. rel-accu abs-accu)
-              :illinois (IllinoisSolver. rel-accu abs-accu)
-              :muller (MullerSolver. rel-accu abs-accu)
-              :muller2 (MullerSolver2. rel-accu abs-accu)
-              :pegasus (PegasusSolver. rel-accu abs-accu)
-              :regula (RegulaFalsiSolver. rel-accu abs-accu)
-              :ridders (RiddersSolver. rel-accu abs-accu)
-              :secant (SecantSolver. rel-accu abs-accu)
-              nil)
-            uni-fn (univariate-function root-f)]
-        (when s (try (.solve s max-iter uni-fn lower upper guess)
-                     (catch Exception e (ex-info (.getMessage e) ex-d))))))))
+  ([args] (root-solver args {}))
+  ([{::keys [root-f guess bounds]}
+    {::keys [max-iter root-solver rel-accu abs-accu]
+     :or    {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
+   (let [ex-d {:fn (var root-solver)}
+         [lower upper] bounds]
+     (if (= root-solver :newton-raphson)
+       (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
+                    (univariate-differentiable-function root-f 2 0.25) lower upper)
+            (catch Exception e (ex-info (.getMessage e) ex-d)))
+       (let [^BaseUnivariateSolver s
+             (case root-solver
+               :bisection (BisectionSolver. rel-accu abs-accu)
+               :bracketing-brent (BracketingNthOrderBrentSolver. rel-accu abs-accu 5)
+               :brent (BrentSolver. rel-accu abs-accu)
+               :illinois (IllinoisSolver. rel-accu abs-accu)
+               :muller (MullerSolver. rel-accu abs-accu)
+               :muller2 (MullerSolver2. rel-accu abs-accu)
+               :pegasus (PegasusSolver. rel-accu abs-accu)
+               :regula (RegulaFalsiSolver. rel-accu abs-accu)
+               :ridders (RiddersSolver. rel-accu abs-accu)
+               :secant (SecantSolver. rel-accu abs-accu)
+               nil)
+             uni-fn (univariate-function root-f)]
+         (when s (try (.solve s max-iter uni-fn lower upper guess)
+                      (catch Exception e (ex-info (.getMessage e) ex-d)))))))))
 
 (s/fdef root-solver
         :args (s/cat :root-f-with-guess-and-bounds ::root-f-with-guess-and-bounds
-                     :opts (s/keys* :opt [::max-iter ::root-solver ::rel-accu ::abs-accu]))
+                     :opts (s/? (s/keys :opt [::max-iter ::root-solver ::rel-accu ::abs-accu])))
         :ret (s/nilable (s/or :finite ::m/finite :exception ::exception)))
 
 ;;;UNIVARIATE OPTIMIZE
@@ -364,32 +365,33 @@ solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
 Each constraints-fn should return m/inf+ or m/inf- when out of range.
 Jacobian-fn should return m/nan when out of range.
 Returns map of ::point and ::errors."
-  [{::keys [constraints-fn n-cons jacobian-fn guesses]}
-   & {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
-      :or   {max-eval 1000, max-iter 1000, nls-solver :lm, rel-accu 1e-14, abs-accu 1e-6}}]
-  (let [ex-d {:fn (var nonlinear-least-squares)}
-        c (multivariate-vector-function constraints-fn)
-        j (multivariate-matrix-function jacobian-fn)
-        s (condp = nls-solver
-            :lm (LevenbergMarquardtOptimizer.)
-            :gauss-newton (GaussNewtonOptimizer.)
-            nil)
-        checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
-        observed (if (and (some? target) (= (count target) n-cons))
-                   (mx/create-vector :apache-commons target)
-                   (mx/create-vector :apache-commons n-cons 0.0))
-        start (mx/create-vector :apache-commons guesses)
-        weights (if (and (some? weights) (= (count weights) n-cons))
-                  (mx/diagonal-matrix :apache-commons weights)
-                  (mx/diagonal-matrix :apache-commons n-cons 1.0))]
-    (try
-      (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
-                    problem (LeastSquaresFactory/create
-                              multivariate-jacobian-fn observed start weights checker max-eval max-iter)
-                    e (.optimize s problem)] (errors-vector-point e)))
-      (catch TooManyEvaluationsException _
-        (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
-      (catch Exception e (ex-info (.getMessage e) ex-d)))))
+  ([args] (nonlinear-least-squares args {}))
+  ([{::keys [constraints-fn n-cons jacobian-fn guesses]}
+    {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
+     :or    {max-eval 1000, max-iter 1000, nls-solver :lm, rel-accu 1e-14, abs-accu 1e-6}}]
+   (let [ex-d {:fn (var nonlinear-least-squares)}
+         c (multivariate-vector-function constraints-fn)
+         j (multivariate-matrix-function jacobian-fn)
+         s (condp = nls-solver
+             :lm (LevenbergMarquardtOptimizer.)
+             :gauss-newton (GaussNewtonOptimizer.)
+             nil)
+         checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
+         observed (if (and (some? target) (= (count target) n-cons))
+                    (mx/create-vector :apache-commons target)
+                    (mx/create-vector :apache-commons n-cons 0.0))
+         start (mx/create-vector :apache-commons guesses)
+         weights (if (and (some? weights) (= (count weights) n-cons))
+                   (mx/diagonal-matrix :apache-commons weights)
+                   (mx/diagonal-matrix :apache-commons n-cons 1.0))]
+     (try
+       (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
+                     problem (LeastSquaresFactory/create
+                               multivariate-jacobian-fn observed start weights checker max-eval max-iter)
+                     e (.optimize s problem)] (errors-vector-point e)))
+       (catch TooManyEvaluationsException _
+         (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
+       (catch Exception e (ex-info (.getMessage e) ex-d))))))
 
 (s/def ::constraints-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
                                  :ret (s/coll-of ::m/num)))
@@ -421,8 +423,8 @@ Returns map of ::point and ::errors."
 
 (s/fdef nonlinear-least-squares
         :args (s/cat :constraints-with-jacobian ::constraints-with-jacobian
-                     :options (s/keys* :opt [::target ::max-eval ::max-iter ::nls-solver
-                                             ::check-by-objective? ::rel-accu ::abs-accu ::weights]))
+                     :opts (s/? (s/keys :opt [::target ::max-eval ::max-iter ::nls-solver
+                                               ::check-by-objective? ::rel-accu ::abs-accu ::weights])))
         :ret (s/nilable (s/or :ret ::errors-vector-point :exception ::exception)))
 
 ;;;OPTIMIZE WITH GRADIENT

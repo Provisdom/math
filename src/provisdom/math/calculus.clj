@@ -652,41 +652,42 @@
          and 1-6 for forward or backward (no 6 for 4th deriv).
          (default accuracy is 2 for derivative <= 2, else 6.
          Accuracy is ignored for derivative > 4 and default accuracies are used."
-  [f & {::keys [derivative h type accuracy]
-        :or    {derivative 1, type :central}}]
-  (let [derivative (int derivative)
-        accuracy (when accuracy (int accuracy))
-        h (when h (double h))]
-    (cond (zero? derivative) f
-          (> derivative 4) (let [exc (- derivative 4)
-                                 x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]
-                             (derivative-fn
-                               (derivative-fn
-                                 f
-                                 ::derivative exc
-                                 ::h (* x (m/pow 10 (/ (+ 3 exc) -2)))
-                                 ::type type)
-                               ::derivative 4
-                               ::h (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
-                               ::type type))
-          :else (let [h (cond h h
-                              (m/one? derivative) m/*sgl-close*
-                              :else (/ m/*sgl-close* 10))
-                      accuracy (cond accuracy accuracy
-                                     (<= derivative 2) 2
-                                     (and (== derivative 4) (not= type :central)) 5
-                                     :else 6)
-                      coeff-fn (condp = type
-                                 :central get-central-coeff
-                                 :forward get-forward-coeff
-                                 :backward get-backward-coeff)
-                      mult (/ h)
-                      dx (m/pow h (/ derivative))
-                      coeff (map #(let [[e1 e2] %] [(* dx e1) e2])
-                                 (coeff-fn derivative accuracy))]
-                  (fn [v]
-                    (* mult (mx/esum (map #(let [[e1 e2] %]
-                                             (* (f (+ v e1)) e2)) coeff))))))))
+  ([f] (derivative-fn f {}))
+  ([f {::keys [derivative h type accuracy]
+       :or    {derivative 1, type :central}}]
+   (let [derivative (int derivative)
+         accuracy (when accuracy (int accuracy))
+         h (when h (double h))]
+     (cond (zero? derivative) f
+           (> derivative 4) (let [exc (- derivative 4)
+                                  x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]
+                              (derivative-fn
+                                (derivative-fn
+                                  f
+                                  {::derivative exc
+                                   ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
+                                   ::type       type})
+                                {::derivative 4
+                                 ::h          (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
+                                 ::type       type}))
+           :else (let [h (cond h h
+                               (m/one? derivative) m/*sgl-close*
+                               :else (/ m/*sgl-close* 10))
+                       accuracy (cond accuracy accuracy
+                                      (<= derivative 2) 2
+                                      (and (== derivative 4) (not= type :central)) 5
+                                      :else 6)
+                       coeff-fn (condp = type
+                                  :central get-central-coeff
+                                  :forward get-forward-coeff
+                                  :backward get-backward-coeff)
+                       mult (/ h)
+                       dx (m/pow h (/ derivative))
+                       coeff (map #(let [[e1 e2] %] [(* dx e1) e2])
+                                  (coeff-fn derivative accuracy))]
+                   (fn [v]
+                     (* mult (mx/esum (map #(let [[e1 e2] %]
+                                              (* (f (+ v e1)) e2)) coeff)))))))))
 
 (s/def ::f (s/with-gen
              (s/fspec :args (s/cat :a ::m/number) :ret ::m/number)
@@ -698,15 +699,14 @@
 
 (s/fdef derivative-fn
         :args (s/cat :f ::f
-                     :opts
-                     (s/&
-                       (s/keys* :opt [::derivative ::h ::type ::accuracy])
-                       (fn [v] (let [d (get v ::derivative 1)
-                                     a (get v ::accuracy (if (<= d 2) 2 6))
-                                     t (get v ::type :central)]
-                                 (if (= t :central)
-                                   (and (even? a) (or (<= d 2) (<= a 6)))
-                                   (and (<= a 6) (or (<= d 3) (<= a 5))))))))
+                     :opts (s/? (s/and
+                                  (s/keys :opt [::derivative ::h ::type ::accuracy])
+                                  (fn [v] (let [d (get v ::derivative 1)
+                                                a (get v ::accuracy (if (<= d 2) 2 6))
+                                                t (get v ::type :central)]
+                                            (if (= t :central)
+                                              (and (even? a) (or (<= d 2) (<= a 6)))
+                                              (and (<= a 6) (or (<= d 3) (<= a 5)))))))))
         :ret ::f)
 
 (defn gradient-fn
@@ -823,11 +823,11 @@
 
 (defn second-partial-derivative-xx-of-fxy
   [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] ((derivative-fn #(fxy % y) ::derivative 2) x)))
+  (fn [x y] ((derivative-fn #(fxy % y) {::derivative 2}) x)))
 
 (defn second-partial-derivative-yy-of-fxy
   [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] ((derivative-fn #(fxy x %) ::derivative 2) y)))
+  (fn [x y] ((derivative-fn #(fxy x %) {::derivative 2}) y)))
 
 (defn second-partial-derivative-xy-of-fxy
   [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
