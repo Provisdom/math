@@ -7,7 +7,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
-(declare nan? roughly-round? non-? non+? tiny-up tiny-down)
+(declare nan? roughly-round? non-? non+? next-up next-down)
 
 ;;;DYNAMIC VARIABLES
 (def ^:dynamic *sgl-digits* 6)
@@ -316,9 +316,9 @@
   "Returns true if x is between 0 and 1, exclusive"
   [x] (and (number? x) (pos? x) (< x 1)))
 
-(s/def ::open-prob (s/spec open-prob? :gen #(s/gen (s/double-in :min tiny-dbl :max (tiny-down 1.0) :NaN? false))))
+(s/def ::open-prob (s/spec open-prob? :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0) :NaN? false))))
 (s/def ::nan-or-open-prob
-  (s/spec #(or (nan? %) (open-prob? %)) :gen #(s/gen (s/double-in :min tiny-dbl :max (tiny-down 1.0)))))
+  (s/spec #(or (nan? %) (open-prob? %)) :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0)))))
 
 (defn corr?
   "Returns true if x is between -1 and 1, inclusive"
@@ -332,22 +332,22 @@
   [x] (and (number? x) (< x 1) (> x -1)))
 
 (s/def ::open-corr
-  (s/spec open-corr? :gen #(s/gen (s/double-in :min (tiny-up -1.0) :max (tiny-down 1.0) :NaN? false))))
+  (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0) :NaN? false))))
 (s/def ::nan-or-open-corr
-  (s/spec #(or (nan? %) (open-corr? %)) :gen #(s/gen (s/double-in :min (tiny-up -1.0) :max (tiny-down 1.0)))))
+  (s/spec #(or (nan? %) (open-corr? %)) :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0)))))
 
 (defn maybe-long-able
   "Returns x as a long if possible.  Otherwise returns x."
   [x] (if (long-able? x) (long x) x))
 
 ;;;BASIC MATH
-(defn tiny-up
-  "Returns x plus tiny-dbl"
-  [^double x] (+ x tiny-dbl))
+(defn next-up
+  "Returns x plus smallest amount to make a change."
+  [^double x] (Math/nextAfter (double x) (+ x 1e292)))
 
-(defn tiny-down
-  "Returns x minus tiny-dbl"
-  [^double x] (- x tiny-dbl))
+(defn next-down
+  "Returns x minus smallest amount to make a change."
+  [^double x] (Math/nextAfter (double x) (- x 1e292)))
 
 (defn one-
   "Returns (1 - x)"

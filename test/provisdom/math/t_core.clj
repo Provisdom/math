@@ -409,23 +409,23 @@
   (open-corr?-test)
   (maybe-long-able-test))
 
-(deftest tiny-up-test
-  (is= (+ 3 m/tiny-dbl) (m/tiny-up 3))
-  (is= (- m/tiny-dbl 3) (m/tiny-up -3))
-  (is (m/nan? (m/tiny-up m/nan)))
-  (is= m/inf+ (m/tiny-up m/inf+))
-  (is= m/inf- (m/tiny-up m/inf-))
-  (is= (- m/tiny-dbl 3) (m/tiny-up -3.0))
-  (is (thrown? Exception (m/tiny-up nil))))
+(deftest next-up-test
+  (is= 3.0000000000000004 (m/next-up 3))
+  (is= -2.9999999999999996 (m/next-up -3))
+  (is (m/nan? (m/next-up m/nan)))
+  (is= m/inf+ (m/next-up m/inf+))
+  (is= m/inf- (m/next-up m/inf-))
+  (is= -2.9999999999999996 (m/next-up -3.0))
+  (is (thrown? Exception (m/next-up nil))))
 
-(deftest tiny-down-test
-  (is= (- 3 m/tiny-dbl) (m/tiny-down 3))
-  (is= (- -3 m/tiny-dbl) (m/tiny-down -3))
-  (is (m/nan? (m/tiny-down m/nan)))
-  (is= m/inf+ (m/tiny-down m/inf+))
-  (is= m/inf- (m/tiny-down m/inf-))
-  (is= (- -3 m/tiny-dbl) (m/tiny-down -3.0))
-  (is (thrown? Exception (m/tiny-down nil))))
+(deftest next-down-test
+  (is= 2.9999999999999996 (m/next-down 3))
+  (is= -3.0000000000000004 (m/next-down -3))
+  (is (m/nan? (m/next-down m/nan)))
+  (is= m/inf+ (m/next-down m/inf+))
+  (is= m/inf- (m/next-down m/inf-))
+  (is= 2.9999999999999996 (m/next-down 3.0))
+  (is (thrown? Exception (m/next-down nil))))
 
 (deftest one--test
   (is= -2 (m/one- 3))
@@ -515,8 +515,8 @@
   (is (thrown? Exception (m/cbrt nil))))
 
 (deftest basic-math-test
-  (tiny-up-test)
-  (tiny-down-test)
+  (next-up-test)
+  (next-down-test)
   (one--test)
   (sq-test)
   (cube-test)
