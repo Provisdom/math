@@ -10,10 +10,10 @@
                           [criterium "0.4.4" :scope "test"]
 
                           [provisdom/boot-tasks "1.4" :scope "test"]
-                          [provisdom/test "0.2.4" :scope "test"]
+                          [provisdom/test "0.3.0" :scope "test"]
                           ;;project deps
                           [org.clojure/clojure "1.9.0-alpha16" :scope "provided"]
-                          [org.clojure/spec.alpha "0.1.108"]
+                          [org.clojure/spec.alpha "0.1.109"]
                           [orchestra "0.3.0"]
                           [org.clojure/core.async "0.3.442"]
                           [provisdom/utility-belt "0.1.1"]

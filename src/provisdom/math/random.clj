@@ -1,5 +1,8 @@
 (ns provisdom.math.random
-  (:require [provisdom.math.core :as m]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [orchestra.spec.test :as st]
+            [provisdom.math.core :as m]
             [provisdom.math.special-functions :as mf]
             [provisdom.math.apache :as ap]
             [clojure.core.reducers :as ccr]

@@ -1,7 +1,7 @@
 (ns provisdom.math.special-functions
-  (:require [clojure.spec :as s]
-            [clojure.spec.test :as st]
-            [clojure.spec.gen :as gen]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [orchestra.spec.test :as st]
             [provisdom.math.core :as m]
             [provisdom.math.matrix :as mx]
             [provisdom.math.apache :as ap]

@@ -2,7 +2,9 @@
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
             [provisdom.math.format :as format]
-            [provisdom.math.core :as m]))
+            [provisdom.math.core :as m]
+            [clojure.spec.test.alpha :as sta]
+            [orchestra.spec.test :as st]))
 
 (deftest trim-number-test
   (is= "-.003" (format/trim-number "-00.00300"))

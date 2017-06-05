@@ -3,7 +3,8 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
             [provisdom.math.apache :as ap]
-            [clojure.spec.test :as st]))
+            [clojure.spec.test.alpha :as sta]
+            [orchestra.spec.test :as st]))
 
 (st/instrument)
 

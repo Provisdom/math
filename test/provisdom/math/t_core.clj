@@ -3,7 +3,8 @@
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
-            [clojure.spec.test :as st]))
+            [clojure.spec.test.alpha :as sta]
+            [orchestra.spec.test :as st]))
 
 (st/instrument)
 
@@ -428,6 +429,8 @@
   (is (thrown? Exception (m/next-down nil))))
 
 (deftest div-test
+  (is (ratio? (m/div 4)))
+  (is= 0.25 (m/div 4.0))
   (is= 1 (m/div 3 3))
   (is= -1 (m/div -3 3))
   (is (m/nan? (m/div m/nan 0)))
@@ -436,7 +439,7 @@
   (is= m/inf- (m/div m/inf- 0))
   (is= 0.0 (m/div 0 m/inf+))
   (is= 0.0 (m/div 0 m/inf-))
-  (is (instance? Exception  (m/div 0 0)))
+  (is (instance? Exception (m/div 0 0)))
   (is= nil (m/div 0 0 nil))
   (is (m/nan? (m/div 0 0 m/nan)))
   (is (thrown? Exception (m/div nil 0)))

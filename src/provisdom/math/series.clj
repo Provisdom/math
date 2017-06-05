@@ -1,5 +1,8 @@
 (ns provisdom.math.series
-  (:require [provisdom.utility-belt.core :as co]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [orchestra.spec.test :as st]
+            [provisdom.utility-belt.core :as co]
             [provisdom.math.core :as m]
             [provisdom.math.combinatorics :as cm]
             [provisdom.math.calculus :as ca]

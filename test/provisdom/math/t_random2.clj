@@ -2,12 +2,13 @@
 (ns provisdom.math.t-random2
   "Tests of the custom RNG. This is a little weird since the subject
   of the tests (the random number generator) is also the primary
-  internal driver of the tests, but hopefully it will still be
-  meaningful."
+  internal driver of the tests, but hopefully it will still be meaningful."
   (:require [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [clojure.test.check.random :as random]))
+            [clojure.test.check.random :as random]
+            [clojure.spec.test.alpha :as sta]
+            [orchestra.spec.test :as st]))
 
 (def gen-split-steps
   (gen/list (gen/elements [:left :right])))

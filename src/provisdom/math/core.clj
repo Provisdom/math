@@ -1,8 +1,7 @@
 (ns provisdom.math.core
   (:refer-clojure :exclude [pos? neg? int?])
-  (:require [clojure.spec :as s]
-            [clojure.spec.gen :as gen]
-    ;[clojure.spec.test :as st]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
             [orchestra.spec.test :as st]))
 
 (set! *warn-on-reflection* true)
@@ -351,8 +350,9 @@
   [^double x] (Math/nextAfter (double x) inf-))
 
 (defn div
-  "Returns x1 divided by x2.
+  "Returns x1 divided by x2.  Or 1 divided by x2.
   'Divide by zero' will return ex-info. Optionally, can include alternative return value, 'div-by-zero'."
+  ([x2] (div 1 x2))
   ([x1 x2] (div x1 x2 "nil"))
   ([x1 x2 div-by-zero]
    (if (zero? x2)
@@ -615,79 +615,79 @@
 ;;;QUOTIENTS
 (defn quot'
   "Quotient of dividing numerator by denominator. Returns a long if possible."
-  [num div]
-  (if (or (nan? div) (nan? num) (inf? num) (inf? div) (zero? div))
+  [numerator divisor]
+  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ num div)]
+    (let [d (/ numerator divisor)]
       (if (inf? d)
         d
-        (maybe-long-range (quot num div))))))
+        (maybe-long-range (quot numerator divisor))))))
 
 (s/fdef quot'
-        :args (s/cat :num ::number :div ::number)
+        :args (s/cat :numerator ::number :divisor ::number)
         :ret ::number)
 
 (defn mod'
-  "Modulus of num and div. Truncates toward negative infinity.
-  Has sign of div unless numerical rounding error with 'quot'.
+  "Modulus of numerator and divisor. Truncates toward negative infinity.
+  Has sign of divisor unless numerical rounding error with 'quot'.
   Will stay consistent with 'quot'.
   Returns a long if possible."
-  [num div]
-  (if (or (nan? div) (nan? num) (inf? num) (inf? div) (zero? div))
+  [numerator divisor]
+  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ num div)]
+    (let [d (/ numerator divisor)]
       (if (inf? d)
         nan
-        (maybe-long-able (mod num div))))))
+        (maybe-long-able (mod numerator divisor))))))
 
 (s/fdef mod'
-        :args (s/cat :num ::number :div ::number)
+        :args (s/cat :numerator ::number :divisor ::number)
         :ret ::number)
 
 (defn rem'
   "Remainder of dividing numerator by denominator.
-  Has sign of num unless numerical rounding error with 'quot'.
+  Has sign of numerator unless numerical rounding error with 'quot'.
   Will stay consistent with 'quot'.
   Returns a long if possible."
-  [num div]
-  (if (or (nan? div) (nan? num) (inf? num) (inf? div) (zero? div))
+  [numerator divisor]
+  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ num div)]
+    (let [d (/ numerator divisor)]
       (if (inf? d)
         nan
-        (maybe-long-able (rem num div))))))
+        (maybe-long-able (rem numerator divisor))))))
 
 (s/fdef rem'
-        :args (s/cat :num ::number :div ::number)
+        :args (s/cat :numerator ::number :divisor ::number)
         :ret ::number)
 
 (defn quot-and-rem
   "Returns a tuple of longs if possible.
   Quotient of dividing numerator by denominator.
   Remainder of dividing numerator by denominator.
-  Has sign of num unless numerical rounding error with 'quot'.
+  Has sign of numerator unless numerical rounding error with 'quot'.
   Will stay consistent with 'quot'."
-  [num div] [(quot' num div) (rem' num div)])
+  [numerator divisor] [(quot' numerator divisor) (rem' numerator divisor)])
 
 (s/fdef quot-and-rem
-        :args (s/cat :num ::number :div ::number)
+        :args (s/cat :numerator ::number :divisor ::number)
         :ret (s/tuple ::number ::number))
 
 (defn quot-and-mod
   "Returns a tuple of longs if possible.
   Quotient of dividing numerator by denominator.
-  Modulus of num and div.
+  Modulus of numerator and divisor.
   Truncates toward negative infinity.
-  Has sign of div unless numerical rounding error with 'quot'.
+  Has sign of divisor unless numerical rounding error with 'quot'.
   Will stay consistent with 'quot'."
-  [num div]
-  (let [q (quot' num div)
-        m (mod' num div)
-        q (if (and (not (zero? num)) (= (sgn num) (- (sgn m)))) (dec q) q)]
+  [numerator divisor]
+  (let [q (quot' numerator divisor)
+        m (mod' numerator divisor)
+        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m)))) (dec q) q)]
     [q m]))
 
 (s/fdef quot-and-mod
-        :args (s/cat :num ::number :div ::number)
+        :args (s/cat :numerator ::number :divisor ::number)
         :ret (s/tuple ::number ::number))
 
 ;;;ANGLES

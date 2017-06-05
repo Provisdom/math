@@ -1,7 +1,7 @@
 (ns provisdom.math.arrays
-  (:require [clojure.spec :as s]
-            [clojure.spec.gen :as gen]
-            [clojure.spec.test :as st]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [orchestra.spec.test :as st]
             [provisdom.math.core :as m])
   (:import [java.util Arrays]))
 

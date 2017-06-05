@@ -1,7 +1,7 @@
 (ns provisdom.math.calculus
-  (:require [clojure.spec :as s]
-            [clojure.spec.gen :as gen]
-            [clojure.spec.test :as st]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [orchestra.spec.test :as st]
             [provisdom.utility-belt.core :as co]
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
