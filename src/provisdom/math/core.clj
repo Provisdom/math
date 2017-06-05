@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [pos? neg? int?])
   (:require [clojure.spec :as s]
             [clojure.spec.gen :as gen]
-            [clojure.spec.test :as st]))
+    ;[clojure.spec.test :as st]
+            [orchestra.spec.test :as st]))
 
 (set! *warn-on-reflection* true)
 
@@ -343,11 +344,25 @@
 ;;;BASIC MATH
 (defn next-up
   "Returns x plus smallest amount to make a change."
-  [^double x] (Math/nextAfter (double x) (+ x 1e292)))
+  [^double x] (Math/nextAfter (double x) inf+))
 
 (defn next-down
   "Returns x minus smallest amount to make a change."
-  [^double x] (Math/nextAfter (double x) (- x 1e292)))
+  [^double x] (Math/nextAfter (double x) inf-))
+
+(defn div
+  "Returns x1 divided by x2.
+  'Divide by zero' will return ex-info. Optionally, can include alternative return value, 'div-by-zero'."
+  ([x1 x2] (div x1 x2 "nil"))
+  ([x1 x2 div-by-zero]
+   (if (zero? x2)
+     (cond (nan? x1) nan
+           (zero? x1) (if (= div-by-zero "nil")
+                        (ex-info "divide by zero" {:fn (var div)})
+                        div-by-zero)
+           (pos? x1) inf+
+           :else inf-)
+     (/ x1 x2))))
 
 (defn one-
   "Returns (1 - x)"

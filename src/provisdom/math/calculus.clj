@@ -379,9 +379,9 @@
    The second is the converter for within the function to integrate."
   [[a b]]
   (cond
-    (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)]
-                                      (/ (inc s) (m/sq (m/one- s)))),
-                                   #(/ % (m/one- (m/sq %))), [-1 1]]
+    (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)] (/ (inc s) (m/sq (m/one- s))))
+                                   #(/ % (m/one- (m/sq %)))
+                                   [-1 1]]
     (m/inf+? b) [#(/ (m/sq %)), #(+ a (/ (m/one- %) %)), [0 1]]
     (m/inf-? a) [#(/ (m/sq %)), #(- b (/ (m/one- %) %)), [0 1]]
     :else [(constantly 1.0), identity, [a b]]))
@@ -427,17 +427,17 @@
   [f ranges & {:keys [points accu min-iter max-iter]
                :or   {min-iter m/*min-iter*, max-iter (/ m/*max-iter* 10)}}]
   (let [ranges (if (sequential? (first ranges)) ranges [ranges])
-        nvars (count ranges)
+        n-vars (count ranges)
         cov (some m/inf? (flatten ranges))
-        points (cond points points, (or cov (> nvars 1)) 15, :else 21)
+        points (cond points points, (or cov (> n-vars 1)) 15, :else 21)
         accu (cond accu accu,
-                   (or (and cov (>= nvars 3)) (>= nvars 4)) m/*sgl-close*,
+                   (or (and cov (>= n-vars 3)) (>= n-vars 4)) m/*sgl-close*,
                    :else m/*dbl-close*)
-        [newf newr] (if (m/one? nvars) (change-of-var f (first ranges))
+        [newf newr] (if (m/one? n-vars) (change-of-var f (first ranges))
                                        (change-of-var-ndim f ranges))
-        implementation (newf (if (m/one? nvars) (mx/eaverage newr)
+        implementation (newf (if (m/one? n-vars) (mx/eaverage newr)
                                                 (map mx/eaverage newr)))]
-    (if (m/one? nvars)
+    (if (m/one? n-vars)
       (adaptive-quadrature
         implementation newf newr accu min-iter max-iter
         (weights-and-nodes-gk points))

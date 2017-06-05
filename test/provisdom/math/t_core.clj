@@ -414,7 +414,7 @@
   (is= -2.9999999999999996 (m/next-up -3))
   (is (m/nan? (m/next-up m/nan)))
   (is= m/inf+ (m/next-up m/inf+))
-  (is= m/inf- (m/next-up m/inf-))
+  (is= m/min-dbl (m/next-up m/inf-))
   (is= -2.9999999999999996 (m/next-up -3.0))
   (is (thrown? Exception (m/next-up nil))))
 
@@ -422,10 +422,25 @@
   (is= 2.9999999999999996 (m/next-down 3))
   (is= -3.0000000000000004 (m/next-down -3))
   (is (m/nan? (m/next-down m/nan)))
-  (is= m/inf+ (m/next-down m/inf+))
+  (is= m/max-dbl (m/next-down m/inf+))
   (is= m/inf- (m/next-down m/inf-))
   (is= 2.9999999999999996 (m/next-down 3.0))
   (is (thrown? Exception (m/next-down nil))))
+
+(deftest div-test
+  (is= 1 (m/div 3 3))
+  (is= -1 (m/div -3 3))
+  (is (m/nan? (m/div m/nan 0)))
+  (is (m/nan? (m/div 0 m/nan)))
+  (is= m/inf+ (m/div m/inf+ 0))
+  (is= m/inf- (m/div m/inf- 0))
+  (is= 0.0 (m/div 0 m/inf+))
+  (is= 0.0 (m/div 0 m/inf-))
+  (is (instance? Exception  (m/div 0 0)))
+  (is= nil (m/div 0 0 nil))
+  (is (m/nan? (m/div 0 0 m/nan)))
+  (is (thrown? Exception (m/div nil 0)))
+  (is (thrown? Exception (m/div 0 nil))))
 
 (deftest one--test
   (is= -2 (m/one- 3))
@@ -517,6 +532,7 @@
 (deftest basic-math-test
   (next-up-test)
   (next-down-test)
+  (div-test)
   (one--test)
   (sq-test)
   (cube-test)
