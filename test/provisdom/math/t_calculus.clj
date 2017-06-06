@@ -3,10 +3,10 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
             [provisdom.math.calculus :as ca]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
 
-(st/instrument)
+(ost/instrument)
 
 (def der-f #(+ (m/exp %) (* 7 (m/pow % 6)) (* 3 (m/pow % 3)) %))
 
@@ -63,4 +63,4 @@
 
 (defspec-test test-derivative-fn `ca/derivative-fn)
 
-#_(st/unstrument)
+#_(ost/unstrument)

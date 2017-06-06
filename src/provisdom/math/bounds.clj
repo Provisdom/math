@@ -1,7 +1,7 @@
 (ns provisdom.math.bounds
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [orchestra.spec.test :as st]
+            [clojure.spec.test.alpha :as st]
             [provisdom.math.core :as m]
             [provisdom.math.matrix :as mx]))
 

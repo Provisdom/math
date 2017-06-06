@@ -3,10 +3,10 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.matrix :as mx]
             [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
 
-(st/instrument)
+(ost/instrument)
 
 (deftest kahan-sum-test
   (is= m/inf+ (mx/kahan-sum [m/inf+ m/inf+]))
@@ -21,4 +21,4 @@
 
 (defspec-test test-kahan-sum `mx/kahan-sum)
 
-#_(st/unstrument)
+#_(ost/unstrument)

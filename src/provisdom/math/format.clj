@@ -1,7 +1,7 @@
 (ns provisdom.math.format
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [orchestra.spec.test :as st]
+            [clojure.spec.test.alpha :as st]
             [clojure.string :as str]
             [taoensso.truss :as truss :refer [have have! have?]]
             [provisdom.utility-belt.format :as u]

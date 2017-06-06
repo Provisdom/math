@@ -7,8 +7,8 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.random :as random]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
 
 (def gen-split-steps
   (gen/list (gen/elements [:left :right])))

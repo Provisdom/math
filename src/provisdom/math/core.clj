@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [pos? neg? int?])
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]))
 
 (set! *warn-on-reflection* true)
 

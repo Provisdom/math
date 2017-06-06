@@ -1,7 +1,7 @@
 (ns provisdom.math.calculus
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [orchestra.spec.test :as st]
+            [clojure.spec.test.alpha :as st]
             [provisdom.utility-belt.core :as co]
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
@@ -660,7 +660,7 @@
          h (when h (double h))]
      (cond (zero? derivative) f
            (> derivative 4) (let [exc (- derivative 4)
-                                  x (if h (/ (* 10 h) m/*sgl-close*) 1.0)]
+                                  x (if h (/ h (/ m/*sgl-close* 10)) 1.0)]
                               (derivative-fn
                                 (derivative-fn
                                   f
@@ -702,8 +702,10 @@
                      :opts (s/? (s/and
                                   (s/keys :opt [::derivative ::h ::type ::accuracy])
                                   (fn [v] (let [d (get v ::derivative 1)
-                                                a (get v ::accuracy (if (<= d 2) 2 6))
-                                                t (get v ::type :central)]
+                                                t (get v ::type :central)
+                                                a (get v ::accuracy (cond (<= d 2) 2
+                                                                          (and (== d 4) (not= t :central)) 5
+                                                                          :else 6))]
                                             (if (= t :central)
                                               (and (even? a) (or (<= d 2) (<= a 6)))
                                               (and (<= a 6) (or (<= d 3) (<= a 5)))))))))

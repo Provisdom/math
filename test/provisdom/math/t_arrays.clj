@@ -3,8 +3,10 @@
             [criterium.core :as perf]
             [provisdom.test.core :refer :all]
             [provisdom.math.arrays :as a]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
+
+(ost/instrument)
 
 (deftest array?-test
   (is (a/array? (a/jagged-2D-array :long [[1 2 3]])))

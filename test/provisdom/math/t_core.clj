@@ -3,10 +3,10 @@
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
 
-(st/instrument)
+(ost/instrument)
 
 (deftest num?-test
   (is-not (m/num? "A"))
@@ -973,4 +973,4 @@
 (defspec-test test-radians->angle `m/radians->angle)
 (defspec-test test-angle->radians `m/angle->radians)
 
-#_(st/unstrument)
+#_(ost/unstrument)

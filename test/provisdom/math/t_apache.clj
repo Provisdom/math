@@ -3,10 +3,10 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
             [provisdom.math.apache :as ap]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
 
-(st/instrument)
+(ost/instrument)
 
 (def fgb0 {::ap/root-f identity ::ap/guess -5.0 ::ap/bounds [-100.0 100.0]})
 (def fgb1 {::ap/root-f (fn [v] (- (* v v) (* 20 v))) ::ap/guess -5.0 ::ap/bounds [-10.0 10.0]})
@@ -64,4 +64,4 @@
 (defspec-test test-root-solver `ap/root-solver)
 (defspec-test test-nonlinear-least-squares-test `ap/nonlinear-least-squares)
 
-#_(st/unstrument)
+#_(ost/unstrument)

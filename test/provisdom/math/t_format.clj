@@ -3,8 +3,10 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.format :as format]
             [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as sta]
-            [orchestra.spec.test :as st]))
+            [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]))
+
+(ost/instrument)
 
 (deftest trim-number-test
   (is= "-.003" (format/trim-number "-00.00300"))
