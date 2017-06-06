@@ -44,4 +44,4 @@
                        provisdom.math.t-core
                        provisdom.math.t-format
                        provisdom.math.t-matrix
-                       provisdom.math.random2}})
+                       provisdom.math.t-random2}})
