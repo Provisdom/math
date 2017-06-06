@@ -379,11 +379,11 @@
    The second is the converter for within the function to integrate."
   [[a b]]
   (cond
-    (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)] (/ (inc s) (m/sq (m/one- s))))
-                                   #(/ % (m/one- (m/sq %)))
+    (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)] (m/div (inc s) (m/sq (m/one- s))))
+                                   #(m/div % (m/one- (m/sq %)))
                                    [-1 1]]
-    (m/inf+? b) [#(/ (m/sq %)), #(+ a (/ (m/one- %) %)), [0 1]]
-    (m/inf-? a) [#(/ (m/sq %)), #(- b (/ (m/one- %) %)), [0 1]]
+    (m/inf+? b) [#(m/div (m/sq %)), #(+ a (m/div (m/one- %) %)), [0 1]]
+    (m/inf-? a) [#(m/div (m/sq %)), #(- b (m/div (m/one- %) %)), [0 1]]
     :else [(constantly 1.0), identity, [a b]]))
 
 (defn- change-of-var
@@ -844,7 +844,7 @@
   "Equation '8.5' page 509 - approximates the integral of f over [a b]."
   ^double
   [f ^double a ^double b ^double h]
-  (* (/ h 3.) (+ (f a) (* 4 (f (+ a h))) (f b))))
+  (* (/ h 3.0) (+ (f a) (* 4 (f (+ a h))) (f b))))
 
 (defn- close-enough?
   "Finds if |a - b| < |error|."
@@ -855,7 +855,7 @@
   "Equation 7 page 509 in Kinkade et al."
   ^double
   [^double S* ^double S** ^double S]
-  (+ S* S** (* (/ 1. 15.) (+ S* S** (* -1. S)))))
+  (+ S* S** (* (/ 1.0 15.0) (+ S* S** (* -1.0 S)))))
 
 (defn- adapt-quad-internal
   "Do not call this fn directly.  Start with adaptive-quadrature instead."
@@ -866,20 +866,20 @@
         h (double h) fa (double fa)
         fc (double fc) fb (double fb)
         S (double S)
-        b (+ a (* 2. h))
+        b (+ a (* 2.0 h))
         c (+ a h)
-        h (/ h 2.)
+        h (/ h 2.0)
         S-left (simpsons-estimate f a c h)
         S-right (simpsons-estimate f c b h)]
     (cond
-      (close-enough? (+ S-left S-right) S (/ (* 60. eps h) delta))
+      (close-enough? (+ S-left S-right) S (/ (* 60.0 eps h) delta))
       (+ sigma (insured-approximation S-left S-right S))
       (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
       :else (+ (adapt-quad-internal                         ;From a to the midpoint
                  f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
                (adapt-quad-internal
                  f delta eps n (inc k)                      ;From the midpoint to b
-                 sigma (+ a (* 2. h)) h fc (f (+ a (* 3. h))) fb S-right)))))
+                 sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
 
 (defn- adaptive-quadrature-test
   "Approximates the definite integral of f over [a b] with an error less
@@ -890,7 +890,7 @@
   (let [a (double a) b (double b)
         eps (double eps) n (long n)
         delta (- b a) sigma 0
-        h (/ delta 2.) c (/ (+ a b) 2.)
+        h (/ delta 2.0) c (/ (+ a b) 2.0)
         k 1 fa (f a)
         fb (f b) fc (f c)
         S (simpsons-estimate f a b h)]

@@ -45,8 +45,8 @@ The number of ways that n objects can be arranged where no object appears in
    its natural position (known as 'derangements.')"
   [^double x]
   {:pre [(have? m/non-? x)]}
-  (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x))
-                                      (m/round (/ (factorial x) m/E))))
+  (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x :up))
+                                      (m/round (/ (factorial x) m/E) :up)))
 
 (defn choose-k-from-n
   "Returns the number of ways to choose k items out of n items. 

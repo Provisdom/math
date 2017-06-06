@@ -335,7 +335,7 @@ as fast alternative to bigDecimal"
   "Returns the size of the matrix given `ecount`. `ecount` is the number of independent symmetric matrix elements (the
   number of elements on the diagonal plus the number either above or below the diagonal)."
   ^long [^long ecount]
-  (let [s (-> ecount (* 8) inc m/sqrt dec (/ 2.0))]
+  (let [s (-> ecount (* 8) inc m/sqrt dec (* 0.5))]
     (when-not (m/roughly-round? s 1e-6)
       (throw (ex-info "Not a symmetric matrix." {:fn (var size-symmetric)})))
     (long s)))
@@ -347,12 +347,12 @@ as fast alternative to bigDecimal"
 (defn ecount-symmetric
   "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix. This is the number of elements on
   the diagonal plus the number of elements above or below the diagonal."
-  ^long [^long size] (-> size m/sq (+ size) (/ 2)))
+  ^long [^long size] (-> size m/sq (+ size) (* m/half)))
 
 (defn ecount-symmetric-with-unit-diagonal
   "Returns the element count (Usually referred to as `ecount`) for a symmetric matrix with a unit diagonal. This is the
   number of elements above or below the diagonal."
-  ^long [^long size] (-> size m/sq (- size) (/ 2)))
+  ^long [^long size] (-> size m/sq (- size) (* m/half)))
 
 (defn to-vector-from-symmetric
   "Returns a vector that contains the upper (defualt) or lower half of the matrix. `m` doesn't have to be symmetric.
@@ -1010,7 +1010,7 @@ Unassigned elements will be 0.0"
 
 (defn eaverage
   "Returns the average of the elements"
-  [m] (/ (esum m) (ecount m)))
+  [m] (m/div (esum m) (ecount m)))
 
 (defn esum-squares
   [m]
@@ -1042,13 +1042,13 @@ Unassigned elements will be 0.0"
   "Returns as length one in norm2."
   ;;mxc/normalise only works for matrices, 
   ;;w/ Clatrix it works like normalise! instead
-  [m] (coerce m (let [s (norm m)] (emap #(/ % s) m))))
+  [m] (coerce m (let [s (norm m)] (emap #(m/div % s) m))))
 
 (defn normalise1
   "Returns as length one in norm1."
   [m]
   (coerce m (let [s (norm1 m),
-                  ser (emap #(/ % s) m),
+                  ser (emap #(m/div % s) m),
                   diff (m/one- (esum ser))]
               (if (zero? diff)
                 ser
@@ -1056,7 +1056,7 @@ Unassigned elements will be 0.0"
 
 (defn normalisep
   "Returns as length one in normp."
-  [m ^double p] (coerce m (let [s (normp m p)] (emap #(/ % s) m))))
+  [m ^double p] (coerce m (let [s (normp m p)] (emap #(m/div % s) m))))
 
 (defn inner-product
   "Computes the inner product of numerical arrays.
@@ -1144,7 +1144,7 @@ x need not be an integer."
   "Returns vector of v1 projected onto v2."
   [v1 v2]
   {:pre [(have? vec? v1 v2)]}
-  (coerce v1 (let [s (/ (inner-product v1 v2) (esum-squares v2))]
+  (coerce v1 (let [s (m/div (inner-product v1 v2) (esum-squares v2))]
                (emap #(* s %) v2))))
 
 (defn cumulative-sum
@@ -1396,8 +1396,8 @@ pred takes an element and will be evaluated only for upper-right or lower-left
          LAPACK routines."
   [m]
   {:pre [(have? [:or number? square? vec?] m)]}
-  (cond (number? m) (/ m)
-        (vec? m) (create-vector m (emap / m))
+  (cond (number? m) (m/div m)
+        (vec? m) (create-vector m (emap m/div m))
         (apache-commons? m) (mxc/inverse m)
         :else (coerce m (clx/i (clx/maybe-positive
                                  (clx/maybe-symmetric (clatrix m)))))))

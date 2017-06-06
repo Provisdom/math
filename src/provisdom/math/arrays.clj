@@ -292,27 +292,27 @@ First array must be the shortest."
   (areduce-kv #(+ % (* %3 %4)) 0.0 a1 a2))
 
 (defn aproj ^double [^doubles a1 ^doubles a2]
-  (let [s (/ (adot-product a1 a2) (asum-squares a1))] (amap-ext #(* s %) a1)))
+  (let [s (m/div (adot-product a1 a2) (asum-squares a1))] (amap-ext #(* s %) a1)))
 
 (defn anorm ^doubles [^doubles a]
-  (let [sum (asum a)] (amap-ext #(/ % sum) a)))
+  (let [sum (asum a)] (amap-ext #(m/div % sum) a)))
 
 (defn anorm2 ^double [^doubles a] (m/sqrt (asum-squares a)))
 
 ;;;STATS
-(defn amean ^double [^doubles a] (/ (asum a) (alength a)))
+(defn amean ^double [^doubles a] (m/div (asum a) (alength a)))
 
-(defn asecond-moment ^double [^doubles a] (/ (asum-squares a) (alength a)))
+(defn asecond-moment ^double [^doubles a] (m/div (asum-squares a) (alength a)))
 
 (defn avariance ^double [^doubles a] (- (asecond-moment a) (m/sq (amean a))))
 
 (defn astd-dev ^double [^doubles a] (m/sqrt (avariance a)))
 
 (defn across-moment ^double [^doubles a1 ^doubles a2]
-  (/ (adot-product a1 a2) (alength a1)))
+  (m/div (adot-product a1 a2) (alength a1)))
 
 (defn acovariance ^double [^doubles a1 ^doubles a2]
   (- (across-moment a1 a2) (* (amean a1) (amean a2))))
 
 (defn acorrelation ^double [^doubles a1 ^doubles a2]
-  (/ (acovariance a1 a2) (* (astd-dev a1) (astd-dev a2))))
+  (m/div (acovariance a1 a2) (* (astd-dev a1) (astd-dev a2))))

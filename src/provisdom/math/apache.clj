@@ -413,7 +413,7 @@ Returns map of ::point and ::errors."
     #(gen/one-of
        (map gen/return
             (list {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/sq a2)) (- (m/cube a1) a2)])
-                   ::n-cons          2
+                   ::n-cons         2
                    ::jacobian-fn    (fn [[a1 a2]] [[1.0 (* 3 (m/sq a1))] [(* 2 a2) -1.0]])
                    ::guesses        [2.0 -2.0]}
                   {::constraints-fn (fn [[a1 a2]] [(+ a1 (m/exp a2)) (if (m/non+? a1) m/inf- (- (m/log a1) a2))])
@@ -424,7 +424,7 @@ Returns map of ::point and ::errors."
 (s/fdef nonlinear-least-squares
         :args (s/cat :constraints-with-jacobian ::constraints-with-jacobian
                      :opts (s/? (s/keys :opt [::target ::max-eval ::max-iter ::nls-solver
-                                               ::check-by-objective? ::rel-accu ::abs-accu ::weights])))
+                                              ::check-by-objective? ::rel-accu ::abs-accu ::weights])))
         :ret (s/nilable (s/or :ret ::errors-vector-point :exception ::exception)))
 
 ;;;OPTIMIZE WITH GRADIENT
@@ -911,8 +911,8 @@ BOBYQA could also be considered as a replacement of any derivative-based
 (defn inv-chi-sq-dist-icdf
   ^double [^double degrees ^double scaling ^double probability]
   (* scaling degrees
-     (/ (.inverseCumulativeProbability
-          (ChiSquaredDistribution. degrees) (m/one- probability)))))
+     (m/div (.inverseCumulativeProbability
+              (ChiSquaredDistribution. degrees) (m/one- probability)))))
 
 (defn students-t-dist-icdf
   ^double [^double location ^double squared-scale ^double degrees

@@ -76,7 +76,7 @@
         (> k n) 0
         (or (zero? k) (== k n)) 1
         (or (m/one? k) (== k (dec n))) n
-        :else (/ (ms (inc (- n k)) (inc' n)) (ms 2 (inc' k)))))))
+        :else (m/div (ms (inc (- n k)) (inc' n)) (ms 2 (inc' k)))))))
 
 (defn binomial-series-factor'
   "Returns the k-th out of n binomial series factor"
@@ -104,7 +104,7 @@
   "Returns the integral of a power series"
   [term-series c x integral-constant]
   (if (== x c) (+' integral-constant (*' (first term-series) x)
-                   (map-indexed #(*' %2 (/ (inc' %)) (pow' (-' x c) (inc' %)))
+                   (map-indexed #(*' %2 (m/div (inc' %)) (pow' (-' x c) (inc' %)))
                                 term-series))))
 
 (defn continued-fraction'
@@ -114,7 +114,7 @@
   (cons h
         (letfn [(f [[ch & ct :as c] kn2 kn1 m]
                   (if-let [an ch]
-                    (let [kn (+' kn2 (*' an kn1)), v (/ m (*' kn1 kn))]
+                    (let [kn (+' kn2 (*' an kn1)), v (m/div m (*' kn1 kn))]
                       (lazy-seq (cons v (f ct kn1 kn (-' m)))))
                     c))]
           (f t 1 h -1))))
@@ -129,7 +129,7 @@
                     '()
                     (let [b0 (+' (*' cah b1) (*' cbh b2)),
                           a0 (+' (*' cah a1) (*' cbh a2))]
-                      (lazy-seq (cons (-' (/ b0 a0) (/ b1 a1))
+                      (lazy-seq (cons (-' (m/div b0 a0) (m/div b1 a1))
                                       (f cbt cat b1 a1 b0 a0))))))]
           (f b-term-series t 1 0 h 1))))
 

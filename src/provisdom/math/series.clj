@@ -64,15 +64,14 @@ Will use numerical derivative when necessary."
   [n deriv & second-kind?]
   {:pre [(have? m/long-able-non-? n) (have? m/long-able? deriv) (pos? deriv)]}
   (let [n (long n)]
-    (cond (zero? n) (fn [x] 0.0)
+    (cond (zero? n) (constantly 0.0)
           (m/one? deriv) (if second-kind?
                            (let [y (inc n)]
                              #(if (m/one? (m/abs %))
                                 (* (/ 3) (m/pow (m/sgn %) y)
                                    (- (m/cube y) y))
                                 (/ (- (* y ((chebyshev-polynomial-fn y) %))
-                                      (* % ((chebyshev-polynomial-fn
-                                              n true) %)))
+                                      (* % ((chebyshev-polynomial-fn n true) %)))
                                    (dec (m/sq %)))))
                            #(* n ((chebyshev-polynomial-fn (dec n) true) %)))
           (and (= 2 deriv)

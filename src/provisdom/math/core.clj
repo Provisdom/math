@@ -403,7 +403,8 @@
 
 (defn pow
   "Returns x1 to the power of x2"
-  ^double [^double x1 ^double x2] (Math/pow x1 x2))
+  ^double [^double x1 ^double x2]
+  (Math/pow x1 x2))
 
 (defn abs
   "Returns absolute value of x"
@@ -533,7 +534,7 @@
         :else (<= (abs (- x1 x2)) accu)))
 
 (s/fdef roughly?
-        :args (s/cat :x1 ::number :x2 ::number :accu ::non-)
+        :args (s/cat :x1 ::number :x2 ::number :accu ::nan-or-non-)
         :ret ::boolean)
 
 (defn roughly-round?
