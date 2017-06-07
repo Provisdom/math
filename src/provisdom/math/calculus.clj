@@ -2,6 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]
             [provisdom.utility-belt.core :as co]
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
@@ -434,9 +435,9 @@
                    (or (and cov (>= n-vars 3)) (>= n-vars 4)) m/*sgl-close*,
                    :else m/*dbl-close*)
         [newf newr] (if (m/one? n-vars) (change-of-var f (first ranges))
-                                       (change-of-var-ndim f ranges))
+                                        (change-of-var-ndim f ranges))
         implementation (newf (if (m/one? n-vars) (mx/eaverage newr)
-                                                (map mx/eaverage newr)))]
+                                                 (map mx/eaverage newr)))]
     (if (m/one? n-vars)
       (adaptive-quadrature
         implementation newf newr accu min-iter max-iter
@@ -750,10 +751,12 @@
       4th deriv), and 1-6 for forward or backward (no 6 for 4th deriv)."
   [f & {:keys [^double h type ^long accuracy]
         :or   {h m/*sgl-close*, type :central, accuracy 2}}]
-  (let [coeff-fn (condp = type :central get-central-coeff,
-                               :forward get-forward-coeff, :backward get-backward-coeff),
-        mult (/ h),
-        dx h,
+  (let [coeff-fn (condp = type
+                   :central get-central-coeff
+                   :forward get-forward-coeff
+                   :backward get-backward-coeff)
+        mult (/ h)
+        dx h
         coeff (map #(let [[e1 e2] %] [(* dx e1) e2]) (coeff-fn 1 accuracy))]
     (fn [v]
       (co/flip-dbl-layered

@@ -2,6 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]
             [provisdom.math.core :as m])
   (:import [java.util Arrays]))
 
@@ -18,6 +19,10 @@
   "Returns true if `x` is an Array."
   [x] (if (some? x) (-> x class .isArray) false))
 
+(defn number-array?
+  "Returns true if 'x' is an Array and each element is a num"
+  [x] (and (array? x) (every? number? x)))
+
 (defn num-array?
   "Returns true if 'x' is an Array and each element is a num"
   [x] (and (array? x) (every? m/num? x)))
@@ -29,7 +34,7 @@
 (defn number-array-gen
   ([] (gen/fmap avec (gen/vector (s/gen ::m/number))))
   ([count] (gen/fmap avec (gen/vector (s/gen ::m/number) count))))
-(s/def ::array (s/with-gen array? number-array-gen))
+(s/def ::number-array (s/with-gen number-array? number-array-gen))
 
 (defn num-array-gen
   ([] (gen/fmap avec (gen/vector (s/gen ::m/num))))

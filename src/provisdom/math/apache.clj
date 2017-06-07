@@ -2,6 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as st]
+            [orchestra.spec.test :as ost]
             [provisdom.math.core :as m]
             [provisdom.math.arrays :as ar]
             [provisdom.math.matrix :as mx]
@@ -385,16 +386,15 @@ Returns map of ::point and ::errors."
        (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                      problem (LeastSquaresFactory/create
                                multivariate-jacobian-fn observed start weights checker max-eval max-iter)
-                     e (.optimize s problem)] (errors-vector-point e)))
+                     e (.optimize s problem)]
+                 (errors-vector-point e)))
        (catch TooManyEvaluationsException _
          (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
        (catch Exception e (ex-info (.getMessage e) ex-d))))))
 
-(s/def ::constraints-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                                 :ret (s/coll-of ::m/num)))
+(s/def ::constraints-fn fn?)
 (s/def ::n-cons ::m/long+)
-(s/def ::jacobian-fn (s/fspec :args (s/cat :a (s/with-gen ::ar/finite-array #(ar/finite-array-gen 2)))
-                              :ret ::mx/matrix))
+(s/def ::jacobian-fn fn?)
 (s/def ::guesses (s/coll-of ::guess))
 (s/def ::target (s/nilable (s/coll-of ::m/finite)))
 (s/def ::max-eval (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
