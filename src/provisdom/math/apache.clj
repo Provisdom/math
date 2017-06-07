@@ -88,11 +88,9 @@
 (defn ^SobolSequenceGenerator sobol-quasi-random-sequence
   [^long dimensions] (SobolSequenceGenerator. dimensions))
 
-(defn next-quasi-random-vector! [^SobolSequenceGenerator ssg]
-  (.nextVector ssg))
+(defn next-quasi-random-vector! [^SobolSequenceGenerator ssg] (.nextVector ssg))
 
-(defn ^ISAACRandom isaac-random-cryptographic [^long seed]
-  (ISAACRandom. seed))
+(defn ^ISAACRandom isaac-random-cryptographic [^long seed] (ISAACRandom. seed))
 
 (defn next-double! ^double [^RandomDataGenerator rdg] (.nextDouble rdg))
 
@@ -179,8 +177,7 @@ xvals[i][1] is the second component, and so on until xvals[i][d-1],
    the last component of that interpolation point (where d is thus the
     dimension of the space).
 fvals - the values for the interpolation points.
-Returns a function that accepts a vector point x and returns the interpolated 
-   value."
+Returns a function that accepts a vector point x and returns the interpolated value."
   [xvals fvals]
   (let [^MultivariateFunction f (.interpolate (MicrosphereInterpolator.)
                                               (ar/jagged-2D-array :d xvals)
@@ -263,7 +260,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   (s/with-gen
     (s/and (s/keys :req [::root-f ::guess] :opt [::bounds]) (fn [m] (let [[l u] (::bounds m)
                                                                           g (::guess m)]
-                                                                      (if l (and (< g u) (> g l)) true))))
+                                                                      (if l (and (<= g u) (>= g l)) true))))
     #(gen/one-of (map gen/return
                       (list {::root-f identity ::guess 3.0 ::bounds [-5.0 5.0]}
                             {::root-f (fn [v] (- (m/cube v) (* 3 v))) ::guess 3.0 ::bounds [-50.0 50.0]}
