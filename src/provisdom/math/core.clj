@@ -272,9 +272,10 @@
   [x] (and (long-able? x) (non+? x)))
 
 (s/def ::long-able-non+ (s/spec long-able-non+? :gen #(s/gen (s/int-in min-long 1))))
-
 (s/def ::non-long-able-non+
   (s/spec #(and (num? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::nan-or-non-long-able-non+
+  (s/spec #(and (number? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn long-able-non-?
   "Returns true if x is a number that can be converted to a long, and is non-"
@@ -286,13 +287,15 @@
   "Returns true if x is inf+"
   [x] (and (number? x) (Double/isInfinite ^double x) (pos? x)))
 
-(s/def ::non-inf+ (s/spec #(and (number? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::non-inf+ (s/spec #(and (num? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::nan-or-non-inf+ (s/spec #(and (number? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf-?
   "Returns true if x is inf-"
   [x] (and (number? x) (Double/isInfinite ^double x) (neg? x)))
 
-(s/def ::non-inf- (s/spec #(and (number? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::non-inf- (s/spec #(and (num? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? false))))
+(s/def ::nan-or-non-inf- (s/spec #(and (number? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf?
   "Returns true if x is inf+ or inf-"
