@@ -735,7 +735,7 @@
         (fn [i e]
           (* mult (mx/esum
                     (map #(let [[e1 e2] %]
-                            (* (f (mx/mset v i (+ e e1))) e2)) coeff)))) v))))
+                            (* (f (assoc v i (+ e e1))) e2)) coeff)))) v))))
 
 (defn jacobian-fn
   "Returns a numerical jacobian function.  
@@ -765,17 +765,17 @@
             (apply
               mx/add
               (map
-                #(let [[e1 e2] %] (mx/mul e2 mult (f (mx/mset v i (+ e e1)))))
+                #(let [[e1 e2] %] (mx/mul e2 mult (f (assoc v i (+ e e1)))))
                 coeff)))
           v)))))
 
 (defn- joint-central-derivative [f v i j dx mult]
-  (let [i+ (mx/mset v i (+ (mx/mget v i) dx)),
-        i- (mx/mset v i (- (mx/mget v i) dx)),
-        e++ (mx/mset i+ j (+ (mx/mget v j) dx)),
-        e+- (mx/mset i+ j (- (mx/mget v j) dx)),
-        e-+ (mx/mset i- j (+ (mx/mget v j) dx)),
-        e-- (mx/mset i- j (- (mx/mget v j) dx))]
+  (let [i+ (assoc v i (+ (get v i) dx)),
+        i- (assoc v i (- (get v i) dx)),
+        e++ (assoc i+ j (+ (get v j) dx)),
+        e+- (assoc i+ j (- (get v j) dx)),
+        e-+ (assoc i- j (+ (get v j) dx)),
+        e-- (assoc i- j (- (get v j) dx))]
     (* 0.25 mult (- (+ (f e++) (f e--)) (f e+-) (f e-+)))))
 
 (defn hessian-fn
@@ -812,7 +812,7 @@
                     (* mult
                        (mx/esum
                          (map #(let [[e1 e2] %]
-                                 (* (f (mx/mset v i (+ (mx/mget v i) e1)))
+                                 (* (f (assoc v i (+ (get v i) e1)))
                                     e2))
                               coeff)))
                     (joint-central-derivative f v i j dx mult)))

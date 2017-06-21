@@ -23,8 +23,8 @@
               a matrix"
              (integrate #(vector % (* % %)) [2.0 6.0]) 
              => [15.999999999999998 69.33333333333333]
-             (integrate 
-               #(mx/create-vector :apache-commons [% (* % %)]) [2.0 6.0]) 
+             (integrate
+               #(mx/compute-vector :apache-commons [% (* % %)]) [2.0 6.0])
              => (mx/apache-commons [15.999999999999998 69.33333333333333])
              (integrate 
                #(mx/matrix :apache-commons [[% (* % %)][(+ 2.0 %) 5.0]]) 
@@ -32,7 +32,7 @@
              => (mx/apache-commons [[16.0 69.33333333333333] 
                                     [24.0 19.999999999999996]])
              (integrate 
-               #(mx/create-vector 
+               #(mx/compute-vector
                   :clatrix [(m/exp (- (m/sq %))) (m/exp (- (m/pow % 4)))]) 
                [m/inf- m/inf+]) 
              => (mx/clatrix [1.7724538509055159 1.8128049541109545])
@@ -60,7 +60,7 @@
                         [[3.0 4.0][m/inf- -5.0]]) => 0.016666666666666666
              (integrate 
                (fn [[a b]] 
-                 (mx/create-vector :apache-commons [a (* a b)])) 
+                 (mx/compute-vector :apache-commons [a (* a b)]))
                [[2.0 6.0][1.0 3.0]]) => (mx/apache-commons [32 64])
              (integrate 
                (fn [[a b]] (mx/matrix :clatrix [[a (* a b)][(+ 2.0 b) 5.0]]))
@@ -68,7 +68,7 @@
              => (mx/clatrix [[32.0 64.0] [32.0 40.00000000000001]])
              (integrate 
                (fn [[a b]] 
-                 (mx/create-vector 
+                 (mx/compute-vector
                    :clatrix 
                    [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b)))) 
                     (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))]))
@@ -94,8 +94,8 @@
                #(* (m/exp (- (m/sq %))) (m/exp (- (m/sq %2)))) [m/inf- m/inf+] 
                (fn [e] [m/inf- m/inf+])) 
              => 3.141592653589793 ;3.141592653589793 PI
-             (integrate-non-rectangular-2D 
-               #(mx/create-vector :apache-commons [% (* % %2)]) [2.0 6.0] 
+             (integrate-non-rectangular-2D
+               #(mx/compute-vector :apache-commons [% (* % %2)]) [2.0 6.0]
                (fn [e] [1.0 3.0])) => (mx/apache-commons [32.0 64.0])
              (integrate-non-rectangular-2D 
                #(mx/matrix :clatrix [[% (* % %2)][(+ 2.0 %2) 5.0]]) 
@@ -103,7 +103,7 @@
              => (mx/clatrix [[32.0 64.0][32.0 40.00000000000001]])
              (integrate-non-rectangular-2D 
                (fn [a b] 
-                 (mx/create-vector 
+                 (mx/compute-vector
                    :clatrix 
                    [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b)))) 
                     (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))]))

@@ -376,12 +376,12 @@ Returns map of ::point and ::errors."
              nil)
          checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
          observed (if (and (some? target) (= (count target) n-cons))
-                    (mx/create-vector :apache-commons target)
-                    (mx/create-vector :apache-commons n-cons 0.0))
-         start (mx/create-vector :apache-commons guesses)
+                    (mx/compute-vector :apache-commons target)
+                    (mx/compute-vector :apache-commons n-cons 0.0))
+         start (mx/compute-vector :apache-commons guesses)
          weights (if (and (some? weights) (= (count weights) n-cons))
-                   (mx/diagonal-matrix :apache-commons weights)
-                   (mx/diagonal-matrix :apache-commons n-cons 1.0))]
+                   (mx/diagonal-matrix-apache weights)
+                   (mx/diagonal-matrix-apache n-cons 1.0))]
      (try
        (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                      problem (LeastSquaresFactory/create

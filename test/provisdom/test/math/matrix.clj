@@ -38,137 +38,24 @@
 (def cl-sym (clatrix se-sym))
 (def ap-sym (apache-commons se-sym))
 
-(facts "special type helpers"
-       (fact "diagonal?"
-             (diagonal? se) => false
-             (diagonal? [[1.0 0.0] [0.0 2.0]]) => true)
-       (fact "symmetric?"
-             (symmetric? se) => false
-             (symmetric? se-sym) => true)
-       (fact "unit diagonal?"
-             (unit-diagonal? se) => false
-             (unit-diagonal? se-sym) => false
-             (unit-diagonal? (identity-matrix 3)) => true)
-       (fact "symmetric with unit diagonal?"
-             (symmetric-with-unit-diagonal? se) => false
-             (symmetric-with-unit-diagonal? se-sym) => false
-             (symmetric-with-unit-diagonal? (identity-matrix 3)) => true)
-       (fact "positive? -- can set accuracy"
-             (positive? se) => false
-             (positive? se-sym) => true
-             (positive? '((1.0 -1.1) (-1.1 1.0))) => false
-             (positive? '((1.0 -1.0) (-1.0 1.0))) => false
-             ;;accuracy too strict
-             (positive? '((1.0 -1.0) (-1.0 1.0)) 1e-32) => true)
-       (fact "positive with unit diagonal? -- can set accuracy"
-             (positive-with-unit-diagonal? se) => false
-             (positive-with-unit-diagonal? se-sym) => false
-             (positive-with-unit-diagonal? '((1.0 -1.1) (-1.1 1.0))) => false
-             (positive-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0))) => false
-             (positive-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0))
-                                           1e-32) => true)  ;accuracy too strict
-       (fact "non-negative? -- can set accuracy"
-             (non-negative? se) => false
-             (non-negative? se-sym) => true
-             (non-negative? '((1.0 -1.1) (-1.1 1.0))) => false
-             (non-negative? '((1.0 -1.0) (-1.0 1.0))) => true
-             (non-negative? '((1.0 -1.0001) (-1.0001 1.0))) => false
-             ;;accuracy too lax
-             (non-negative? '((1.0 -1.0001) (-1.0001 1.0)) 1e-3) => true)
-       (fact "row-or-column-matrix?"
-             (row-or-column-matrix? #(* % %)) => false
-             (row-or-column-matrix? se) => false
-             (row-or-column-matrix? ve) => false
-             (row-or-column-matrix? cl) => false
-             (row-or-column-matrix? ap) => false
-             (row-or-column-matrix? se-row) => true
-             (row-or-column-matrix? ve-row) => true
-             (row-or-column-matrix? cl-row) => true
-             (row-or-column-matrix? ap-row) => true
-             (row-or-column-matrix? se-col) => true
-             (row-or-column-matrix? ve-col) => true
-             (row-or-column-matrix? cl-col) => true
-             (row-or-column-matrix? ap-col) => true
-             (row-or-column-matrix? se1D) => false
-             (row-or-column-matrix? ve1D) => false
-             (row-or-column-matrix? cl1D) => false
-             (row-or-column-matrix? ap1D) => false)
-       (fact "size-symmetric"
-             (size-symmetric 1) => 1
-             (size-symmetric 2) => (throws)
-             (size-symmetric 3) => 2
-             (size-symmetric 6) => 3)
-       (fact "size-symmetric-with-unit-diagonal"
-             (size-symmetric-with-unit-diagonal 1) => 2
-             (size-symmetric-with-unit-diagonal 2) => (throws)
-             (size-symmetric-with-unit-diagonal 3) => 3
-             (size-symmetric-with-unit-diagonal 6) => 4)
-       (fact "ecount-symmetric"
-             (ecount-symmetric 1) => 1
-             (ecount-symmetric 2) => 3
-             (ecount-symmetric 3) => 6
-             (ecount-symmetric 6) => 21)
-       (fact "ecount-symmetric-with-unit-diagonal"
-             (ecount-symmetric-with-unit-diagonal 1) => 0
-             (ecount-symmetric-with-unit-diagonal 2) => 1
-             (ecount-symmetric-with-unit-diagonal 3) => 3
-             (ecount-symmetric-with-unit-diagonal 6) => 15)
-       (fact "to-vector-from-symmetric"
-             (to-vector-from-symmetric #(+ 3 3) :byrow? false) => (throws)
-             (to-vector-from-symmetric se :byrow? false) => [1.0 2.0 4.0]
-             (to-vector-from-symmetric ve) => [1.0 0.5 4.0]
-             (to-vector-from-symmetric cl :byrow? false) => [1.0 2.0 4.0]
-             (to-vector-from-symmetric ap) => [1.0 0.5 4.0]
-             (to-vector-from-symmetric se-sym :byrow? false) => [1.0 0.5 2.0]
-             (to-vector-from-symmetric ve-sym) => [1.0 0.5 2.0]
-             (to-vector-from-symmetric cl-sym :byrow? false) => [1.0 0.5 2.0]
-             (to-vector-from-symmetric ap-sym) => [1.0 0.5 2.0]
-             (to-vector-from-symmetric se1D) => throws
-             (to-vector-from-symmetric se-row :byrow? false) => [1.0]
-             (to-vector-from-symmetric se-row) => [1.0 0.5]
-             (to-vector-from-symmetric se-col :byrow? false) => [1.0 0.5]
-             (to-vector-from-symmetric se-col) => [1.0])
-       (fact "to-vector-from-symmetric-with-unit-diagonal"
-             (to-vector-from-symmetric-with-unit-diagonal
-               #(+ 3 3) :byrow? false) => (throws)
-             (to-vector-from-symmetric-with-unit-diagonal
-               se :byrow? false) => [2.0]
-             (to-vector-from-symmetric-with-unit-diagonal ve) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal
-               cl :byrow? false) => [2.0]
-             (to-vector-from-symmetric-with-unit-diagonal ap) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal
-               se-sym :byrow? false) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal ve-sym) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal
-               cl-sym :byrow? false) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal ap-sym) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal se1D) => throws
-             (to-vector-from-symmetric-with-unit-diagonal
-               se-row :byrow? false) => []
-             (to-vector-from-symmetric-with-unit-diagonal se-row) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal
-               se-col :byrow? false) => [0.5]
-             (to-vector-from-symmetric-with-unit-diagonal se-col) => []))
-
 (facts "matrix implementations"
        (fact "to nested vectors"
-             (to-nested-vectors se) => ve
-             (to-nested-vectors cl) => ve
-             (to-nested-vectors ve) => ve
-             (to-nested-vectors ap) => ve
-             (to-nested-vectors se1D) => ve1D
-             (to-nested-vectors cl1D) => ve1D
-             (to-nested-vectors ve1D) => ve1D
-             (to-nested-vectors ap1D) => ve1D
-             (to-nested-vectors se-row) => ve-row
-             (to-nested-vectors cl-row) => ve-row
-             (to-nested-vectors ve-row) => ve-row
-             (to-nested-vectors ap-row) => ve-row
-             (to-nested-vectors se-col) => ve-col
-             (to-nested-vectors cl-col) => ve-col
-             (to-nested-vectors ve-col) => ve-col
-             (to-nested-vectors ap-col) => ve-col))
+             (to-tensor se) => ve
+             (to-tensor cl) => ve
+             (to-tensor ve) => ve
+             (to-tensor ap) => ve
+             (to-tensor se1D) => ve1D
+             (to-tensor cl1D) => ve1D
+             (to-tensor ve1D) => ve1D
+             (to-tensor ap1D) => ve1D
+             (to-tensor se-row) => ve-row
+             (to-tensor cl-row) => ve-row
+             (to-tensor ve-row) => ve-row
+             (to-tensor ap-row) => ve-row
+             (to-tensor se-col) => ve-col
+             (to-tensor cl-col) => ve-col
+             (to-tensor ve-col) => ve-col
+             (to-tensor ap-col) => ve-col))
 
 (facts "vector constructors"
        (fact "maybe to vector"
@@ -177,11 +64,11 @@
              (maybe-to-vector [1.0]) => [1.0]
              (maybe-to-vector '(1.0)) => [1.0])
        (fact "vector"
-             (create-vector [2.0 3.0 4.0]) => [2.0 3.0 4.0]
-             (create-vector nil 3 3.0) = [3.0 3.0 3.0]
-             (create-vector :apache-commons [2.0 3.0 4.0])
+             (compute-vector [2.0 3.0 4.0]) => [2.0 3.0 4.0]
+             (compute-vector nil 3 3.0) = [3.0 3.0 3.0]
+             (compute-vector :apache-commons [2.0 3.0 4.0])
              => (apache-commons [2.0 3.0 4.0])
-             (create-vector :clatrix 3 #(+ 2.0 %)) => (clatrix [2.0 3.0 4.0]))
+             (compute-vector :clatrix 3 #(+ 2.0 %)) => (clatrix [2.0 3.0 4.0]))
        (fact "sparse vector"
              (sparse-vector [[0 3.0]] [5.0 6.0]) => [3.0 6.0]
              (sparse-vector :clatrix [[0 3.0]] [5.0 6.0])
@@ -201,21 +88,21 @@
              => (clatrix [[1.0 1.0] [1.0 1.0]])
              (constant-matrix :apache-commons [2 2] 1.0)
              => (apache-commons '((1.0, 1.0) (1.0, 1.0))))
-       (fact "sequence to matrix"
-             (sequence-to-matrix se1D se1D 1 true) => [[1.0 0.5]]
-             (sequence-to-matrix ve1D ve1D 1 true) => [[1.0 0.5]]
-             (sequence-to-matrix ap1D ap1D 1 true) => (apache-commons
+       (fact "to-matrix"
+             (to-matrix se1D se1D 1 true) => [[1.0 0.5]]
+             (to-matrix ve1D ve1D 1 true) => [[1.0 0.5]]
+             (to-matrix ap1D ap1D 1 true) => (apache-commons
                                                         [[1.0 0.5]])
-             (sequence-to-matrix cl1D cl1D 1 true) => (clatrix [[1.0 0.5]])
-             (sequence-to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 false)
+             (to-matrix cl1D cl1D 1 true) => (clatrix [[1.0 0.5]])
+             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 false)
              => [[1.0 3.0 5.0] [2.0 4.0 6.0]]
-             (sequence-to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
+             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
              => [[1.0 2.0 3.0] [4.0 5.0 6.0]]
-             (sequence-to-matrix [1.0 2.0 3.0 4.0 5.0 6.0 7.0] 2 true)
+             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0 7.0] 2 true)
              => (throws)
-             (sequence-to-matrix :clatrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
+             (to-matrix :clatrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
              => (clatrix [[1.0 2.0 3.0] [4.0 5.0 6.0]])
-             (sequence-to-matrix
+             (to-matrix
                :apache-commons [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
              => (apache-commons '((1.0 2.0 3.0) (4.0 5.0 6.0))))
        (fact "square"
@@ -335,11 +222,6 @@
              => (clatrix [[3.0 2.0] [2.0 4.0]])))
 
 (facts "get"
-       (fact "rows"
-             (rows se) => [[1.0 0.5] [2.0 4.0]]
-             (rows ap-row) => [[1.0 0.5]]
-             (rows cl-col) => [[1.0] [0.5]]
-             (rows ve1D) => (throws))
        (fact "row"
              (get-row-as-matrix se -1) => (throws)
              (get-row-as-matrix ve 0) => [[1.0 0.5]]
@@ -749,8 +631,8 @@
        (fact "some-kv"
              (some-kv #(if (> % %2) %2) se1D) => 0.5)
        (fact "esome"
-             (esome #(if (> (+ % %2) %3) %3) se true) => 0.5
-             (esome #(if (> (+ % %2) %3) %3) se false) => 0.5))
+             (esome #(if (> (+ % %2) %3) %3) se) => 0.5
+             (esome #(if (> (+ % %2) %3) %3) se {::mx/by-row false}) => 0.5))
 
 (facts "filter"
        (fact "filter-kv"
