@@ -166,27 +166,27 @@
              (symmetric-matrix :apache-commons [1.0 2.0 3.0])
              => (apache-commons '((1.0 2.0) (2.0 3.0))))
        (fact "symmetric with unit diagonal"
-             (symmetric-with-unit-diagonal-matrix nil [1.0 2.0]) => throws
-             (symmetric-with-unit-diagonal-matrix [1.0 2.0 3.0])
+             (symmetric-matrix-with-unit-diagonal nil [1.0 2.0]) => throws
+             (symmetric-matrix-with-unit-diagonal [1.0 2.0 3.0])
              => [[1.0 1.0 2.0] [1.0 1.0 3.0] [2.0 3.0 1.0]]
-             (symmetric-with-unit-diagonal-matrix
+             (symmetric-matrix-with-unit-diagonal
                nil 3 #(double (+ % (* 2 %2))) true)
              => [[1.0 2.0 4.0] [2.0 1.0 5.0] [4.0 5.0 1.0]]
-             (symmetric-with-unit-diagonal-matrix
+             (symmetric-matrix-with-unit-diagonal
                nil 3 #(double (+ % (* 2 %2))) false)
              => [[1.0 1.0 2.0] [1.0 1.0 4.0] [2.0 4.0 1.0]]
-             (symmetric-with-unit-diagonal-matrix
+             (symmetric-matrix-with-unit-diagonal
                :clatrix 3 #(+ % (* 2 %2)) true)
              => (clatrix [[1.0 2.0 4.0] [2.0 1.0 5.0] [4.0 5.0 1.0]])
-             (symmetric-with-unit-diagonal-matrix
+             (symmetric-matrix-with-unit-diagonal
                :apache-commons [1.0 2.0 3.0])
              => (apache-commons '((1.0 1.0 2.0) (1.0 1.0 3.0) (2.0 3.0 1.0))))
        (fact "symmetric matrix by averaging"
-             (symmetric-by-averaging-matrix se1D) => (throws)
-             (symmetric-by-averaging-matrix se) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-by-averaging-matrix ve) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-by-averaging-matrix cl) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-by-averaging-matrix ap) => (apache-commons
+             (symmetric-matrix-by-averaging se1D) => (throws)
+             (symmetric-matrix-by-averaging se) => [[1.0 1.25] [1.25 4.0]]
+             (symmetric-matrix-by-averaging ve) => [[1.0 1.25] [1.25 4.0]]
+             (symmetric-matrix-by-averaging cl) => [[1.0 1.25] [1.25 4.0]]
+             (symmetric-matrix-by-averaging ap) => (apache-commons
                                                      [[1.0 1.25] [1.25 4.0]]))
        (fact "toeplitz"
              (toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0 5.0])
@@ -199,25 +199,25 @@
              (toeplitz-matrix :apache-commons [1.0 2.0 3.0] [1.0 4.0 5.0])
              => (apache-commons [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]]))
        (fact "sparse"
-             (sparse-matrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
+             (sparse->matrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
              => [[3.0 5.0] [6.0 7.0]]
-             (sparse-matrix :clatrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
+             (sparse->matrix :clatrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
              => (clatrix [[3.0 5.0] [6.0 7.0]])
-             (sparse-matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
-             (sparse-matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
-             (sparse-matrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2])
+             (sparse->matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
+             (sparse->matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
+             (sparse->matrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2])
              => [[3.0 5.0] [2.0 -1.0]]
-             (sparse-matrix [[0 2 3.0]] [2 2]) => (throws)
-             (sparse-matrix
+             (sparse->matrix [[0 2 3.0]] [2 2]) => (throws)
+             (sparse->matrix
                :clatrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2])
              => (clatrix [[3.0 5.0] [2.0 -1.0]])
-             (sparse-matrix
+             (sparse->matrix
                :apache-commons [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]]
                [2 2]) => (apache-commons [[3.0 5.0] [2.0 -1.0]])
-             (sparse-symmetric-matrix
+             (sparse->symmetric-matrix
                :clatrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] 2)
              => (clatrix [[3.0 5.0] [5.0 -1.0]])
-             (sparse-symmetric-matrix
+             (sparse->symmetric-matrix
                :clatrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [3.0 4.0]])
              => (clatrix [[3.0 2.0] [2.0 4.0]])))
 
@@ -731,13 +731,7 @@
              => (apache-commons [[8.0 1.0 0.5] [9.0 2.0 4.0]])
              (insert-column cl 1 [8.0 9.0])
              => (clatrix [[1.0 8.0 0.5] [2.0 9.0 4.0]])
-             (insert-column cl1D 1 [8.0 9.0]) => (throws))
-       (fact "insert symmetrically"
-             (insert-symmetrically ap 1 [8.0 9.0 10.0])
-             => (apache-commons [[1.0 8.0 0.5] [8.0 9.0 10.0] [2.0 10.0 4.0]])
-             (insert-symmetrically cl 1 [8.0 9.0 10.0])
-             => (clatrix [[1.0 8.0 0.5] [8.0 9.0 10.0] [2.0 10.0 4.0]])
-             (insert-symmetrically cl1D 1 [8.0 9.0 10.0]) => (throws)))
+             (insert-column cl1D 1 [8.0 9.0]) => (throws)))
 
 (facts "numerical stability"
        (fact "roughly?"

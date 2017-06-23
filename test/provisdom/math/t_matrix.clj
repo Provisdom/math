@@ -40,44 +40,44 @@
   (is-not (mx/empty-matrix? [[false]])))
 
 (deftest diagonal?-test
-  (is-not (mx/diagonal? se))
-  (is (mx/diagonal? [[1.0 0.0] [0.0 2.0]])))
+  (is-not (mx/diagonal-matrix? se))
+  (is (mx/diagonal-matrix? [[1.0 0.0] [0.0 2.0]])))
 
 (deftest symmetric?-test
   (is-not (mx/symmetric? se))
   (is (mx/symmetric? se-sym)))
 
 (deftest unit-diagonal?-test
-  (is-not (mx/unit-diagonal? se))
-  (is-not (mx/unit-diagonal? se-sym))
-  (is (mx/unit-diagonal? (mx/identity-matrix 3))))
+  (is-not (mx/matrix-with-unit-diagonal? se))
+  (is-not (mx/matrix-with-unit-diagonal? se-sym))
+  (is (mx/matrix-with-unit-diagonal? (mx/identity-matrix 3))))
 
 (deftest symmetric-with-unit-diagonal?-test
-  (is-not (mx/symmetric-with-unit-diagonal? se))
-  (is-not (mx/symmetric-with-unit-diagonal? se-sym))
-  (is (mx/symmetric-with-unit-diagonal? (mx/identity-matrix 3))))
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? se))
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? se-sym))
+  (is (mx/symmetric-matrix-with-unit-diagonal? (mx/identity-matrix 3))))
 
 (deftest positive?-test
-  (is-not (mx/positive? se))
-  (is (mx/positive? se-sym))
-  (is-not (mx/positive? '((1.0 -1.1) (-1.1 1.0))))
-  (is-not (mx/positive? '((1.0 -1.0) (-1.0 1.0))))
-  (is (mx/positive? '((1.0 -1.0) (-1.0 1.0)) 1e-32)))       ;accuracy too strict
+  (is-not (mx/positive-matrix? se))
+  (is (mx/positive-matrix? se-sym))
+  (is-not (mx/positive-matrix? '((1.0 -1.1) (-1.1 1.0))))
+  (is-not (mx/positive-matrix? '((1.0 -1.0) (-1.0 1.0))))
+  (is (mx/positive-matrix? '((1.0 -1.0) (-1.0 1.0)) 1e-32)))       ;accuracy too strict
 
 (deftest positive-with-unit-diagonal?-test
-  (is-not (mx/positive-with-unit-diagonal? se))
-  (is-not (mx/positive-with-unit-diagonal? se-sym))
-  (is-not (mx/positive-with-unit-diagonal? '((1.0 -1.1) (-1.1 1.0))))
-  (is-not (mx/positive-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0))))
-  (is (mx/positive-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0)) 1e-32))) ;accuracy too strict
+  (is-not (mx/positive-matrix-with-unit-diagonal? se))
+  (is-not (mx/positive-matrix-with-unit-diagonal? se-sym))
+  (is-not (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.1) (-1.1 1.0))))
+  (is-not (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0))))
+  (is (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0)) 1e-32))) ;accuracy too strict
 
 (deftest non-negative?-test
-  (is-not (mx/non-negative? se))
-  (is (mx/non-negative? se-sym))
-  (is-not (mx/non-negative? '((1.0 -1.1) (-1.1 1.0))))
-  (is (mx/non-negative? '((1.0 -1.0) (-1.0 1.0))))
-  (is-not (mx/non-negative? '((1.0 -1.0001) (-1.0001 1.0))))
-  (is (mx/non-negative? '((1.0 -1.0001) (-1.0001 1.0)) 1e-3))) ;accuracy too lax
+  (is-not (mx/non-negative-matrix? se))
+  (is (mx/non-negative-matrix? se-sym))
+  (is-not (mx/non-negative-matrix? '((1.0 -1.1) (-1.1 1.0))))
+  (is (mx/non-negative-matrix? '((1.0 -1.0) (-1.0 1.0))))
+  (is-not (mx/non-negative-matrix? '((1.0 -1.0001) (-1.0001 1.0))))
+  (is (mx/non-negative-matrix? '((1.0 -1.0001) (-1.0001 1.0)) 1e-3))) ;accuracy too lax
 
 (deftest row-or-column-matrix?-test
   (is-not (mx/row-or-column-matrix? m/sq))
@@ -115,27 +115,27 @@
   (is= 15 (mx/ecount-symmetric-with-unit-diagonal 6)))
 
 (deftest to-vector-from-symmetric-test
-  (is= [1.0 2.0 4.0] (mx/to-vector-from-symmetric se {::mx/by-row? false}))
-  (is= [1.0 0.5 4.0] (mx/to-vector-from-symmetric ve))
-  (is= [1.0 0.5 2.0] (mx/to-vector-from-symmetric se-sym {::mx/by-row? false}))
-  (is= [1.0 0.5 2.0] (mx/to-vector-from-symmetric ve-sym))
-  (is= nil (mx/to-vector-from-symmetric se1D))
-  (is= [1.0] (mx/to-vector-from-symmetric se-row {::mx/by-row? false}))
-  (is= [1.0 0.5] (mx/to-vector-from-symmetric se-row))
-  (is= [1.0 0.5] (mx/to-vector-from-symmetric se-col {::mx/by-row? false}))
-  (is= [1.0] (mx/to-vector-from-symmetric se-col)))
+  (is= [1.0 2.0 4.0] (mx/symmetric-matrix->vector se {::mx/by-row? false}))
+  (is= [1.0 0.5 4.0] (mx/symmetric-matrix->vector ve))
+  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector se-sym {::mx/by-row? false}))
+  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector ve-sym))
+  (is= nil (mx/symmetric-matrix->vector se1D))
+  (is= [1.0] (mx/symmetric-matrix->vector se-row {::mx/by-row? false}))
+  (is= [1.0 0.5] (mx/symmetric-matrix->vector se-row))
+  (is= [1.0 0.5] (mx/symmetric-matrix->vector se-col {::mx/by-row? false}))
+  (is= [1.0] (mx/symmetric-matrix->vector se-col)))
 
 (deftest to-vector-from-symmetric-with-unit-diagonal-test
-  (is= nil (mx/to-vector-from-symmetric-with-unit-diagonal #(+ 3 3) {::mx/by-row? false}))
-  (is= [2.0] (mx/to-vector-from-symmetric-with-unit-diagonal se {::mx/by-row? false}))
-  (is= [0.5] (mx/to-vector-from-symmetric-with-unit-diagonal ve))
-  (is= [0.5] (mx/to-vector-from-symmetric-with-unit-diagonal se-sym {::mx/by-row? false}))
-  (is= [0.5] (mx/to-vector-from-symmetric-with-unit-diagonal ve-sym))
-  (is= nil (mx/to-vector-from-symmetric-with-unit-diagonal se1D))
-  (is= [] (mx/to-vector-from-symmetric-with-unit-diagonal se-row {::mx/by-row? false}))
-  (is= [0.5] (mx/to-vector-from-symmetric-with-unit-diagonal se-row))
-  (is= [0.5] (mx/to-vector-from-symmetric-with-unit-diagonal se-col {::mx/by-row? false}))
-  (is= [] (mx/to-vector-from-symmetric-with-unit-diagonal se-col)))
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector #(+ 3 3) {::mx/by-row? false}))
+  (is= [2.0] (mx/symmetric-matrix-with-unit-diagonal->vector se {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector ve))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-sym {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector ve-sym))
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector se1D))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector se-row {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-row))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-col {::mx/by-row? false}))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector se-col)))
 
 (deftest special-type-helpers-test
   (mempty?-test)
@@ -155,19 +155,19 @@
   (to-vector-from-symmetric-with-unit-diagonal-test))
 
 (defspec-test test-mempty? `mx/empty-matrix?)
-(defspec-test test-diagonal? `mx/diagonal?)
+(defspec-test test-diagonal? `mx/diagonal-matrix?)
 (defspec-test test-symmetric? `mx/symmetric?)
-(defspec-test test-unit-diagonal? `mx/unit-diagonal?)
-(defspec-test test-symmetric-with-unit-diagonal? `mx/symmetric-with-unit-diagonal?)
-(defspec-test test-positive? `mx/positive?)
-(defspec-test test-positive-with-unit-diagonal? `mx/positive-with-unit-diagonal?)
-(defspec-test test-non-negative? `mx/non-negative?)
+(defspec-test test-unit-diagonal? `mx/matrix-with-unit-diagonal?)
+(defspec-test test-symmetric-with-unit-diagonal? `mx/symmetric-matrix-with-unit-diagonal?)
+(defspec-test test-positive? `mx/positive-matrix?)
+(defspec-test test-positive-with-unit-diagonal? `mx/positive-matrix-with-unit-diagonal?)
+(defspec-test test-non-negative? `mx/non-negative-matrix?)
 (defspec-test test-row-or-column-matrix? `mx/row-or-column-matrix?)
 (defspec-test test-size-symmetric `mx/size-symmetric)
 (defspec-test test-size-symmetric-with-unit-diagonal `mx/size-symmetric-with-unit-diagonal)
 (defspec-test test-ecount-symmetric `mx/ecount-symmetric)
 (defspec-test test-ecount-symmetric-with-unit-diagonal `mx/ecount-symmetric-with-unit-diagonal)
-(defspec-test test-to-vector-from-symmetric `mx/to-vector-from-symmetric)
-(defspec-test test-to-vector-from-symmetric-with-unit-diagonal `mx/to-vector-from-symmetric-with-unit-diagonal)
+(defspec-test test-to-vector-from-symmetric `mx/symmetric-matrix->vector)
+(defspec-test test-to-vector-from-symmetric-with-unit-diagonal `mx/symmetric-matrix-with-unit-diagonal->vector)
 
 #_(ost/unstrument)

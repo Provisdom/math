@@ -376,9 +376,9 @@ Returns map of ::point and ::errors."
              nil)
          checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
          observed (if (and (some? target) (= (count target) n-cons))
-                    (mx/compute-vector :apache-commons target)
-                    (mx/compute-vector :apache-commons n-cons 0.0))
-         start (mx/compute-vector :apache-commons guesses)
+                    (mx/coerce :apache-commons target)
+                    (mx/compute-vector-apache n-cons 0.0))
+         start (mx/coerce :apache-commons guesses)
          weights (if (and (some? weights) (= (count weights) n-cons))
                    (mx/diagonal-matrix-apache weights)
                    (mx/diagonal-matrix-apache n-cons 1.0))]

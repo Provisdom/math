@@ -354,8 +354,10 @@
   [^double x] (Math/nextAfter (double x) inf-))
 
 (defn div
-  "Returns x1 divided by x2.  Or 1 divided by x2.
-  'Divide by zero' will return ex-info. Optionally, can include alternative return value, 'div-by-zero'."
+  "Returns x1 divided by x2.
+  Or 1 divided by x2.
+  'Divide by zero' will return ex-info.
+  Optionally, can include alternative return value, 'div-by-zero'."
   ([x2] (div 1 x2))
   ([x1 x2] (div x1 x2 "nil"))
   ([x1 x2 div-by-zero]

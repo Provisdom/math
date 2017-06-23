@@ -51,7 +51,7 @@ Bounds are closed by default."
 (defn positive-matrix-bounds
   "Returns a vector of bounds flattened for a symmetric positive matrix."
   [^long size]
-  (mx/to-vector-from-symmetric
+  (mx/symmetric-matrix->vector
     (mx/symmetric-matrix #(if (== % %2) bounds+ (bounds)) size true)))
 
 ;;;BOUNDS MANIPULATION
