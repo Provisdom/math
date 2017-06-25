@@ -24,7 +24,7 @@
          get-slices-as-matrix esome esum matrix? row-matrix? column-matrix? square-matrix?
          row-count column-count dimensionality size-symmetric size-symmetric-with-unit-diagonal
          compute-vector coerce maybe-convert-clatrix-row-or-column to-vector ecount to-matrix
-         inner-product emap)
+         inner-product emap constant-matrix)
 
 (s/def ::by-row? boolean?)
 (s/def ::upper? boolean?)
@@ -32,6 +32,11 @@
 (s/def ::accu ::m/non-)
 (s/def ::size ::m/int-non-)
 (s/def ::index ::m/int-non-)
+(s/def ::indices (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 6)))
+(s/def ::row-indices (s/or :index ::index :indices ::indices))
+(s/def ::column-indices (s/or :index ::index :indices ::indices))
+(s/def ::exception-row-indices (s/or :index ::index :indices ::indices))
+(s/def ::exception-column-indices (s/or :index ::index :indices ::indices))
 (s/def ::row ::m/int-non-)
 (s/def ::column ::m/int-non-)
 (s/def ::rows ::m/int-non-)
@@ -75,6 +80,10 @@
 (s/def ::bottom-left ::matrix-or-vector)
 (s/def ::top-right ::matrix-or-vector)
 (s/def ::bottom-right ::matrix-or-vector)
+(s/def ::top-left-matrix ::matrix)
+(s/def ::bottom-left-matrix ::matrix)
+(s/def ::top-right-matrix ::matrix)
+(s/def ::bottom-right-matrix ::matrix)
 (s/def ::sparse-vector
   (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::number) :kind vector?)
               #(gen/bind (gen/large-integer* {:min 0 :max 6})
@@ -229,7 +238,74 @@
         :args (s/cat :tensor ::tensor)
         :ret ::m/int-non-)
 
+;;;TENSOR MANIPULATION
+(defn transpose
+  "Transposes a tensor, returning a new tensor.
+  For matrices, rows and columns are swapped.
+  More generally, the dimension indices are reversed.
+  Note that vectors and scalars will be returned unchanged."
+  [t]
+  (let [dim (dimensionality t)]
+    (cond (<= dim 1) t
+          (= dim 2) (apply mapv vector t)
+          :else (mapv transpose t))))                       ;;this is wrong for dim > 2 -- come back to this
+
+(s/fdef transpose
+        :args (s/cat :t ::tensor)
+        :ret (s/nilable ::tensor))
+
+(defn emap
+  "Element-wise mapping over all elements of one or more tensors."
+  ([f tensor] (mxc/emap f tensor))
+  ([f tensor & more] (apply mxc/emap f tensor more)))       ;;use 'walking' library? -- return nil if can't emap
+
+(s/fdef emap
+        :args (s/cat :f (s/fspec :args (s/cat))             ;finish this line
+                     :tensor ::tensor
+                     :more (s/? (s/keys* :tensors ::tensor)))
+        :ret (s/nilable ::tensor))
+
 ;;;TENSOR MATH
+(defn add
+  "Performs element-wise addition for one or more tensors."
+  ([] 0.0)
+  ([tensor] (emap + tensor))
+  ([tensor & more] (apply emap + tensor more)))
+
+(s/fdef add
+        :args (s/or :zero (s/cat)
+                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
+        :ret (s/nilable ::tensor))
+
+(defn subtract
+  "Performs element-wise subtraction for one or more tensors."
+  ([tensor] (emap - tensor))
+  ([tensor & more] (apply emap - tensor more)))
+
+(s/fdef subtract
+        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
+        :ret (s/nilable ::tensor))
+
+(defn multiply
+  "Performs element-wise multiplication for one or more tensors."
+  ([] 1.0)
+  ([tensor] (emap * tensor))
+  ([tensor & more] (apply emap * tensor more)))
+
+(s/fdef add
+        :args (s/or :zero (s/cat)
+                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
+        :ret (s/nilable ::tensor))
+
+(defn divide
+  "Performs element-wise division for one or more tensors."
+  ([tensor] (emap / tensor))
+  ([tensor & more] (apply emap / tensor more)))
+
+(s/fdef divide
+        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
+        :ret (s/nilable ::tensor))
+
 (defn ecount
   "Returns the total count of elements."
   [tensor] (if (number? tensor) 1 (count (flatten tensor))))
@@ -306,7 +382,7 @@
 
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
-  "Creates a vector representing the flattened elements of tensor `t`."
+  "Creates a vector representing the flattened elements of `tensor`."
   [tensor] (if (number? tensor) [tensor] (vec (flatten tensor))))
 
 (s/fdef to-vector
@@ -332,7 +408,7 @@
 
 (defn compute-vector
   "`f` takes an `index` and returns a number."
-  [size f] (vec (map f (range 0 size))))
+  [size f] (mapv f (range 0 size)))
 
 (s/fdef compute-vector
         :args (s/cat :size ::size
@@ -603,8 +679,8 @@
          [columns r] (if (zero? r) [columns 0] [(inc columns) (- rows r)])
          coll (concat coll (repeat r 0.0))]
      (if by-row?
-       (vec (map vec (partition columns coll)))
-       (transpose (vec (map vec (partition rows coll))))))))
+       (mapv vec (partition columns coll))
+       (transpose (mapv vec (partition rows coll)))))))
 
 (s/fdef to-matrix
         :args (s/cat :tensor ::tensor :rows ::rows :args (s/? (s/keys :opt [::by-row?])))
@@ -621,7 +697,7 @@
 
 (defn compute-matrix
   "`f` takes a `row` and `column` and returns a number."
-  [rows columns f] (vec (map (fn [r] (vec (map (fn [c] (f r c)) (range 0 columns)))) (range 0 rows))))
+  [rows columns f] (mapv (fn [r] (mapv (fn [c] (f r c)) (range 0 columns))) (range 0 rows)))
 
 (s/fdef compute-matrix
         :args (s/cat :rows ::rows :columns ::columns
@@ -638,10 +714,12 @@
         :ret ::matrix)
 
 (defn square-matrix
-  "Returns a square matrix my truncating values from the given matrix."
+  "Returns a square matrix my truncating values from the given matrix `m`."
   [m]
-  (let [size (min (column-count m) (row-count m))]
-    (get-slices-as-matrix m :rows (range size) :columns (range size))))
+  (let [r (row-count m)
+        c (column-count m)
+        k (if (> r c) ::exception-column-indices ::exception-row-indices)]
+    (get-slices-as-matrix m {k (range (dec (min c r)) (max c r))})))
 
 (s/fdef square-matrix
         :args (s/cat :m ::matrix)
@@ -651,8 +729,8 @@
   "Returns a column matrix created from `numbers` or from `size` and `f`.
   `size` is the size of the returned matrix.
   `f` is a function that takes `row` and returns a number."
-  ([numbers] (vec (map vec (partition 1 numbers))))
-  ([size f] (vec (map vec (partition 1 (compute-vector size f))))))
+  ([numbers] (mapv vec (partition 1 numbers)))
+  ([size f] (mapv vec (partition 1 (compute-vector size f)))))
 
 (s/fdef column-matrix
         :args (s/or :one (s/cat :numbers ::numbers)
@@ -715,7 +793,7 @@
      (when size (compute-matrix size size f)))))
 
 (s/fdef triangular-matrix
-        :args (s/cat :args (s/or :one-or-two (s/cat :numbers ::numbers (s/? (s/keys :opt [::by-row? ::upper?])))
+        :args (s/cat :args (s/or :one-or-two (s/cat :numbers ::numbers :args (s/? (s/keys :opt [::by-row? ::upper?])))
                                  :three (s/cat :diagonal-numbers ::numbers
                                                :off-diagonal-numbers ::numbers
                                                :args (s/keys :opt [::by-row? ::upper?]))))
@@ -874,7 +952,7 @@
 
 (defn get-column
   "Gets a `column` of a matrix, as a vector."
-  [m column] (vec (map #(get % column) m)))
+  [m column] (mapv #(get % column) m))
 
 (s/fdef get-column
         :args (s/cat :m ::matrix :column ::column)
@@ -931,89 +1009,81 @@
     `:rows` returns all rows by default, can pass a row index or sequence of row indices
     `:columns` returns all columns by default, can pass a column index or sequence of column indices
     `:except-rows` can pass a row index or sequence of row indices to exclude
-    `:except-columns` can pass a column index or sequence of column indices to exclude"
-  [m & {:keys [rows columns except-rows except-columns]}]
+    `:except-columns` can pass a column index or sequence of column indices to exclude.
+    Exceptions override inclusions."
+  [m {::keys [row-indices column-indices exception-row-indices exception-column-indices]}]
   (let [calc-fn (fn [i except-i n]
                   (cond (and (not i) (not except-i)) true
-                        (not except-i) i
+                        (not except-i) (if (< i n) i true)
                         (number? i) (if (number? except-i)
-                                      (if (= except-i i) [] i)
-                                      (if (contains? (set except-i) i) [] i))
-                        :else (let [i (if i i (range n))]   ; i is a seq of idxs
+                                      (if (= except-i i) [] (if (< i n) i true))
+                                      (if (contains? (set except-i) i) [] (if (< i n) i true)))
+                        :else (let [i (or i (range n))]     ;i is a seq of indices
                                 (if (number? except-i)
-                                  (remove #(= except-i %) i)
+                                  (remove #(or (= except-i %) (>= % n)) i)
                                   (reduce
-                                    (fn [tot e]
-                                      (if (first (filter #(= % e) except-i))
-                                        tot
-                                        (conj tot e)))
-                                    [] i)))))
-        rows (calc-fn rows except-rows (row-count m))
-        columns (calc-fn columns except-columns (column-count m))]
+                                    (fn [tot e] (if (or (>= e n) (some #(= % e) except-i)) tot (conj tot e)))
+                                    []
+                                    i)))))
+        rs (calc-fn row-indices exception-row-indices (row-count m))
+        cs (calc-fn column-indices exception-column-indices (column-count m))]
     (cond
-      (or (and (coll? rows) (empty? rows))
-          (and (coll? columns) (empty? columns))) [[]]
-      (and (number? rows) (number? columns)) [[(get-in m [rows columns])]]
-      (and (number? rows) (coll? columns)) (row-matrix
-                                             (let [r (get m rows)]
-                                               (map #(get r %) columns)))
-      (and (number? rows) (true? columns)) (get-row-as-matrix m rows)
-      (and (coll? rows) (number? columns)) (column-matrix
-                                             m (let [c (get-column m columns)]
-                                                 (map #(nth c %) rows)))
-      (and (coll? rows) (coll? columns)) (map
-                                           (fn [e]
-                                             (nth (co/flip-dbl-layered
-                                                    (map #(get-column m %) columns))
-                                                  e))
-                                           rows)
-      (and (coll? rows) (true? columns)) (map #(get m %) rows)
-      (and (true? rows) (number? columns)) (get-column-as-matrix m columns)
-      (and (true? rows) (coll? columns)) (co/flip-dbl-layered
-                                           (map #(get-column m %)
-                                                columns))
-      (and (true? rows) (true? columns)) m)))
+      (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) [[]]
+      (and (number? rs) (number? cs)) [[(get-in m [rs cs])]]
+      (and (number? rs) (coll? cs)) (row-matrix (let [r (get m rs)] (map #(get r %) cs)))
+      (and (number? rs) (true? cs)) (get-row-as-matrix m rs)
+      (and (coll? rs) (number? cs)) (column-matrix (let [c (get-column m cs)] (map #(nth c %) rs)))
+      (and (coll? rs) (coll? cs)) (map (fn [row] (reduce (fn [tot c] (conj tot (get row c))) [] cs))
+                                       (map #(get m %) rs))
+      (and (coll? rs) (true? cs)) (map #(get m %) rs)
+      (and (true? rs) (number? cs)) (get-column-as-matrix m cs)
+      (and (true? rs) (coll? cs)) (map (fn [row] (reduce (fn [tot c] (conj tot (get row c))) [] cs)) m)
+      (and (true? rs) (true? cs)) m)))
+
+(s/fdef get-slices-as-matrix
+        :args (s/cat :m ::matrix
+                     :args (s/keys :opt [::row-indices
+                                         ::column-indices
+                                         ::exception-row-indices
+                                         ::exception-column-indices]))
+        :ret ::matrix)
 
 (defn matrix-partition
-  "Returns a map containing the four sub-matrices labeled `:top-left`, `:bottom-left`, `:top-right`, and
-  `:bottom-right`. `first-bottom-row` is the bottom of where the slice will occur. `first-right-column` is
-  the right edge of where the slice will occur."
-  [m ^long first-bottom-row ^long first-right-column]
-  {:pre [(have? m/non-? first-bottom-row first-right-column)
-         (have? (fn [[m first-bottom-row]] (<= first-bottom-row (row-count m))) [m first-bottom-row])
-         (have? (fn [[m first-right-column]] (<= first-right-column (column-count m))) [m first-right-column])]}
-  {:top-left     (get-slices-as-matrix m
-                                       :rows (range first-bottom-row)
-                                       :columns (range first-right-column))
-   :bottom-left  (get-slices-as-matrix m
-                                       :except-rows (range first-bottom-row)
-                                       :columns (range first-right-column))
-   :top-right    (get-slices-as-matrix m
-                                       :rows (range first-bottom-row)
-                                       :except-columns (range first-right-column))
-   :bottom-right (get-slices-as-matrix m
-                                       :except-rows (range first-bottom-row)
-                                       :except-columns (range first-right-column))})
+  "Returns a map containing the four sub-matrices labeled `::top-left`, `::bottom-left`, `::top-right`, and
+  `::bottom-right`.
+  `first-bottom-row` is the bottom of where the slice will occur.
+  `first-right-column` is the right edge of where the slice will occur."
+  [m first-bottom-row first-right-column]
+  {::top-left-matrix     (get-slices-as-matrix m {::row-indices    (range first-bottom-row)
+                                                  ::column-indices (range first-right-column)})
+   ::bottom-left-matrix  (get-slices-as-matrix m {::exception-row-indices (range first-bottom-row)
+                                                  ::column-indices        (range first-right-column)})
+   ::top-right-matrix    (get-slices-as-matrix m {::row-indices              (range first-bottom-row)
+                                                  ::exception-column-indices (range first-right-column)})
+   ::bottom-right-matrix (get-slices-as-matrix m {::exception-row-indices    (range first-bottom-row)
+                                                  ::exception-column-indices (range first-right-column)})})
+
+(s/fdef matrix-partition
+        :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)
+        :ret (s/keys :req [::top-left-matrix ::bottom-left-matrix ::top-right-matrix ::bottom-right-matrix]))
 
 ;;;MATRIX MANIPULATION
-(defn set-row
+(defn assoc-row
   "Sets a row in a matrix using the specified numbers."
   [m row numbers]
   (when (and (= (count numbers) (column-count m)) (<= row (row-count m)))
     (assoc m row (vec numbers))))
 
-(s/fdef set-row
+(s/fdef assoc-row
         :args (s/cat :m ::matrix :row ::row :numbers ::numbers)
         :ret (s/nilable ::matrix))
 
-(defn set-column
-  "Sets a row in a matrix using the specified numbers."
+(defn assoc-column
+  "Sets a column in a matrix using the specified numbers."
   [m column numbers]
-  (let [tm (transpose m)
-        nm (when tm (set-row tm column numbers))]
-    (when nm (transpose nm))))
+  (vec (map-indexed (fn [row row-vector] (assoc row-vector column (get numbers row 0.0))) m)))
 
-(s/fdef set-column
+(s/fdef assoc-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
         :ret (s/nilable ::matrix))
 
@@ -1032,75 +1102,88 @@
 (defn insert-column
   "Inserts a column of `numbers` in a matrix at the specified `column`."
   [m column numbers]
-  (let [tm (transpose m)
-        nm (when tm (insert-row tm column numbers))]
-    (when nm (transpose nm))))
+  (when (<= column (column-count m))
+    (vec (map-indexed (fn [row row-vector] (insertv row-vector column (get numbers row 0.0))) m))))
 
 (s/fdef insert-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
         :ret (s/nilable ::matrix))
 
-(defn emap
-  "Element-wise map over all elements of one or more arrays.
-  Can also map onto a number, multiple numbers, or a single fn.
-  `f` is called with every element in the matrix."
-  ([f m]
-   (if (clatrix? m)
-     (coerce :clatrix (mxc/emap f (to-tensor m)))
-     (mxc/emap f m)))
-  ([f m a]
-   {:pre [(have? (fn [[m a]] (= (row-count m) (row-count a))) [m a])
-          (have? (fn [[m a]] (or (and (numbers? m) (numbers? a))
-                                 (= (column-count m) (column-count a)))) [m a])]}
-   (mxc/emap f m a))
-  ([f m a & more]
-   {:pre [(have? (fn [[m a more]]
-                   (let [v (apply vector m a more)]
-                     (and (every? #(= (row-count m) (row-count %)) v)
-                          (or (every? numbers? v) (every? #(= (column-count m)
-                                                              (column-count %)) v)))))
-                 [m a more])]}
-   (if (clatrix? m)
-     (coerce :clatrix (apply mxc/emap f (map to-tensor
-                                             (apply vector m a more))))
-     (apply mxc/emap f m a more))))
+(defn remove-row
+  "Removes a row in a matrix"
+  [m row]
+  (if (<= (inc row) (count m))
+    (let [f (subvec m 0 row)
+          l (subvec m (inc row))]
+      (vec (concat f l)))
+    m))
 
-(defn transpose
-  "Transposes a tensor, returning a new tensor.
-  For matrices, rows and columns are swapped.
-  More generally, the dimension indices are reversed.
-  Note that vectors and scalars will be returned unchanged."
-  [t] (try (mxc/transpose t) (catch Exception e nil)))
+(s/fdef remove-row
+        :args (s/cat :m ::matrix :row ::row)
+        :ret ::matrix)
 
-(s/fdef transpose
-        :args (s/cat :t ::tensor)
-        :ret (s/nilable ::tensor))
+(defn remove-column
+  "Removes a column in a matrix"
+  [m column]
+  (if (<= (inc column) (column-count m))
+    (mapv #(removev % column) m)
+    m))
+
+(s/fdef remove-column
+        :args (s/cat :m ::matrix :column ::column)
+        :ret ::matrix)
+
+(defn update-row
+  "Updates a `row` of matrix `m`, using `f`, which is a function of the `column` and `number` and returns a number."
+  ([m row f] (update m row f))
+  ([m row f & args] (apply update m row f args)))
+
+(s/fdef update-row
+        :args (s/cat :m ::matrix
+                     :row ::row
+                     :f (s/fspec :args (s/cat :column ::column)
+                                 :ret ::number)
+                     :args (s/? (s/keys* :number ::number)))
+        :ret ::matrix)
+
+(defn update-column
+  "Updates a `column` of matrix `m`, using `f`, which is a function of the `row` and `number` and returns a number."
+  ([m column f] (vec (map-indexed (fn [row row-vector] (update row-vector column f row)) m)))
+  ([m column f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector column f row args)) m))))
+
+(s/fdef update-column
+        :args (s/cat :m ::matrix
+                     :column ::column
+                     :f (s/fspec :args (s/cat :row ::row :number ::number)
+                                 :ret ::number)
+                     :args (s/? (s/keys* :number ::number)))
+        :ret ::matrix)
 
 (defn conj-rows
   "Appends rows from all the matrices or vectors after the first to the first.
   Each row must be the same size or will return nil."
-  [m & ms]
-  (let [m (if (vector? m) (row-matrix m) m)
-        ms (map #(if (vector? %) (row-matrix %) %) ms)
+  [mv & mvs]
+  (let [m (if (vector? mv) (row-matrix mv) mv)
+        ms (map #(if (vector? %) (row-matrix %) %) mvs)
         c (column-count m)
         cs (map column-count ms)]
     (when (every? #(= c %) cs)
       (reduce (fn [tot e] (apply conj tot e)) m ms))))
 
 (s/fdef conj-rows
-        :args (s/cat :m ::matrix-or-vector :ms (s/* ::matrix-or-vector))
+        :args (s/cat :mv ::matrix-or-vector :mvs (s/* ::matrix-or-vector))
         :ret (s/nilable ::matrix))
 
 (defn conj-columns
   "Appends columns from all the matrices or vectors after the first to the first.
   Each column must be the same size or will return nil."
-  [m & ms]
-  (let [mt (transpose m)
-        mts (map transpose ms)]
+  [mv & mvs]
+  (let [mt (transpose mv)
+        mts (map transpose mvs)]
     (transpose (apply conj-rows mt mts))))
 
 (s/fdef conj-columns
-        :args (s/cat :m ::matrix-or-vector :ms (s/* ::matrix-or-vector))
+        :args (s/cat :mv ::matrix-or-vector :mvs (s/* ::matrix-or-vector))
         :ret (s/nilable ::matrix))
 
 (defn merge-matrices
@@ -1122,11 +1205,11 @@
   (let [nr1 (row-count m1)
         m2 (if (vector? m2) (row-matrix m2) m2)
         c? (> (row-count m2) (column-count m2))
-        k (if c? :rows :columns)
-        k2 (if c? :except-rows :except-columns)
-        m (get-slices-as-matrix m2 k (range nr1))
+        k (if c? ::row-indices ::column-indices)
+        k2 (if c? ::exception-row-indices ::exception-column-indices)
+        m (get-slices-as-matrix m2 {k (range nr1)})
         mt (transpose m)
-        br (get-slices-as-matrix m2 k2 (range nr1))
+        br (get-slices-as-matrix m2 {k2 (range nr1)})
         bl (if c? mt m)
         tr (if c? m mt)]
     (merge-matrices {::top-left m1 ::bottom-left bl ::top-right tr ::bottom-right br})))
@@ -1151,20 +1234,22 @@
 
 (defn replace-submatrix
   "Returns a Matrix after substituting a 'sub' matrix at top-left location 'row' and 'column'.
-   Sub must be a matrix, not a vector.
-   'row' and 'column' can be negative.
+   'row-start' and 'column-start' can be negative.
    Unassigned elements will be 0.0"
-  [m sub ^long row ^long column]
-  {:pre [(have? matrix? m sub)]}
-  (let [sr (row-count sub), sc (column-count sub), tr (+ sr row),
-        tc (+ sc column), nr (row-count m), nc (column-count m)]
-    (for [r (range (min row 0) (max tr nr))]
-      (for [c (range (min column 0) (max tc nc))]
-        (cond (and (>= r row) (< r tr) (>= c column)
-                   (< c tc)) (get-in sub [(- r row) (- c column)])
+  [m submatrix row-start column-start]
+  (let [sr (row-count submatrix), sc (column-count submatrix), tr (+ sr row-start),
+        tc (+ sc column-start), nr (row-count m), nc (column-count m)]
+    (for [r (range (min row-start 0) (max tr nr))]
+      (for [c (range (min column-start 0) (max tc nc))]
+        (cond (and (>= r row-start) (< r tr) (>= c column-start)
+                   (< c tc)) (get-in submatrix [(- r row-start) (- c column-start)])
               (and (m/non-? r) (< r nr) (m/non-? c)
                    (< c nr)) (get-in m [r c])
               :else 0.0)))))
+
+(s/fdef replace-submatrix
+        :args (s/cat :m ::matrix :submatrix ::matrix :row-start ::m/int :column-start ::m/int)
+        :ret ::matrix)
 
 (defn permute-matrix
   "Returns a Matrix with the rows and the columns of a matrix permuted.
@@ -1177,46 +1262,15 @@
     (coerce m p)))
 
 ;;;MATRIX MATH
-(defn div
-  "Performs element-wise matrix division for numerical arrays."
-  ([a] (mxc/div a))
-  ([a b] (mxc/div a b))
-  ([a b & more] (apply mxc/div a b more)))
+(defn matrix-multiply
+  ([] 1.0)
+  ([m] m)
+  ([m1 m2] (mapv (fn [a] (mapv (fn [b] (reduce + (map * a b))) (transpose m2))) m1))
+  ([m1 m2 & ms] (apply matrix-multiply (matrix-multiply m1 m2) ms)))
 
-(defn add
-  "Performs element-wise addition on one or more numerical arrays."
-  ([a] (mxc/add a))
-  ([a b] (mxc/add a b))
-  ([a b & more] (apply mxc/add a b more)))
-
-(s/fdef add
-        :args (s/cat :t1 ::m/number)
-        :ret ::tensor)
-
-(defn sub
-  "Performs element-wise subtraction on one or more numerical arrays."
-  ([a] (mxc/sub a))
-  ([a b] (mxc/sub a b))
-  ([a b & more] (apply mxc/sub a b more)))
-
-(defn mul
-  "Performs element-wise multiplication with scalars and numerical arrays.
-  Behaves like clojure.core/* for scalar values."
-  ([] (mxc/mul))
-  ([a] (mxc/mul a))
-  ([a b] (mxc/mul a b))
-  ([a b & more] (apply mxc/mul a b more)))
-
-(defn mmul
-  ([] (mxc/mmul))
-  ([a] (mxc/mmul a))
-  ;;lazy seq's can be a problem otherwise
-  ([a b]
-   (coerce a (mxc/mmul (if (and (sequential? a) (not (clatrix? a)))
-                         (vec a)
-                         a)
-                       b)))
-  ([a b & more] (apply mmul (mmul a b) more)))
+(s/fdef matrix-multiply
+        :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
+                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/? (s/keys* :mats ::matrix)))))
 
 (defn inner-product
   "Computes the inner product of numerical arrays.
@@ -1239,22 +1293,8 @@ The inner-product of two vectors will be scalar."
                         (apply conj-rows (for [i (range arows)]
                                            (apply conj-columns
                                                   (for [j (range acols)]
-                                                    (mul (get-in a [i j]) b)))))))
+                                                    (multiply (get-in a [i j]) b)))))))
                     m ms)))
-
-(defn matrix-pow
-  "Returns the xth matrix power of the square matrix.
-  m using Eigendecomposition.
-  x need not be an integer."
-  [m x]
-  {:pre [(have? square-matrix? m)]}
-  (clx/pow (clx/maybe-symmetric (clatrix m)) x))
-
-(defn det
-  "Calculates the determinant of a square numerical matrix."
-  [m]
-  (let [m (if (or (clatrix? m) (apache-commons? m)) m (apache-commons m))]
-    (mxc/det m)))
 
 ;;;SPECIAL-MATRIX INFO
 (defn size-symmetric
@@ -1444,10 +1484,12 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   {:pre [(have? matrix? m)]}
   (let [ma (if by-row? m (transpose m)),
         keep-set (reduce-kv #(if (pred %3) (conj % %2) %) #{} ma)]
-    (get-slices-as-matrix m :rows keep-set, :columns keep-set)))
+    (get-slices-as-matrix m {::row-indices keep-set, ::column-indices keep-set})))
 
 ;;;MATRIX NUMERICAL STABILITY
-(defn roughly? [m1 m2 accu]
+(defn roughly?                                              ;expand this to work for tensors
+  "Returns true if every element compared across two matrices are within `accu` of each other."
+  [m1 m2 accu]
   (cond (and (matrix? m1)
              (matrix? m2)) (every? identity
                                    (map #(roughly? %1 %2 accu)
@@ -1461,7 +1503,7 @@ pred takes an element and will be evaluated only for upper-right or lower-left
 
 (defn roughly-distinct
   "Returns a matrix with later duplicate rows removed,
-   or a vector with later duplicate elements removed"
+  or a vector with later duplicate elements removed"        ;expand to work for tensors
   [m ^double accu]
   (loop [[h & t] m, seen []]
     (cond (not h) seen
@@ -1495,7 +1537,8 @@ pred takes an element and will be evaluated only for upper-right or lower-left
 
 ;(defn force-symmetric-matrix-to-be-non-negative
 ;  "Attempts to return a non-negative matrix by reducing the absolute values
-;      of the off-diagaonal elements as necessary"
+;      of the off-diagonal elements as necessary.
+; Useful for rounding errors."
 ;  [m]
 ;  (symmetric-matrix
 ;    m (fn [r c]
@@ -1518,7 +1561,7 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   (cond (number? m) (m/div m)
         (numbers? m) (compute-vector m (emap m/div m))
         (apache-commons? m) (mxc/inverse m)
-        :else (coerce m (clx/i (clx/maybe-positive
+        :else (coerce m (clx/i (clx/maybe-positive          ;;looks like Clatrix may have been faster than Apache
                                  (clx/maybe-symmetric (clatrix m)))))))
 
 (defn cholesky-decomposition
@@ -1648,8 +1691,18 @@ Returns a map containing:
                 {:L (coerce m (:l r)), :U (coerce m (:u r)),
                  :P (coerce m (:p r))})))
 
+;;could instead be calculated from [[lu-decomposition-with-permutation-matrix]]
+;;probably better to use apache (or another library)
+(defn determinant
+  "Calculates the determinant of a square matrix."
+  [square-m] (mxc/det (apache-commons square-m)))
+
+(s/fdef determinant
+        :args (s/cat :square-m ::square-matrix)
+        :ret ::number)
+
 (defn lu-decomposition
-  "Computes the LU decompotion of a matrix.
+  "Computes the LU decomposition of a matrix.
 Returns a vector containing two matrices [L U]
 Intended usage: (let [[L U] (lu-decomosition M)] ....)"
   [m]
@@ -1734,7 +1787,7 @@ Returns a map containing:
         r (square-matrix r)]
     (when-not (= (column-count r) (column-count m1))        ; TODO - use truss or assert
       (throw (ex-info "Icky matrices" {:fn (var linear-least-squares-with-error-matrix)})))
-    (let [ri (inverse r), e (mmul ri (transpose ri)),
+    (let [ri (inverse r), e (matrix-multiply ri (transpose ri)),
           ^DecompositionSolver s (.getSolver d), m (apache-commons m2)]
       {:S (vec (.toArray (if (numbers? m)
                            ^RealVector (.solve s ^RealVector m)
@@ -1793,47 +1846,44 @@ The work per iteration is very slightly less if shift = 0."
     (vec (.toArray (if guess ^RealVector (.solve s ^RealLinearOperator a b g)
                              ^RealVector (.solve s a b))))))
 
-;;;RANDOM
-(defn rnd-vec
+;;;RANDOM -- move these to vector/matrix sections?  Or to rnd library?
+(defn rnd-vector
   "Returns [v rnd-lazy], where v has random elements"
-  ([^long size rnd-lazy] (rnd-vec nil size rnd-lazy))
-  ([implementation ^long size rnd-lazy]
-   {:pre [(have? pos? size)]}
-   [(into [] (take size rnd-lazy)) (drop size rnd-lazy)]))
+  [size rnd-lazy] [(into [] (take size rnd-lazy)) (drop size rnd-lazy)])
+
+(s/fdef rnd-vector
+        :args (s/cat :size ::size)                          ;we don't use rnd-lazy any more
+        :ret ::vector)
 
 (defn rnd-matrix
   "Returns [m rnd-lazy], where m has random elements"
-  ([^long rows ^long columns rnd-lazy] (rnd-matrix nil rows columns rnd-lazy))
-  ([implementation ^long rows ^long columns rnd-lazy]
-   (let [[v s] (rnd-vec (* rows columns) rnd-lazy)]
-     [(coerce implementation (partition columns v)) s])))
+  [rows ^long columns rnd-lazy]
+   (let [[v s] (rnd-vector (* rows columns) rnd-lazy)]
+     [(partition columns v) s]))
 
 (defn rnd-reflection-matrix
   "Returns [m rnd-lazy], where m is a random Householder reflection."
-  ([size rnd-lazy] (rnd-reflection-matrix nil size rnd-lazy))
-  ([implementation size rnd-lazy]
-   (let [v (column-matrix implementation (normalise (take size rnd-lazy)))]
-     [(coerce implementation (sub (identity-matrix implementation size)
-                                  (mmul (mmul v (transpose v)) 2.0))),
-      (drop size rnd-lazy)])))
+  [size rnd-lazy]
+   (let [v (column-matrix (normalise (take size rnd-lazy)))]
+     [(subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
+      (drop size rnd-lazy)]))
 
 (defn rnd-spectral-matrix
   "Returns [m rnd-lazy], where m is a random matrix with a particular
       spectrum vector.
 The orthogonal matrices are generated by using 2 * spectrum-length composed
    Householder reflections."
-  ([spectrum rnd-lazy] (rnd-spectral-matrix nil spectrum rnd-lazy))
-  ([implementation spectrum rnd-lazy]
-   (let [size (count spectrum),
-         [v-mat r] (nth (iterate (fn [[prod-mat laz]]
-                                   (let [[r-mat s] (rnd-reflection-matrix
-                                                     implementation size laz)]
-                                     [(mmul prod-mat r-mat) s]))
-                                 [(identity-matrix implementation size) rnd-lazy])
-                        (* 2 size))
-         l-mat (diagonal-matrix implementation spectrum)]
-     [(coerce implementation (-> v-mat (mmul l-mat) (mmul (transpose v-mat)))),
-      r])))
+  [spectrum rnd-lazy]
+  (let [size (count spectrum),
+        [v-mat r] (nth (iterate (fn [[prod-mat laz]]
+                                  (let [[r-mat s] (rnd-reflection-matrix
+                                                    size laz)]
+                                    [(matrix-multiply prod-mat r-mat) s]))
+                                [(identity-matrix size) rnd-lazy])
+                       (* 2 size))
+        l-mat (diagonal-matrix spectrum)]
+    [(-> v-mat (matrix-multiply l-mat) (matrix-multiply (transpose v-mat)))
+     r]))
 
 (defn rnd-positive-matrix
   "Returns [m rnd-lazy], where m is a positive definite matrix with a random
@@ -1843,6 +1893,4 @@ The orthogonal matrices are generated by using 2 * size composed Householder
 Alternative #1: Sample from the Inverse-Wishart Distribution.
 Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
                    [(mmul (transpose m) m), s])"
-  ([^long size rnd-lazy] (rnd-positive-matrix nil size rnd-lazy))
-  ([implementation ^long size rnd-lazy]
-   (rnd-spectral-matrix implementation (take size rnd-lazy) (drop size rnd-lazy))))
+  [size rnd-lazy] (rnd-spectral-matrix (take size rnd-lazy) (drop size rnd-lazy)))

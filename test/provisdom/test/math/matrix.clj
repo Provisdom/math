@@ -447,8 +447,8 @@
 
 (facts "matrix math"
        (fact "matrix multiply"
-             (mmul '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
-             (mmul '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
+             (matrix-multiply '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
+             (matrix-multiply '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
        (fact "element sum"
              (esum 2.0) => 2.0
              (esum m/sq 2.0) => 4.0
@@ -570,10 +570,10 @@
              => [[12.052805176613186 78.49641538319892]
                  [78.49641538319894 519.1897130056464]])
        (fact "determinant"
-             (det ap) => 3.0
-             (det cl) => 3.0
-             (det ve) => 3.0
-             (det se) => 3.0))
+             (determinant ap) => 3.0
+             (determinant cl) => 3.0
+             (determinant ve) => 3.0
+             (determinant se) => 3.0))
 
 (facts "vector math"
        (fact "outer product"
@@ -716,10 +716,10 @@
 
 (facts "immutable changes"
        (fact "set column"
-             (set-column ap 0 [8.0 9.0])
+             (assoc-column ap 0 [8.0 9.0])
              => (apache-commons [[8.0 0.5] [9.0 4.0]])
-             (set-column cl 0 [8.0 9.0]) => (clatrix [[8.0 0.5] [9.0 4.0]])
-             (set-column cl1D 0 [8.0 9.0]) => (throws))
+             (assoc-column cl 0 [8.0 9.0]) => (clatrix [[8.0 0.5] [9.0 4.0]])
+             (assoc-column cl1D 0 [8.0 9.0]) => (throws))
        (fact "insert row"
              (insert-row ap 1 [8.0 9.0])
              => (apache-commons [[1.0 0.5] [8.0 9.0] [2.0 4.0]])
@@ -1069,10 +1069,10 @@
 
 (facts "random"
        (fact "vector"
-             (first (rnd-vec :clatrix 3 test-rnd-lazy))
+             (first (rnd-vector :clatrix 3 test-rnd-lazy))
              => (clatrix [0.8335762378570932 0.11249249636232017
                           0.8502406979201282])
-             (first (rnd-vec 3 test-rnd-lazy))
+             (first (rnd-vector 3 test-rnd-lazy))
              => [0.8335762378570932 0.11249249636232017 0.8502406979201282])
        (fact "matrix"
              (first (rnd-matrix :clatrix 2 2 test-rnd-lazy))

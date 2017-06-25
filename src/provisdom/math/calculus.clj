@@ -269,11 +269,11 @@
         half-diff (* 0.5 (- b a))
         un (map (partial unnormalize half-sum half-diff) n)
         lh (into [] (map f un))
-        h (mx/mul half-diff (mx/inner-product hw lh))
-        l (mx/mul
+        h (mx/multiply half-diff (mx/inner-product hw lh))
+        l (mx/multiply
             half-diff
             (mx/inner-product lw (mx/filter-kv (fn [idx _] (odd? idx)) lh)))
-        err (mx/eaverage (mx/abs (mx/sub l h)))]
+        err (mx/eaverage (mx/abs (mx/subtract l h)))]
     [err h]))
 
 (defn- get-error-and-value-ndim
@@ -293,12 +293,12 @@
         fallh (repeat dim fh)
         falll (repeat dim fl)
         partitioned-lh (co/partition-recursively lh (count hw))
-        reduce-f #(mx/mul mult (reduce (fn [tot ef] (ef tot))
-                                       partitioned-lh %))
+        reduce-f #(mx/multiply mult (reduce (fn [tot ef] (ef tot))
+                                            partitioned-lh %))
         h (reduce-f fallh)
         l (reduce-f falll)
         dim1 (map reduce-f f1dim)
-        err-f #(mx/eaverage (mx/abs (mx/sub % h)))]
+        err-f #(mx/eaverage (mx/abs (mx/subtract % h)))]
     [(err-f l) h (map err-f dim1) ranges]))
 
 (defn- adaptive-quadrature [implementation f [a b] accu min-iter max-iter wn]
@@ -391,7 +391,7 @@
   "Returns the new function and range as a tuple"
   [f [a b]]
   (let [[fm fv r] (change-of-variable [a b])]
-    [#(mx/mul (fm %) (f (fv %))) r]))
+    [#(mx/multiply (fm %) (f (fv %))) r]))
 
 (defn- change-of-var-ndim
   "Returns the new function and ranges.  
@@ -399,8 +399,8 @@
   [f ranges]
   (let [trips (map change-of-variable ranges), fms (map first trips),
         fvs (map second trips), newr (into [] (map #(nth % 2) trips))]
-    [#(mx/mul (mx/eproduct (co/in-place-functional fms %))
-              (f (co/in-place-functional fvs %))) newr]))
+    [#(mx/multiply (mx/eproduct (co/in-place-functional fms %))
+                   (f (co/in-place-functional fvs %))) newr]))
 
 (defn integrate
   "Returns the integral of a function f over ranges from a to b using 
@@ -765,7 +765,7 @@
             (apply
               mx/add
               (map
-                #(let [[e1 e2] %] (mx/mul e2 mult (f (assoc v i (+ e e1)))))
+                #(let [[e1 e2] %] (mx/multiply e2 mult (f (assoc v i (+ e e1)))))
                 coeff)))
           v)))))
 
