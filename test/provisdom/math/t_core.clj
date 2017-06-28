@@ -416,8 +416,7 @@
   (is (m/nan? (m/next-up m/nan)))
   (is= m/inf+ (m/next-up m/inf+))
   (is= m/min-dbl (m/next-up m/inf-))
-  (is= -2.9999999999999996 (m/next-up -3.0))
-  (is (thrown? Exception (m/next-up nil))))
+  (is= -2.9999999999999996 (m/next-up -3.0)))
 
 (deftest next-down-test
   (is= 2.9999999999999996 (m/next-down 3))
@@ -425,8 +424,7 @@
   (is (m/nan? (m/next-down m/nan)))
   (is= m/max-dbl (m/next-down m/inf+))
   (is= m/inf- (m/next-down m/inf-))
-  (is= 2.9999999999999996 (m/next-down 3.0))
-  (is (thrown? Exception (m/next-down nil))))
+  (is= 2.9999999999999996 (m/next-down 3.0)))
 
 (deftest div-test
   (is (ratio? (m/div 4)))
@@ -439,42 +437,34 @@
   (is= m/inf- (m/div m/inf- 0))
   (is= 0.0 (m/div 0 m/inf+))
   (is= 0.0 (m/div 0 m/inf-))
-  (is (instance? Exception (m/div 0 0)))
-  (is= nil (m/div 0 0 nil))
-  (is (m/nan? (m/div 0 0 m/nan)))
-  (is (thrown? Exception (m/div nil 0)))
-  (is (thrown? Exception (m/div 0 nil))))
+  (is (m/nan? (m/div 0 0)))
+  (is (m/nan? (m/div 0 0 m/nan))))
 
 (deftest one--test
   (is= -2 (m/one- 3))
   (is= 0 (m/one- 3 -2))
   (is= -16 (m/one- 3 4 2 8))
-  (is (thrown? Exception (m/one- 3 "A")))
-  (is (thrown? Exception (m/one- "A" 3)))
   (is= 4 (m/one- -3))
   (is (m/nan? (m/one- m/nan)))
   (is= m/inf- (m/one- m/inf+))
   (is= m/inf+ (m/one- m/inf-))
-  (is= 4.0 (m/one- -3.0))
-  (is (thrown? Exception (m/one- nil))))
+  (is= 4.0 (m/one- -3.0)))
 
-(deftest sq-test
-  (is= 9 (m/sq 3))
-  (is= 9 (m/sq -3))
-  (is (m/nan? (m/sq m/nan)))
-  (is= m/inf+ (m/sq m/inf+))
-  (is= m/inf+ (m/sq m/inf-))
-  (is= 9.0 (m/sq -3.0))
-  (is (thrown? Exception (m/sq nil))))
+(deftest sq'-test
+  (is= 9 (m/sq' 3))
+  (is= 9 (m/sq' -3))
+  (is (m/nan? (m/sq' m/nan)))
+  (is= m/inf+ (m/sq' m/inf+))
+  (is= m/inf+ (m/sq' m/inf-))
+  (is= 9 (m/sq' -3.0)))
 
-(deftest cube-test
-  (is= 27 (m/cube 3))
-  (is (m/nan? (m/cube m/nan)))
-  (is= m/inf+ (m/cube m/inf+))
-  (is= m/inf- (m/cube m/inf-))
-  (is= -27 (m/cube -3))
-  (is= -27.0 (m/cube -3.0))
-  (is (thrown? Exception (m/cube nil))))
+(deftest cube'-test
+  (is= 27 (m/cube' 3))
+  (is (m/nan? (m/cube' m/nan)))
+  (is= m/inf+ (m/cube' m/inf+))
+  (is= m/inf- (m/cube' m/inf-))
+  (is= -27 (m/cube' -3))
+  (is= -27 (m/cube' -3.0)))
 
 (deftest sgn-test
   (is= 1 (m/sgn 3))
@@ -484,8 +474,7 @@
   (is= -1 (m/sgn m/inf-))
   (is (zero? (m/sgn 0)))
   (is (zero? (m/sgn 0.0)))
-  (is= -1 (m/sgn -3.0))
-  (is (thrown? Exception (m/sgn nil))))
+  (is= -1 (m/sgn -3.0)))
 
 (deftest log2-test
   (is= 1.5849625007211563 (m/log2 3))
@@ -494,8 +483,7 @@
   (is (m/nan? (m/log2 m/nan)))
   (is (m/nan? (m/log2 -3.0)))
   (is= 0.0 (m/log2 1.0))
-  (is= -0.15200309344504997 (m/log2 0.9))
-  (is (thrown? Exception (m/log2 nil))))
+  (is= -0.15200309344504997 (m/log2 0.9)))
 
 (deftest logn-test
   (is= 1.0 (m/logn 3 3))
@@ -505,7 +493,6 @@
   (is (m/nan? (m/logn m/nan 3)))
   (is= 0.0 (m/logn 1.0 3))
   (is= -0.09590327428938458 (m/logn 0.9 3))
-  (is (thrown? Exception (m/logn nil 3)))
   (is= m/inf- (m/logn 0.9 1))
   (is= 0.15200309344504997 (m/logn 0.9 0.5))
   (is= 0.0 (m/logn 0.9 0))
@@ -519,8 +506,7 @@
   (is (zero? (m/abs' 0.0)))
   (is= m/inf+ (m/abs' m/inf+))
   (is= m/inf+ (m/abs' m/inf-))
-  (is (m/nan? (m/abs' m/nan)))
-  (is (thrown? Exception (m/abs' nil))))
+  (is (m/nan? (m/abs' m/nan))))
 
 (deftest cbrt-test
   (is= 0.0 (m/cbrt 0.0))
@@ -529,21 +515,40 @@
   (is= -2.0 (m/cbrt -8))
   (is= m/inf+ (m/cbrt m/inf+))
   (is= m/inf- (m/cbrt m/inf-))
-  (is (m/nan? (m/cbrt m/nan)))
-  (is (thrown? Exception (m/cbrt nil))))
+  (is (m/nan? (m/cbrt m/nan))))
 
 (deftest basic-math-test
   (next-up-test)
   (next-down-test)
   (div-test)
   (one--test)
-  (sq-test)
-  (cube-test)
+  (sq'-test)
+  (cube'-test)
   (sgn-test)
   (log2-test)
   (logn-test)
   (abs'-test)
   (cbrt-test))
+
+(defspec-test test-next-up `m/next-up)
+(defspec-test test-next-down `m/next-down)
+(defspec-test test-div `m/div)
+(defspec-test test-one- `m/one-)
+(defspec-test test-sq `m/sq)
+(defspec-test test-sq' `m/sq')
+(defspec-test test-cube `m/cube)
+(defspec-test test-cube' `m/cube')
+(defspec-test test-sgn `m/sgn)
+(defspec-test test-exp `m/exp)
+(defspec-test test-log `m/log)
+(defspec-test test-log2 `m/log2)
+(defspec-test test-log10 `m/log10)
+(defspec-test test-logn `m/logn)
+(defspec-test test-pow `m/pow)
+(defspec-test test-abs `m/abs)
+(defspec-test test-abs' `m/abs')
+(defspec-test test-sqrt `m/sqrt)
+(defspec-test test-cbrt `m/cbrt)
 
 (deftest asinh-test
   (is= 0.0 (m/asinh 0.0))
@@ -554,16 +559,14 @@
   (is= 1.4436354751788103 (m/asinh 2.0))
   (is= m/inf+ (m/asinh m/inf+))
   (is (m/nan? (m/asinh m/inf-)))
-  (is (m/nan? (m/asinh m/nan)))
-  (is (thrown? Exception (m/asinh nil))))
+  (is (m/nan? (m/asinh m/nan))))
 
 (deftest acosh-test
   (is (m/nan? (m/acosh 0.0)))
   (is= 0.0 (m/acosh 1.0))
   (is= 1.3169578969248166 (m/acosh 2.0))
   (is= m/inf+ (m/acosh m/inf+))
-  (is (m/nan? (m/acosh m/nan)))
-  (is (thrown? Exception (m/acosh nil))))
+  (is (m/nan? (m/acosh m/nan))))
 
 (deftest atanh-test
   (is= 0.0 (m/atanh 0.0))
@@ -571,13 +574,24 @@
   (is= m/inf- (m/atanh -1.0))
   (is= m/inf+ (m/atanh 1.0))
   (is (m/nan? (m/atanh -2.0)))
-  (is (m/nan? (m/atanh m/nan)))
-  (is (m/nan? (m/atanh nil))))
+  (is (m/nan? (m/atanh m/nan))))
 
 (deftest trigonometry-test
   (asinh-test)
   (acosh-test)
   (atanh-test))
+
+(defspec-test test-sin `m/sin)
+(defspec-test test-asin `m/asin)
+(defspec-test test-asinh `m/asinh)
+(defspec-test test-cos `m/cos)
+(defspec-test test-acos `m/acos)
+(defspec-test test-acosh `m/acosh)
+(defspec-test test-tan `m/tan)
+(defspec-test test-atan `m/atan)
+(defspec-test test-atan2 `m/atan2)
+(defspec-test test-atanh `m/atanh)
+(defspec-test test-hypot `m/hypot)
 
 (deftest round-test
   (is= 1 (m/round 0.5 :up))

@@ -31,6 +31,7 @@
 (s/def ::number ::m/number)
 (s/def ::accu ::m/non-)
 (s/def ::size ::m/int-non-)
+(s/def ::shape (s/with-gen (s/coll-of ::m/int+) #(gen/vector (gen/large-integer* {:min 1 :max 6}) 0 6)))
 (s/def ::index ::m/int-non-)
 (s/def ::indices (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 6)))
 (s/def ::row-indices (s/or :index ::index :indices ::indices))
@@ -44,19 +45,19 @@
 (s/def ::row-matrix (s/with-gen row-matrix? #(gen/vector (s/gen ::vector) 1)))
 (s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap (fn [v] (column-matrix v)) (s/gen ::vector))))
 (s/def ::numbers (s/with-gen (s/coll-of ::number)
-                             #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count 6 :kind vector?)
-                                           :l (s/coll-of ::number :min-count 0 :max-count 6 :kind list?)))))
-(s/def ::vector (s/with-gen (s/coll-of ::number :kind vector?) #(gen/vector (s/gen ::number) 0 6)))
-(s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind vector? :min-count 2 :max-count 2)
+                             #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count 6 :kind vector? :into [])
+                                           :l (s/coll-of ::number :min-count 0 :max-count 6 :kind list? :into '())))))
+(s/def ::vector (s/with-gen (s/coll-of ::number :kind vector? :into []) #(gen/vector (s/gen ::number) 0 6)))
+(s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 2 :max-count 2)
                                #(gen/vector (s/gen ::number) 2)))
-(s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind vector? :min-count 3 :max-count 3)
+(s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 3 :max-count 3)
                                #(gen/vector (s/gen ::number) 3)))
-(s/def ::vector-num (s/with-gen (s/coll-of ::m/num :kind vector?) #(gen/vector (s/gen ::m/num) 0 6)))
-(s/def ::vector-finite (s/with-gen (s/coll-of ::m/finite :kind vector?) #(gen/vector (s/gen ::m/finite) 0 6)))
+(s/def ::vector-num (s/with-gen (s/coll-of ::m/num :kind vector? :into []) #(gen/vector (s/gen ::m/num) 0 6)))
+(s/def ::vector-finite (s/with-gen (s/coll-of ::m/finite :kind vector? :into []) #(gen/vector (s/gen ::m/finite) 0 6)))
 (s/def ::matrix (s/with-gen matrix? #(gen/vector (s/gen ::vector) 1 6)))
-(s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector?) :kind vector?)
+(s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
                                 #(gen/vector (s/gen ::vector-num) 1 6)))
-(s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector?) :kind vector?)
+(s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
                                    #(gen/vector (s/gen ::vector-finite) 1 6)))
 (s/def ::square-matrix
   (s/with-gen square-matrix?
@@ -85,14 +86,14 @@
 (s/def ::top-right-matrix ::matrix)
 (s/def ::bottom-right-matrix ::matrix)
 (s/def ::sparse-vector
-  (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::number) :kind vector?)
+  (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::number) :kind vector? :into [])
               #(gen/bind (gen/large-integer* {:min 0 :max 6})
                          (fn [i] (gen/vector
                                    (gen/tuple (gen/large-integer* {:min 0 :max (dec i)})
                                               (s/gen ::number))
                                    i)))))
 (s/def ::sparse-matrix
-  (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::m/int-non- ::number) :kind vector?)
+  (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::m/int-non- ::number) :kind vector? :into [])
               #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max 6}) (gen/large-integer* {:min 0 :max 6}))
                          (fn [[i j]] (gen/vector (gen/vector
                                                    (gen/tuple (gen/large-integer* {:min 0 :max (dec i)})
@@ -225,6 +226,38 @@
         :args (s/cat :x any?)
         :ret (s/nilable ::tensor))
 
+(defn- recursive-compute-tensor
+  "Recursively computes tensor for [[compute-tensor]]."
+  [shape f sh]
+  (let [c (count shape)
+        dim (count sh)]
+    (if (= dim c)
+      (f sh)
+      (mapv #(recursive-compute-tensor shape f (conj sh %)) (range (get shape dim))))))
+
+(defn compute-tensor
+  "`f` takes a vector of `indices` and returns a number."
+  [shape f] (recursive-compute-tensor shape f []))
+
+(s/fdef compute-tensor
+        :args (s/cat :shape ::shape :f (s/fspec :args (s/cat :indices ::indices) :ret ::number))
+        :ret ::tensor)
+
+(defn constant-tensor
+  "Constructs a new tensor of `number`'s (or zeros (doubles)) with the given `shape`."
+  ([shape] (constant-tensor shape 0.0))
+  ([shape number]
+   (let [c (dec (count shape))
+         n (vec (repeat (get shape c) number))]
+     (loop [dim (dec c), t n]
+       (if (neg? dim)
+         t
+         (recur (dec dim) (vec (repeat (get shape dim) t))))))))
+
+(s/fdef constant-tensor
+        :args (s/cat :shape ::shape :number (s/? ::number))
+        :ret ::tensor)
+
 ;;;TENSOR INFO
 (defn dimensionality
   "Returns the dimensionality of an tensor.
@@ -237,6 +270,34 @@
 (s/fdef dimensionality
         :args (s/cat :tensor ::tensor)
         :ret ::m/int-non-)
+
+(defn shape
+  "Returns the shape of the tensor."
+  [tensor]
+  (loop [dim 0, sh [], remain tensor]
+    (if (sequential? remain)
+      (let [r (first remain)]
+        (recur (inc dim) (conj sh (count remain)) r))
+      sh)))
+
+(s/fdef shape
+        :args (s/cat :tensor ::tensor)
+        :ret ::shape)
+
+(defn every-kv?
+  "Returns true if (pred indices number) is logical true for every element in tensor, else false."
+  [pred tensor] (every? true? (flatten (compute-tensor shape #(pred % (get-in tensor %))))))
+
+(s/fdef every-kv?
+        :args (s/cat :pred (s/fspec :args (s/cat :indices ::indices :number ::number) :ret boolean?))
+        :ret boolean?)
+
+(defn some-kv
+  "Returns the first logical true value of (pred index x) for any x in coll, else nil."
+  [pred coll]
+  (loop [idx 0, s coll]
+    (when (seq s)
+      (or (pred idx (first s)) (recur (inc idx) (next s))))))
 
 ;;;TENSOR MANIPULATION
 (defn transpose
@@ -292,7 +353,7 @@
   ([tensor] (emap * tensor))
   ([tensor & more] (apply emap * tensor more)))
 
-(s/fdef add
+(s/fdef multiply
         :args (s/or :zero (s/cat)
                     :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
         :ret (s/nilable ::tensor))
@@ -371,6 +432,30 @@
         :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
         :ret ::tensor)
 
+;;;TENSOR NUMERICAL STABILITY
+(defn roughly?
+  "Returns true if every element compared across two tensors are within `accu` of each other."
+  [tensor1 tensor2 accu]
+  (not-any? (emap #(not (roughly? %1 %2 accu)) tensor1 tensor2)))
+
+(s/fdef roughly?
+        :args (s/cat :tensor1 ::tensor :tensor2 ::tensor :accu ::accu)
+        :ret boolean?)
+
+(defn roughly-distinct
+  "Returns a tensor with later duplicate top-level rows (or elements) removed"
+  [tensor accu]
+  (if (number? tensor)
+    tensor
+    (loop [[h & t] tensor, seen []]
+      (cond (not h) seen
+            (some #(roughly? h % accu) seen) (recur t seen)
+            :else (recur t (conj seen h))))))
+
+(s/fdef roughly-distinct
+        :args (s/cat :tensor ::tensor :accu ::accu)
+        :ret ::tensor)
+
 ;;;VECTOR TYPES
 (defn numbers?
   "Returns true if the parameter is a collection of numbers (i.e., dimensionality is 1 and contains numbers only)."
@@ -398,12 +483,12 @@
         :ret (s/nilable ::vector))
 
 (defn constant-vector
-  "Constructs a new vector of `value`'s (or zeros (doubles)) with the given `size`."
+  "Constructs a new vector of `number`'s (or zeros (doubles)) with the given `size`."
   ([size] (constant-vector size 0.0))
-  ([size value] (vec (repeat size value))))
+  ([size number] (vec (repeat size number))))
 
 (s/fdef constant-vector
-        :args (s/cat :size ::size :value (s/? ::number?))
+        :args (s/cat :size ::size :number (s/? ::number?))
         :ret ::vector)
 
 (defn compute-vector
@@ -433,8 +518,19 @@
         :args (s/cat :sparse ::sparse-vector :v ::vector)
         :ret ::vector)
 
+(defn flatten-matrix-by-column
+  "Returns a vector that contains the elements of the matrix flattened by column."
+  [m]
+  (let [nr (row-count m)
+        nc (column-count m)]
+    (vec (for [c (range nc), r (range nr)] (get-in m [r c])))))
+
+(s/fdef flatten-matrix-by-column
+        :args (s/cat :m ::matrix)
+        :ret ::vector)
+
 (defn symmetric-matrix->vector
-  "Returns a vector that contains the upper (defualt) or lower half of the matrix.
+  "Returns a vector that contains the upper (default) or lower half of the matrix.
   `m` doesn't have to be symmetric.
   Options: `::by-row?` (default: true).
   Set to false to get lower triangular values instead of upper."
@@ -465,6 +561,12 @@
 (s/fdef symmetric-matrix-with-unit-diagonal->vector
         :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::by-row?])))
         :ret ::vector)
+
+;;;VECTOR INFO
+(defn filter-kv
+  "Returns a vector of the items in coll for which (pred item) returns true.
+  pred must be free of side-effects."
+  [pred v] (persistent! (reduce-kv #(if (pred %2 %3) (conj! % %3) %) (transient []) v)))
 
 ;;;VECTOR MANIPULATION
 (defn insertv
@@ -630,6 +732,14 @@
         :args (s/cat :m ::matrix)
         :ret boolean?)
 
+(defn symmetric-matrix?
+  "Returns true if a symmetric matrix."
+  [m] (symmetric? m))
+
+(s/fdef symmetric-matrix?
+        :args (s/cat :m ::matrix)
+        :ret boolean?)
+
 (defn symmetric-matrix-with-unit-diagonal?
   "Returns true if a symmetric matrix with a unit diagonal."
   [m] (and (matrix-with-unit-diagonal? m) (symmetric? m)))
@@ -697,7 +807,7 @@
 
 (defn compute-matrix
   "`f` takes a `row` and `column` and returns a number."
-  [rows columns f] (mapv (fn [r] (mapv (fn [c] (f r c)) (range 0 columns))) (range 0 rows)))
+  [rows columns f] (mapv (fn [r] (mapv (fn [c] (f r c)) (range columns))) (range rows)))
 
 (s/fdef compute-matrix
         :args (s/cat :rows ::rows :columns ::columns
@@ -1373,31 +1483,6 @@ The inner-product of two vectors will be scalar."
                             g val (first s1) (first s2) (first s3)) (rest s1)
                   (rest s2) (rest s3))))))))
 
-(defn every-kv?
-  "Returns true if (pred index e) is logical true for every element in coll, else false."
-  [pred coll]
-  (loop [c 0, s coll]
-    (cond (nil? (seq s)) true
-          (pred c (first s)) (recur (inc c) (rest s))
-          :else false)))
-
-(defn eevery?
-  "Returns true if (pred row col e) is logical true for every element in m, else false."
-  [pred m]
-  {:pre [(have? matrix? m)]}
-  (let [nr (row-count m)]
-    (loop [c 0, s m]
-      (cond (>= c nr) true
-            (every-kv? #(pred c % %2) (first s)) (recur (inc c) (rest s))
-            :else false))))
-
-(defn some-kv
-  "Returns the first logical true value of (pred index x) for any x in coll, else nil."
-  [pred coll]
-  (loop [idx 0, s coll]
-    (when (seq s)
-      (or (pred idx (first s)) (recur (inc idx) (next s))))))
-
 (defn esome
   "Returns the first logical true value of (pred row col e) for any e in matrix, else nil.
   Options: `::by-row?` (default: true)."
@@ -1416,59 +1501,29 @@ The inner-product of two vectors will be scalar."
                      :args (s/? (s/keys :opt [::by-row?])))
         :ret (s/nilable ::m/number))
 
-;;;MATRIX FILTERS
-(defn filter-kv
-  "Returns a vector of the items in coll for which (pred item) returns true. pred must be free of side-effects."
-  [pred coll] (persistent! (reduce-kv #(if (pred %2 %3) (conj! % %3) %) (transient []) (vec coll))))
-
-(defn efilter
-  "Returns a sequence of filtered values.  pred takes an element"
-  [m pred & {:keys [byrow?] :or {byrow? true}}]
-  {:pre [(have? matrix? m)]}
-  (let [mt (if byrow? m (transpose m))] (filter pred (flatten mt))))
-
-(defn efilter-kv
-  "Returns a sequence of filtered values. pred takes two indexes and an element"
-  [m pred & {:keys [byrow?] :or {byrow? true}}]
-  {:pre [(have? matrix? m)]}
-  (ereduce-kv #(if (pred %2 %3 %4) (conj % %4) %) [] m byrow?))
-
-(defn sparse-efilter
-  "Returns a vector of [row column value]. pred takes an element"
+;;;SPARSE
+(defn sparse-efilter     ;;these two sparse filters are how to create 'sparse' from matrix, default pred should be not= 0
+  "Returns a vector of [row column value].
+  pred takes an element"
   [m pred & {:keys [byrow?] :or {byrow? true}}]
   {:pre [(have? matrix? m)]}
   (ereduce-kv #(if (pred %4) (conj % [%2 %3 %4]) %) [] m byrow?))
 
 (defn sparse-symmetric-efilter
   "Returns a vector of [row column value].
-pred takes an element and will be evaluated only for upper-right or lower-left
-   triangle of m."
+pred takes an element and will be evaluated only for upper-right or lower-left triangle of m."
   [m pred & {:keys [byrow?] :or {byrow? true}}]
   {:pre [(have? matrix? m)]}
   (let [f (if byrow? <= >=)]
     (ereduce-kv #(if (and (f %2 %3) (pred %4)) (conj % [%2 %3 %4]) %)
                 [] m byrow?)))
 
-(defn filter-by-row
-  "Returns a matrix.
-  'pred' takes a row"
-  [m pred]
-  {:pre [(have? matrix? m)]}
-  (filter pred m))
-
 (defn sparse-filter-by-row
   "Returns a vector of [row row-value].
-  'pred' takes a row"
+  'pred' takes a row."
   [m pred]
   {:pre [(have? matrix? m)]}
   (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] m))
-
-(defn filter-by-column
-  "Returns a matrix.
-  'pred' takes a column"
-  [m pred]
-  {:pre [(have? matrix? m)]}
-  (transpose (filter pred (transpose m))))
 
 (defn sparse-filter-by-column
   "Returns a vector of [column column-value].
@@ -1476,6 +1531,23 @@ pred takes an element and will be evaluated only for upper-right or lower-left
   [m pred]
   {:pre [(have? matrix? m)]}
   (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] (transpose m)))
+
+;;;MATRIX FILTERS
+(defn filter-by-row
+  "Returns a matrix.
+  'pred' takes a row."
+  [m pred] (filter pred m))
+
+(s/fdef filter-by-row
+        :args (s/cat :m ::matrix :pred (s/fspec :args (s/cat :row ::row) :ret boolean?))
+        :ret ::matrix)
+
+(defn filter-by-column
+  "Returns a matrix.
+  'pred' takes a column"
+  [m pred]
+  {:pre [(have? matrix? m)]}
+  (transpose (filter pred (transpose m))))
 
 (defn filter-symmetrically
   "Returns a matrix.
@@ -1487,29 +1559,6 @@ pred takes an element and will be evaluated only for upper-right or lower-left
     (get-slices-as-matrix m {::row-indices keep-set, ::column-indices keep-set})))
 
 ;;;MATRIX NUMERICAL STABILITY
-(defn roughly?                                              ;expand this to work for tensors
-  "Returns true if every element compared across two matrices are within `accu` of each other."
-  [m1 m2 accu]
-  (cond (and (matrix? m1)
-             (matrix? m2)) (every? identity
-                                   (map #(roughly? %1 %2 accu)
-                                        (to-tensor m1)
-                                        (to-tensor m2)))
-        (and (vector? m1)
-             (vector? m2)) (every? identity
-                                   (map #(m/roughly? %1 %2 accu) m1 m2))
-        (and (number? m1) (number? m2)) (m/roughly? m1 m2 accu)
-        :else false))
-
-(defn roughly-distinct
-  "Returns a matrix with later duplicate rows removed,
-  or a vector with later duplicate elements removed"        ;expand to work for tensors
-  [m ^double accu]
-  (loop [[h & t] m, seen []]
-    (cond (not h) seen
-          (some #(roughly? h % accu) seen) (recur t seen)
-          :else (recur t (conj seen h)))))
-
 (defn- roughly-zero-row-fn [^double accu]
   #(every? (fn [e] (m/roughly? e 0.0 accu)) %))
 
@@ -1858,15 +1907,15 @@ The work per iteration is very slightly less if shift = 0."
 (defn rnd-matrix
   "Returns [m rnd-lazy], where m has random elements"
   [rows ^long columns rnd-lazy]
-   (let [[v s] (rnd-vector (* rows columns) rnd-lazy)]
-     [(partition columns v) s]))
+  (let [[v s] (rnd-vector (* rows columns) rnd-lazy)]
+    [(partition columns v) s]))
 
 (defn rnd-reflection-matrix
   "Returns [m rnd-lazy], where m is a random Householder reflection."
   [size rnd-lazy]
-   (let [v (column-matrix (normalise (take size rnd-lazy)))]
-     [(subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
-      (drop size rnd-lazy)]))
+  (let [v (column-matrix (normalise (take size rnd-lazy)))]
+    [(subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
+     (drop size rnd-lazy)]))
 
 (defn rnd-spectral-matrix
   "Returns [m rnd-lazy], where m is a random matrix with a particular

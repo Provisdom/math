@@ -346,282 +346,417 @@
 
 ;;;BASIC MATH
 (defn next-up
-  "Returns x plus smallest amount to make a change."
-  [^double x] (Math/nextAfter (double x) inf+))
+  "Returns `number` plus smallest amount to make a change."
+  [number] (Math/nextAfter (double number) inf+))
+
+(s/fdef next-up
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn next-down
-  "Returns x minus smallest amount to make a change."
-  [^double x] (Math/nextAfter (double x) inf-))
+  "Returns `number` minus smallest amount to make a change."
+  [number] (Math/nextAfter (double number) inf-))
+
+(s/fdef next-down
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn div
-  "Returns x1 divided by x2.
-  Or 1 divided by x2.
-  'Divide by zero' will return ex-info.
+  "Returns `number1` divided by `number2`.
+  Or 1 divided by `number2`.
+  Dividing by zero will return NaN by default.
   Optionally, can include alternative return value, 'div-by-zero'."
-  ([x2] (div 1 x2))
-  ([x1 x2] (div x1 x2 "nil"))
-  ([x1 x2 div-by-zero]
-   (if (zero? x2)
-     (cond (nan? x1) nan
-           (zero? x1) (if (= div-by-zero "nil")
-                        (ex-info "divide by zero" {:fn (var div)})
-                        div-by-zero)
-           (pos? x1) inf+
+  ([number2] (div 1 number2))
+  ([number1 number2] (div number1 number2 nan))
+  ([number1 number2 div-by-zero]
+   (if (zero? number2)
+     (cond (nan? number1) nan
+           (zero? number1) div-by-zero
+           (pos? number1) inf+
            :else inf-)
-     (/ x1 x2))))
+     (/ number1 number2))))
+
+(s/fdef div
+        :args (s/or :one (s/cat :number2 ::number)
+                    :two-three (s/cat :number1 ::number :number2 ::number :div-by-zero (s/? ::number)))
+        :ret ::number)
 
 (defn one-
-  "Returns (1 - x)"
-  ([x] (inc (- x)))
-  ([x & y] (inc (- (+ x (apply + y))))))
+  "Returns (1 - `number`)"
+  ([number] (inc (- number)))
+  ([number & numbers] (inc (- (+ number (apply + numbers))))))
+
+(s/fdef one-
+        :args (s/cat :number ::number :numbers (s/* ::number))
+        :ret ::number)
 
 (defn sq
-  "Returns square of x"
-  [x] (* x x))
+  "Returns square of `number`"
+  [number] (* (double number) number))
+
+(s/fdef sq
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
+
+(defn sq'
+  "Returns square of `number` as a long if possible"
+  [number] (maybe-long-able (* (double number) number)))
+
+(s/fdef sq'
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
 
 (defn cube
-  "Returns cube of x"
-  [x] (* x x x))
+  "Returns cube of `number`"
+  [number] (* (double number) number number))
+
+(s/fdef cube
+        :args (s/cat :number ::number)
+        :ret ::number)
+
+(defn cube'
+  "Returns cube of `number` as a long if possible."
+  [number] (maybe-long-able (* (double number) number number)))
+
+(s/fdef cube'
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn sgn
-  "Returns 1 if x positive, 0 if 0, -1 if negative"
-  [x] (cond (zero? x) 0, (neg? x) -1, (pos? x) 1, :else nan))
+  "Returns 1 if `number` positive, 0 if 0, -1 if negative"
+  [number] (cond (zero? number) 0, (neg? number) -1, (pos? number) 1, :else nan))
+
+(s/fdef sgn
+        :args (s/cat :number ::number)
+        :ret (s/or :nan ::nan :ret #{-1 0 1}))
 
 (defn exp
-  "Returns e^x"
-  ^double [^double x] (Math/exp x))
+  "Returns e^`number`"
+  [number] (Math/exp (double number)))
+
+(s/fdef exp
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
 
 (defn log
-  "Returns log x"
-  ^double [^double x] (Math/log x))
+  "Returns log `number`"
+  [number] (Math/log (double number)))
+
+(s/fdef log
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn log2
-  "Returns base 2 log of x"
-  ^double [^double x] (/ (Math/log x) log-two))
+  "Returns base 2 log of `number`"
+  [number] (/ (Math/log (double number)) log-two))
+
+(s/fdef log2
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn log10
-  "Returns base 10 log of x"
-  ^double [^double x] (Math/log10 x))
+  "Returns base 10 log of `number`"
+  [number] (Math/log10 (double number)))
+
+(s/fdef log10
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn logn
-  "Returns base n log of x"
-  ^double [^double x ^double n] (/ (Math/log x) (Math/log n)))
+  "Returns `base` log of `number`"
+  [number base] (div (Math/log (double number)) (Math/log (double base))))
+
+(s/fdef logn
+        :args (s/cat :number ::number :base ::number)
+        :ret ::number)
 
 (defn pow
-  "Returns x1 to the power of x2"
-  ^double [^double x1 ^double x2]
-  (Math/pow x1 x2))
+  "Returns `number1` to the power of `number2`"
+  [number1 number2] (Math/pow (double number1) (double number2)))
+
+(s/fdef pow
+        :args (s/cat :number1 ::number :number2 ::number)
+        :ret ::number)
 
 (defn abs
-  "Returns absolute value of x"
-  ^double [^double x] (Math/abs x))
+  "Returns absolute value of `number`"
+  [number] (Math/abs (double number)))
+
+(s/fdef abs
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
 
 (defn abs'
-  "Returns absolute value of x as a long if possible"
-  [^double x] (maybe-long-able (Math/abs x)))
+  "Returns absolute value of `number` as a long if possible"
+  [number] (maybe-long-able (Math/abs (double number))))
+
+(s/fdef abs'
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
 
 (defn sqrt
-  "Returns square root of x"
-  ^double [^double x] (Math/sqrt x))
+  "Returns square root of `number`"
+  [number] (Math/sqrt (double number)))
+
+(s/fdef sqrt
+        :args (s/cat :number ::number)
+        :ret ::nan-or-non-)
 
 (defn cbrt
-  "Returns cube root of x"
-  ^double [^double x] (* (sgn x) (pow (abs x) (/ 3.0))))
+  "Returns cube root of `number`"
+  [number] (* (sgn number) (pow (abs number) (/ 3.0))))
+
+(s/fdef cbrt
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 ;;;TRIGONOMETRY
 (defn sin
-  "Returns sine of x"
-  ^double [^double x] (Math/sin x))
+  "Returns sine of `number`"
+  [number] (Math/sin (double number)))
+
+(s/fdef sin
+        :args (s/cat :number ::number)
+        :ret ::nan-or-corr)
 
 (defn asin
-  "Returns inverse sine of x"
-  ^double [^double x] (Math/asin x))
+  "Returns inverse sine of `number`"
+  [number] (Math/asin (double number)))
+
+(s/fdef asin
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn asinh
-  "Returns inverse hyperbolic sine of x"
-  ^double [^double x] (-> x sq inc sqrt (+ x) log))
+  "Returns inverse hyperbolic sine of `number`"
+  [number] (-> (double number) sq inc sqrt (+ number) log))
+
+(s/fdef asinh
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn cos
-  "Returns cosine of x"
-  ^double [^double x] (Math/cos x))
+  "Returns cosine of `number`"
+  [number] (Math/cos (double number)))
+
+(s/fdef cos
+        :args (s/cat :number ::number)
+        :ret ::nan-or-corr)
 
 (defn acos
-  "Returns inverse cosine of x"
-  ^double [^double x] (Math/acos x))
+  "Returns inverse cosine of `number`"
+  [number] (Math/acos (double number)))
+
+(s/fdef acos
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn acosh
-  "Returns inverse hyperbolic cosine of x"
-  ^double [^double x] (if-not (>= x 1) nan (-> x sq dec sqrt (+ x) log)))
+  "Returns inverse hyperbolic cosine of `number`"
+  [number] (if-not (>= number 1) nan (-> (double number) sq dec sqrt (+ number) log)))
+
+(s/fdef acosh
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn tan
-  "Returns tangent of x"
-  ^double [^double x] (Math/tan x))
+  "Returns tangent of `number`"
+  [number] (Math/tan (double number)))
+
+(s/fdef tan
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn atan
-  "Returns inverse tangent of x"
-  ^double [^double x] (Math/atan x))
+  "Returns inverse tangent of `number`"
+  [number] (Math/atan (double number)))
+
+(s/fdef atan
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn atan2
   "Returns inverse tangent with two arguments"
-  ^double [^double x1 ^double x2] (Math/atan2 x1 x2))
+  [number1 number2] (Math/atan2 (double number1) (double number2)))
+
+(s/fdef atan2
+        :args (s/cat :number1 ::number :number2 ::number)
+        :ret ::number)
 
 (defn atanh
   "Returns inverse hyperbolic tangent"
-  ^double [x]
-  (cond (not (corr? x)) nan
-        (one? x) inf+
-        (== x -1) inf-
-        :else (-> x inc log (* -0.5))))
+  [number]
+  (cond (not (corr? number)) nan
+        (one? number) inf+
+        (== number -1) inf-
+        :else (-> (double number) inc log (* -0.5))))
+
+(s/fdef atanh
+        :args (s/cat :number ::number)
+        :ret ::number)
 
 (defn hypot
-  "Returns hypotenuse with sides x1 and x2."
-  ^double [^double x1 ^double x2] (Math/hypot x1 x2))
+  "Returns hypotenuse with sides `number1` and `number2`."
+  [number1 number2] (Math/hypot (double number1) (double number2)))
+
+(s/fdef hypot
+        :args (s/cat :number1 ::number :number2 ::number)
+        :ret ::number)
 
 ;;;ROUNDING
+(s/def ::accu ::non-)
+
 (defn round
-  "Returns a long if possible.  Otherwise, returns x.
-    type:
+  "Returns a long if possible.
+  Otherwise, returns `number`.
+    `type`:
       :up (default)
       :down
       :away (from zero)
       :toward (zero)"
-  [x type]
-  (if-not (long-range? x)
-    x
-    (let [x (case type
-              :down (* -1 (Math/round (- ^double x)))
-              :away (* (sgn x) (Math/round (abs x)))
-              :toward (* -1 (sgn x) (Math/round (- (abs x))))
-              (Math/round ^double x))]
-      (long x))))
+  [number type]
+  (if-not (long-range? number)
+    number
+    (let [number (double number)
+          number (case type
+                   :down (* -1 (Math/round (- number)))
+                   :away (* (sgn number) (Math/round ^double (abs number)))
+                   :toward (* -1 (sgn number) (Math/round ^double (- (abs number))))
+                   (Math/round number))]
+      (long number))))
 
 (s/fdef round
-        :args (s/cat :x ::number :t #{:up :down :away :toward})
+        :args (s/cat :number ::number :t #{:up :down :away :toward})
         :ret ::number)
 
 (defn floor
-  "Rounds down.  Returns a long if possible, otherwise a double."
-  [x] (maybe-long-range (Math/floor x)))
+  "Rounds down.
+  Returns a long if possible, otherwise a double."
+  [number] (maybe-long-range (Math/floor number)))
 
 (s/fdef floor
-        :args (s/cat :x ::number)
+        :args (s/cat :number ::number)
         :ret ::number)
 
 (defn ceil
-  "Rounds up.  Returns a long if possible, otherwise a double."
-  [x] (maybe-long-range (Math/ceil x)))
+  "Rounds up.
+  Returns a long if possible, otherwise a double."
+  [number] (maybe-long-range (Math/ceil number)))
 
 (s/fdef ceil
-        :args (s/cat :x ::number)
+        :args (s/cat :number ::number)
         :ret ::number)
 
 (defn roughly-floor
-  "Rounds down unless within accu, then rounds up. Returns a long if possible, otherwise a double."
-  [x accu] (floor (+ x accu)))
+  "Rounds down unless within `accu`, then rounds up.
+  Returns a long if possible, otherwise a double."
+  [number accu] (floor (+ number accu)))
 
 (s/fdef roughly-floor
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::number)
 
 (defn roughly-ceil
-  "Rounds up unless within accu, then rounds down. Returns a long if possible, otherwise a double."
-  [x accu] (ceil (- x accu)))
+  "Rounds up unless within `accu`, then rounds down.
+  Returns a long if possible, otherwise a double."
+  [number accu] (ceil (- number accu)))
 
 (s/fdef roughly-ceil
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::number)
 
 (defn roughly?
-  "Returns true if x1 and x2 are within accu of each other, or within double accuracy."
-  [x1 x2 accu]
-  (cond (or (nan? accu) (nan? x1) (nan? x2)) false
+  "Returns true if `number1` and `number2` are within `accu` of each other, or within double accuracy."
+  [number1 number2 accu]
+  (cond (or (nan? number1) (nan? number2)) false
         (inf+? accu) true
-        (or (inf? x1) (inf? x2)) false
-        :else (<= (abs (- x1 x2)) accu)))
+        (or (inf? number1) (inf? number2)) false
+        :else (<= (abs (- number1 number2)) accu)))
 
 (s/fdef roughly?
-        :args (s/cat :x1 ::number :x2 ::number :accu ::nan-or-non-)
+        :args (s/cat :number1 ::number :number2 ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-round?
-  "Returns true if x is equal to a whole number or within accu of a whole number, or within double accuracy."
-  [x accu]
-  (cond (or (nan? accu) (nan? x)) false
+  "Returns true if `number` is equal to a whole number or within `accu` of a whole number, or within double accuracy."
+  [number accu]
+  (cond (nan? number) false
         (inf+? accu) true
-        (inf? x) false
-        :else (<= (abs (- (round x :up) x)) accu)))
+        (inf? number) false
+        :else (<= (abs (- (round number :up) number)) accu)))
 
 (s/fdef roughly-round?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-round-non-?
-  "Returns true if x is non- and roughly a whole number, or within double accuracy."
-  [x accu] (and (non-? x) (roughly-round? x accu)))
+  "Returns true if `number` is non- and roughly a whole number, or within double accuracy."
+  [number accu] (and (non-? number) (roughly-round? number accu)))
 
 (s/fdef roughly-round-non-?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-round-non+?
-  "Returns true if x is non+ and roughly a whole number, or within double accuracy."
-  [x accu] (and (non+? x) (roughly-round? x accu)))
+  "Returns true if `number` is non+ and roughly a whole number, or within double accuracy."
+  [number accu] (and (non+? number) (roughly-round? number accu)))
 
 (s/fdef roughly-round-non+?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-round+?
-  "Returns true if x is positive and roughly a whole number, or within double accuracy."
-  [x accu] (and (pos? x) (roughly-round? x accu)))
+  "Returns true if `number` is positive and roughly a whole number, or within double accuracy."
+  [number accu] (and (pos? number) (roughly-round? number accu)))
 
 (s/fdef roughly-round+?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-round-?
-  "Returns true if x is negative and roughly a whole number, or within double accuracy."
-  [x accu] (and (neg? x) (roughly-round? x accu)))
+  "Returns true if `number` is negative and roughly a whole number, or within double accuracy."
+  [number accu] (and (neg? number) (roughly-round? number accu)))
 
 (s/fdef roughly-round-?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-non-?
-  "Returns true if x is positive or within accu to zero."
-  [x accu] (>= x (- accu)))
+  "Returns true if `number` is positive or within `accu` to zero."
+  [number accu] (>= number (- accu)))
 
 (s/fdef roughly-non-?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-non+?
-  "Returns true if x is negative or within accu to zero."
-  [x accu] (<= x accu))
+  "Returns true if `number` is negative or within `accu` to zero."
+  [number accu] (<= number accu))
 
 (s/fdef roughly-non+?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-prob?
-  "Returns true if x is a prob or within accu of a prob."
-  [x accu] (and (>= x (- accu)) (<= x (inc accu))))
+  "Returns true if `number` is a prob or within `accu` of a prob."
+  [number accu] (and (>= number (- accu)) (<= number (inc accu))))
 
 (s/fdef roughly-prob?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 (defn roughly-corr?
-  "Returns true if x is a corr or within accu of a corr."
-  [x accu] (and (>= x (dec (- accu))) (<= x (inc accu))))
+  "Returns true if `number` is a corr or within `accu` of a corr."
+  [number accu] (and (>= number (dec (- accu))) (<= number (inc accu))))
 
 (s/fdef roughly-corr?
-        :args (s/cat :x ::number :accu ::non-)
+        :args (s/cat :number ::number :accu ::accu)
         :ret ::boolean)
 
 ;;;QUOTIENTS
 (defn quot'
-  "Quotient of dividing numerator by denominator. Returns a long if possible."
+  "Quotient of dividing `numerator` by `divisor`.
+  Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
@@ -635,9 +770,10 @@
         :ret ::number)
 
 (defn mod'
-  "Modulus of numerator and divisor. Truncates toward negative infinity.
-  Has sign of divisor unless numerical rounding error with 'quot'.
-  Will stay consistent with 'quot'.
+  "Modulus of `numerator` and `divisor`.
+  Truncates toward negative infinity.
+  Has sign of `divisor` unless numerical rounding error with [[quot']].
+  Will stay consistent with [[quot']].
   Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
@@ -652,9 +788,9 @@
         :ret ::number)
 
 (defn rem'
-  "Remainder of dividing numerator by denominator.
-  Has sign of numerator unless numerical rounding error with 'quot'.
-  Will stay consistent with 'quot'.
+  "Remainder of dividing `numerator` by `divisor`.
+  Has sign of `numerator` unless numerical rounding error with [[quot']].
+  Will stay consistent with [[quot']].
   Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
@@ -670,10 +806,10 @@
 
 (defn quot-and-rem
   "Returns a tuple of longs if possible.
-  Quotient of dividing numerator by denominator.
-  Remainder of dividing numerator by denominator.
-  Has sign of numerator unless numerical rounding error with 'quot'.
-  Will stay consistent with 'quot'."
+  Quotient of dividing `numerator` by `divisor`.
+  Remainder of dividing `numerator` by `divisor`.
+  Has sign of `numerator` unless numerical rounding error with [[quot']].
+  Will stay consistent with [[quot']]."
   [numerator divisor] [(quot' numerator divisor) (rem' numerator divisor)])
 
 (s/fdef quot-and-rem
@@ -682,11 +818,11 @@
 
 (defn quot-and-mod
   "Returns a tuple of longs if possible.
-  Quotient of dividing numerator by denominator.
-  Modulus of numerator and divisor.
+  Quotient of dividing `numerator` by `divisor`.
+  Modulus of `numerator` and `divisor`.
   Truncates toward negative infinity.
-  Has sign of divisor unless numerical rounding error with 'quot'.
-  Will stay consistent with 'quot'."
+  Has sign of `divisor` unless numerical rounding error with [[quot']].
+  Will stay consistent with [[quot']]."
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
@@ -699,7 +835,8 @@
 
 ;;;ANGLES
 (defn reduce-angle
-  "Returns an angle between 0 and 360.  Returns a long if possible."
+  "Returns an `angle` between 0 and 360.
+  Returns a long if possible."
   [angle]
   (let [m (mod' angle 360)]
     (if (or (nan? m) (inf? m) (and (pos? m) (< m 360.0)))
@@ -717,7 +854,8 @@
                    :inf ::inf))
 
 (defn reduce-radians
-  "Returns radians between 0 and 2 * PI.  Returns a long if possible."
+  "Returns `radians` between 0 and 2 * PI.
+  Returns a long if possible."
   [radians]
   (let [m (mod' radians two-pi)]
     (if (or (nan? m) (inf? m) (and (pos? m) (< m two-pi)))
@@ -735,7 +873,8 @@
                    :inf ::inf))
 
 (defn radians->angle
-  "Returns the reduced angle from radians, where angles = 180 * radians / PI. Returns a long if possible."
+  "Returns the reduced angle from `radians`, where angles = 180 * `radians` / PI.
+  Returns a long if possible."
   [radians] (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
 (s/fdef radians->angle
@@ -746,7 +885,8 @@
                    :inf ::inf))
 
 (defn angle->radians
-  "Returns the reduced radians from the angle, where radians = angle * PI / 180. Returns a long if possible."
+  "Returns the reduced radians from the `angle`, where radians = `angle` * PI / 180.
+  Returns a long if possible."
   [angle] (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
 
 (s/fdef angle->radians
