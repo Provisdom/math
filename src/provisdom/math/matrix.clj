@@ -29,11 +29,7 @@
 (s/def ::by-row? boolean?)
 (s/def ::upper? boolean?)
 (s/def ::number ::m/number)
-(s/def ::accu ::m/non-)
 (s/def ::size ::m/int-non-)
-(s/def ::shape (s/with-gen (s/coll-of ::m/int+) #(gen/vector (gen/large-integer* {:min 1 :max 6}) 0 6)))
-(s/def ::index ::m/int-non-)
-(s/def ::indices (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 6)))
 (s/def ::row-indices (s/or :index ::index :indices ::indices))
 (s/def ::column-indices (s/or :index ::index :indices ::indices))
 (s/def ::exception-row-indices (s/or :index ::index :indices ::indices))
@@ -47,14 +43,12 @@
 (s/def ::numbers (s/with-gen (s/coll-of ::number)
                              #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count 6 :kind vector? :into [])
                                            :l (s/coll-of ::number :min-count 0 :max-count 6 :kind list? :into '())))))
-(s/def ::vector (s/with-gen (s/coll-of ::number :kind vector? :into []) #(gen/vector (s/gen ::number) 0 6)))
 (s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 2 :max-count 2)
                                #(gen/vector (s/gen ::number) 2)))
 (s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 3 :max-count 3)
                                #(gen/vector (s/gen ::number) 3)))
 (s/def ::vector-num (s/with-gen (s/coll-of ::m/num :kind vector? :into []) #(gen/vector (s/gen ::m/num) 0 6)))
 (s/def ::vector-finite (s/with-gen (s/coll-of ::m/finite :kind vector? :into []) #(gen/vector (s/gen ::m/finite) 0 6)))
-(s/def ::matrix (s/with-gen matrix? #(gen/vector (s/gen ::vector) 1 6)))
 (s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
                                 #(gen/vector (s/gen ::vector-num) 1 6)))
 (s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
@@ -63,15 +57,6 @@
   (s/with-gen square-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max 6})
                          (fn [i] (gen/vector (gen/vector i) i)))))
-(s/def ::matrix3 (s/with-gen (s/coll-of ::matrix) #(gen/vector (s/gen ::matrix) 1 6)))
-(s/def ::matrix4 (s/with-gen (s/coll-of ::matrix3) #(gen/vector (s/gen ::matrix3) 1 6)))
-(s/def ::matrix5+ (s/with-gen (s/coll-of (s/coll-of (s/coll-of (s/coll-of (s/coll-of some?)))))
-                              #(gen/vector (s/gen ::matrix4) 1 6)))
-(s/def ::matrix4+ (s/or :four-m ::matrix4 :5+m ::matrix5+))
-(s/def ::matrix3+ (s/or :three-m ::matrix3 :4+m ::matrix4+))
-(s/def ::matrix2+ (s/or :m ::matrix :3+m ::matrix3+))
-(s/def ::matrix1+ (s/or :v ::vector :2+m ::matrix2+))
-(s/def ::tensor (s/or :value ::number :1+m ::matrix1+))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix-num))
 (s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :m ::matrix-finite))
@@ -202,260 +187,6 @@
   "`f` takes an index and returns a number."
   [size f] (coerce :apache-commons (compute-vector size f)))
 
-;;;TENSOR TYPES
-(defn symmetric?
-  "Returns true if a symmetric tensor."
-  [tensor] (= (transpose tensor) tensor))
-
-(s/fdef symmetric?
-        :args (s/cat :t ::tensor)
-        :ret boolean?)
-
-;;;TENSOR CONSTRUCTOR
-(defn to-tensor
-  "Tries to convert to tensor, otherwise returns nil."
-  [x]
-  (let [ret (cond (sequential? x) (let [t (map to-tensor x)] (when (every? some? t) (vec t)))
-                  (number? x) x
-                  :else nil)]
-    (cond (nil? ret) ret
-          (= (dimensionality ret) 2) (when (every? #(= (count %) (count (first ret))) ret) ret)
-          :else ret)))
-
-(s/fdef to-tensor
-        :args (s/cat :x any?)
-        :ret (s/nilable ::tensor))
-
-(defn- recursive-compute-tensor
-  "Recursively computes tensor for [[compute-tensor]]."
-  [shape f sh]
-  (let [c (count shape)
-        dim (count sh)]
-    (if (= dim c)
-      (f sh)
-      (mapv #(recursive-compute-tensor shape f (conj sh %)) (range (get shape dim))))))
-
-(defn compute-tensor
-  "`f` takes a vector of `indices` and returns a number."
-  [shape f] (recursive-compute-tensor shape f []))
-
-(s/fdef compute-tensor
-        :args (s/cat :shape ::shape :f (s/fspec :args (s/cat :indices ::indices) :ret ::number))
-        :ret ::tensor)
-
-(defn constant-tensor
-  "Constructs a new tensor of `number`'s (or zeros (doubles)) with the given `shape`."
-  ([shape] (constant-tensor shape 0.0))
-  ([shape number]
-   (let [c (dec (count shape))
-         n (vec (repeat (get shape c) number))]
-     (loop [dim (dec c), t n]
-       (if (neg? dim)
-         t
-         (recur (dec dim) (vec (repeat (get shape dim) t))))))))
-
-(s/fdef constant-tensor
-        :args (s/cat :shape ::shape :number (s/? ::number))
-        :ret ::tensor)
-
-;;;TENSOR INFO
-(defn dimensionality
-  "Returns the dimensionality of an tensor.
-  The dimensionality is equal to the number of dimensions in the tensor's shape."
-  [tensor]
-  (if (number? tensor)
-    0
-    (inc (dimensionality (first tensor)))))
-
-(s/fdef dimensionality
-        :args (s/cat :tensor ::tensor)
-        :ret ::m/int-non-)
-
-(defn shape
-  "Returns the shape of the tensor."
-  [tensor]
-  (loop [dim 0, sh [], remain tensor]
-    (if (sequential? remain)
-      (let [r (first remain)]
-        (recur (inc dim) (conj sh (count remain)) r))
-      sh)))
-
-(s/fdef shape
-        :args (s/cat :tensor ::tensor)
-        :ret ::shape)
-
-(defn every-kv?
-  "Returns true if (pred indices number) is logical true for every element in tensor, else false."
-  [pred tensor] (every? true? (flatten (compute-tensor shape #(pred % (get-in tensor %))))))
-
-(s/fdef every-kv?
-        :args (s/cat :pred (s/fspec :args (s/cat :indices ::indices :number ::number) :ret boolean?))
-        :ret boolean?)
-
-(defn some-kv
-  "Returns the first logical true value of (pred index x) for any x in coll, else nil."
-  [pred coll]
-  (loop [idx 0, s coll]
-    (when (seq s)
-      (or (pred idx (first s)) (recur (inc idx) (next s))))))
-
-;;;TENSOR MANIPULATION
-(defn transpose
-  "Transposes a tensor, returning a new tensor.
-  For matrices, rows and columns are swapped.
-  More generally, the dimension indices are reversed.
-  Note that vectors and scalars will be returned unchanged."
-  [t]
-  (let [dim (dimensionality t)]
-    (cond (<= dim 1) t
-          (= dim 2) (apply mapv vector t)
-          :else (mapv transpose t))))                       ;;this is wrong for dim > 2 -- come back to this
-
-(s/fdef transpose
-        :args (s/cat :t ::tensor)
-        :ret (s/nilable ::tensor))
-
-(defn emap
-  "Element-wise mapping over all elements of one or more tensors."
-  ([f tensor] (mxc/emap f tensor))
-  ([f tensor & more] (apply mxc/emap f tensor more)))       ;;use 'walking' library? -- return nil if can't emap
-
-(s/fdef emap
-        :args (s/cat :f (s/fspec :args (s/cat))             ;finish this line
-                     :tensor ::tensor
-                     :more (s/? (s/keys* :tensors ::tensor)))
-        :ret (s/nilable ::tensor))
-
-;;;TENSOR MATH
-(defn add
-  "Performs element-wise addition for one or more tensors."
-  ([] 0.0)
-  ([tensor] (emap + tensor))
-  ([tensor & more] (apply emap + tensor more)))
-
-(s/fdef add
-        :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
-        :ret (s/nilable ::tensor))
-
-(defn subtract
-  "Performs element-wise subtraction for one or more tensors."
-  ([tensor] (emap - tensor))
-  ([tensor & more] (apply emap - tensor more)))
-
-(s/fdef subtract
-        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
-        :ret (s/nilable ::tensor))
-
-(defn multiply
-  "Performs element-wise multiplication for one or more tensors."
-  ([] 1.0)
-  ([tensor] (emap * tensor))
-  ([tensor & more] (apply emap * tensor more)))
-
-(s/fdef multiply
-        :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
-        :ret (s/nilable ::tensor))
-
-(defn divide
-  "Performs element-wise division for one or more tensors."
-  ([tensor] (emap / tensor))
-  ([tensor & more] (apply emap / tensor more)))
-
-(s/fdef divide
-        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
-        :ret (s/nilable ::tensor))
-
-(defn ecount
-  "Returns the total count of elements."
-  [tensor] (if (number? tensor) 1 (count (flatten tensor))))
-
-(s/fdef ecount
-        :args (s/cat :tensor ::tensor)
-        :ret ::size)
-
-(defn norm1
-  "The sum of the absolute values of the elements."
-  [tensor] (reduce + (map m/abs (flatten tensor))))
-
-(s/fdef norm1
-        :args (s/cat :tensor ::tensor)
-        :ret ::number)
-
-(defn norm2
-  "The square-root of the sum of the squared values of the elements."
-  [tensor] (m/sqrt (reduce + (map m/sq (flatten tensor)))))
-
-(s/fdef norm2
-        :args (s/cat :tensor ::tensor)
-        :ret ::number)
-
-(def ^{:doc "See [[norm2]]"} norm norm2)
-
-(defn normp
-  "The 1/`p' power of the sum of the element values to the power `p`."
-  [tensor p] (m/pow (esum (map #(m/pow (m/abs %) p) (flatten tensor))) (/ p)))
-
-(s/fdef normp
-        :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
-        :ret ::number)
-
-(defn normalise
-  "Returns as length one in norm2."
-  [tensor] (let [n (norm tensor)] (emap #(m/div % n) tensor)))
-
-(s/fdef normalise
-        :args (s/cat :tensor ::tensor)
-        :ret ::tensor)
-
-(defn normalise1
-  "Returns as length one in norm1."
-  [tensor]
-  (let [n1 (norm1 tensor)
-        ser (vec (emap #(m/div % n1) tensor))
-        diff (m/one- (esum ser))]
-    ;;check for slight rounding errors...
-    (if (zero? diff)
-      ser
-      (assoc ser 0 (+ diff (first ser))))))
-
-(s/fdef normalise
-        :args (s/cat :tensor ::tensor)
-        :ret ::tensor)
-
-(defn normalisep
-  "Returns as length one in normp."
-  [tensor p] (let [s (normp tensor p)] (emap #(m/div % s) tensor)))
-
-(s/fdef normp
-        :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
-        :ret ::tensor)
-
-;;;TENSOR NUMERICAL STABILITY
-(defn roughly?
-  "Returns true if every element compared across two tensors are within `accu` of each other."
-  [tensor1 tensor2 accu]
-  (not-any? (emap #(not (roughly? %1 %2 accu)) tensor1 tensor2)))
-
-(s/fdef roughly?
-        :args (s/cat :tensor1 ::tensor :tensor2 ::tensor :accu ::accu)
-        :ret boolean?)
-
-(defn roughly-distinct
-  "Returns a tensor with later duplicate top-level rows (or elements) removed"
-  [tensor accu]
-  (if (number? tensor)
-    tensor
-    (loop [[h & t] tensor, seen []]
-      (cond (not h) seen
-            (some #(roughly? h % accu) seen) (recur t seen)
-            :else (recur t (conj seen h))))))
-
-(s/fdef roughly-distinct
-        :args (s/cat :tensor ::tensor :accu ::accu)
-        :ret ::tensor)
-
 ;;;VECTOR TYPES
 (defn numbers?
   "Returns true if the parameter is a collection of numbers (i.e., dimensionality is 1 and contains numbers only)."
@@ -567,6 +298,18 @@
   "Returns a vector of the items in coll for which (pred item) returns true.
   pred must be free of side-effects."
   [pred v] (persistent! (reduce-kv #(if (pred %2 %3) (conj! % %3) %) (transient []) v)))
+
+(defn some-kv   ;;make a matrix version of this too
+  "Returns the first logical true value of (pred indices number) for any number in `v`, else nil."
+  [pred v]
+  (loop [i 0, s v]
+    (when (seq s)
+      (or (pred i (first s)) (recur (inc i) (next s))))))
+
+(s/fdef some-kv
+        :args (s/cat :pred (s/fspec :args (s/cat :index ::index :number ::number) :ret boolean?)
+                     :v ::vector)
+        :ret ::number)
 
 ;;;VECTOR MANIPULATION
 (defn insertv
@@ -734,7 +477,7 @@
 
 (defn symmetric-matrix?
   "Returns true if a symmetric matrix."
-  [m] (symmetric? m))
+  [m] (= (transpose m) m))
 
 (s/fdef symmetric-matrix?
         :args (s/cat :m ::matrix)
@@ -1178,6 +921,14 @@
         :ret (s/keys :req [::top-left-matrix ::bottom-left-matrix ::top-right-matrix ::bottom-right-matrix]))
 
 ;;;MATRIX MANIPULATION
+(defn transpose
+  "Transposes a matrix by swapping rows and columns, returning a new matrix."
+  [m] (apply mapv vector m))
+
+(s/fdef transpose
+        :args (s/cat :m ::matrix)
+        :ret ::matrix)
+
 (defn assoc-row
   "Sets a row in a matrix using the specified numbers."
   [m row numbers]
