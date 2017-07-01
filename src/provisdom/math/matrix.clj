@@ -213,7 +213,7 @@
         :args (s/cat :x (s/nilable ::tensor))
         :ret (s/nilable ::vector))
 
-(defn constant-vector
+(defn constant-vector  ;;this probably isn't a helpful function
   "Constructs a new vector of `number`'s (or zeros (doubles)) with the given `size`."
   ([size] (constant-vector size 0.0))
   ([size number] (vec (repeat size number))))

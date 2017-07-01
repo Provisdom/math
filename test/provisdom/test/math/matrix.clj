@@ -38,25 +38,6 @@
 (def cl-sym (clatrix se-sym))
 (def ap-sym (apache-commons se-sym))
 
-(facts "matrix implementations"
-       (fact "to nested vectors"
-             (to-tensor se) => ve
-             (to-tensor cl) => ve
-             (to-tensor ve) => ve
-             (to-tensor ap) => ve
-             (to-tensor se1D) => ve1D
-             (to-tensor cl1D) => ve1D
-             (to-tensor ve1D) => ve1D
-             (to-tensor ap1D) => ve1D
-             (to-tensor se-row) => ve-row
-             (to-tensor cl-row) => ve-row
-             (to-tensor ve-row) => ve-row
-             (to-tensor ap-row) => ve-row
-             (to-tensor se-col) => ve-col
-             (to-tensor cl-col) => ve-col
-             (to-tensor ve-col) => ve-col
-             (to-tensor ap-col) => ve-col))
-
 (facts "vector constructors"
        (fact "maybe to vector"
              (maybe-to-vector nil) => nil
@@ -315,20 +296,6 @@
              (matrix-partition s 3 -1) => (throws)))
 
 (facts "manipulation"
-       (fact "emap"
-             (emap #(% 2.0 3.0) +) => 5.0
-             (emap #(% 2.0 3.0) [+ -]) => [5.0 -1.0]
-             (emap m/sq 1.0) => 1.0
-             (emap m/sq ap) => (apache-commons [[1.0 0.25] [4.0 16.0]])
-             (emap m/sq cl) => (clatrix [[1.0 0.25] [4.0 16.0]])
-             (emap m/sq cl1D) => (clatrix [1.0 0.25])
-             (emap m/sq cl-row) => (clatrix [[1.0 0.25]])
-             (emap m/sq cl-col) => (clatrix [[1.0] [0.25]])
-             (emap #(+ % %2 %3) cl ap ve) => (clatrix [[3.0 1.5] [6.0 12.0]])
-             (emap #(+ % %2 %3 %4) cl ap ve se) => (clatrix [[4.0 2.0]
-                                                             [8.0 16.0]])
-             (emap #(+ % %2) ap cl) => (apache-commons [[2.0 1.0] [4.0 8.0]])
-             (emap #(+ % %2) ap cl-row) => (throws))
        (fact "transpose"
              (transpose ap) => (apache-commons [[1.0 2.0] [0.5 4.0]])
              (transpose cl) => (clatrix [[1.0 2.0] [0.5 4.0]])
@@ -449,86 +416,6 @@
        (fact "matrix multiply"
              (matrix-multiply '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
              (matrix-multiply '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
-       (fact "element sum"
-             (esum 2.0) => 2.0
-             (esum m/sq 2.0) => 4.0
-             (esum ve-row) => 1.5
-             (esum ap1D) => 1.5
-             (esum cl) => 7.5
-             (esum m/sq cl) => 21.25
-             (esum m/sq ap1D) => 1.25)
-       (fact "element average"
-             (eaverage ve-row) => 0.75)
-       (fact "element squared sum"
-             (esum-squares 3.0) => 9.0
-             (esum-squares ve-row) => 1.25
-             (esum-squares ap1D) => 1.25
-             (esum-squares cl) => 21.25)
-       (fact "element product"
-             (eproduct ve-row) => 0.5
-             (eproduct ap1D) => 0.5
-             (eproduct cl) => 4.0
-             (eproduct m/sq ap1D) => 0.25)
-       (fact "norm (this is the standard norm2)"
-             (norm ap) => 4.6097722286464435
-             (norm cl) => 4.6097722286464435
-             (norm cl-row) => 1.118033988749895
-             (norm ap1D) => 1.118033988749895
-             (norm cl1D) => 1.118033988749895)
-       (fact "norm1"
-             (norm1 ap) => 7.5
-             (norm1 cl) => 7.5
-             (norm1 cl-row) => 1.5
-             (norm1 ap1D) => 1.5
-             (norm1 cl1D) => 1.5)
-       (fact "normp"
-             (normp ap 1.0) => 7.5
-             (normp cl 3.4) => 4.118720689718815
-             (normp cl-row 2.1) => 1.1049918154523823
-             (normp ap1D 2.1) => 1.1049918154523823
-             (normp cl1D 1.0) => 1.5
-             (normp cl1D 0.5) => (throws))
-       (fact "normalise"
-             (normalise ap)
-             => (apache-commons [[0.21693045781865616 0.10846522890932808]
-                                 [0.4338609156373123 0.8677218312746247]])
-             (normalise cl)
-             => (clatrix [[0.21693045781865616 0.10846522890932808]
-                          [0.4338609156373123 0.8677218312746247]])
-             (normalise ap1D)
-             => (apache-commons [0.8944271909999159 0.4472135954999579])
-             (normalise cl1D)
-             => (clatrix [0.8944271909999159 0.4472135954999579]))
-       (fact "normalise1"
-             (normalise1 ap)
-             => (apache-commons [[0.13333333333333333 0.06666666666666667]
-                                 [0.26666666666666666 0.5333333333333333]])
-             (esum (normalise1
-                     [2.1242141025912059120591205912509510259021590125
-                      1.2398578935713571650983759872398572983
-                      2.1351365731650631856238056287035,
-                      3.235729375209357203975])) => 1.0
-             (normalise1 cl) =>
-             (clatrix [[0.13333333333333333 0.06666666666666667]
-                       [0.26666666666666666 0.5333333333333333]])
-             (normalise1 ap1D)
-             => (apache-commons [0.6666666666666666 0.3333333333333333])
-             (normalise1 cl1D)
-             => (clatrix [0.6666666666666666 0.3333333333333333]))
-       (fact "normalisep"
-             (normalisep ap 1.0)
-             => (apache-commons [[0.13333333333333333 0.06666666666666667]
-                                 [0.26666666666666666 0.5333333333333333]])
-             (normalisep cl 3.4)
-             => (clatrix [[0.24279383705144375 0.12139691852572188]
-                          [0.4855876741028875 0.971175348205775]])
-             (normalisep cl-row 2.1)
-             => (clatrix [[0.9049840786292169 0.45249203931460846]])
-             (normalisep ap1D 2.1)
-             => (apache-commons [0.9049840786292169 0.45249203931460846])
-             (normalisep cl1D 1.0)
-             => (clatrix [0.6666666666666666 0.3333333333333333])
-             (normalisep cl1D 0.5) => (throws))
        (fact "inner product / dot product"
              (dot-product ap1D) => (inner-product ap1D)
              (inner-product ap1D) => (apache-commons [1 0.5])
@@ -603,17 +490,7 @@
              (projection ap1D cl1D) => (apache-commons [1.0 0.5])
              (projection ve1D [5.0 6.0])
              => [0.6557377049180328 0.7868852459016393]
-             (projection cl1D ap1D) => (clatrix [1.0 0.5]))
-       (fact "cumulative sum"
-             (cumulative-sum ap-row) => (throws)
-             (cumulative-sum [3 4 6 14]) => [3 7 13 27]
-             (cumulative-sum ap1D) => (apache-commons [1 1.5])
-             (cumulative-sum cl1D) => (clatrix [1.0 1.5]))
-       (fact "differences"
-             (differences ap-row 1.0) => (throws)
-             (differences [3 4 6 14] 1) => [2 1 2 8]
-             (differences ap1D 1.0) => (apache-commons [0.0 -0.5])
-             (differences cl1D 1.0 2.0) => (clatrix [0.0 -0.5 1.5])))
+             (projection cl1D ap1D) => (clatrix [1.0 0.5])))
 
 (facts "reduce"
        (fact "ereduce-kv"
@@ -624,8 +501,6 @@
              (ereduce-kv #(+ % %2 %3 %4) 3.4 cl-row false) => 5.9
              (ereduce-kv #(+ % %2 %3 %4 %5) 3.4 cl-row ap-row false) => 7.4
              (ereduce-kv #(+ % %2 %3 %4 %5) 3.4 se ve false) => 22.4)
-       (fact "every-kv?"
-             (every-kv? #(> % %2) se1D) => false)
        (fact "eevery?"
              (eevery? #(> (+ % %2) %3) se) => false)
        (fact "some-kv"
@@ -734,19 +609,6 @@
              (insert-column cl1D 1 [8.0 9.0]) => (throws)))
 
 (facts "numerical stability"
-       (fact "roughly?"
-             (roughly? 1 1.01 0.05) => true
-             (roughly? 1 1.01 0.005) => false
-             (roughly? [1 2] [1.01 2] 0.05) => true
-             (roughly? [1 2] [1.01 2] 0.005) => false
-             (roughly? [[1 2] [3 4]] [[1.01 2] [3 4]] 0.05) => true
-             (roughly? [[1 2] [3 4]] [[1.01 2] [3 4]] 0.005) => false)
-       (fact "roughly-distinct"
-             (roughly-distinct [1 1.01 1.001] 0.005) => [1 1.01]
-             (roughly-distinct [[1 1] [1.01 1.01] [1.001 1.001]]
-                               0.005) => [[1 1] [1.01 1.01]]
-             (roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]]
-                               0.05) => [[1 1.01]])
        (fact "round roughly zero rows"
              (round-roughly-zero-rows ap 1e-6)
              => (apache-commons [[1.0 0.5] [2.0 4.0]])

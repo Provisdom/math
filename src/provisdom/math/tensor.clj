@@ -91,19 +91,23 @@
         :args (s/cat :shape ::shape :f (s/fspec :args (s/cat :indices ::indices) :ret ::number))
         :ret ::tensor)
 
-(defn constant-tensor
-  "Constructs a new tensor of `number`'s (or zeros (doubles)) with the given `shape`."
-  ([shape] (constant-tensor shape 0.0))
-  ([shape number]
-   (let [c (dec (count shape))
-         n (vec (repeat (get shape c) number))]
-     (loop [dim (dec c), t n]
-       (if (neg? dim)
-         t
-         (recur (dec dim) (vec (repeat (get shape dim) t))))))))
+(defn repeat-tensor
+  "Constructs a new tensor of zeros (doubles) with the given `shape`, or
+  constructs a new tensor with a new shape that is the concat of `shape` and the shape of the `seed-tensor`
+  by placing copies of `seed-tensor` into `shape`."
+  ([shape] (repeat-tensor shape 0.0))
+  ([shape seed-tensor]
+   (if (zero? (count shape))
+     seed-tensor
+     (let [c (dec (count shape))
+           n (vec (repeat (get shape c) seed-tensor))]
+       (loop [dim (dec c), t n]
+         (if (neg? dim)
+           t
+           (recur (dec dim) (vec (repeat (get shape dim) t)))))))))
 
-(s/fdef constant-tensor
-        :args (s/cat :shape ::shape :number (s/? ::number))
+(s/fdef repeat-tensor
+        :args (s/cat :seed-tensor ::tensor :shape ::shape)
         :ret ::tensor)
 
 ;;;TENSOR INFO
@@ -141,6 +145,10 @@
         :ret boolean?)
 
 ;;;TENSOR MANIPULATION
+(defn- convertible-shape?
+  "Tests whether a tensor with `shape` can be expanded into `expanded-shape`."
+  [shape expanded-shape] (every? zero? (map - (take-last (count shape) expanded-shape) shape)))
+
 (defn- recursive-emap
   "Recursively maps for [[emap]]."
   [shape f sh tensors]
@@ -151,13 +159,19 @@
       (mapv #(recursive-emap shape f (conj sh %) tensors) (range (get shape dim))))))
 
 (defn emap
-  "Element-wise mapping over all elements of one or more tensors."
+  "Element-wise mapping over all elements of one or more tensors.
+  Returns nil if tensors can't be expanded as necessary."
   ([f tensor] (recursive-emap (shape tensor) f [] [tensor]))
   ([f tensor & more]
    (let [tensors (concat [tensor] more)
-         shapes (map shape tensors)]
-     (when (every? #(= (first shapes) %) (rest shapes))
-       (recursive-emap (shape tensor) f [] tensors)))))
+         shapes (map shape tensors)
+         [largest-shape large-count] (reduce (fn [[sh c] new-sh] (let [new-c (count new-sh)]
+                                                                   (if (> new-c c) [new-sh new-c] [sh c])))
+                                             [(first shapes) (count (first shapes))]
+                                             (rest shapes))
+         new-tensors (when (every? #(convertible-shape? % largest-shape) shapes)
+                       (map #(repeat-tensor (vec (take (- large-count (count %2)) largest-shape)) %1) tensors shapes))]
+     (recursive-emap largest-shape f [] new-tensors))))
 
 (s/fdef emap
         :args (s/cat :f (s/fspec :args (s/cat :number ::number)
@@ -181,9 +195,14 @@
   ([f tensor] (recursive-emap-kv (shape tensor) f [] [tensor]))
   ([f tensor & more]
    (let [tensors (concat [tensor] more)
-         shapes (map shape tensors)]
-     (when (every? #(= (first shapes) %) (rest shapes))
-       (recursive-emap-kv (shape tensor) f [] tensors)))))
+         shapes (map shape tensors)
+         [largest-shape large-count] (reduce (fn [[sh c] new-sh] (let [new-c (count new-sh)]
+                                                                   (if (> new-c c) [new-sh new-c] [sh c])))
+                                             [(first shapes) (count (first shapes))]
+                                             (rest shapes))
+         new-tensors (when (every? #(convertible-shape? % largest-shape) shapes)
+                       (map #(repeat-tensor (vec (take (- large-count (count %2)) largest-shape)) %1) tensors shapes))]
+     (recursive-emap-kv largest-shape f [] new-tensors))))
 
 (s/fdef emap-kv
         :args (s/cat :f (s/fspec :args (s/cat :shape ::shape :number ::number)
@@ -268,17 +287,7 @@
         :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
         :ret ::number)
 
-(defn normalise
-  "Returns as length one in [[norm2]]."
-  [tensor] (emap #(m/div % (norm tensor)) tensor))
-
-(s/fdef normalise
-        :args (s/cat :tensor ::tensor)
-        :ret ::tensor)
-
-(def ^{:doc "See [[normalise2]]"} normalise2 normalise)
-
-(defn normalise1
+(defn normalize1
   "Returns as length one in [[norm1]]."
   [tensor]
   (let [n1 (norm1 tensor)
@@ -289,16 +298,26 @@
       ser
       (assoc ser 0 (+ diff (first ser))))))
 
-(s/fdef normalise1
+(s/fdef normalize1
         :args (s/cat :tensor ::tensor)
         :ret ::tensor)
 
-(defn normalise-p
+(defn normalize
+  "Returns as length one in [[norm2]]."
+  [tensor] (emap #(m/div % (norm tensor)) tensor))
+
+(s/fdef normalize
+        :args (s/cat :tensor ::tensor)
+        :ret ::tensor)
+
+(def ^{:doc "See [[normalize2]]"} normalize2 normalize)
+
+(defn normalize-p
   "Returns as length one in [[norm-p]].
   To be a norm, `p` must be <= 1.0."
   [tensor p] (emap #(m/div % (norm-p tensor p)) tensor))
 
-(s/fdef normalise-p
+(s/fdef normalize-p
         :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
         :ret ::tensor)
 
