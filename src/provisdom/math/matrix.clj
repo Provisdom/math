@@ -28,7 +28,6 @@
 
 (s/def ::by-row? boolean?)
 (s/def ::upper? boolean?)
-(s/def ::number ::m/number)
 (s/def ::size ::m/int-non-)
 (s/def ::row-indices (s/or :index ::index :indices ::indices))
 (s/def ::column-indices (s/or :index ::index :indices ::indices))
@@ -40,9 +39,6 @@
 (s/def ::columns ::m/int-non-)
 (s/def ::row-matrix (s/with-gen row-matrix? #(gen/vector (s/gen ::vector) 1)))
 (s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap (fn [v] (column-matrix v)) (s/gen ::vector))))
-(s/def ::numbers (s/with-gen (s/coll-of ::number)
-                             #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count 6 :kind vector? :into [])
-                                           :l (s/coll-of ::number :min-count 0 :max-count 6 :kind list? :into '())))))
 (s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 2 :max-count 2)
                                #(gen/vector (s/gen ::number) 2)))
 (s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind vector? :into [] :min-count 3 :max-count 3)

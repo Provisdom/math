@@ -6,7 +6,7 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
-(ost/instrument)
+;(ost/instrument)
 
 (deftest tensor?-test
   (is (tensor/tensor? []))
@@ -19,6 +19,11 @@
   (is-not (tensor/tensor? '()))
   (is (tensor/tensor? 1)))
 
+(deftest type-tests
+  (tensor?-test))
+
+;(defspec-test test-tensor? `tensor/tensor?)
+
 (deftest to-tensor-test
   (is= [] (tensor/to-tensor '()))
   (is= nil (tensor/to-tensor "A"))
@@ -29,12 +34,53 @@
   (is= [[2 3]] (tensor/to-tensor '((2 3)))))
 
 (deftest compute-tensor-test
-  (is= [1.0 2.0] (tensor/compute-tensor [2] inc)))
+  (is= -2 (tensor/compute-tensor [] (fn [[n]] (if n n -2))))
+  (is= [] (tensor/compute-tensor [0] (fn [[n]] (if n n -2))))
+  (is= [[]] (tensor/compute-tensor [1 0] (fn [[_ n2]] (if n2 n2 -2))))
+  (is= [0 1] (tensor/compute-tensor [2] (fn [[n]] (if n n -2))))
+  (is= [[0 1 2][0 1 2]] (tensor/compute-tensor [2 3] (fn [[n1 n2]] (if n1 (if n2 n2 -1) -2)))))
 
 (deftest repeat-tensor-test
+  (is= 0.0 (tensor/repeat-tensor []))
+  (is= 1.0 (tensor/repeat-tensor [] 1.0))
+  (is= [] (tensor/repeat-tensor [0] 1.0))
+  (is= [[]] (tensor/repeat-tensor [1 0] 1.0))
   (is= [0.0] (tensor/repeat-tensor [1]))
   (is= [1.0] (tensor/repeat-tensor [1] 1.0))
   (is= [[2]] (tensor/repeat-tensor [1] [2])))
+
+(deftest fill-tensor-test
+  (is= 1 (tensor/fill-tensor [] [1 2 3 4]))
+  (is= [] (tensor/fill-tensor [0] [1 2 3 4]))
+  (is= [[]] (tensor/fill-tensor [1 0] [1 2 3 4]))
+  (is= [[1 2 3] [4 5 6]] (tensor/fill-tensor [2 3] [1 2 3 4 5 6 7 8]))
+  (is= [[1 2 3] [4 0.0 0.0]] (tensor/fill-tensor [2 3] [1 2 3 4]))
+  (is= [[[1 2] [3 4] [5 6]] [[7 8] [9 10] [11 12]]]
+       (tensor/fill-tensor [2 3 2] [1 2 3 4 5 6 7 8 9 10 11 12 13 14])))
+
+(deftest rnd-tensor-test                                    ;bind a seed
+  (is= 0.1 (tensor/rnd-tensor []))
+  (is= [] (tensor/rnd-tensor [0]))
+  (is= [[]] (tensor/rnd-tensor [1 0]))
+  (is= [[0.3 0.4 0.5] [0.2 0.3 0.4]] (tensor/rnd-tensor [2 3])))
+
+(deftest constructor-tests
+  (to-tensor-test)
+  (compute-tensor-test)
+  (repeat-tensor-test)
+  (fill-tensor-test)
+  (rnd-tensor-test))
+
+;(defspec-test test-to-tensor `tensor/to-tensor)
+;(defspec-test test-compute-tensor `tensor/compute-tensor)
+;(defspec-test test-repeat-tensor `tensor/repeat-tensor)
+;(defspec-test test-fill-tensor `tensor/fill-tensor)
+;(defspec-test test-rnd-tensor `tensor/rnd-tensor)
+
+(deftest ecount-test
+  (is= 1 (tensor/ecount 0))
+  (is= 0 (tensor/ecount [[]]))
+  (is= 4 (tensor/ecount [[1.0 0.5] [2.0 4.0]])))
 
 (deftest dimensionality-test
   (is= 2 (tensor/dimensionality [[2] [1]]))
@@ -44,16 +90,27 @@
 (deftest shape-test
   (is= [3] (tensor/shape [1 2 3]))
   (is= [2 0] (tensor/shape [[] []]))
-  (is= [0] (tensor/shape 1))
+  (is= [] (tensor/shape 1))
   (is= [2 2 1] (tensor/shape [[[1] [2]] [[3] [4]]])))
 
 (deftest every-kv?-test
-  (is-not (tensor/every-kv? #(> % %2) [1.0 0.5])))
+  (is-not (tensor/every-kv? (fn [[n] v] (> n v)) [1.0 0.5]))
+  (is (tensor/every-kv? (fn [[n] v] (> n -1)) [1.0 0.5]))
+  (is (tensor/every-kv? (fn [[n1 n2] v] (> n2 (- v 2.1))) [[1.0 0.5] [2.0 3.0]])))
+
+(deftest info-tests
+  (ecount-test)
+  (dimensionality-test)
+  (shape-test)
+  (every-kv?-test))
+
+;(defspec-test test-ecount `tensor/ecount)
+;(defspec-test test-dimensionality `tensor/dimensionality)
+;(defspec-test test-shape `tensor/shape)
+;(defspec-test test-every-kv? `tensor/every-kv?)
 
 (deftest emap-test
-  (is= 5.0 (tensor/emap + 1 [2 2] [[3 3] [3 3]]))
-  (is= 5.0 (tensor/emap #(% 2.0 3.0) +))
-  (is= [5.0 -1.0] (tensor/emap #(% 2.0 3.0) [+ -]))
+  (is= [[6 6] [6 6]] (tensor/emap + 1 [2 2] [[3 3] [3 3]]))
   (is= 1.0 (tensor/emap m/sq 1.0))
   (is= [[1.0 0.25] [4.0 16.0]] (tensor/emap m/sq [[1.0 0.5] [2.0 4.0]]))
   (is= [1.0 0.25] (tensor/emap m/sq [1.0 0.5]))
@@ -65,7 +122,14 @@
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/emap #(+ % %2) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]])))
 
 (deftest emap-kv-test
-  (is= 5.0 (tensor/emap-kv #(+ (second %1) %2 %3 %4) 1 [2 2] [[3 3] [3 3]])))
+  (is= [[7 10] [10 13]] (tensor/emap-kv (fn [[n1 n2] v1 v2 v3] (+ n1 n2 v1 v2 v3)) 1 [2 3] [[4 5] [6 7]])))
+
+(deftest manipulation-tests
+  (emap-test)
+  (emap-kv-test))
+
+;(defspec-test test-emap `tensor/emap)
+;(defspec-test test-emap-kv `tensor/emap-kv)
 
 (deftest add-test
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/add [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
@@ -91,9 +155,6 @@
   (is= [1.0 2.0] (tensor/divide [1.0 0.5] [1.0 0.5] [1.0 0.5]))
   (is= [[1.0 2.0]] (tensor/divide [[1.0 0.5]])))
 
-(deftest ecount-test
-  (is= 4 (tensor/ecount [[1.0 0.5] [2.0 4.0]])))
-
 (deftest norm1-test
   (is= 7.5 (tensor/norm1 [[1.0 0.5] [2.0 4.0]]))
   (is= 1.5 (tensor/norm1 [[1.0 0.5]]))
@@ -105,7 +166,7 @@
   (is= 1.118033988749895 (tensor/norm [1.0 0.5])))
 
 (deftest norm-p-test
-  (is= 7.5 (tensor/norm-p ap 1.0))
+  (is= 7.5 (tensor/norm-p [[1.0 0.5] [2.0 4.0]] 1.0))
   (is= 4.118720689718815 (tensor/norm-p [[1.0 0.5] [2.0 4.0]] 3.4))
   (is= 1.1049918154523823 (tensor/norm-p [[1.0 0.5]] 2.1))
   (is= 1.1049918154523823 (tensor/norm-p [1.0 0.5] 2.1))
@@ -139,6 +200,29 @@
   (is= [0.9049840786292169 0.45249203931460846] (tensor/normalize-p [1.0 0.5] 2.1))
   (is= [0.6666666666666666 0.3333333333333333] (tensor/normalize-p [1.0 0.5] 1.0)))
 
+(deftest math-tests
+  (add-test)
+  (subtract-test)
+  (multiply-test)
+  (divide-test)
+  (norm1-test)
+  (norm-test)
+  (norm-p-test)
+  (normalize1-test)
+  (normalize-test)
+  (normalize-p-test))
+
+;(defspec-test test-add `tensor/add)
+;(defspec-test test-subtract `tensor/subtract)
+;(defspec-test test-multiply `tensor/multiply)
+;(defspec-test test-divide `tensor/divide)
+;(defspec-test test-norm1 `tensor/norm1)
+;(defspec-test test-norm `tensor/norm)
+;(defspec-test test-norm-p `tensor/norm-p)
+;(defspec-test test-normalize1 `tensor/normalize1)
+;(defspec-test test-normalize `tensor/normalize)
+;(defspec-test test-normalize-p `tensor/normalize-p)
+
 (deftest roughly?-test
   (is (tensor/roughly? 1 1.01 0.05))
   (is-not (tensor/roughly? 1 1.01 0.005))
@@ -152,50 +236,10 @@
   (is= [[1 1] [1.01 1.01]] (tensor/roughly-distinct [[1 1] [1.01 1.01] [1.001 1.001]] 0.005))
   (is= [[1 1.01]] (tensor/roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]] 0.05)))
 
-(deftest tensor-test
-  (tensor?-test)
-  (to-tensor-test)
-  (compute-tensor-test)
-  (repeat-tensor-test)
-  (dimensionality-test)
-  (shape-test)
-  (every-kv?-test)
-  (emap-test)
-  (emap-kv-test)
-  (add-test)
-  (subtract-test)
-  (multiply-test)
-  (divide-test)
-  (ecount-test)
-  (norm1-test)
-  (norm-test)
-  (norm-p-test)
-  (normalize1-test)
-  (normalize-test)
-  (normalize-p-test)
+(deftest rounding-tests
   (roughly?-test)
   (roughly-distinct-test))
 
-;(defspec-test test-tensor? `tensor/tensor?)
-;(defspec-test test-to-tensor `tensor/to-tensor)
-;(defspec-test test-compute-tensor `tensor/compute-tensor)
-;(defspec-test test-repeat-tensor `tensor/repeat-tensor)
-;(defspec-test test-dimensionality `tensor/dimensionality)
-;(defspec-test test-shape `tensor/shape)
-;(defspec-test test-every-kv? `tensor/every-kv?)
-;(defspec-test test-emap `tensor/emap)
-;(defspec-test test-emap-kv `tensor/emap-kv)
-;(defspec-test test-add `tensor/add)
-;(defspec-test test-subtract `tensor/subtract)
-;(defspec-test test-multiply `tensor/multiply)
-;(defspec-test test-divide `tensor/divide)
-;(defspec-test test-ecount `tensor/ecount)
-;(defspec-test test-norm1 `tensor/norm1)
-;(defspec-test test-norm `tensor/norm)
-;(defspec-test test-norm-p `tensor/norm-p)
-;(defspec-test test-normalize1 `tensor/normalize1)
-;(defspec-test test-normalize `tensor/normalize)
-;(defspec-test test-normalize-p `tensor/normalize-p)
 ;(defspec-test test-roughly? `tensor/roughly?)
 ;(defspec-test test-roughly-distinct `tensor/roughly-distinct)
 

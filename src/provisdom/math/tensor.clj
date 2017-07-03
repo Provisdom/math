@@ -3,49 +3,56 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]
-            [provisdom.math.core :as m]))
+            [provisdom.math.core :as m]
+            [provisdom.math.random2 :as random]))
 
 (set! *warn-on-reflection* true)
 
 (declare transpose dimensionality tensor?)
 
+(def mdl 6)                                                 ;max-dim-length for generators
+
 (s/def ::number ::m/number)
+(s/def ::numbers (s/with-gen (s/coll-of ::number)
+                             #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count mdl :kind vector? :into [])
+                                           :l (s/coll-of ::number :min-count 0 :max-count mdl :kind list? :into '())))))
 (s/def ::tensor1D (s/with-gen (s/coll-of ::number :kind vector? :into [])
-                              #(gen/vector (s/gen ::number) 0 2)))
+                              #(gen/vector (s/gen ::number) 0 mdl)))
 (s/def ::tensor2D (s/with-gen #(and (tensor? %) (= 2 (dimensionality %)))
-                              #(gen/bind (gen/large-integer* {:min 1 :max 2})
-                                         (fn [i] (gen/vector (gen/vector (s/gen ::number) i) 1 2)))))
+                              #(gen/bind (gen/large-integer* {:min 1 :max mdl})
+                                         (fn [i] (gen/vector (gen/vector (s/gen ::number) i) 1 mdl)))))
 (s/def ::tensor3D (s/with-gen #(and (tensor? %) (= 3 (dimensionality %)))
-                              #(gen/bind (gen/tuple (gen/large-integer* {:min 1 :max 2})
-                                                    (gen/large-integer* {:min 1 :max 2}))
-                                         (fn [[i j]] (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) 1 2)))))
+                              #(gen/bind (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                                                    (gen/large-integer* {:min 1 :max mdl}))
+                                         (fn [[i j]] (gen/vector
+                                                       (gen/vector (gen/vector (s/gen ::number) i) j) 1 mdl)))))
 (s/def ::tensor4D (s/with-gen #(and (tensor? %) (= 4 (dimensionality %)))
                               #(gen/bind
-                                 (gen/tuple (gen/large-integer* {:min 1 :max 2})
-                                            (gen/large-integer* {:min 1 :max 2})
-                                            (gen/large-integer* {:min 1 :max 2}))
+                                 (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                                            (gen/large-integer* {:min 1 :max mdl})
+                                            (gen/large-integer* {:min 1 :max mdl}))
                                  (fn [[i j k]]
-                                   (gen/vector (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) k) 1 2)))))
+                                   (gen/vector (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) k) 1 mdl)))))
 (s/def ::tensor5D+ (s/with-gen #(and (tensor? %) (>= (dimensionality %) 5))
                                #(gen/bind
-                                  (gen/tuple (gen/large-integer* {:min 1 :max 2})
-                                             (gen/large-integer* {:min 1 :max 2})
-                                             (gen/large-integer* {:min 1 :max 2})
-                                             (gen/large-integer* {:min 1 :max 2}))
+                                  (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                                             (gen/large-integer* {:min 1 :max mdl})
+                                             (gen/large-integer* {:min 1 :max mdl})
+                                             (gen/large-integer* {:min 1 :max mdl}))
                                   (fn [[i j k l]]
                                     (gen/vector
                                       (gen/vector
-                                        (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) k) l) 1 2)))))
+                                        (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) k) l) 1 mdl)))))
 (s/def ::tensor (s/or :number ::number
                       :t1 ::tensor1D
                       :t2 ::tensor2D
                       :t3+ (s/or :t3 ::tensor3D             ;used 2nd 's/or' to reduce these in tests
                                  :t4 ::tensor4D
                                  :t5+ ::tensor5D+)))
-(s/def ::accu ::m/non-)
-(s/def ::shape (s/with-gen (s/coll-of ::m/int+) #(gen/vector (gen/large-integer* {:min 1 :max 2}) 0 6)))
-(s/def ::index ::m/int-non-)
-(s/def ::indices (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 2)))
+(s/def ::accu (s/with-gen ::m/non- #(gen/double* {:min m/tiny-dbl :max 1e-3 :NaN? false})))
+(s/def ::shape (s/with-gen (s/coll-of ::m/int-non-) #(gen/vector (gen/large-integer* {:min 0 :max mdl}) 0 mdl)))
+(s/def ::index (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+(s/def ::indices (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 mdl)))
 
 ;;;TENSOR TYPES
 (defn tensor?
@@ -63,7 +70,7 @@
 
 ;;;TENSOR CONSTRUCTOR
 (defn to-tensor
-  "Tries to convert to tensor, otherwise returns nil."
+  "Tries to convert any `x` to tensor, otherwise returns nil."
   [x]
   (let [ret (cond (number? x) x
                   (sequential? x) (mapv to-tensor x)
@@ -107,17 +114,52 @@
            (recur (dec dim) (vec (repeat (get shape dim) t)))))))))
 
 (s/fdef repeat-tensor
-        :args (s/cat :seed-tensor ::tensor :shape ::shape)
+        :args (s/cat :shape ::shape :seed-tensor (s/? ::tensor))
+        :ret ::tensor)
+
+(defn fill-tensor
+  "Creates a new tensor with a given `shape` from a sequence of `numbers`.
+  If `numbers` doesn't fill tensor, will fill remaining elements with 0.0."
+  [shape numbers]
+  (if (empty? shape)
+    (or (first numbers) 0.0)
+    (let [tot (apply * shape)]
+      (if (zero? tot)
+        (repeat-tensor shape)
+        (let [cn (count numbers)
+              rem (- tot cn)
+              tensor (vec (if (neg? rem) (take tot numbers) (concat numbers (repeat rem 0.0))))]
+          (reduce (fn [tot sh] (vec (map vec (partition sh tot)))) tensor (reverse (rest shape))))))))
+
+(s/fdef fill-tensor
+        :args (s/cat :shape ::shape :numbers ::numbers)
+        :ret ::tensor)
+
+(defn rnd-tensor
+  "Creates a new tensor with a given `shape` with random doubles."
+  [shape] (fill-tensor shape (take (apply * shape) (random/rand-double-lazy))))
+
+(s/fdef rnd-tensor
+        :args (s/cat :shape ::shape)
         :ret ::tensor)
 
 ;;;TENSOR INFO
+(defn ecount
+  "Returns the total count of elements."
+  [tensor] (if (number? tensor) 1 (count (flatten tensor))))
+
+(s/fdef ecount
+        :args (s/cat :tensor ::tensor)
+        :ret ::m/int-non-)
+
 (defn dimensionality
   "Returns the dimensionality of an `tensor`.
   The dimensionality is equal to the number of dimensions in the `tensor`'s shape."
   [tensor]
-  (if (number? tensor)
-    0
-    (inc (dimensionality (first tensor)))))
+  (if (vector? tensor)
+    (let [f (first tensor)]
+      (if f (inc (dimensionality f)) 1))
+    0))
 
 (s/fdef dimensionality
         :args (s/cat :tensor ::tensor)
@@ -141,7 +183,9 @@
   [pred tensor] (every? true? (flatten (compute-tensor (shape tensor) #(pred % (get-in tensor %))))))
 
 (s/fdef every-kv?
-        :args (s/cat :pred (s/fspec :args (s/cat :indices ::indices :number ::number) :ret boolean?))
+        :args (s/cat :pred (s/fspec :args (s/cat :indices ::indices :number ::number)
+                                    :ret boolean?)
+                     :tensor ::tensor)
         :ret boolean?)
 
 ;;;TENSOR MANIPULATION
@@ -174,7 +218,7 @@
      (recursive-emap largest-shape f [] new-tensors))))
 
 (s/fdef emap
-        :args (s/cat :f (s/fspec :args (s/cat :number ::number)
+        :args (s/cat :f (s/fspec :args (s/cat :number (s/* ::number))
                                  :ret ::number)
                      :tensor ::tensor
                      :more (s/* ::tensor))
@@ -205,7 +249,7 @@
      (recursive-emap-kv largest-shape f [] new-tensors))))
 
 (s/fdef emap-kv
-        :args (s/cat :f (s/fspec :args (s/cat :shape ::shape :number ::number)
+        :args (s/cat :f (s/fspec :args (s/cat :shape ::shape :number (s/* ::number))
                                  :ret ::number)
                      :tensor ::tensor
                      :more (s/* ::tensor))
@@ -220,7 +264,7 @@
 
 (s/fdef add
         :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
+                    :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn subtract
@@ -229,7 +273,7 @@
   ([tensor & more] (apply emap - tensor more)))
 
 (s/fdef subtract
-        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
+        :args (s/cat :tensor ::tensor :more (s/* ::tensor))
         :ret (s/nilable ::tensor))
 
 (defn multiply
@@ -240,7 +284,7 @@
 
 (s/fdef multiply
         :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor))))
+                    :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn divide
@@ -249,16 +293,8 @@
   ([tensor & more] (apply emap m/div tensor more)))
 
 (s/fdef divide
-        :args (s/cat :tensor ::tensor :more (s/? (s/keys* :tensors ::tensor)))
+        :args (s/cat :tensor ::tensor :more (s/* ::tensor))
         :ret (s/nilable ::tensor))
-
-(defn ecount
-  "Returns the total count of elements."
-  [tensor] (if (number? tensor) 1 (count (flatten tensor))))
-
-(s/fdef ecount
-        :args (s/cat :tensor ::tensor)
-        :ret ::m/int-non-)
 
 (defn norm1
   "The sum of the absolute values of the elements."
