@@ -3,6 +3,7 @@
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
             [provisdom.math.tensor :as tensor]
+            [provisdom.math.random2 :as random]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
@@ -38,7 +39,7 @@
   (is= [] (tensor/compute-tensor [0] (fn [[n]] (if n n -2))))
   (is= [[]] (tensor/compute-tensor [1 0] (fn [[_ n2]] (if n2 n2 -2))))
   (is= [0 1] (tensor/compute-tensor [2] (fn [[n]] (if n n -2))))
-  (is= [[0 1 2][0 1 2]] (tensor/compute-tensor [2 3] (fn [[n1 n2]] (if n1 (if n2 n2 -1) -2)))))
+  (is= [[0 1 2] [0 1 2]] (tensor/compute-tensor [2 3] (fn [[n1 n2]] (if n1 (if n2 n2 -1) -2)))))
 
 (deftest repeat-tensor-test
   (is= 0.0 (tensor/repeat-tensor []))
@@ -58,11 +59,17 @@
   (is= [[[1 2] [3 4] [5 6]] [[7 8] [9 10] [11 12]]]
        (tensor/fill-tensor [2 3 2] [1 2 3 4 5 6 7 8 9 10 11 12 13 14])))
 
-(deftest rnd-tensor-test                                    ;bind a seed
-  (is= 0.1 (tensor/rnd-tensor []))
-  (is= [] (tensor/rnd-tensor [0]))
-  (is= [[]] (tensor/rnd-tensor [1 0]))
-  (is= [[0.3 0.4 0.5] [0.2 0.3 0.4]] (tensor/rnd-tensor [2 3])))
+(deftest rnd-tensor-test
+  (random/bind-seed 0
+    (is= 0.8833108082136426 (tensor/rnd-tensor [])))
+  (random/bind-seed 0
+    (is= [] (tensor/rnd-tensor [0])))
+  (random/bind-seed 0
+    (is= [[]] (tensor/rnd-tensor [1 0])))
+  (random/bind-seed 0
+    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
+          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
+         (tensor/rnd-tensor [2 3]))))
 
 (deftest constructor-tests
   (to-tensor-test)
@@ -116,8 +123,8 @@
   (is= [1.0 0.25] (tensor/emap m/sq [1.0 0.5]))
   (is= [[1.0 0.25]] (tensor/emap m/sq [[1.0 0.5]]))
   (is= [[1.0] [0.25]] (tensor/emap m/sq [[1.0] [0.5]]))
-  (is= [[3.0 1.5] [6.0 12.0]] (tensor/emap #(+ % %2 %3) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [1.0 0.5]))
-  (is= [[4.0 2.0] [8.0 16.0]]
+  (is= [[3.0 1.5] [5.0 8.5]] (tensor/emap #(+ % %2 %3) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [1.0 0.5]))
+  (is= [[4.0 2.0] [7.0 12.5]]
        (tensor/emap #(+ % %2 %3 %4) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [1.0 0.5] [[1.0 0.5] [2.0 4.0]]))
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/emap #(+ % %2) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]])))
 

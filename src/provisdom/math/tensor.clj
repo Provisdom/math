@@ -10,7 +10,7 @@
 
 (declare transpose dimensionality tensor?)
 
-(def mdl 6)                                                 ;max-dim-length for generators
+(def mdl 3)                                                 ;max-dim-length for generators
 
 (s/def ::number ::m/number)
 (s/def ::numbers (s/with-gen (s/coll-of ::number)
@@ -180,10 +180,13 @@
 
 (defn every-kv?
   "Returns true if (pred indices number) is logically true for every element in `tensor`, else false."
-  [pred tensor] (every? true? (flatten (compute-tensor (shape tensor) #(pred % (get-in tensor %))))))
+  [pred tensor]
+  (if (number? tensor)
+    (pred [] tensor)
+    (every? true? (flatten (compute-tensor (shape tensor) #(pred % (get-in tensor %)))))))
 
 (s/fdef every-kv?
-        :args (s/cat :pred (s/fspec :args (s/cat :indices ::indices :number ::number)
+        :args (s/cat :pred any? #_(s/fspec :args (s/cat :indices ::indices :number ::number)
                                     :ret boolean?)
                      :tensor ::tensor)
         :ret boolean?)
@@ -218,8 +221,8 @@
      (recursive-emap largest-shape f [] new-tensors))))
 
 (s/fdef emap
-        :args (s/cat :f (s/fspec :args (s/cat :number (s/* ::number))
-                                 :ret ::number)
+        :args (s/cat :f (s/fspec :args (s/cat :number ::number)
+                               :ret ::number)
                      :tensor ::tensor
                      :more (s/* ::tensor))
         :ret (s/nilable ::tensor))
@@ -249,8 +252,7 @@
      (recursive-emap-kv largest-shape f [] new-tensors))))
 
 (s/fdef emap-kv
-        :args (s/cat :f (s/fspec :args (s/cat :shape ::shape :number (s/* ::number))
-                                 :ret ::number)
+        :args (s/cat :f any?
                      :tensor ::tensor
                      :more (s/* ::tensor))
         :ret (s/nilable ::tensor))
@@ -290,7 +292,7 @@
 (defn divide
   "Performs element-wise division for one or more tensors."
   ([tensor] (emap m/div tensor))
-  ([tensor & more] (apply emap m/div tensor more)))
+  ([tensor & more] (reduce (fn [tot e] (emap m/div tot e)) tensor more)))
 
 (s/fdef divide
         :args (s/cat :tensor ::tensor :more (s/* ::tensor))
@@ -298,7 +300,10 @@
 
 (defn norm1
   "The sum of the absolute values of the elements."
-  [tensor] (apply + (map m/abs (flatten tensor))))
+  [tensor]
+  (if (number? tensor)
+    (m/abs tensor)
+    (apply + (map m/abs (flatten tensor)))))
 
 (s/fdef norm1
         :args (s/cat :tensor ::tensor)
@@ -306,7 +311,10 @@
 
 (defn norm
   "The square-root of the sum of the squared values of the elements."
-  [tensor] (m/sqrt (apply + (map m/sq (flatten tensor)))))
+  [tensor]
+  (if (number? tensor)
+    (m/abs tensor)
+    (m/sqrt (apply + (map m/sq (flatten tensor))))))
 
 (s/fdef norm
         :args (s/cat :tensor ::tensor)
@@ -317,7 +325,10 @@
 (defn norm-p
   "The 1/`p` power of the sum of the element values to the power `p`.
   To be a norm, `p` must be <= 1.0."
-  [tensor p] (m/pow (apply + (map #(m/pow (m/abs %) p) (flatten tensor))) (/ p)))
+  [tensor p]
+  (if (number? tensor)
+    (m/abs tensor)
+    (m/pow (apply + (map #(m/pow (m/abs %) p) (flatten tensor))) (/ p))))
 
 (s/fdef norm-p
         :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
@@ -359,8 +370,12 @@
 
 ;;;TENSOR NUMERICAL STABILITY
 (defn roughly?
-  "Returns true if every element compared across two tensors are within `accu` of each other."
-  [tensor1 tensor2 accu] (every? true? (flatten (emap #(m/roughly? %1 %2 accu) tensor1 tensor2))))
+  "Returns true if every element compared across two similarly-shaped tensors are within `accu` of each other."
+  [tensor1 tensor2 accu]
+  (and (= (shape tensor1) (shape tensor2))
+       (if (number? tensor1)
+         (m/roughly? tensor1 tensor2 accu)
+         (every? true? (map #(m/roughly? %1 %2 accu) (flatten tensor1) (flatten tensor2))))))
 
 (s/fdef roughly?
         :args (s/cat :tensor1 ::tensor :tensor2 ::tensor :accu ::accu)
