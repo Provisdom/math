@@ -4,13 +4,14 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]
             [provisdom.math.core :as m]
-            [provisdom.math.random2 :as random]))
+            [provisdom.math.random2 :as random]
+            [provisdom.utility-belt.core :as co]))
 
 (set! *warn-on-reflection* true)
 
 (declare transpose dimensionality tensor?)
 
-(def mdl 3)                                                 ;max-dim-length for generators
+(def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::number ::m/number)
 (s/def ::numbers (s/with-gen (s/coll-of ::number)
@@ -99,9 +100,8 @@
         :ret ::tensor)
 
 (defn repeat-tensor
-  "Constructs a new tensor of zeros (doubles) with the given `shape`, or
-  constructs a new tensor with a new shape that is the concat of `shape` and the shape of the `seed-tensor`
-  by placing copies of `seed-tensor` into `shape`."
+  "Constructs a new tensor of zeros (doubles) with the given `shape`, or constructs a new tensor with a new shape
+  that is the concat of `shape` and the shape of the `seed-tensor` by placing copies of `seed-tensor` into `shape`."
   ([shape] (repeat-tensor shape 0.0))
   ([shape seed-tensor]
    (if (zero? (count shape))
@@ -183,13 +183,15 @@
   [pred tensor]
   (if (number? tensor)
     (pred [] tensor)
-    (every? true? (flatten (compute-tensor (shape tensor) #(pred % (get-in tensor %)))))))
+    (every? true? (flatten (recursive-compute-tensor (shape tensor) #(pred % (get-in tensor %)) [])))))
 
-(s/fdef every-kv?
-        :args (s/cat :pred any? #_(s/fspec :args (s/cat :indices ::indices :number ::number)
-                                    :ret boolean?)
-                     :tensor ::tensor)
-        :ret boolean?)
+(comment                                                    ;instrumentation won't pass (fspec issues)
+  (s/fdef every-kv?
+          :args (s/cat :pred (s/with-gen (s/fspec :args (s/cat :indices ::indices :number ::number)
+                                                  :ret boolean?)
+                                         #(gen/return (constantly true)))
+                       :tensor ::tensor)
+          :ret boolean?))
 
 ;;;TENSOR MANIPULATION
 (defn- convertible-shape?
@@ -218,14 +220,17 @@
                                              (rest shapes))
          new-tensors (when (every? #(convertible-shape? % largest-shape) shapes)
                        (map #(repeat-tensor (vec (take (- large-count (count %2)) largest-shape)) %1) tensors shapes))]
-     (recursive-emap largest-shape f [] new-tensors))))
+     (when new-tensors (recursive-emap largest-shape f [] new-tensors)))))
 
-(s/fdef emap
-        :args (s/cat :f (s/fspec :args (s/cat :number ::number)
-                               :ret ::number)
-                     :tensor ::tensor
-                     :more (s/* ::tensor))
-        :ret (s/nilable ::tensor))
+(comment                                                    ;slow
+  (s/fdef emap
+          :args (s/and (s/cat :f (s/with-gen (s/fspec :args (s/cat :number (s/+ ::number))
+                                                      :ret ::number)
+                                             #(gen/return (constantly 1.0)))
+                              :tensor ::tensor
+                              :more (s/* ::tensor))
+                       #(some (fn [a] (or (= (inc (count (:more %))) a) (= a :rest))) (co/arities (:f %))))
+          :ret (s/nilable ::tensor)))
 
 (defn- recursive-emap-kv
   "Recursively maps for [[emap-kv]]."
@@ -251,11 +256,15 @@
                        (map #(repeat-tensor (vec (take (- large-count (count %2)) largest-shape)) %1) tensors shapes))]
      (recursive-emap-kv largest-shape f [] new-tensors))))
 
-(s/fdef emap-kv
-        :args (s/cat :f any?
-                     :tensor ::tensor
-                     :more (s/* ::tensor))
-        :ret (s/nilable ::tensor))
+(comment                                                    ;;slow
+  (s/fdef emap-kv
+          :args (and (s/cat :f (s/with-gen (s/fspec :args (s/cat :shape ::shape :number (s/+ ::number))
+                                                    :ret ::number)
+                                           #(gen/return (constantly 1.0)))
+                            :tensor ::tensor
+                            :more (s/* ::tensor))
+                     #(some (fn [a] (or (= (+ 2 (count (:more %))) a) (= a :rest))) (co/arities (:f %))))
+          :ret (s/nilable ::tensor)))
 
 ;;;TENSOR MATH
 (defn add
@@ -292,7 +301,7 @@
 (defn divide
   "Performs element-wise division for one or more tensors."
   ([tensor] (emap m/div tensor))
-  ([tensor & more] (reduce (fn [tot e] (emap m/div tot e)) tensor more)))
+  ([tensor & more] (reduce (fn [tot e] (when tot (emap m/div tot e))) tensor more)))
 
 (s/fdef divide
         :args (s/cat :tensor ::tensor :more (s/* ::tensor))
@@ -336,14 +345,7 @@
 
 (defn normalize1
   "Returns as length one in [[norm1]]."
-  [tensor]
-  (let [n1 (norm1 tensor)
-        ser (vec (emap #(m/div % n1) tensor))
-        diff (m/one- (apply + (flatten ser)))]
-    ;;check for slight rounding errors...
-    (if (zero? diff)
-      ser
-      (assoc ser 0 (+ diff (first ser))))))
+  [tensor] (emap #(m/div % (norm1 tensor)) tensor))
 
 (s/fdef normalize1
         :args (s/cat :tensor ::tensor)

@@ -38,30 +38,6 @@
 (def cl-sym (clatrix se-sym))
 (def ap-sym (apache-commons se-sym))
 
-(facts "vector constructors"
-       (fact "maybe to vector"
-             (maybe-to-vector nil) => nil
-             (maybe-to-vector 1.0) => [1.0]
-             (maybe-to-vector [1.0]) => [1.0]
-             (maybe-to-vector '(1.0)) => [1.0])
-       (fact "vector"
-             (compute-vector [2.0 3.0 4.0]) => [2.0 3.0 4.0]
-             (compute-vector nil 3 3.0) = [3.0 3.0 3.0]
-             (compute-vector :apache-commons [2.0 3.0 4.0])
-             => (apache-commons [2.0 3.0 4.0])
-             (compute-vector :clatrix 3 #(+ 2.0 %)) => (clatrix [2.0 3.0 4.0]))
-       (fact "sparse vector"
-             (sparse-vector [[0 3.0]] [5.0 6.0]) => [3.0 6.0]
-             (sparse-vector :clatrix [[0 3.0]] [5.0 6.0])
-             => (clatrix [3.0 6.0])
-             (sparse-vector [[0 3.0]] 2) => [3.0 0.0]
-             (sparse-vector [[0 3.0] [1 2.0]] 2) => [3.0 2.0]
-             (sparse-vector [[2 3.0]] 2) => (throws)
-             (sparse-vector :clatrix [[0 3.0] [1 2.0]] 2)
-             => (clatrix [3.0 2.0])
-             (sparse-vector :apache-commons [[0 3.0] [1 2.0]] 2)
-             => (apache-commons [3.0 2.0])))
-
 (facts "matrix constructors"
        (fact "constant"
              (constant-matrix [2 2] 1.0) => [[1.0 1.0] [1.0 1.0]]
@@ -416,17 +392,15 @@
        (fact "matrix multiply"
              (matrix-multiply '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
              (matrix-multiply '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
-       (fact "inner product / dot product"
-             (dot-product ap1D) => (inner-product ap1D)
+       (fact "inner product"
+             (vector/dot-product ve1D) => (inner-product ve1D)
              (inner-product ap1D) => (apache-commons [1 0.5])
              (inner-product cl1D) => (clatrix [1.0 0.5])
-             (inner-product cl1D ap1D) => 1.25
-             (inner-product ap1D cl1D) => 1.25
+             (inner-product ap1D ve1D cl1D) => (apache-commons [1.25 0.625])
+             (inner-product ap1D ve1D cl1D se1D) => 1.5625
              (inner-product ap1D cl) => (apache-commons [2.0 2.5])
              (inner-product ap cl) => (apache-commons [[2.0 2.5] [10.0 17.0]])
              (inner-product ve cl) => [[2.0 2.5] [10.0 17.0]]
-             (inner-product ap1D ve1D cl1D) => (apache-commons [1.25 0.625])
-             (inner-product ap1D ve1D cl1D se1D) => 1.5625
              (inner-product ap) => (apache-commons '((1.0 0.5) (2.0 4.0)))
              (inner-product cl) => (clatrix '((1.0 0.5) (2.0 4.0))))
        (fact "kronecker product"
@@ -479,18 +453,7 @@
              (outer-product nil #(+ % %2 %3 %4) [2.0 3.0] cl ap ve)
              => [[7.0 7.5] [12.0 21.0]]
              (outer-product nil #(+ % %2 %3 %4 %5) [2.0 3.0] cl ap ve se)
-             => [[8.0 8.0] [14.0 25.0]])
-       (fact "cross product"
-             (cross-product ap1D cl1D) => 0.0
-             (cross-product cl1D ap1D) => 0.0
-             (cross-product [5.0 6.0] cl1D) => -3.5
-             (cross-product cl-row ap-col) => (throws))
-       (fact "projection"
-             (projection ap-row cl-col) => (throws)
-             (projection ap1D cl1D) => (apache-commons [1.0 0.5])
-             (projection ve1D [5.0 6.0])
-             => [0.6557377049180328 0.7868852459016393]
-             (projection cl1D ap1D) => (clatrix [1.0 0.5])))
+             => [[8.0 8.0] [14.0 25.0]]))
 
 (facts "reduce"
        (fact "ereduce-kv"
@@ -503,15 +466,11 @@
              (ereduce-kv #(+ % %2 %3 %4 %5) 3.4 se ve false) => 22.4)
        (fact "eevery?"
              (eevery? #(> (+ % %2) %3) se) => false)
-       (fact "some-kv"
-             (some-kv #(if (> % %2) %2) se1D) => 0.5)
        (fact "esome"
              (esome #(if (> (+ % %2) %3) %3) se) => 0.5
              (esome #(if (> (+ % %2) %3) %3) se {::mx/by-row false}) => 0.5))
 
 (facts "filter"
-       (fact "filter-kv"
-             (filter-kv #(< % %2) se1D) => [1.0])
        (fact "element filter"
              (efilter ap #(< % 2.1)) => '(1.0 0.5 2.0)
              (efilter ap #(< % 2.1) :byrow? false) => '(1.0 2.0 0.5)
@@ -930,12 +889,6 @@
              (matrix-solve-iterative ap [7.0 9.0] :solver :symm) => (throws)))
 
 (facts "random"
-       (fact "vector"
-             (first (rnd-vector :clatrix 3 test-rnd-lazy))
-             => (clatrix [0.8335762378570932 0.11249249636232017
-                          0.8502406979201282])
-             (first (rnd-vector 3 test-rnd-lazy))
-             => [0.8335762378570932 0.11249249636232017 0.8502406979201282])
        (fact "matrix"
              (first (rnd-matrix :clatrix 2 2 test-rnd-lazy))
              => (clatrix [[0.8335762378570932 0.11249249636232017]

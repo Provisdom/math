@@ -7,7 +7,7 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
-;(ost/instrument)
+(ost/instrument)
 
 (deftest tensor?-test
   (is (tensor/tensor? []))
@@ -23,7 +23,7 @@
 (deftest type-tests
   (tensor?-test))
 
-;(defspec-test test-tensor? `tensor/tensor?)
+;(defspec-test test-tensor? `tensor/tensor?)                 ;slowish
 
 (deftest to-tensor-test
   (is= [] (tensor/to-tensor '()))
@@ -78,11 +78,11 @@
   (fill-tensor-test)
   (rnd-tensor-test))
 
-;(defspec-test test-to-tensor `tensor/to-tensor)
-;(defspec-test test-compute-tensor `tensor/compute-tensor)
-;(defspec-test test-repeat-tensor `tensor/repeat-tensor)
-;(defspec-test test-fill-tensor `tensor/fill-tensor)
-;(defspec-test test-rnd-tensor `tensor/rnd-tensor)
+;(defspec-test test-to-tensor `tensor/to-tensor) ;slowish
+;(defspec-test test-compute-tensor `tensor/compute-tensor) ;slowish
+;(defspec-test test-repeat-tensor `tensor/repeat-tensor) ;slow
+(defspec-test test-fill-tensor `tensor/fill-tensor)
+(defspec-test test-rnd-tensor `tensor/rnd-tensor)
 
 (deftest ecount-test
   (is= 1 (tensor/ecount 0))
@@ -111,10 +111,10 @@
   (shape-test)
   (every-kv?-test))
 
-;(defspec-test test-ecount `tensor/ecount)
-;(defspec-test test-dimensionality `tensor/dimensionality)
-;(defspec-test test-shape `tensor/shape)
-;(defspec-test test-every-kv? `tensor/every-kv?)
+(defspec-test test-ecount `tensor/ecount)
+(defspec-test test-dimensionality `tensor/dimensionality)
+(defspec-test test-shape `tensor/shape)
+(defspec-test test-every-kv? `tensor/every-kv?)             ;fspec issues
 
 (deftest emap-test
   (is= [[6 6] [6 6]] (tensor/emap + 1 [2 2] [[3 3] [3 3]]))
@@ -135,8 +135,8 @@
   (emap-test)
   (emap-kv-test))
 
-;(defspec-test test-emap `tensor/emap)
-;(defspec-test test-emap-kv `tensor/emap-kv)
+;(defspec-test test-emap `tensor/emap) ;fspec issues
+;(defspec-test test-emap-kv `tensor/emap-kv) ;fspec issues
 
 (deftest add-test
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/add [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
@@ -182,7 +182,7 @@
 (deftest normalize1-test
   (is= [[0.13333333333333333 0.06666666666666667] [0.26666666666666666 0.5333333333333333]]
        (tensor/normalize1 [[1.0 0.5] [2.0 4.0]]))
-  (is= 1.0
+  (is= 0.9999999999999998
        (apply + (tensor/normalize1 [2.1242141025912059120591205912509510259021590125 1.2398578935713571650983759872398572983
                                     2.1351365731650631856238056287035 3.235729375209357203975])))
   (is= [[0.13333333333333333 0.06666666666666667] [0.26666666666666666 0.5333333333333333]]
@@ -219,16 +219,16 @@
   (normalize-test)
   (normalize-p-test))
 
-;(defspec-test test-add `tensor/add)
-;(defspec-test test-subtract `tensor/subtract)
-;(defspec-test test-multiply `tensor/multiply)
-;(defspec-test test-divide `tensor/divide)
-;(defspec-test test-norm1 `tensor/norm1)
-;(defspec-test test-norm `tensor/norm)
-;(defspec-test test-norm-p `tensor/norm-p)
-;(defspec-test test-normalize1 `tensor/normalize1)
-;(defspec-test test-normalize `tensor/normalize)
-;(defspec-test test-normalize-p `tensor/normalize-p)
+;(defspec-test test-add `tensor/add) ;slow
+;(defspec-test test-subtract `tensor/subtract) ;slow
+;(defspec-test test-multiply `tensor/multiply) ;slow
+;(defspec-test test-divide `tensor/divide) ;slow
+(defspec-test test-norm1 `tensor/norm1)
+(defspec-test test-norm `tensor/norm)
+(defspec-test test-norm-p `tensor/norm-p)
+;(defspec-test test-normalize1 `tensor/normalize1) ;slow
+;(defspec-test test-normalize `tensor/normalize) ;slow
+;(defspec-test test-normalize-p `tensor/normalize-p) ;slow
 
 (deftest roughly?-test
   (is (tensor/roughly? 1 1.01 0.05))
@@ -247,7 +247,7 @@
   (roughly?-test)
   (roughly-distinct-test))
 
-;(defspec-test test-roughly? `tensor/roughly?)
-;(defspec-test test-roughly-distinct `tensor/roughly-distinct)
+(defspec-test test-roughly? `tensor/roughly?)
+(defspec-test test-roughly-distinct `tensor/roughly-distinct)
 
 #_(ost/unstrument)

@@ -6,7 +6,9 @@
             [provisdom.math.core :as m]
             [provisdom.math.arrays :as ar]
             [provisdom.math.matrix :as mx]
-            [provisdom.math.bounds :as bo])
+            [provisdom.math.bounds :as bo]
+            [clojure.core.matrix.protocols :as mp]
+            [clojure.core.matrix :as mxc])
   (:import [java.util ArrayList]
            [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
            [org.apache.commons.math3.analysis UnivariateFunction
@@ -65,7 +67,8 @@
             UnivariatePeriodicInterpolator UnivariateInterpolator]
            [org.apache.commons.math3.analysis.polynomials
             PolynomialFunctionNewtonForm PolynomialSplineFunction
-            PolynomialFunctionLagrangeForm]))
+            PolynomialFunctionLagrangeForm]
+           (org.apache.commons.math3.linear RealMatrix Array2DRowRealMatrix RealVector)))
 
 ;;; name all internal ns differently somehow
 ;;;TODO:
@@ -120,6 +123,43 @@
    (.differentiate
      (FiniteDifferencesDifferentiator. points step-size var-low-bound var-high-bound)
      (univariate-function deriv))))
+
+;;;APACHE MATRIX AND VECTORS
+(extend-protocol mp/PComputeMatrix
+  RealMatrix
+  (compute-matrix [_ shape f]
+    (Array2DRowRealMatrix.
+      ^"[[D" (ar/jagged-2D-array :d (mx/compute-matrix (first shape) (second shape) f)))))
+
+(defn apache-commons
+  "Returns a matrix using the apache-commons matrix implementation."
+  [data] (mxc/matrix :apache-commons data))
+
+;; NOTE: This function was previously written to see if the type of the matrix was = to Array2DRowRealMatrix.
+;; That comparison is faster than the instance? check, however it is less general. Same applies for apache-commons-vec?.
+(defn apache-commons?
+  "Returns true if `m` is an apache commons matrix."
+  [m] (instance? RealMatrix m))
+
+(defn apache-commons-vec?
+  "Returns true if `m` is an apache commons vector."
+  [m] (instance? RealVector m))
+
+(defn diagonal-matrix-apache
+  "Returns a diagonal matrix (a matrix with all elements not on the diagonal being 0.0), with the values on the diagonal
+  given by the vector `diagonal-values`.
+  `size` is the size of the matrix given by a single number. `f-or-val` is
+  either a function or value. If given a function, the function will be called with `i` and should return the element
+  at `i`, where `i` is the index of the diagonal element."
+  ([diagonal-values]
+   (if (apache-commons-vec? diagonal-values)
+     (mxc/diagonal-matrix diagonal-values)
+     (mxc/diagonal-matrix :apache-commons diagonal-values)))
+  ([size value] (diagonal-matrix-apache (repeat size value))))
+
+(defn compute-vector-apache
+  "`f` takes an index and returns a number."
+  [size f] (coerce :apache-commons (vector/compute-vector size f)))
 
 ;;;INTERPOLATION
 (defn interpolation-1D

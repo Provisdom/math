@@ -19,33 +19,20 @@
 (def se-sym '((1.0 0.5) (0.5 2.0)))
 (def ve-sym (mx/matrix se-sym))
 
-(deftest kahan-sum-test
-  (is= m/inf+ (mx/kahan-sum [m/inf+ m/inf+]))
-  (is (m/nan? (mx/kahan-sum [m/inf+ m/inf-])))
-  (is= 17.340604306430002 (mx/kahan-sum '(-3.0 6.34060430643 14.0)))
-  (is= 4950.0 (mx/kahan-sum (map double (range 1 100))))
-  (is= 15550.883635269476 (mx/kahan-sum (map (partial * m/PI) (range 1 100))))
-  (is= 15550.883635269474 (mx/esum (map (partial * m/PI) (range 1 100)))))
-
-(deftest matrix-test
-  (kahan-sum-test))
-
-(defspec-test test-kahan-sum `mx/kahan-sum)
-
-(deftest mempty?-test
+(deftest empty-matrix?-test
   (is (mx/empty-matrix? [[]]))
   (is-not (mx/empty-matrix? [[1]]))
   (is-not (mx/empty-matrix? [[] [2]]))
   (is-not (mx/empty-matrix? [[m/nan]]))
   (is-not (mx/empty-matrix? [[false]])))
 
-(deftest diagonal?-test
+(deftest diagonal-matrix?-test
   (is-not (mx/diagonal-matrix? se))
   (is (mx/diagonal-matrix? [[1.0 0.0] [0.0 2.0]])))
 
-(deftest symmetric?-test
-  (is-not (mx/symmetric? se))
-  (is (mx/symmetric? se-sym)))
+(deftest symmetric-matrix?-test
+  (is-not (mx/symmetric-matrix? se))
+  (is (mx/symmetric-matrix? se-sym)))
 
 (deftest unit-diagonal?-test
   (is-not (mx/matrix-with-unit-diagonal? se))
@@ -138,9 +125,9 @@
   (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector se-col)))
 
 (deftest special-type-helpers-test
-  (mempty?-test)
-  (diagonal?-test)
-  (symmetric?-test)
+  (empty-matrix?-test)
+  (diagonal-matrix?-test)
+  (symmetric-matrix?-test)
   (unit-diagonal?-test)
   (symmetric-with-unit-diagonal?-test)
   (positive?-test)
@@ -154,9 +141,9 @@
   (to-vector-from-symmetric-test)
   (to-vector-from-symmetric-with-unit-diagonal-test))
 
-(defspec-test test-mempty? `mx/empty-matrix?)
-(defspec-test test-diagonal? `mx/diagonal-matrix?)
-(defspec-test test-symmetric? `mx/symmetric?)
+(defspec-test test-empty-matrix? `mx/empty-matrix?)
+(defspec-test test-diagonal-matrix? `mx/diagonal-matrix?)
+(defspec-test test-symmetric-matrix? `mx/symmetric-matrix?)
 (defspec-test test-unit-diagonal? `mx/matrix-with-unit-diagonal?)
 (defspec-test test-symmetric-with-unit-diagonal? `mx/symmetric-matrix-with-unit-diagonal?)
 (defspec-test test-positive? `mx/positive-matrix?)
