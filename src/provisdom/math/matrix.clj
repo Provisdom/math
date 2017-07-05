@@ -5,17 +5,12 @@
             [orchestra.spec.test :as ost]
             [provisdom.utility-belt.core :as co]
             [provisdom.math.core :as m]
-            [provisdom.math.arrays :as ar]
+            [provisdom.math.tensor :as tensor]
+            [provisdom.math.vector :as vector]
             [clatrix.core :as clx]
             [clojure.core.matrix :as mxc]
-            [clojure.core.matrix.protocols :as mp]
-            [taoensso.truss :refer [have have?]])
-  (:import [org.apache.commons.math3.linear RealVector RealMatrix
-                                            QRDecomposition LUDecomposition CholeskyDecomposition
-                                            RectangularCholeskyDecomposition Array2DRowRealMatrix
-                                            EigenDecomposition SingularValueDecomposition RRQRDecomposition
-                                            DecompositionSolver ConjugateGradient SymmLQ
-                                            PreconditionedIterativeLinearSolver RealLinearOperator]))
+            [taoensso.truss :refer [have have?]]
+            [provisdom.math.random2 :as random]))
 
 (set! *warn-on-reflection* true)
 
@@ -24,7 +19,7 @@
          get-slices-as-matrix esome esum matrix? row-matrix? column-matrix? square-matrix?
          row-count column-count dimensionality size-symmetric size-symmetric-with-unit-diagonal
          compute-vector coerce maybe-convert-clatrix-row-or-column to-vector ecount to-matrix
-         inner-product emap constant-matrix)
+         inner-product emap constant-matrix matrix-multiply)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -68,11 +63,11 @@
                                     (gen/large-integer* {:min 0 :max mdl})
                                     (gen/large-integer* {:min 0 :max mdl}))
                          (fn [[i j k]] (gen/vector (gen/vector
-                                                   (gen/tuple (gen/large-integer* {:min 0 :max (dec i)})
-                                                              (gen/large-integer* {:min 0 :max (dec j)})
-                                                              (s/gen ::number))
-                                                   i)
-                                                 j)))))     ;this needs updating, see vector version
+                                                     (gen/tuple (gen/large-integer* {:min 0 :max (dec i)})
+                                                                (gen/large-integer* {:min 0 :max (dec j)})
+                                                                (s/gen ::number))
+                                                     i)
+                                                   j)))))   ;this needs updating, see vector version
 
 ;;;MATRIX TYPES
 (defn matrix?
@@ -218,7 +213,7 @@
 (defn constant-matrix
   "Constructs a new matrix of `value`'s (or zeros (doubles)) with the given `rows` and `columns`."
   ([rows columns] (constant-matrix rows columns 0.0))
-  ([rows columns number] (vec (repeat rows (constant-vector columns number)))))
+  ([rows columns number] (vec (repeat rows (vec (repeat columns number))))))
 
 (s/fdef constant-matrix
         :args (s/cat :rows ::rows :columns ::columns :number (s/? ::number))
@@ -254,19 +249,6 @@
         :args (s/cat :m ::matrix)
         :ret ::matrix)
 
-(defn column-matrix
-  "Returns a column matrix created from `numbers` or from `size` and `f`.
-  `size` is the size of the returned matrix.
-  `f` is a function that takes `row` and returns a number."
-  ([numbers] (mapv vec (partition 1 numbers)))
-  ([size f] (mapv vec (partition 1 (compute-vector size f)))))
-
-(s/fdef column-matrix
-        :args (s/or :one (s/cat :numbers ::numbers)
-                    :two (s/cat :size ::size :f (s/fspec :args (s/cat :row ::row)
-                                                         :ret ::number)))
-        :ret ::column-matrix)
-
 (defn row-matrix
   "Returns a row matrix created from `numbers` or from `size` and `f`.
   `size` is the size of the returned matrix.
@@ -279,6 +261,19 @@
                     :two (s/cat :size ::size :f (s/fspec :args (s/cat :column ::column)
                                                          :ret ::number)))
         :ret ::row-matrix)
+
+(defn column-matrix
+  "Returns a column matrix created from `numbers` or from `size` and `f`.
+  `size` is the size of the returned matrix.
+  `f` is a function that takes `row` and returns a number."
+  ([numbers] (mapv vec (partition 1 numbers)))
+  ([size f] (mapv vec (partition 1 (compute-vector size f)))))
+
+(s/fdef column-matrix
+        :args (s/or :one (s/cat :numbers ::numbers)
+                    :two (s/cat :size ::size :f (s/fspec :args (s/cat :row ::row)
+                                                         :ret ::number)))
+        :ret ::column-matrix)
 
 (defn diagonal-matrix
   "Returns a diagonal matrix (a matrix with all elements not on the diagonal being 0.0).
@@ -399,6 +394,19 @@
         :args (s/cat :square-m ::square-matrix)
         :ret ::matrix)
 
+;(defn non-negative-matrix-by-decreasing-off-diagonal
+;  "Attempts to return a non-negative matrix by decreasing the absolute values
+;      of the off-diagonal elements as necessary.
+; Useful for rounding errors."
+;  [m]
+;  (symmetric-matrix
+;    m (fn [r c]
+;        (let [e (get-in m [r c])]
+;          (if (= r c) e
+;            (* (m/sgn e) (min (m/sqrt (* (get-in m [r r]) (get-in m [c c])))
+;                              (m/abs e))))))
+;    (row-count m) true))
+
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the same).
   A Toeplitz matrix is also called a diagonal-constant matrix.
@@ -467,6 +475,50 @@
 (s/fdef sparse->symmetric-matrix
         :args (s/cat :sparse ::sparse-matrix :m ::matrix)
         :ret ::matrix)
+
+(defn rnd-matrix
+  "Returns matrix with random elements"
+  [rows columns]
+  (let [[v s] (take (* rows columns) (random/rand-double-lazy))]
+    [(partition columns v) s]))
+
+(s/fdef rnd-matrix
+        :args (s/cat :rows ::rows :columns ::columns)
+        :ret ::matrix)
+
+(defn rnd-reflection-matrix
+  "Returns [m rnd-lazy], where m is a random Householder reflection."
+  [size rnd-lazy]
+  (let [v (column-matrix (tensor/normalize (take size rnd-lazy)))]
+    [(tensor/subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
+     (drop size rnd-lazy)]))
+
+(defn rnd-spectral-matrix
+  "Returns [m rnd-lazy], where m is a random matrix with a particular
+      spectrum vector.
+The orthogonal matrices are generated by using 2 * spectrum-length composed
+   Householder reflections."
+  [spectrum rnd-lazy]
+  (let [size (count spectrum),
+        [v-mat r] (nth (iterate (fn [[prod-mat laz]]
+                                  (let [[r-mat s] (rnd-reflection-matrix
+                                                    size laz)]
+                                    [(matrix-multiply prod-mat r-mat) s]))
+                                [(identity-matrix size) rnd-lazy])
+                       (* 2 size))
+        l-mat (diagonal-matrix spectrum)]
+    [(-> v-mat (matrix-multiply l-mat) (matrix-multiply (transpose v-mat)))
+     r]))
+
+(defn rnd-positive-matrix
+  "Returns [m rnd-lazy], where m is a positive definite matrix with a random
+      spectrum.
+The orthogonal matrices are generated by using 2 * size composed Householder
+   reflections.
+Alternative #1: Sample from the Inverse-Wishart Distribution.
+Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
+                   [(mmul (transpose m) m), s])"
+  [size rnd-lazy] (rnd-spectral-matrix (take size rnd-lazy) (drop size rnd-lazy)))
 
 ;;;MATRIX INFO
 (defn row-count
@@ -605,13 +657,13 @@
                         (number? i) (if (number? except-i)
                                       (if (= except-i i) [] (if (< i n) i true))
                                       (if (contains? (set except-i) i) [] (if (< i n) i true)))
-                        :else (let [i (or i (range n))]     ;i is a seq of indices
+                        :else (let [indices (or i (range n))]
                                 (if (number? except-i)
-                                  (remove #(or (= except-i %) (>= % n)) i)
+                                  (remove #(or (= except-i %) (>= % n)) indices)
                                   (reduce
                                     (fn [tot e] (if (or (>= e n) (some #(= % e) except-i)) tot (conj tot e)))
                                     []
-                                    i)))))
+                                    indices)))))
         rs (calc-fn row-indices exception-row-indices (row-count m))
         cs (calc-fn column-indices exception-column-indices (column-count m))]
     (cond
@@ -666,6 +718,46 @@
                                     :ret boolean?)
                      :m ::matrix)
         :ret ::number)
+
+(defn size-symmetric
+  "Returns the size of the matrix given `ecount`.
+  `ecount` is the number of independent symmetric matrix elements (the number of elements on the diagonal plus
+  the number either above or below the diagonal)."
+  [ecount]
+  (let [s (-> ecount (* 8) inc m/sqrt dec (* 0.5))]
+    (when (m/roughly-round? s 1e-6)
+      (long s))))
+
+(s/fdef size-symmetric
+        :args (s/cat :ecount ::m/int-non-)
+        :ret (s/nilable ::m/int-non-))
+
+(defn size-symmetric-with-unit-diagonal
+  "Returns the size of the matrix given `ecount`.
+  `ecount` is the number of elements above or below the unit diagonal."
+  [ecount] (inc (size-symmetric ecount)))
+
+(s/fdef size-symmetric-with-unit-diagonal
+        :args (s/cat :ecount ::m/int-non-)
+        :ret (s/nilable ::m/int-non-))
+
+(defn ecount-symmetric
+  "Returns the element count (`ecount`) for a symmetric matrix.
+  This is the number of elements on the diagonal plus the number of elements above or below the diagonal."
+  [size] (/ (+ (m/sq size) size) 2))
+
+(s/fdef ecount-symmetric
+        :args (s/cat :size ::size)
+        :ret ::m/int-non-)
+
+(defn ecount-symmetric-with-unit-diagonal
+  "Returns the element count (`ecount`) for a symmetric matrix with a unit diagonal.
+  This is the number of elements above or below the diagonal."
+  [size] (/ (- (m/sq size) size) 2))
+
+(s/fdef ecount-symmetric-with-unit-diagonal
+        :args (s/cat :size ::size)
+        :ret ::m/int-non-)
 
 ;;;MATRIX MANIPULATION
 (defn transpose
@@ -734,7 +826,7 @@
   "Removes a column in a matrix"
   [m column]
   (if (<= (inc column) (column-count m))
-    (mapv #(removev % column) m)
+    (mapv #(vector/removev % column) m)
     m))
 
 (s/fdef remove-column
@@ -862,12 +954,17 @@
 (defn permute-matrix
   "Returns a Matrix with the rows and the columns of a matrix permuted.
     Options:
-     :rows is the rowspec providing a seq listing the indices of the permutation.
-     :cols is the colspec providing a seq listing the indices of the permutation."
-  [m & {:keys [rows columns]}]
-  {:pre [(have? matrix? m)]}
-  (let [clx (clatrix m), p (clx/permute clx :r rows :c columns)]
-    (coerce m p)))
+     ::row-indices provides the row index or indices of the permutation.
+     ::column-indices provides the column index or indices of the permutation."
+  [m & {::keys [row-indices column-indices]}]
+  (let [after-rows (if row-indices (mapv (partial get-row m) (vector/to-vector row-indices)) m)]
+    (if column-indices
+      (transpose (mapv (partial get-row (transpose after-rows)) (vector/to-vector column-indices)))
+      after-rows)))
+
+(s/fdef permute-matrix
+        :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::row-indices ::column-indices])))
+        :ret ::matrix)
 
 ;;;MATRIX MATH
 (defn matrix-multiply
@@ -880,65 +977,25 @@
         :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
                     :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/? (s/keys* :mats ::matrix)))))
 
-(defn inner-product
+(defn inner-product                                         ;is this defined for tensors?
   "Computes the inner product of numerical arrays.
 For matrix/matrix and matrix/vector arguments, this is equivalent to matrix multiplication.
 The inner product of two arrays with indexed dimensions {..i j} and {j k..} has dimensions {..i k..}.
 The inner-product of two vectors will be scalar."
   ([a] (mxc/inner-product a))
-  ([a b] (mxc/inner-product (to-tensor a) (to-tensor b)))
-  ([a b & more] (apply mxc/inner-product (map to-tensor (apply vector a b more)))))
+  ([a b] (mxc/inner-product a b))
+  ([a b & more] (apply mxc/inner-product a b more)))
 
 (defn kronecker-product [m & ms]
   {:pre [(have? matrix? m) (have? (partial every? matrix?) ms)]}
   (reduce (fn [a b]
-            (let [arows (row-count a), acols (column-count a)]
-              (apply conj-rows (for [i (range arows)]
+            (let [a-rows (row-count a)
+                  a-cols (column-count a)]
+              (apply conj-rows (for [i (range a-rows)]
                                  (apply conj-columns
-                                        (for [j (range acols)]
-                                          (multiply (get-in a [i j]) b)))))))
+                                        (for [j (range a-cols)]
+                                          (tensor/multiply (get-in a [i j]) b)))))))
           m ms))
-
-;;;SPECIAL-MATRIX INFO
-(defn size-symmetric
-  "Returns the size of the matrix given `ecount`.
-  `ecount` is the number of independent symmetric matrix elements (the number of elements on the diagonal plus
-  the number either above or below the diagonal)."
-  [ecount]
-  (let [s (-> ecount (* 8) inc m/sqrt dec (* 0.5))]
-    (when (m/roughly-round? s 1e-6)
-      (long s))))
-
-(s/fdef size-symmetric
-        :args (s/cat :ecount ::m/int-non-)
-        :ret (s/nilable ::m/int-non-))
-
-(defn size-symmetric-with-unit-diagonal
-  "Returns the size of the matrix given `ecount`.
-  `ecount` is the number of elements above or below the unit diagonal."
-  [ecount] (inc (size-symmetric ecount)))
-
-(s/fdef size-symmetric-with-unit-diagonal
-        :args (s/cat :ecount ::m/int-non-)
-        :ret (s/nilable ::m/int-non-))
-
-(defn ecount-symmetric
-  "Returns the element count (`ecount`) for a symmetric matrix.
-  This is the number of elements on the diagonal plus the number of elements above or below the diagonal."
-  [size] (/ (+ (m/sq size) size) 2))
-
-(s/fdef ecount-symmetric
-        :args (s/cat :size ::size)
-        :ret ::m/int-non-)
-
-(defn ecount-symmetric-with-unit-diagonal
-  "Returns the element count (`ecount`) for a symmetric matrix with a unit diagonal.
-  This is the number of elements above or below the diagonal."
-  [size] (/ (- (m/sq size) size) 2))
-
-(s/fdef ecount-symmetric-with-unit-diagonal
-        :args (s/cat :size ::size)
-        :ret ::m/int-non-)
 
 (comment "REDUCE MATRIX")
 (defn ereduce-kv
@@ -995,7 +1052,7 @@ The inner-product of two vectors will be scalar."
         :ret (s/nilable ::m/number))
 
 ;;;SPARSE
-(defn sparse-efilter     ;;these two sparse filters are how to create 'sparse' from matrix, default pred should be not= 0
+(defn sparse-efilter                                        ;;these two sparse filters are how to create 'sparse' from matrix, default pred should be not= 0
   "Returns a vector of [row column value].
   pred takes an element"
   [m pred & {:keys [byrow?] :or {byrow? true}}]
@@ -1081,57 +1138,3 @@ pred takes an element and will be evaluated only for upper-right or lower-left t
 (defn round-roughly-zero-rows-and-columns
   "Returns a matrix after rounding any roughly-zero rows and columns"
   [m accu] (round-roughly-zero-columns (round-roughly-zero-rows m accu) accu))
-
-;(defn force-symmetric-matrix-to-be-non-negative
-;  "Attempts to return a non-negative matrix by reducing the absolute values
-;      of the off-diagonal elements as necessary.
-; Useful for rounding errors."
-;  [m]
-;  (symmetric-matrix
-;    m (fn [r c]
-;        (let [e (get-in m [r c])]
-;          (if (= r c) e
-;            (* (m/sgn e) (min (m/sqrt (* (get-in m [r r]) (get-in m [c c])))
-;                              (m/abs e))))))
-;    (row-count m) true))
-
-;;;RANDOM
-(defn rnd-matrix
-  "Returns [m rnd-lazy], where m has random elements"
-  [rows ^long columns rnd-lazy]
-  (let [[v s] (rnd-vector (* rows columns) rnd-lazy)]
-    [(partition columns v) s]))
-
-(defn rnd-reflection-matrix
-  "Returns [m rnd-lazy], where m is a random Householder reflection."
-  [size rnd-lazy]
-  (let [v (column-matrix (normalise (take size rnd-lazy)))]
-    [(subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
-     (drop size rnd-lazy)]))
-
-(defn rnd-spectral-matrix
-  "Returns [m rnd-lazy], where m is a random matrix with a particular
-      spectrum vector.
-The orthogonal matrices are generated by using 2 * spectrum-length composed
-   Householder reflections."
-  [spectrum rnd-lazy]
-  (let [size (count spectrum),
-        [v-mat r] (nth (iterate (fn [[prod-mat laz]]
-                                  (let [[r-mat s] (rnd-reflection-matrix
-                                                    size laz)]
-                                    [(matrix-multiply prod-mat r-mat) s]))
-                                [(identity-matrix size) rnd-lazy])
-                       (* 2 size))
-        l-mat (diagonal-matrix spectrum)]
-    [(-> v-mat (matrix-multiply l-mat) (matrix-multiply (transpose v-mat)))
-     r]))
-
-(defn rnd-positive-matrix
-  "Returns [m rnd-lazy], where m is a positive definite matrix with a random
-      spectrum.
-The orthogonal matrices are generated by using 2 * size composed Householder
-   reflections.
-Alternative #1: Sample from the Inverse-Wishart Distribution.
-Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
-                   [(mmul (transpose m) m), s])"
-  [size rnd-lazy] (rnd-spectral-matrix (take size rnd-lazy) (drop size rnd-lazy)))

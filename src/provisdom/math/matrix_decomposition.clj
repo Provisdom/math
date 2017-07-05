@@ -4,8 +4,15 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]
             [provisdom.math.core :as m]
+            [clojure.core.matrix.protocols :as mp]
             [clojure.core.matrix :as mxc]
-            [clatrix.core :as clx]))
+            [clatrix.core :as clx])
+  (:import [org.apache.commons.math3.linear RealVector RealMatrix
+                                            QRDecomposition LUDecomposition CholeskyDecomposition
+                                            RectangularCholeskyDecomposition Array2DRowRealMatrix
+                                            EigenDecomposition SingularValueDecomposition RRQRDecomposition
+                                            DecompositionSolver ConjugateGradient SymmLQ
+                                            PreconditionedIterativeLinearSolver RealLinearOperator]))
 
 (set! *warn-on-reflection* true)
 
