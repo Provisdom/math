@@ -7,7 +7,6 @@
             [provisdom.math.core :as m]
             [provisdom.math.tensor :as tensor]
             [provisdom.math.vector :as vector]
-            [clatrix.core :as clx]
             [clojure.core.matrix :as mxc]
             [taoensso.truss :refer [have have?]]
             [provisdom.math.random2 :as random]))
@@ -17,7 +16,7 @@
 ;;;DECLARATIONS
 (declare eigenvalues column-matrix transpose rrqr-decomposition diagonal
          get-slices-as-matrix esome esum matrix? row-matrix? column-matrix? square-matrix?
-         row-count column-count dimensionality size-symmetric size-symmetric-with-unit-diagonal
+         row-count column-count size-symmetric size-symmetric-with-unit-diagonal
          compute-vector coerce maybe-convert-clatrix-row-or-column to-vector ecount to-matrix
          inner-product emap constant-matrix matrix-multiply)
 
@@ -25,6 +24,8 @@
 
 (s/def ::by-row? boolean?)
 (s/def ::upper? boolean?)
+(s/def ::index ::tensor/index)
+(s/def ::indices ::tensor/indices)
 (s/def ::row-indices (s/or :index ::index :indices ::indices))
 (s/def ::column-indices (s/or :index ::index :indices ::indices))
 (s/def ::exception-row-indices (s/or :index ::index :indices ::indices))
@@ -33,9 +34,14 @@
 (s/def ::column ::m/int-non-)
 (s/def ::rows ::m/int-non-)
 (s/def ::columns ::m/int-non-)
+(s/def ::size ::vector/size)
+(s/def ::number ::m/number)
+(s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
+(s/def ::tensor ::tensor/tensor)
 (s/def ::row-matrix (s/with-gen row-matrix? #(gen/vector (s/gen ::vector) 1)))
 (s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap (fn [v] (column-matrix v)) (s/gen ::vector))))
+(s/def ::matrix ::tensor/tensor2D)
 (s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
                                 #(gen/vector (s/gen ::vector-num) 1 mdl)))
 (s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
@@ -72,7 +78,7 @@
 ;;;MATRIX TYPES
 (defn matrix?
   "Returns true if a matrix (i.e., dimensionality is 2, contains numbers only, and rows have equal lengths)"
-  [x] (and (= 2 (dimensionality x))
+  [x] (and (= 2 (tensor/dimensionality x))
            (every? #(= (count %) (count (first x))) x)
            (every? number? (flatten x))))
 
@@ -82,7 +88,7 @@
 
 (defn row-matrix?
   "Returns true if a row-matrix (i.e., matrix with exactly one row)"
-  [x] (and (= 2 (dimensionality x)) (m/one? (row-count x)) (every? number? (flatten x))))
+  [x] (and (= 2 (tensor/dimensionality x)) (m/one? (row-count x)) (every? number? (flatten x))))
 
 (s/fdef row-matrix?
         :args (s/cat :x any?)
@@ -90,7 +96,7 @@
 
 (defn column-matrix?
   "Returns true if a column-matrix (i.e., matrix with exactly one column)"
-  [x] (and (= 2 (dimensionality x)) (every? #(m/one? (count %)) x) (every? number? (flatten x))))
+  [x] (and (= 2 (tensor/dimensionality x)) (every? #(m/one? (count %)) x) (every? number? (flatten x))))
 
 (s/fdef column-matrix?
         :args (s/cat :x any?)
@@ -98,7 +104,7 @@
 
 (defn row-or-column-matrix?
   "Returns true if a row or a column matrix."
-  [x] (and (= 2 (dimensionality x))
+  [x] (and (= 2 (tensor/dimensionality x))
            (every? number? (flatten x))
            (or (every? #(m/one? (count %)) x) (m/one? (row-count x)))))
 
@@ -156,7 +162,7 @@
 
 (defn symmetric-matrix-with-unit-diagonal?
   "Returns true if a symmetric matrix with a unit diagonal."
-  [m] (and (matrix-with-unit-diagonal? m) (symmetric? m)))
+  [m] (and (matrix-with-unit-diagonal? m) (symmetric-matrix? m)))
 
 (s/fdef symmetric-matrix-with-unit-diagonal?
         :args (s/cat :m ::matrix)
@@ -183,7 +189,7 @@
 (defn non-negative-matrix?
   "Returns true if `m` is a non-negative matrix."
   ([m] (non-negative-matrix? m m/*dbl-close*))
-  ([m accu] (and (symmetric? m) (every? #(m/roughly-non-? % accu) (eigenvalues m)))))
+  ([m accu] (and (symmetric-matrix? m) (every? #(m/roughly-non-? % accu) (eigenvalues m)))))
 
 (s/fdef non-negative-matrix?
         :args (s/cat :m ::matrix :accu (s/? ::accu))
@@ -191,9 +197,9 @@
 
 ;;;MATRIX CONSTRUCTORS
 (defn to-matrix
-  "Builds a matrix representing the flattened elements of `tensor` (on a matrix of zeros (doubles) if necessary).
+  "Builds a matrix representing the flattened elements of `tensor` (onto a matrix of zeros (doubles) if necessary).
   `rows` is the number of rows of the returned matrix.
-  The elements are placed `by-row?`.
+  The elements are placed `by-row?` (default is true).
   To set the number of columns instead, transpose returned matrix."
   ([tensor rows] (to-matrix tensor rows {::by-row? true}))
   ([tensor rows {::keys [by-row?] :or {by-row? true}}]
@@ -207,7 +213,7 @@
        (transpose (mapv vec (partition rows coll)))))))
 
 (s/fdef to-matrix
-        :args (s/cat :tensor ::tensor :rows ::rows :args (s/? (s/keys :opt [::by-row?])))
+        :args (s/cat :tensor ::tensor :rows ::rows :opts (s/? (s/keys :opt [::by-row?])))
         :ret ::matrix)
 
 (defn constant-matrix
@@ -254,7 +260,7 @@
   `size` is the size of the returned matrix.
   `f` is a function that takes `column` and returns a number."
   ([numbers] [(vec numbers)])
-  ([size f] [(compute-vector size f)]))
+  ([size f] [(vector/compute-vector size f)]))
 
 (s/fdef row-matrix
         :args (s/or :one (s/cat :numbers ::numbers)
@@ -267,7 +273,7 @@
   `size` is the size of the returned matrix.
   `f` is a function that takes `row` and returns a number."
   ([numbers] (mapv vec (partition 1 numbers)))
-  ([size f] (mapv vec (partition 1 (compute-vector size f)))))
+  ([size f] (mapv vec (partition 1 (vector/compute-vector size f)))))
 
 (s/fdef column-matrix
         :args (s/or :one (s/cat :numbers ::numbers)
@@ -290,7 +296,9 @@
 (s/fdef diagonal-matrix
         :args (s/or :one (s/cat :diagonal-numbers ::numbers)
                     :two (s/cat :size ::size :f (s/fspec :args (s/cat :index ::index)
-                                                         :ret ::number)))
+                                                         :ret ::number))
+                    :three (s/cat :rows ::rows :columns ::columns :f (s/fspec :args (s/cat :index ::index)
+                                                                              :ret ::number)))
         :ret ::matrix)
 
 (defn triangular-matrix
@@ -317,10 +325,10 @@
      (when size (compute-matrix size size f)))))
 
 (s/fdef triangular-matrix
-        :args (s/cat :args (s/or :one-or-two (s/cat :numbers ::numbers :args (s/? (s/keys :opt [::by-row? ::upper?])))
+        :args (s/cat :args (s/or :one-two (s/cat :numbers ::numbers :opts (s/? (s/keys :opt [::by-row? ::upper?])))
                                  :three (s/cat :diagonal-numbers ::numbers
                                                :off-diagonal-numbers ::numbers
-                                               :args (s/keys :opt [::by-row? ::upper?]))))
+                                               :opts (s/keys :opt [::by-row? ::upper?]))))
         :ret (s/nilable ::matrix))
 
 (defn symmetric-matrix
@@ -342,10 +350,10 @@
 
 (s/fdef symmetric-matrix
         :args (s/cat :args (s/or :one (s/cat :numbers ::numbers)
-                                 :two-or-three (s/cat :f (s/fspec :args (s/cat :row ::row :column ::column)
-                                                                  :ret ::number)
-                                                      :size ::size
-                                                      :args (s/? (s/keys :opt [::by-row?])))))
+                                 :two-three (s/cat :f (s/fspec :args (s/cat :row ::row :column ::column)
+                                                               :ret ::number)
+                                                   :size ::size
+                                                   :opts (s/? (s/keys :opt [::by-row?])))))
         :ret (s/nilable ::matrix))
 
 (defn symmetric-matrix-with-unit-diagonal
@@ -371,10 +379,10 @@
 
 (s/fdef symmetric-matrix-with-unit-diagonal
         :args (s/cat :args (s/or :one (s/cat :numbers ::numbers)
-                                 :two-or-three (s/cat :f (s/fspec :args (s/cat :row ::row :column ::column)
-                                                                  :ret ::number)
-                                                      :size ::size
-                                                      :args (s/? (s/keys :opt [::by-row?])))))
+                                 :two-three (s/cat :f (s/fspec :args (s/cat :row ::row :column ::column)
+                                                               :ret ::number)
+                                                   :size ::size
+                                                   :opts (s/? (s/keys :opt [::by-row?])))))
         :ret (s/nilable ::matrix))
 
 (defn symmetric-matrix-by-averaging
@@ -394,19 +402,6 @@
         :args (s/cat :square-m ::square-matrix)
         :ret ::matrix)
 
-;(defn non-negative-matrix-by-decreasing-off-diagonal
-;  "Attempts to return a non-negative matrix by decreasing the absolute values
-;      of the off-diagonal elements as necessary.
-; Useful for rounding errors."
-;  [m]
-;  (symmetric-matrix
-;    m (fn [r c]
-;        (let [e (get-in m [r c])]
-;          (if (= r c) e
-;            (* (m/sgn e) (min (m/sqrt (* (get-in m [r r]) (get-in m [c c])))
-;                              (m/abs e))))))
-;    (row-count m) true))
-
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the same).
   A Toeplitz matrix is also called a diagonal-constant matrix.
@@ -424,7 +419,7 @@
                              (= (count r) (count c)))))
         :ret ::matrix)
 
-(def ^{:doc "See [[toeplitz-matrix]]"} diagonal-constant toeplitz-matrix)
+(def ^{:doc "See [[toeplitz-matrix]]"} diagonal-constant-matrix toeplitz-matrix)
 
 (defn outer-product
   "An outer product is the tensor product of two coordinate vectors,
@@ -487,38 +482,40 @@
         :ret ::matrix)
 
 (defn rnd-reflection-matrix
-  "Returns [m rnd-lazy], where m is a random Householder reflection."
-  [size rnd-lazy]
-  (let [v (column-matrix (tensor/normalize (take size rnd-lazy)))]
-    [(tensor/subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))
-     (drop size rnd-lazy)]))
+  "Returns a random Householder reflection matrix of `size`."
+  [size]
+  (let [v (column-matrix (tensor/normalize (take size (random/rand-double-lazy))))]
+    (tensor/subtract (identity-matrix size) (matrix-multiply (matrix-multiply v (transpose v)) 2.0))))
+
+(s/fdef rnd-reflection-matrix
+        :args (s/cat :size ::size)
+        :ret ::matrix)
 
 (defn rnd-spectral-matrix
-  "Returns [m rnd-lazy], where m is a random matrix with a particular
-      spectrum vector.
-The orthogonal matrices are generated by using 2 * spectrum-length composed
-   Householder reflections."
-  [spectrum rnd-lazy]
-  (let [size (count spectrum),
-        [v-mat r] (nth (iterate (fn [[prod-mat laz]]
-                                  (let [[r-mat s] (rnd-reflection-matrix
-                                                    size laz)]
-                                    [(matrix-multiply prod-mat r-mat) s]))
-                                [(identity-matrix size) rnd-lazy])
-                       (* 2 size))
-        l-mat (diagonal-matrix spectrum)]
-    [(-> v-mat (matrix-multiply l-mat) (matrix-multiply (transpose v-mat)))
-     r]))
+  "Returns a random matrix with a particular `spectrum-vector`.
+  The orthogonal matrices are generated by using 2 * size of `spectrum-vector` composed Householder reflections."
+  [spectrum-vector]
+  (let [size (count spectrum-vector)
+        v-mat (nth (iterate (fn [prod-mat] (matrix-multiply prod-mat (rnd-reflection-matrix size)))
+                            (identity-matrix size))
+                   (* 2 size))
+        l-mat (diagonal-matrix spectrum-vector)]
+    (matrix-multiply (matrix-multiply v-mat l-mat) (transpose v-mat))))
+
+(s/fdef rnd-spectral-matrix
+        :args (s/cat :spectrum-vector ::vector)
+        :ret ::matrix)
 
 (defn rnd-positive-matrix
-  "Returns [m rnd-lazy], where m is a positive definite matrix with a random
-      spectrum.
-The orthogonal matrices are generated by using 2 * size composed Householder
-   reflections.
-Alternative #1: Sample from the Inverse-Wishart Distribution.
-Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
-                   [(mmul (transpose m) m), s])"
-  [size rnd-lazy] (rnd-spectral-matrix (take size rnd-lazy) (drop size rnd-lazy)))
+  "Returns a positive definite matrix with a random spectrum.
+  The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
+  Alternative #1: Sample from the Inverse-Wishart Distribution.
+  Alternative #2: (let [[m s] (rnd-matrix size size)] [(matrix-multiply (transpose m) m), s])"
+  [size] (rnd-spectral-matrix (take size (random/rand-double-lazy))))
+
+(s/fdef rnd-positive-matrix
+        :args (s/cat :size ::size)
+        :ret ::matrix)
 
 ;;;MATRIX INFO
 (defn row-count
@@ -594,7 +591,7 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
             (for [c (range nc), r (range c nr)] (get-in m [r c])))))))
 
 (s/fdef symmetric-matrix->vector
-        :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::by-row?])))
+        :args (s/cat :m ::matrix :opts (s/? (s/keys :opt [::by-row?])))
         :ret ::vector)
 
 (defn symmetric-matrix-with-unit-diagonal->vector
@@ -610,7 +607,7 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
             (for [c (range nc), r (range (inc c) nr)] (get-in m [r c])))))))
 
 (s/fdef symmetric-matrix-with-unit-diagonal->vector
-        :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::by-row?])))
+        :args (s/cat :m ::matrix :opts (s/? (s/keys :opt [::by-row?])))
         :ret ::vector)
 
 (defn diagonal
@@ -681,7 +678,7 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
 
 (s/fdef get-slices-as-matrix
         :args (s/cat :m ::matrix
-                     :args (s/keys :opt [::row-indices
+                     :opts (s/keys :opt [::row-indices
                                          ::column-indices
                                          ::exception-row-indices
                                          ::exception-column-indices]))
@@ -803,7 +800,7 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
   "Inserts a column of `numbers` in a matrix at the specified `column`."
   [m column numbers]
   (when (<= column (column-count m))
-    (vec (map-indexed (fn [row row-vector] (insertv row-vector column (get numbers row 0.0))) m))))
+    (vec (map-indexed (fn [row row-vector] (vector/insertv row-vector column (get numbers row 0.0))) m))))
 
 (s/fdef insert-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
@@ -835,7 +832,6 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
 
 (defn update-row
   "Updates a `row` of matrix `m`, using `f`, which is a function of the `column` and `number` and returns a number."
-  ([m row f] (update m row f))
   ([m row f & args] (apply update m row f args)))
 
 (s/fdef update-row
@@ -843,20 +839,19 @@ Alternative #2: (let [[m s] (rnd-matrix size size rnd-lazy)]
                      :row ::row
                      :f (s/fspec :args (s/cat :column ::column)
                                  :ret ::number)
-                     :args (s/? (s/keys* :number ::number)))
+                     :args (s/* ::number))
         :ret ::matrix)
 
 (defn update-column
   "Updates a `column` of matrix `m`, using `f`, which is a function of the `row` and `number` and returns a number."
-  ([m column f] (vec (map-indexed (fn [row row-vector] (update row-vector column f row)) m)))
-  ([m column f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector column f row args)) m))))
+  [m column f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector column f row args)) m)))
 
 (s/fdef update-column
         :args (s/cat :m ::matrix
                      :column ::column
                      :f (s/fspec :args (s/cat :row ::row :number ::number)
                                  :ret ::number)
-                     :args (s/? (s/keys* :number ::number)))
+                     :args (s/* ::number))
         :ret ::matrix)
 
 (defn conj-rows

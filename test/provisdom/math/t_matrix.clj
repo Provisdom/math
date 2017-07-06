@@ -4,81 +4,112 @@
             [provisdom.math.matrix :as mx]
             [provisdom.math.core :as m]
             [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+            [orchestra.spec.test :as ost]
+            [provisdom.math.random2 :as random]))
 
 (ost/instrument)
 
-(def ve [[1.0 0.5] [2.0 4.0]])
-(def ve-sym [[1.0 0.5] [0.5 1.0]])
-(def ve1D [1.0 0.5])
-(def ve-row [[1.0 0.5]])
-(def ve-col [[1.0] [0.5]])
+(deftest matrix?-test
+  (is-not (mx/matrix? [0]))
+  (is-not (mx/matrix? 0))
+  (is-not (mx/matrix? [[[0.0] [0.0]]]))
+  (is-not (mx/matrix? [[nil]]))
+  (is-not (mx/matrix? [["A"]]))
+  (is-not (mx/matrix? '((0))))
+  (is (mx/matrix? [[0]]))
+  (is (mx/matrix? [[m/nan]]))
+  (is (mx/matrix? [[0.0] [0.0]])))
 
-(deftest matrix?-test)
-(deftest row-matrix?-test)
-(deftest column-matrix?-test)
+(deftest row-matrix?-test
+  (is-not (mx/row-matrix? [0]))
+  (is-not (mx/row-matrix? [[0.0] [0.0]]))
+  (is-not (mx/row-matrix? [[nil]]))
+  (is-not (mx/row-matrix? '((0))))
+  (is (mx/row-matrix? [[0]]))
+  (is (mx/row-matrix? [[0.0 0.0]]))
+  (is (mx/row-matrix? [[m/nan]])))
+
+(deftest column-matrix?-test
+  (is-not (mx/column-matrix? [0]))
+  (is-not (mx/column-matrix? [[0.0 0.0]]))
+  (is-not (mx/column-matrix? [[nil]]))
+  (is-not (mx/column-matrix? '((0))))
+  (is (mx/column-matrix? [[0]]))
+  (is (mx/column-matrix? [[0.0] [0.0]]))
+  (is (mx/column-matrix? [[m/nan]])))
 
 (deftest row-or-column-matrix?-test
   (is-not (mx/row-or-column-matrix? m/sq))
-  (is-not (mx/row-or-column-matrix? se))
-  (is-not (mx/row-or-column-matrix? ve))
-  (is (mx/row-or-column-matrix? se-row))
-  (is (mx/row-or-column-matrix? ve-row))
-  (is (mx/row-or-column-matrix? se-col))
-  (is (mx/row-or-column-matrix? ve-col))
-  (is-not (mx/row-or-column-matrix? se1D))
-  (is-not (mx/row-or-column-matrix? ve1D)))
+  (is-not (mx/row-or-column-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (mx/row-or-column-matrix? [[1.0 0.5]]))
+  (is (mx/row-or-column-matrix? [[1.0] [0.5]]))
+  (is-not (mx/row-or-column-matrix? [1.0 0.5]))
+  (is-not (mx/row-or-column-matrix? 2.0)))
 
-(deftest zero-matrix?-test)
+(deftest zero-matrix?-test
+  (is-not (mx/zero-matrix? [0]))
+  (is (mx/zero-matrix? [[0]]))
+  (is (mx/zero-matrix? [[0.0]]))
+  (is (mx/zero-matrix? [[0.0] [0.0]]))
+  (is-not (mx/zero-matrix? [[0.0] [0.1]])))
 
 (deftest empty-matrix?-test
+  (is-not (mx/empty-matrix? []))
   (is (mx/empty-matrix? [[]]))
   (is-not (mx/empty-matrix? [[1]]))
   (is-not (mx/empty-matrix? [[] [2]]))
   (is-not (mx/empty-matrix? [[m/nan]]))
   (is-not (mx/empty-matrix? [[false]])))
 
-(deftest square-matrix?-test)
+(deftest square-matrix?-test
+  (is-not (mx/square-matrix? []))
+  (is (mx/square-matrix? [[]]))
+  (is (mx/square-matrix? [[1]]))
+  (is-not (mx/square-matrix? [[] [2]]))
+  (is (mx/square-matrix? [[m/nan]]))
+  (is-not (mx/square-matrix? [[1 2]])))
 
 (deftest diagonal-matrix?-test
-  (is-not (mx/diagonal-matrix? ve))
+  (is-not (mx/diagonal-matrix? [[1.0 0.5] [2.0 4.0]]))
   (is (mx/diagonal-matrix? [[1.0 0.0] [0.0 2.0]])))
 
 (deftest matrix-with-unit-diagonal?-test
-  (is-not (mx/matrix-with-unit-diagonal? ve))
-  (is-not (mx/matrix-with-unit-diagonal? ve-sym))
-  (is (mx/matrix-with-unit-diagonal? (mx/identity-matrix 3))))
+  (is-not (mx/matrix-with-unit-diagonal? [[1.0 0.5] [2.0 4.0]]))
+  (is-not (mx/matrix-with-unit-diagonal? [[1.0 0.5] [0.5 2.0]]))
+  (is (mx/matrix-with-unit-diagonal? (mx/identity-matrix 3)))
+  (is (mx/matrix-with-unit-diagonal? [[1.0 0.5] [0.5 1.0]])))
 
 (deftest symmetric-matrix?-test
-  (is-not (mx/symmetric-matrix? ve))
-  (is (mx/symmetric-matrix? ve-sym)))
+  (is-not (mx/symmetric-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (mx/symmetric-matrix? [[1.0 0.5] [0.5 2.0]])))
 
 (deftest symmetric-matrix-with-unit-diagonal?-test
-  (is-not (mx/symmetric-matrix-with-unit-diagonal? ve))
-  (is-not (mx/symmetric-matrix-with-unit-diagonal? ve-sym))
-  (is (mx/symmetric-matrix-with-unit-diagonal? (mx/identity-matrix 3))))
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [2.0 4.0]]))
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 2.0]]))
+  (is (mx/symmetric-matrix-with-unit-diagonal? (mx/identity-matrix 3)))
+  (is (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 1.0]])))
 
 (deftest positive-matrix?-test
-  (is-not (mx/positive-matrix? ve))
-  (is (mx/positive-matrix? ve-sym))
-  (is-not (mx/positive-matrix? '((1.0 -1.1) (-1.1 1.0))))
-  (is-not (mx/positive-matrix? '((1.0 -1.0) (-1.0 1.0))))
-  (is (mx/positive-matrix? '((1.0 -1.0) (-1.0 1.0)) 1e-32)))       ;accuracy too strict
+  (is-not (mx/positive-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (mx/positive-matrix? [[1.0 0.5] [0.5 1.0]]))
+  (is-not (mx/positive-matrix? [[1.0 -1.1] [-1.1 1.0]]))
+  (is-not (mx/positive-matrix? [[1.0 -1.0] [-1.0 1.0]]))
+  (is (mx/positive-matrix? [[1.0 -1.0] [-1.0 1.0]] 1e-32))) ;accuracy too strict
 
 (deftest positive-matrix-with-unit-diagonal?-test
-  (is-not (mx/positive-matrix-with-unit-diagonal? se))
-  (is-not (mx/positive-matrix-with-unit-diagonal? se-sym))
-  (is-not (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.1) (-1.1 1.0))))
-  (is-not (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0))))
-  (is (mx/positive-matrix-with-unit-diagonal? '((1.0 -1.0) (-1.0 1.0)) 1e-32))) ;accuracy too strict
+  (is-not (mx/positive-matrix-with-unit-diagonal? [[1.0 0.5] [2.0 4.0]]))
+  (is-not (mx/positive-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 2.0]]))
+  (is-not (mx/positive-matrix-with-unit-diagonal? [[1.0 -1.1] [-1.1 1.0]]))
+  (is-not (mx/positive-matrix-with-unit-diagonal? [[1.0 -1.0] [-1.0 1.0]]))
+  (is (mx/positive-matrix-with-unit-diagonal? [[1.0 -1.0] [-1.0 1.0]] 1e-32))) ;accuracy too strict
 
 (deftest non-negative-matrix?-test
-  (is-not (mx/non-negative-matrix? se))
-  (is (mx/non-negative-matrix? se-sym))
-  (is-not (mx/non-negative-matrix? '((1.0 -1.1) (-1.1 1.0))))
-  (is (mx/non-negative-matrix? '((1.0 -1.0) (-1.0 1.0))))
-  (is-not (mx/non-negative-matrix? '((1.0 -1.0001) (-1.0001 1.0))))
-  (is (mx/non-negative-matrix? '((1.0 -1.0001) (-1.0001 1.0)) 1e-3))) ;accuracy too lax
+  (is-not (mx/non-negative-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (mx/non-negative-matrix? [[1.0 0.5] [0.5 2.0]]))
+  (is-not (mx/non-negative-matrix? [[1.0 -1.1] [-1.1 1.0]]))
+  (is (mx/non-negative-matrix? [[1.0 -1.0] [-1.0 1.0]]))
+  (is-not (mx/non-negative-matrix? [[1.0 -1.0001] [-1.0001 1.0]]))
+  (is (mx/non-negative-matrix? [[1.0 -1.0001] [-1.0001 1.0]] 1e-3))) ;accuracy too lax
 
 (deftest type-tests
   (matrix?-test)
@@ -111,216 +142,158 @@
 (defspec-test test-positive-matrix-with-unit-diagonal? `mx/positive-matrix-with-unit-diagonal?)
 (defspec-test test-non-negative-matrix? `mx/non-negative-matrix?)
 
-(deftest to-matrix-test)
-(deftest constant-matrix-test)
+(deftest to-matrix-test
+  (is= [[1.0 0.5]] (mx/to-matrix [1.0 0.5] 1))
+  (is= [[1.0 3.0 5.0] [2.0 4.0 6.0]] (mx/to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 {::mx/by-row? false}))
+  (is= [[1.0 2.0 3.0] [4.0 5.0 6.0]] (mx/to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2))
+  (is= [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 0.0]] (mx/to-matrix [1.0 2.0 3.0 4.0 5.0 6.0 7.0] 2)))
+
+(deftest constant-matrix-test
+  (is= [[1.0 1.0] [1.0 1.0]] (mx/constant-matrix 2 2 1.0)))
+
 (deftest compute-matrix-test)
+
 (deftest identity-matrix-test)
-(deftest square-matrix-test)
-(deftest row-matrix-test)
-(deftest column-matrix-test)
-(deftest diagonal-matrix-test)
-(deftest triangular-matrix-test)
-(deftest symmetric-matrix-test)
-(deftest symmetric-matrix-with-unit-diagonal-test)
-(deftest symmetric-matrix-by-averaging-test)
-(deftest toeplitz-matrix-test)
-(deftest outer-product-test)
-(deftest sparse->matrix-test)
-(deftest sparse->symmetric-matrix-test)
-(deftest rnd-matrix-test)
-(deftest rnd-reflection-matrix-test)
-(deftest rnd-spectral-matrix-test)
-(deftest rnd-positive-matrix-test)
 
-(facts "matrix constructors"
-       (fact "constant"
-             (constant-matrix [2 2] 1.0) => [[1.0 1.0] [1.0 1.0]]
-             (constant-matrix :clatrix [2 2] 1.0)
-             => (clatrix [[1.0 1.0] [1.0 1.0]])
-             (constant-matrix :apache-commons [2 2] 1.0)
-             => (apache-commons '((1.0, 1.0) (1.0, 1.0))))
-       (fact "to-matrix"
-             (to-matrix se1D se1D 1 true) => [[1.0 0.5]]
-             (to-matrix ve1D ve1D 1 true) => [[1.0 0.5]]
-             (to-matrix ap1D ap1D 1 true) => (apache-commons
-                                               [[1.0 0.5]])
-             (to-matrix cl1D cl1D 1 true) => (clatrix [[1.0 0.5]])
-             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 false)
-             => [[1.0 3.0 5.0] [2.0 4.0 6.0]]
-             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
-             => [[1.0 2.0 3.0] [4.0 5.0 6.0]]
-             (to-matrix [1.0 2.0 3.0 4.0 5.0 6.0 7.0] 2 true)
-             => (throws)
-             (to-matrix :clatrix [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
-             => (clatrix [[1.0 2.0 3.0] [4.0 5.0 6.0]])
-             (to-matrix
-               :apache-commons [1.0 2.0 3.0 4.0 5.0 6.0] 2 true)
-             => (apache-commons '((1.0 2.0 3.0) (4.0 5.0 6.0))))
-       (fact "square"
-             (square-matrix [[1.0 2.0 3.0]]) => [[1.0]]
-             (square-matrix 2 #(double (+ % %2))) => [[0.0 1.0] [1.0 2.0]]
-             (square-matrix 2 3.0) => [[3.0 3.0] [3.0 3.0]]
-             (square-matrix :clatrix 2 #(+ % %2)) => (clatrix [[0.0 1.0]
-                                                               [1.0 2.0]])
-             (square-matrix :apache-commons 2 #(+ % %2))
-             => (apache-commons '((0.0 1.0) (1.0 2.0))))
-       (fact "column"
-             (column-matrix se1D se1D) => [[1.0] [0.5]]
-             (column-matrix ve1D ve1D) => [[1.0] [0.5]]
-             (column-matrix ap1D ap1D) => (apache-commons [[1.0] [0.5]])
-             (column-matrix cl1D cl1D) => (clatrix [[1.0] [0.5]])
-             (column-matrix nil 2 #(double %)) => [[0.0] [1.0]]
-             (column-matrix nil 2 3.0) => [[3.0] [3.0]]
-             (column-matrix :clatrix 2 #(+ % 0.0)) => (clatrix [[0.0] [1.0]])
-             (column-matrix :apache-commons 2 #(+ % 0.0)) => (apache-commons
-                                                               '((0.0) (1.0))))
-       (fact "row"
-             (row-matrix se1D se1D) => [[1.0 0.5]]
-             (row-matrix ve1D ve1D) => [[1.0 0.5]]
-             (row-matrix ap1D ap1D) => (apache-commons [[1.0 0.5]])
-             (row-matrix cl1D ap1D) => (clatrix [[1.0 0.5]])
-             (row-matrix cl1D cl1D) => (clatrix [[1.0 0.5]])
-             (row-matrix nil 2 #(double %)) => [[0.0 1.0]]
-             (row-matrix nil 2 3.0) => [[3.0 3.0]]
-             (row-matrix :clatrix 2 #(+ % 0.0)) => (clatrix [[0.0 1.0]])
-             (row-matrix :apache-commons 2 #(+ % 0.0)) => (apache-commons
-                                                            '((0.0 1.0))))
-       (fact "diagonal"
-             (diagonal-matrix se1D se1D) => [[1.0 0.0] [0.0 0.5]]
-             (diagonal-matrix ve1D ve1D) => [[1.0 0.0] [0.0 0.5]]
-             (diagonal-matrix ap1D ap1D) => (apache-commons [[1.0 0.0]
-                                                             [0.0 0.5]])
-             (diagonal-matrix cl1D cl1D) => (clatrix [[1.0 0.0] [0.0 0.5]])
-             (diagonal-matrix nil 2 #(double %)) => [[0.0 0.0] [0.0 1.0]]
-             (diagonal-matrix nil [1.0 3.0]) => [[1.0 0.0] [0.0 3.0]]
-             (diagonal-matrix nil 2 3.0) => [[3.0 0.0] [0.0 3.0]]
-             (diagonal-matrix :clatrix 2 #(+ % 0.0)) => (clatrix [[0.0 0.0]
-                                                                  [0.0 1.0]])
-             (diagonal-matrix :apache-commons 2 #(+ % 0.0))
-             => (apache-commons '((0.0 0.0) (0.0 1.0))))
-       (fact "triangular"
-             (triangular-matrix [1.0 2.0 3.0] true) => [[1.0 2.0] [0.0 3.0]]
-             (triangular-matrix [1.0 2.0 3.0] false) => [[1.0 0.0] [2.0 3.0]]
-             (triangular-matrix :clatrix [1.0 2.0 3.0] false)
-             => (clatrix [[1.0 0.0] [2.0 3.0]])
-             (triangular-matrix nil [4.0 5.0 6.0] [1.0 2.0 3.0] false)
-             => [[4.0 0.0 0.0] [1.0 5.0 0.0] [2.0 3.0 6.0]])
-       (fact "symmetric"
-             (symmetric-matrix nil [1.0 2.0]) => (throws)
-             (symmetric-matrix [1.0 2.0 3.0]) => [[1.0 2.0] [2.0 3.0]]
-             (symmetric-matrix #(double (+ % (* 2 %2))) 2 true) => [[0.0 2.0]
-                                                                    [2.0 3.0]]
-             (symmetric-matrix nil #(double (+ % (* 2 %2))) 2 false)
-             => [[0.0 1.0] [1.0 3.0]]
-             (symmetric-matrix :clatrix #(+ % (* 2 %2)) 2 true)
-             => (clatrix [[0.0 2.0] [2.0 3.0]])
-             (symmetric-matrix :apache-commons [1.0 2.0 3.0])
-             => (apache-commons '((1.0 2.0) (2.0 3.0))))
-       (fact "symmetric with unit diagonal"
-             (symmetric-matrix-with-unit-diagonal nil [1.0 2.0]) => throws
-             (symmetric-matrix-with-unit-diagonal [1.0 2.0 3.0])
-             => [[1.0 1.0 2.0] [1.0 1.0 3.0] [2.0 3.0 1.0]]
-             (symmetric-matrix-with-unit-diagonal
-               nil 3 #(double (+ % (* 2 %2))) true)
-             => [[1.0 2.0 4.0] [2.0 1.0 5.0] [4.0 5.0 1.0]]
-             (symmetric-matrix-with-unit-diagonal
-               nil 3 #(double (+ % (* 2 %2))) false)
-             => [[1.0 1.0 2.0] [1.0 1.0 4.0] [2.0 4.0 1.0]]
-             (symmetric-matrix-with-unit-diagonal
-               :clatrix 3 #(+ % (* 2 %2)) true)
-             => (clatrix [[1.0 2.0 4.0] [2.0 1.0 5.0] [4.0 5.0 1.0]])
-             (symmetric-matrix-with-unit-diagonal
-               :apache-commons [1.0 2.0 3.0])
-             => (apache-commons '((1.0 1.0 2.0) (1.0 1.0 3.0) (2.0 3.0 1.0))))
-       (fact "symmetric matrix by averaging"
-             (symmetric-matrix-by-averaging se1D) => (throws)
-             (symmetric-matrix-by-averaging se) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-matrix-by-averaging ve) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-matrix-by-averaging cl) => [[1.0 1.25] [1.25 4.0]]
-             (symmetric-matrix-by-averaging ap) => (apache-commons
-                                                     [[1.0 1.25] [1.25 4.0]]))
-       (fact "toeplitz"
-             (toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0 5.0])
-             => [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]]
-             (toeplitz-matrix [1.0 2.0 3.0] [2.0 4.0 5.0]) => (throws)
-             (toeplitz-matrix [1.0 2.0] [1.0 4.0 5.0]) => (throws)
-             (toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0]) => (throws)
-             (toeplitz-matrix :clatrix [1.0 2.0 3.0] [1.0 4.0 5.0])
-             => (clatrix [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]])
-             (toeplitz-matrix :apache-commons [1.0 2.0 3.0] [1.0 4.0 5.0])
-             => (apache-commons [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]]))
-       (fact "outer product"
-             (outer-product 3) => 9
-             (outer-product [1.0 2.0]) => [[1.0 2.0] [2.0 4.0]]
-             (outer-product :clatrix [1.0 2.0])
-             => (clatrix [[1.0 2.0] [2.0 4.0]])
-             (outer-product :apache-commons [2.0 4.0 5.0])
-             => (apache-commons [[4.0 8.0 10.0] [8.0 16.0 20.0]
-                                 [10.0 20.0 25.0]])
-             (outer-product nil cl1D) => [[1.0 0.5] [0.5 0.25]]
-             (outer-product nil cl-row) => (throws)
-             (outer-product nil m/sq [2.0 3.0]) => [[16.0 36.0] [36.0 81.0]]
-             (outer-product nil #(+ % %2) [2.0 3.0] ap)
-             => [[5.0 6.5] [8.0 13.0]]
-             (outer-product nil #(+ % %2 %3 %4) [2.0 3.0] cl ap ve)
-             => [[7.0 7.5] [12.0 21.0]]
-             (outer-product nil #(+ % %2 %3 %4 %5) [2.0 3.0] cl ap ve se)
-             => [[8.0 8.0] [14.0 25.0]])
-       (fact "sparse"
-             (sparse->matrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
-             => [[3.0 5.0] [6.0 7.0]]
-             (sparse->matrix :clatrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]])
-             => (clatrix [[3.0 5.0] [6.0 7.0]])
-             (sparse->matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
-             (sparse->matrix [[0 0 3.0]] [2 2]) => [[3.0 0.0] [0.0 0.0]]
-             (sparse->matrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2])
-             => [[3.0 5.0] [2.0 -1.0]]
-             (sparse->matrix [[0 2 3.0]] [2 2]) => (throws)
-             (sparse->matrix
-               :clatrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2])
-             => (clatrix [[3.0 5.0] [2.0 -1.0]])
-             (sparse->matrix
-               :apache-commons [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]]
-               [2 2]) => (apache-commons [[3.0 5.0] [2.0 -1.0]])
-             (sparse->symmetric-matrix
-               :clatrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] 2)
-             => (clatrix [[3.0 5.0] [5.0 -1.0]])
-             (sparse->symmetric-matrix
-               :clatrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [3.0 4.0]])
-             => (clatrix [[3.0 2.0] [2.0 4.0]]))
-       (fact "rnd-matrix"
-             (first (rnd-matrix :clatrix 2 2 test-rnd-lazy))
-             => (clatrix [[0.8335762378570932 0.11249249636232017]
-                          [0.8502406979201282 0.7495670044667]])
-             (first (rnd-matrix 2 3 test-rnd-lazy))
-             => [[0.8335762378570932 0.11249249636232017 0.8502406979201282]
-                 [0.7495670044667 0.4764463905206542 0.9509334914632213]])
-       (fact "reflection"
-             (first (rnd-reflection-matrix 2 test-rnd-lazy))
-             => [[-0.9642275848105564 -0.265075771602011]
-                 [-0.265075771602011 0.9642275848105563]]
-             (first (rnd-reflection-matrix :apache-commons 2 test-rnd-lazy))
-             => (apache-commons [[-0.9642275848105564 -0.265075771602011]
-                                 [-0.265075771602011 0.9642275848105563]]))
-       (fact "spectral"
-             (first (rnd-spectral-matrix [1.0 3.0] test-rnd-lazy))
-             => [[1.296772920438264 0.710965311791703]
-                 [0.710965311791703 2.703227079561737]]
-             (first (rnd-spectral-matrix :apache-commons [1.0 3.0]
-                                         test-rnd-lazy))
-             => (apache-commons [[1.296772920438264 0.710965311791703]
-                                 [0.710965311791703 2.703227079561737]]))
-       (fact "positive"
-             (first (rnd-positive-matrix 2 test-rnd-lazy))
-             => [[0.11268006837251504 0.011628411054483414]
-                 [0.011628411054483414 0.833388665846898]]
-             (first (rnd-positive-matrix :clatrix 2 test-rnd-lazy))
-             => (clatrix [[0.11268006837251504 0.011628411054483414]
-                          [0.011628411054483414 0.833388665846898]])))
+(deftest square-matrix-test
+  (is= [[1.0]] (mx/square-matrix [[1.0 2.0 3.0]])))         ;broken I think
 
+(deftest row-matrix-test
+  (is= [[1.0 0.5]] (mx/row-matrix [1.0 0.5]))
+  (is= [[0.0 1.0]] (mx/row-matrix 2 #(double %)))
+  (is= [[3.0 3.0]] (mx/row-matrix 2 (constantly 3.0))))
 
+(deftest column-matrix-test
+  (is= [[1.0] [0.5]] (mx/column-matrix [1.0 0.5]))
+  (is= [[0.0] [1.0]] (mx/column-matrix 2 #(double %)))
+  (is= [[3.0] [3.0]] (mx/column-matrix 2 (constantly 3.0))))
 
+(deftest diagonal-matrix-test
+  (is= [[1.0 0.0] [0.0 0.5]] (mx/diagonal-matrix [1.0 0.5]))
+  (is= [[0.0 0.0] [0.0 1.0]] (mx/diagonal-matrix 2 #(double %)))
+  (is= [[1.0 0.0] [0.0 3.0]] (mx/diagonal-matrix [1.0 3.0]))
+  (is= [[3.0 0.0] [0.0 3.0]] (mx/diagonal-matrix 2 (constantly 3.0))))
 
+(deftest triangular-matrix-test
+  (is= [[1.0 2.0] [0.0 3.0]] (mx/triangular-matrix [1.0 2.0 3.0])) ;broken
+  (is= [[1.0 0.0] [2.0 3.0]] (mx/triangular-matrix [1.0 2.0 3.0] {::mx/upper? false}))
+  (is= [[4.0 0.0 0.0] [1.0 5.0 0.0] [2.0 3.0 6.0]]
+       (mx/triangular-matrix [4.0 5.0 6.0] [1.0 2.0 3.0] {::mx/upper? false}))
+  (is= [[1.0 0.0 0.0] [2.0 4.0 0.0] [3.0 5.0 6.0]]
+       (mx/triangular-matrix [1.0 2.0 3.0 4.0 5.0 6.0] {::mx/upper? false ::mx/by-row? false}))
+  (is= [[1.0 0.0 0.0] [2.0 3.0 0.0] [4.0 5.0 6.0]]
+       (mx/triangular-matrix [1.0 2.0 3.0 4.0 5.0 6.0] {::mx/upper? false})))
+
+(deftest symmetric-matrix-test
+  (is= nil (mx/symmetric-matrix [1.0 2.0]))
+  (is= [[1.0 2.0] [2.0 3.0]] (mx/symmetric-matrix [1.0 2.0 3.0]))
+  (is= [[0.0 2.0] [2.0 3.0]] (mx/symmetric-matrix #(double (+ % (* 2 %2))) 2))
+  (is= [[0.0 1.0] [1.0 3.0]] (mx/symmetric-matrix #(double (+ % (* 2 %2))) 2 {::mx/by-row? false})))
+
+(deftest symmetric-matrix-with-unit-diagonal-test
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal [1.0 2.0]))
+  (is= [[1.0 1.0 2.0] [1.0 1.0 3.0] [2.0 3.0 1.0]] (mx/symmetric-matrix-with-unit-diagonal [1.0 2.0 3.0]))
+  (is= [[1.0 2.0 4.0] [2.0 1.0 5.0] [4.0 5.0 1.0]]
+       (mx/symmetric-matrix-with-unit-diagonal 3 #(double (+ % (* 2 %2)))))
+  (is= [[1.0 1.0 2.0] [1.0 1.0 4.0] [2.0 4.0 1.0]]
+       (mx/symmetric-matrix-with-unit-diagonal 3 #(double (+ % (* 2 %2))) {::mx/by-row? false})))
+
+(deftest symmetric-matrix-by-averaging-test
+  (is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]])))
+
+(deftest toeplitz-matrix-test                               ;also called [[diagonal-constant-matrix]]
+  (is= [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]] (mx/toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0 5.0]))
+  (is= nil (mx/toeplitz-matrix [1.0 2.0 3.0] [2.0 4.0 5.0]))
+  (is= nil (mx/toeplitz-matrix [1.0 2.0] [1.0 4.0 5.0]))
+  (is= nil (mx/toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0])))
+
+(deftest outer-product-test
+  (is= [[1.0 2.0] [2.0 4.0]] (mx/outer-product [1.0 2.0]))
+  (is= [[4.0 8.0 10.0] [8.0 16.0 20.0] [10.0 20.0 25.0]] (mx/outer-product [2.0 4.0 5.0]))
+  (is= [[1.0 0.5] [0.5 0.25]] (mx/outer-product [1.0 0.5]))
+  (is= [[4.0 6.0] [6.0 9.0]] (mx/outer-product [2.0 3.0])))
+
+(deftest rnd-matrix-test
+  (random/bind-seed 0
+    (is= [] (mx/rnd-matrix 0 0)))
+  (random/bind-seed 0
+    (is= [[0.8335762378570932 0.11249249636232017] [0.8502406979201282 0.7495670044667]]
+         (mx/rnd-matrix 2 2)))
+  (random/bind-seed 0
+    (is= [[0.8335762378570932 0.11249249636232017 0.8502406979201282]
+          [0.7495670044667 0.4764463905206542 0.9509334914632213]]
+         (mx/rnd-matrix 2 3))))
+
+(deftest rnd-reflection-matrix-test
+  (random/bind-seed 0
+    (is= [[-0.9642275848105564 -0.265075771602011] [-0.265075771602011 0.9642275848105563]]
+         (mx/rnd-reflection-matrix 2))))
+
+(deftest rnd-spectral-matrix-test
+  (random/bind-seed 0
+    (is= [[1.296772920438264 0.710965311791703] [0.710965311791703 2.703227079561737]]
+         (mx/rnd-spectral-matrix [1.0 3.0]))))
+
+(deftest rnd-positive-matrix-test
+  (random/bind-seed 0
+    (is= [[0.11268006837251504 0.011628411054483414] [0.011628411054483414 0.833388665846898]]
+         (mx/rnd-positive-matrix 2)))
+  (random/bind-seed 0
+    (is (mx/positive-matrix? (mx/rnd-positive-matrix 2)))))
+
+(deftest constructor-tests
+  (to-matrix-test)
+  (constant-matrix-test)
+  (compute-matrix-test)
+  (identity-matrix-test)
+  (square-matrix-test)
+  (row-matrix-test)
+  (column-matrix-test)
+  (diagonal-matrix-test)
+  (triangular-matrix-test)
+  (symmetric-matrix-test)
+  (symmetric-matrix-with-unit-diagonal-test)
+  (symmetric-matrix-by-averaging-test)
+  (toeplitz-matrix-test)
+  (outer-product-test)
+  (rnd-matrix-test)
+  (rnd-reflection-matrix-test)
+  (rnd-spectral-matrix-test)
+  (rnd-positive-matrix-test))
+
+(defspec-test test-to-matrix `mx/to-matrix)
+(defspec-test test-constant-matrix `mx/constant-matrix)
+(defspec-test test-compute-matrix `mx/compute-matrix)
+(defspec-test test-identity-matrix `mx/identity-matrix)
+(defspec-test test-square-matrix `mx/square-matrix)
+(defspec-test test-row-matrix `mx/row-matrix)
+(defspec-test test-column-matrix `mx/column-matrix)
+(defspec-test test-diagonal-matrix `mx/diagonal-matrix)
+(defspec-test test-triangular-matrix `mx/triangular-matrix)
+(defspec-test test-symmetric-matrix `mx/symmetric-matrix)
+(defspec-test test-symmetric-matrix-with-unit-diagonal `mx/symmetric-matrix-with-unit-diagonal)
+(defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
+(defspec-test test-toeplitz-matrix `mx/toeplitz-matrix)
+(defspec-test test-outer-product `mx/outer-product)
+(defspec-test test-rnd-matrix `mx/rnd-matrix)
+(defspec-test test-rnd-reflection-matrix `mx/rnd-reflection-matrix)
+(defspec-test test-rnd-spectral-matrix `mx/rnd-spectral-matrix)
+(defspec-test test-rnd-positive-matrix `mx/rnd-positive-matrix)
+
+(def ve [[1.0 0.5] [2.0 4.0]])
+(def ve-sym [[1.0 0.5] [0.5 1.0]])
+(def ve1D [1.0 0.5])
+(def ve-row [[1.0 0.5]])
+(def ve-col [[1.0] [0.5]])
+
+(deftest sparse->matrix-test
+  (is= [[3.0 5.0] [6.0 7.0]] (mx/sparse->matrix [[0 0 3.0]] [[4.0 5.0] [6.0 7.0]]))
+  (is= [[3.0 0.0] [0.0 0.0]] (mx/sparse->matrix [[0 0 3.0]] [2 2]))
+  (is= [[3.0 5.0] [2.0 -1.0]] (mx/sparse->matrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] [2 2]))
+  (is= nil (mx/sparse->matrix [[0 2 3.0]] [2 2])))
+
+(deftest sparse->symmetric-matrix-test
+  (is= [[3.0 2.0] [2.0 4.0]] (mx/sparse->symmetric-matrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [3.0 4.0]])))
 
 (deftest size-symmetric-test
   (is= 1 (mx/size-symmetric 1))
@@ -347,27 +320,27 @@
   (is= 15 (mx/ecount-symmetric-with-unit-diagonal 6)))
 
 (deftest to-vector-from-symmetric-test
-  (is= [1.0 2.0 4.0] (mx/symmetric-matrix->vector se {::mx/by-row? false}))
-  (is= [1.0 0.5 4.0] (mx/symmetric-matrix->vector ve))
-  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector se-sym {::mx/by-row? false}))
-  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector ve-sym))
-  (is= nil (mx/symmetric-matrix->vector se1D))
-  (is= [1.0] (mx/symmetric-matrix->vector se-row {::mx/by-row? false}))
-  (is= [1.0 0.5] (mx/symmetric-matrix->vector se-row))
-  (is= [1.0 0.5] (mx/symmetric-matrix->vector se-col {::mx/by-row? false}))
-  (is= [1.0] (mx/symmetric-matrix->vector se-col)))
+  (is= [1.0 2.0 4.0] (mx/symmetric-matrix->vector [[1.0 0.5] [2.0 4.0]] {::mx/by-row? false}))
+  (is= [1.0 0.5 4.0] (mx/symmetric-matrix->vector [[1.0 0.5] [2.0 4.0]]))
+  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector [[1.0 0.5] [0.5 1.0]] {::mx/by-row? false}))
+  (is= [1.0 0.5 2.0] (mx/symmetric-matrix->vector [[1.0 0.5] [0.5 1.0]]))
+  (is= nil (mx/symmetric-matrix->vector [1.0 0.5]))
+  (is= [1.0] (mx/symmetric-matrix->vector [[1.0 0.5]] {::mx/by-row? false}))
+  (is= [1.0 0.5] (mx/symmetric-matrix->vector [[1.0 0.5]]))
+  (is= [1.0 0.5] (mx/symmetric-matrix->vector [[1.0] [0.5]] {::mx/by-row? false}))
+  (is= [1.0] (mx/symmetric-matrix->vector [[1.0] [0.5]])))
 
 (deftest to-vector-from-symmetric-with-unit-diagonal-test
   (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector #(+ 3 3) {::mx/by-row? false}))
-  (is= [2.0] (mx/symmetric-matrix-with-unit-diagonal->vector se {::mx/by-row? false}))
-  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector ve))
-  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-sym {::mx/by-row? false}))
-  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector ve-sym))
-  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector se1D))
-  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector se-row {::mx/by-row? false}))
-  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-row))
-  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector se-col {::mx/by-row? false}))
-  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector se-col)))
+  (is= [2.0] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [2.0 4.0]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [2.0 4.0]]))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [0.5 1.0]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [0.5 1.0]]))
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector [1.0 0.5]))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5]]))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0] [0.5]] {::mx/by-row? false}))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0] [0.5]])))
 
 (deftest special-type-helpers-test
   (size-symmetric-test)
