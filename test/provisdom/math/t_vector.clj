@@ -44,13 +44,13 @@
   (is= [0 3 6] (vector/compute-vector 3 (partial * 3)))
   (is= [2.0 3.0 4.0] (vector/compute-vector 3 #(+ 2.0 %))))
 
-(deftest rnd-vector-test
+(deftest rnd-vector!-test
   (random/bind-seed 0
-    (is= [] (vector/rnd-vector 0)))
+    (is= [] (vector/rnd-vector! 0)))
   (random/bind-seed 0
-    (is= [0.8833108082136426] (vector/rnd-vector 1)))
+    (is= [0.8833108082136426] (vector/rnd-vector! 1)))
   (random/bind-seed 0
-    (is= [0.8833108082136426 0.026433771592597743] (vector/rnd-vector 2))))
+    (is= [0.8833108082136426 0.026433771592597743] (vector/rnd-vector! 2))))
 
 (deftest sparse->vector-test
   (is= [3.0 0.0 4.0 0.0] (vector/sparse->vector '([2 4.0] [0 3.0]) (vec (repeat 4 0.0))))
@@ -60,12 +60,12 @@
 (deftest constructor-tests
   (to-vector-test)
   (compute-vector-test)
-  (rnd-vector-test)
+  (rnd-vector!-test)
   (sparse->vector-test))
 
 (defspec-test test-to-vector `vector/to-vector)
 (defspec-test test-compute-vector `vector/compute-vector)
-(defspec-test test-rnd-vector `vector/rnd-vector)
+(defspec-test test-rnd-vector! `vector/rnd-vector!)
 (defspec-test test-sparse->vector `vector/sparse->vector)
 
 (deftest filter-kv-test

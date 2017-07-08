@@ -211,9 +211,9 @@ provisdom.math.random2
   ([f rng]
    (map f (rng-lazy rng))))
 
-(defn rand-double-lazy
+(defn rand-double-lazy!
   "Returns a lazy seq of random doubles"
-  ([] (rand-double-lazy (make-random)))
+  ([] (rand-double-lazy! (make-random)))
   ([rng]
    (rand-lazy* rand-double rng)))
 

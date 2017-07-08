@@ -1,13 +1,44 @@
-(ns provisdom.math.t-matrix-decomposition
+(ns provisdom.math.t-clatrix
   (:require [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.matrix-decomposition :as decomp]
+            [provisdom.math.clatrix :as decomp]
             [provisdom.math.random2 :as random]
             [provisdom.math.core :as m]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
 (ost/instrument)
+
+(deftest positive-matrix?-test
+  (is-not (decomp/positive-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (decomp/positive-matrix? [[1.0 0.5] [0.5 1.0]]))
+  (is-not (decomp/positive-matrix? [[1.0 -1.1] [-1.1 1.0]]))
+  (is-not (decomp/positive-matrix? [[1.0 -1.0] [-1.0 1.0]]))
+  (is (decomp/positive-matrix? [[1.0 -1.0] [-1.0 1.0]] 1e-32))) ;accuracy too strict
+
+(deftest positive-matrix-with-unit-diagonal?-test
+  (is-not (decomp/positive-matrix-with-unit-diagonal? [[1.0 0.5] [2.0 4.0]]))
+  (is-not (decomp/positive-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 2.0]]))
+  (is-not (decomp/positive-matrix-with-unit-diagonal? [[1.0 -1.1] [-1.1 1.0]]))
+  (is-not (decomp/positive-matrix-with-unit-diagonal? [[1.0 -1.0] [-1.0 1.0]]))
+  (is (decomp/positive-matrix-with-unit-diagonal? [[1.0 -1.0] [-1.0 1.0]] 1e-32))) ;accuracy too strict
+
+(deftest non-negative-matrix?-test
+  (is-not (decomp/non-negative-matrix? [[1.0 0.5] [2.0 4.0]]))
+  (is (decomp/non-negative-matrix? [[1.0 0.5] [0.5 2.0]]))
+  (is-not (decomp/non-negative-matrix? [[1.0 -1.1] [-1.1 1.0]]))
+  (is (decomp/non-negative-matrix? [[1.0 -1.0] [-1.0 1.0]]))
+  (is-not (decomp/non-negative-matrix? [[1.0 -1.0001] [-1.0001 1.0]]))
+  (is (decomp/non-negative-matrix? [[1.0 -1.0001] [-1.0001 1.0]] 1e-3))) ;accuracy too lax
+
+(deftest type-tests
+  (positive-matrix?-test)
+  (positive-matrix-with-unit-diagonal?-test)
+  (non-negative-matrix?-test))
+
+(defspec-test test-positive-matrix? `decomp/positive-matrix?)
+(defspec-test test-positive-matrix-with-unit-diagonal? `decomp/positive-matrix-with-unit-diagonal?)
+(defspec-test test-non-negative-matrix? `decomp/non-negative-matrix?)
 
 (deftest lu-decomposition-test
   (is= [] (decomp/lu-decomposition 1)))
@@ -16,6 +47,8 @@
   (lu-decomposition-test))
 
 ;(defspec-test test-lu-decomposition `decomp/lu-decomposition)
+
+
 
 (comment
 

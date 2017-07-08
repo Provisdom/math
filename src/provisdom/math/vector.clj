@@ -79,11 +79,11 @@
                                  :ret ::number))
         :ret ::vector)
 
-(defn rnd-vector
+(defn rnd-vector!
   "Returns vector `v` of `size` with random doubles."
-  [size] (vec (take size (random/rand-double-lazy))))
+  [size] (vec (take size (random/rand-double-lazy!))))
 
-(s/fdef rnd-vector
+(s/fdef rnd-vector!
         :args (s/cat :size ::size)
         :ret ::vector)
 

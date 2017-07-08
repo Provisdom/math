@@ -135,11 +135,11 @@
         :args (s/cat :shape ::shape :numbers ::numbers)
         :ret ::tensor)
 
-(defn rnd-tensor
+(defn rnd-tensor!
   "Creates a new tensor with a given `shape` with random doubles."
-  [shape] (fill-tensor shape (take (apply * shape) (random/rand-double-lazy))))
+  [shape] (fill-tensor shape (take (apply * shape) (random/rand-double-lazy!))))
 
-(s/fdef rnd-tensor
+(s/fdef rnd-tensor!
         :args (s/cat :shape ::shape)
         :ret ::tensor)
 

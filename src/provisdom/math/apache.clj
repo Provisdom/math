@@ -8,7 +8,8 @@
             [provisdom.math.matrix :as mx]
             [provisdom.math.bounds :as bo]
             [clojure.core.matrix.protocols :as mp]
-            [clojure.core.matrix :as mxc])
+            [clojure.core.matrix :as mxc]
+            [provisdom.math.vector :as vector])
   (:import [java.util ArrayList]
            [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
            [org.apache.commons.math3.analysis UnivariateFunction
@@ -67,8 +68,9 @@
             UnivariatePeriodicInterpolator UnivariateInterpolator]
            [org.apache.commons.math3.analysis.polynomials
             PolynomialFunctionNewtonForm PolynomialSplineFunction
-            PolynomialFunctionLagrangeForm]
-           (org.apache.commons.math3.linear RealMatrix Array2DRowRealMatrix RealVector)))
+            PolynomialFunctionLagrangeForm]))
+
+(declare )
 
 ;;; name all internal ns differently somehow
 ;;;TODO:
@@ -123,43 +125,6 @@
    (.differentiate
      (FiniteDifferencesDifferentiator. points step-size var-low-bound var-high-bound)
      (univariate-function deriv))))
-
-;;;APACHE MATRIX AND VECTORS
-(extend-protocol mp/PComputeMatrix
-  RealMatrix
-  (compute-matrix [_ shape f]
-    (Array2DRowRealMatrix.
-      ^"[[D" (ar/jagged-2D-array :d (mx/compute-matrix (first shape) (second shape) f)))))
-
-(defn apache-commons
-  "Returns a matrix using the apache-commons matrix implementation."
-  [data] (mxc/matrix :apache-commons data))
-
-;; NOTE: This function was previously written to see if the type of the matrix was = to Array2DRowRealMatrix.
-;; That comparison is faster than the instance? check, however it is less general. Same applies for apache-commons-vec?.
-(defn apache-commons?
-  "Returns true if `m` is an apache commons matrix."
-  [m] (instance? RealMatrix m))
-
-(defn apache-commons-vec?
-  "Returns true if `m` is an apache commons vector."
-  [m] (instance? RealVector m))
-
-(defn diagonal-matrix-apache
-  "Returns a diagonal matrix (a matrix with all elements not on the diagonal being 0.0), with the values on the diagonal
-  given by the vector `diagonal-values`.
-  `size` is the size of the matrix given by a single number. `f-or-val` is
-  either a function or value. If given a function, the function will be called with `i` and should return the element
-  at `i`, where `i` is the index of the diagonal element."
-  ([diagonal-values]
-   (if (apache-commons-vec? diagonal-values)
-     (mxc/diagonal-matrix diagonal-values)
-     (mxc/diagonal-matrix :apache-commons diagonal-values)))
-  ([size value] (diagonal-matrix-apache (repeat size value))))
-
-(defn compute-vector-apache
-  "`f` takes an index and returns a number."
-  [size f] (coerce :apache-commons (vector/compute-vector size f)))
 
 ;;;INTERPOLATION
 (defn interpolation-1D
@@ -416,12 +381,12 @@ Returns map of ::point and ::errors."
              nil)
          checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
          observed (if (and (some? target) (= (count target) n-cons))
-                    (mx/coerce :apache-commons target)
-                    (mx/compute-vector-apache n-cons 0.0))
-         start (mx/coerce :apache-commons guesses)
+                    (apache-vector target)
+                    (apache-vector (vector/compute-vector n-cons 0.0)))
+         start (apache-vector guesses)
          weights (if (and (some? weights) (= (count weights) n-cons))
-                   (mx/diagonal-matrix-apache weights)
-                   (mx/diagonal-matrix-apache n-cons 1.0))]
+                   (apache-matrix (mx/diagonal-matrix weights))
+                   (apache-matrix (mx/diagonal-matrix n-cons 1.0)))]
      (try
        (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                      problem (LeastSquaresFactory/create
@@ -506,13 +471,10 @@ Returns map of ::point and ::errors."
               (InitialGuess. initial)],
         data (condp = solver
                :powell data
-               :nelder-mead (conj data (doto (NelderMeadSimplex. ndim)
-                                         (.build initial)))
+               :nelder-mead (conj data (doto (NelderMeadSimplex. ndim) (.build initial)))
                :multi-directional-simplex (conj
                                             data
-                                            (doto (MultiDirectionalSimplex.
-                                                    ndim)
-                                              (.build initial)))
+                                            (doto (MultiDirectionalSimplex. ndim) (.build initial)))
                (throw (ex-info (format "Invalid optimizer specified %s" solver)
                                {:fn (var optimize-without-constraints)})))
         s (if (= solver :powell) (PowellOptimizer. rel abs)

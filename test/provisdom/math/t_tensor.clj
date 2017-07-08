@@ -59,30 +59,30 @@
   (is= [[[1 2] [3 4] [5 6]] [[7 8] [9 10] [11 12]]]
        (tensor/fill-tensor [2 3 2] [1 2 3 4 5 6 7 8 9 10 11 12 13 14])))
 
-(deftest rnd-tensor-test
+(deftest rnd-tensor!-test
   (random/bind-seed 0
-    (is= 0.8833108082136426 (tensor/rnd-tensor [])))
+    (is= 0.8833108082136426 (tensor/rnd-tensor! [])))
   (random/bind-seed 0
-    (is= [] (tensor/rnd-tensor [0])))
+    (is= [] (tensor/rnd-tensor! [0])))
   (random/bind-seed 0
-    (is= [[]] (tensor/rnd-tensor [1 0])))
+    (is= [[]] (tensor/rnd-tensor! [1 0])))
   (random/bind-seed 0
     (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
           [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
-         (tensor/rnd-tensor [2 3]))))
+         (tensor/rnd-tensor! [2 3]))))
 
 (deftest constructor-tests
   (to-tensor-test)
   (compute-tensor-test)
   (repeat-tensor-test)
   (fill-tensor-test)
-  (rnd-tensor-test))
+  (rnd-tensor!-test))
 
 ;(defspec-test test-to-tensor `tensor/to-tensor) ;slowish
 ;(defspec-test test-compute-tensor `tensor/compute-tensor) ;slowish
 ;(defspec-test test-repeat-tensor `tensor/repeat-tensor) ;slow
 (defspec-test test-fill-tensor `tensor/fill-tensor)
-(defspec-test test-rnd-tensor `tensor/rnd-tensor)
+(defspec-test test-rnd-tensor! `tensor/rnd-tensor!)
 
 (deftest ecount-test
   (is= 1 (tensor/ecount 0))
