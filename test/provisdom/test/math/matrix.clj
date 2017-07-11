@@ -250,8 +250,8 @@
 
 (facts "matrix math"
        (fact "matrix multiply"
-             (matrix-multiply '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
-             (matrix-multiply '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
+             (mx* '((1 1 1) (1 1 1)) '(1 1 1)) => [3 3]
+             (mx* '((1 1 1) (1 1 1)) [1 1 1]) => [3 3])
        (fact "inner product"
              (vector/dot-product ve1D) => (inner-product ve1D)
              (inner-product ap1D) => (apache-commons [1 0.5])

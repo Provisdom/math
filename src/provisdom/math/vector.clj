@@ -163,10 +163,10 @@
   [replacement-number numbers]
   (if (vector? numbers)
     (reduce (fn [v i]
-               (if (m/nan? (nth v i))
-                 (assoc v i replacement-number)
-                 v))
-             numbers (range (count numbers)))
+              (if (m/nan? (nth v i))
+                (assoc v i replacement-number)
+                v))
+            numbers (range (count numbers)))
     (map #(if (m/nan? %) replacement-number %) numbers)))
 
 (s/fdef replace-nan
@@ -192,10 +192,10 @@
         :ret ::number)
 
 (defn dot-product
-  "The dot product is the sum of the products of the corresponding entries of the two sequences of numbers.
+  "The dot product is the sum of the products of the corresponding entries of two vectors.
   Geometrically, the dot product is the product of the Euclidean magnitudes of the two vectors and the cosine of
   the angle between them.
-  See [[inner-product]] for generalization of [[dot-product]] for any number of tensors."
+  Also called [[inner-product]]."
   [v1 v2] (apply + (map (fn [a b] (* (double a) b)) v1 v2)))
 
 (s/fdef dot-product

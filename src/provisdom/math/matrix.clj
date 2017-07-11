@@ -7,8 +7,6 @@
             [provisdom.math.core :as m]
             [provisdom.math.tensor :as tensor]
             [provisdom.math.vector :as vector]
-            [clojure.core.matrix :as mxc]
-            [taoensso.truss :refer [have have?]]
             [provisdom.math.random2 :as random]))
 
 (set! *warn-on-reflection* true)
@@ -16,15 +14,17 @@
 ;;;DECLARATIONS
 (declare column-matrix transpose diagonal
          get-slices-as-matrix esome matrix? row-matrix? column-matrix? square-matrix?
-         row-count column-count size-symmetric size-symmetric-with-unit-diagonal
+         symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
+         rows columns size-symmetric size-symmetric-with-unit-diagonal
          compute-vector coerce to-vector ecount to-matrix
-         inner-product emap constant-matrix matrix-multiply)
+         inner-product emap constant-matrix mx*
+         ecount-symmetric symmetric-matrix ecount-triangular upper-triangular-matrix
+         lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::accu ::tensor/accu)
 (s/def ::by-row? boolean?)
-(s/def ::upper? boolean?)
 (s/def ::index ::tensor/index)
 (s/def ::indices ::tensor/indices)
 (s/def ::row-indices (s/or :index ::index :indices ::indices))
@@ -40,8 +40,8 @@
 (s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
 (s/def ::tensor ::tensor/tensor)
-(s/def ::row-matrix (s/with-gen row-matrix? #(gen/vector (s/gen ::vector) 1)))
-(s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap (fn [v] (column-matrix v)) (s/gen ::vector))))
+(s/def ::row-matrix (s/with-gen row-matrix? #(gen/fmap row-matrix (s/gen ::vector))))
+(s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap column-matrix (s/gen ::vector))))
 (s/def ::matrix ::tensor/tensor2D)
 (s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
                                 #(gen/vector (s/gen ::vector-num) 1 mdl)))
@@ -51,6 +51,19 @@
   (s/with-gen square-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                          (fn [i] (gen/vector (gen/vector i) i)))))
+(s/def ::diagonal-matrix (s/with-gen diagonal-matrix? #(gen/fmap diagonal-matrix (s/gen ::vector))))
+(s/def ::upper-triangular-matrix
+  (s/with-gen upper-triangular-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap upper-triangular-matrix (gen/vector (ecount-triangular i)))))))
+(s/def ::lower-triangular-matrix
+  (s/with-gen lower-triangular-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap lower-triangular-matrix (gen/vector (ecount-triangular i)))))))
+(s/def ::symmetric-matrix
+  (s/with-gen symmetric-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap symmetric-matrix (gen/vector (ecount-symmetric i)))))))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix-num))
 (s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :m ::matrix-finite))
@@ -89,7 +102,7 @@
 
 (defn row-matrix?
   "Returns true if a row-matrix (i.e., matrix with exactly one row)"
-  [x] (and (= 2 (tensor/dimensionality x)) (m/one? (row-count x)) (every? number? (flatten x))))
+  [x] (and (= 2 (tensor/dimensionality x)) (m/one? (rows x)) (every? number? (flatten x))))
 
 (s/fdef row-matrix?
         :args (s/cat :x any?)
@@ -107,7 +120,7 @@
   "Returns true if a row or a column matrix."
   [x] (and (= 2 (tensor/dimensionality x))
            (every? number? (flatten x))
-           (or (every? #(m/one? (count %)) x) (m/one? (row-count x)))))
+           (or (every? #(m/one? (count %)) x) (m/one? (rows x)))))
 
 (s/fdef row-or-column-matrix?
         :args (s/cat :x any?)
@@ -131,18 +144,34 @@
 
 (defn square-matrix?
   "Returns true if matrix is square (i.e., same number of rows and columns)"
-  [m] (= (row-count m) (column-count m)))
+  [x] (and (matrix? x) (= (rows x) (columns x))))
 
 (s/fdef square-matrix?
-        :args (s/cat :m ::matrix)
+        :args (s/cat :x any?)
         :ret boolean?)
 
 (defn diagonal-matrix?
-  "Returns true if matrix is diagonal (the entries outside the main diagonal are all zero)."
-  [m] (nil? (esome (fn [i j e] (not (or (= i j) (zero? e)))) m)))
+  "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
+  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (= i j) (zero? e)))) x))))
 
 (s/fdef diagonal-matrix?
-        :args (s/cat :m ::matrix)
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn upper-triangular-matrix?
+  "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
+  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
+
+(s/fdef upper-triangular-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn lower-triangular-matrix?
+  "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
+  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
+
+(s/fdef lower-triangular-matrix?
+        :args (s/cat :x any?)
         :ret boolean?)
 
 (defn matrix-with-unit-diagonal?
@@ -267,41 +296,75 @@
                                                                               :ret ::number)))
         :ret ::matrix)
 
-(defn triangular-matrix
-  "Returns a (square) triangular matrix (a matrix with all elements above or below the diagonal being 0.0).
-  `numbers` are the elements that will be used to create the triangular matrix.
+(defn- symmetric-row-fill [r c size numbers] (get numbers (+ c (* r size) (* -1 m/half (+ r (m/sq' r)))) m/nan))
+
+(defn- symmetric-column-fill [r c numbers] (get numbers (+ r (* m/half c (inc c))) m/nan))
+
+(defn- symmetric-without-diagonal-row-fill
+  [r c size numbers] (get numbers (+ c (* r size) (* -1 m/half (+ (inc r) (m/sq' (inc r))))) m/nan))
+
+(defn- symmetric-without-diagonal-column-fill [r c numbers] (get numbers (+ r (* m/half c (dec c))) m/nan))
+
+(defn lower-triangular-matrix
+  "Returns a (square) lower triangular matrix (a matrix with all elements above the diagonal being 0.0).
+  `numbers` are the elements that will be used to create the lower triangular matrix.
   `off-diagonal-numbers` can be used to create the off-diagonal elements,
   and then any existing `diagonal-numbers` will fill the diagonal elements.
-  Set `upper?` to true for an upper triangular matrix or false for a lower triangular matrix.
   The elements are placed `by-row?` (default is true)."
-  ([numbers {::keys [by-row? upper?] :or {by-row? true}}]
+  ([numbers] (lower-triangular-matrix numbers {::by-row? true}))
+  ([numbers {::keys [by-row?] :or {by-row? true}}]
    (let [size (size-symmetric (count numbers))
-         val-fn (fn [r c] (get numbers (+ c (* r size) (* -1 m/half (+ r (m/sq' r)))) m/nan))
-         val-fn2 (fn [r c] (get numbers (+ r (* m/half c (inc c))) m/nan))
-         f (fn [r c] (if (or (and upper? (> r c)) (not (or upper? (>= r c))))
+         f (fn [r c] (if (< r c)
                        0.0
-                       (cond (and upper? by-row?) (val-fn r c)
-                             (not (or upper? by-row?)) (val-fn c r)
-                             upper? (val-fn2 r c)
-                             :else (val-fn2 c r))))]
+                       (if by-row?
+                         (symmetric-column-fill c r numbers)
+                         (symmetric-row-fill c r size numbers))))]
      (when size (compute-matrix size size f))))
-  ([diagonal-numbers off-diagonal-numbers {::keys [by-row? upper?] :or {by-row? true}}]
+  ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
    (let [size (size-symmetric-with-unit-diagonal (count off-diagonal-numbers))
-         val-fn (fn [r c] (get off-diagonal-numbers (+ c (* r size) (* -1 m/half (+ (inc r) (m/sq' (inc r))))) m/nan))
-         val-fn2 (fn [r c] (get off-diagonal-numbers (+ r (* m/half c (dec c))) m/nan))
-         f (fn [r c] (cond (= r c) (get diagonal-numbers r 0.0)
-                           (or (and upper? (> r c)) (not (or upper? (>= r c)))) 0.0
-                           :else (cond (and upper? by-row?) (val-fn r c)
-                                       (not (or upper? by-row?)) (val-fn c r)
-                                       upper? (val-fn2 r c)
-                                       :else (val-fn2 c r))))]
+         f (fn [r c] (cond (< r c) 0.0
+                           (= r c) (get diagonal-numbers r 0.0)
+                           :else (if by-row?
+                                   (symmetric-without-diagonal-column-fill c r off-diagonal-numbers)
+                                   (symmetric-without-diagonal-row-fill c r size off-diagonal-numbers))))]
      (when size (compute-matrix size size f)))))
 
-(s/fdef triangular-matrix
-        :args (s/or :two (s/cat :numbers ::numbers :opts (s/keys :req [::upper?] :opt [::by-row?]))
+(s/fdef lower-triangular-matrix
+        :args (s/or :one-two (s/cat :numbers ::numbers :opts (s/? (s/keys :opt [::by-row?])))
                     :three (s/cat :diagonal-numbers ::numbers
                                   :off-diagonal-numbers ::numbers
-                                  :opts (s/keys :req [::upper?] :opt [::by-row?])))
+                                  :opts (s/keys :opt [::by-row?])))
+        :ret (s/nilable ::matrix))
+
+(defn upper-triangular-matrix
+  "Returns a (square) upper triangular matrix (a matrix with all elements below the diagonal being 0.0).
+  `numbers` are the elements that will be used to create the upper triangular matrix.
+  `off-diagonal-numbers` can be used to create the off-diagonal elements,
+  and then any existing `diagonal-numbers` will fill the diagonal elements.
+  The elements are placed `by-row?` (default is true)."
+  ([numbers] (upper-triangular-matrix numbers {::by-row? true}))
+  ([numbers {::keys [by-row?] :or {by-row? true}}]
+   (let [size (size-symmetric (count numbers))
+         f (fn [r c] (if (> r c)
+                       0.0
+                       (if by-row?
+                         (symmetric-row-fill r c size numbers)
+                         (symmetric-column-fill r c numbers))))]
+     (when size (compute-matrix size size f))))
+  ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
+   (let [size (size-symmetric-with-unit-diagonal (count off-diagonal-numbers))
+         f (fn [r c] (cond (> r c) 0.0
+                           (= r c) (get diagonal-numbers r 0.0)
+                           :else (if by-row?
+                                   (symmetric-without-diagonal-row-fill r c size off-diagonal-numbers)
+                                   (symmetric-without-diagonal-column-fill r c off-diagonal-numbers))))]
+     (when size (compute-matrix size size f)))))
+
+(s/fdef upper-triangular-matrix
+        :args (s/or :one-two (s/cat :numbers ::numbers :opts (s/? (s/keys :opt [::by-row?])))
+                    :three (s/cat :diagonal-numbers ::numbers
+                                  :off-diagonal-numbers ::numbers
+                                  :opts (s/keys :opt [::by-row?])))
         :ret (s/nilable ::matrix))
 
 (defn symmetric-matrix
@@ -313,8 +376,9 @@
   depending on `by-row?`."
   ([numbers]
    (let [size (size-symmetric (count numbers))
-         val-fn (fn [r c] (get numbers (+ c (* r size) (* -1 m/half (+ r (m/sq' r)))) m/nan))
-         f (fn [r c] (if (<= r c) (val-fn r c) (val-fn c r)))]
+         f (fn [r c] (if (<= r c)
+                       (symmetric-row-fill r c size numbers)
+                       (symmetric-row-fill c r size numbers)))]
      (when size (compute-matrix size size f))))
   ([size f] (symmetric-matrix size f {::by-row? true}))
   ([size f {::keys [by-row?] :or {by-row? true}}]
@@ -338,10 +402,9 @@
   `f` is only called for each element on either the upper or lower half of the matrix, depending on `by-row?`."
   ([numbers]
    (let [size (size-symmetric-with-unit-diagonal (count numbers))
-         val-fn (fn [r c] (get numbers (+ c (* r size) (* -1 m/half (+ (inc r) (m/sq' (inc r))))) m/nan))
          f (fn [r c] (cond (= r c) 1.0
-                           (< r c) (val-fn r c)
-                           :else (val-fn c r)))]
+                           (< r c) (symmetric-without-diagonal-row-fill r c size numbers)
+                           :else (symmetric-without-diagonal-row-fill c r size numbers)))]
      (when size (compute-matrix size size f))))
   ([size f] (symmetric-matrix-with-unit-diagonal size f {::by-row? true}))
   ([size f {::keys [by-row?] :or {by-row? true}}]
@@ -406,7 +469,7 @@
   "Returns a random Householder reflection matrix of `size`."
   [size]
   (let [v (column-matrix (tensor/normalize (vec (take size (random/rand-double-lazy!)))))]
-    (tensor/subtract (identity-matrix size) (tensor/multiply (matrix-multiply v (transpose v)) 2.0))))
+    (tensor/subtract (identity-matrix size) (tensor/multiply (mx* v (transpose v)) 2.0))))
 
 (s/fdef rnd-reflection-matrix!
         :args (s/cat :size ::size)
@@ -417,11 +480,11 @@
   The orthogonal matrices are generated by using 2 * size of `spectrum-vector` composed Householder reflections."
   [spectrum-vector]
   (let [size (count spectrum-vector)
-        v-mat (nth (iterate (fn [prod-mat] (matrix-multiply prod-mat (rnd-reflection-matrix! size)))
+        v-mat (nth (iterate (fn [prod-mat] (mx* prod-mat (rnd-reflection-matrix! size)))
                             (identity-matrix size))
                    (* 2 size))
         l-mat (diagonal-matrix spectrum-vector)]
-    (matrix-multiply (matrix-multiply v-mat l-mat) (transpose v-mat))))
+    (mx* (mx* v-mat l-mat) (transpose v-mat))))
 
 (s/fdef rnd-spectral-matrix!
         :args (s/cat :spectrum-vector ::vector)
@@ -443,7 +506,7 @@
   `sparse` is a vector of triples of `[row column value]`.
   Later values will override prior overlapping values."
   [sparse m]
-  (let [[rows columns] [(row-count m) (column-count m)]]
+  (let [[rows columns] [(rows m) (columns m)]]
     (vec (reduce (fn [new-m [r c x]]
                    (if (or (>= r rows) (neg? r) (>= c columns) (neg? c))
                      new-m
@@ -462,7 +525,7 @@
   Each off-diagonal inner sparse form is applied twice, with the row and column switched.
   If original matrix is not symmetric, then returned matrix may not be symmetric."
   [sparse m]
-  (let [[rows columns] [(row-count m) (column-count m)]]
+  (let [[rows columns] [(rows m) (columns m)]]
     (vec (reduce (fn [new-m [r c x]]
                    (if (or (>= r rows) (neg? r) (>= c columns) (neg? c))
                      new-m
@@ -475,19 +538,19 @@
         :ret ::matrix)
 
 ;;;MATRIX INFO
-(defn row-count
+(defn rows
   "Returns the number of rows."
   [m] (count m))
 
-(s/fdef row-count
+(s/fdef rows
         :args (s/cat :m ::matrix)
         :ret ::rows)
 
-(defn column-count
+(defn columns
   "Returns the number of columns in a matrix."
   [m] (count (first m)))
 
-(s/fdef column-count
+(s/fdef columns
         :args (s/cat :m ::matrix)
         :ret ::columns)
 
@@ -526,8 +589,8 @@
 (defn flatten-matrix-by-column
   "Returns a vector that contains the elements of the matrix flattened by column."
   [m]
-  (let [nr (row-count m)
-        nc (column-count m)]
+  (let [nr (rows m)
+        nc (columns m)]
     (vec (for [c (range nc), r (range nr)] (get-in m [r c])))))
 
 (s/fdef flatten-matrix-by-column
@@ -541,8 +604,8 @@
   Set to false to get lower triangular values instead of upper."
   ([m] (symmetric-matrix->vector m {::by-row? true}))
   ([m {::keys [by-row?] :or {by-row? true}}]
-   (let [nr (row-count m)
-         nc (column-count m)]
+   (let [nr (rows m)
+         nc (columns m)]
      (vec (if by-row?
             (for [r (range nr), c (range r nc)] (get-in m [r c]))
             (for [c (range nc), r (range c nr)] (get-in m [r c])))))))
@@ -557,8 +620,8 @@
    Options: `::by-row?` (default: true). Set to false to get lower triangular values instead of upper."
   ([m] (symmetric-matrix-with-unit-diagonal->vector m {::by-row? true}))
   ([m {::keys [by-row?] :or {by-row? true}}]
-   (let [nr (row-count m)
-         nc (column-count m)]
+   (let [nr (rows m)
+         nc (columns m)]
      (vec (if by-row?
             (for [r (range nr), c (range (inc r) nc)] (get-in m [r c]))
             (for [c (range nc), r (range (inc c) nr)] (get-in m [r c])))))))
@@ -577,8 +640,8 @@
   ([m k]
    (let [r (if (neg? k) (- k) 0)
          c (if (pos? k) k 0)
-         nc (- (column-count m) c)
-         nr (- (row-count m) r)
+         nc (- (columns m) c)
+         nr (- (rows m) r)
          n (min nc nr)]
      (when (pos? n)
        (vec (for [i (range n)] (get-in m [(+ i r) (+ i c)])))))))
@@ -618,8 +681,8 @@
                                     (fn [tot e] (if (or (>= e n) (some #(= % e) except-i)) tot (conj tot e)))
                                     []
                                     indices)))))
-        rs (calc-fn row-indices exception-row-indices (row-count m))
-        cs (calc-fn column-indices exception-column-indices (column-count m))]
+        rs (calc-fn row-indices exception-row-indices (rows m))
+        cs (calc-fn column-indices exception-column-indices (columns m))]
     (cond
       (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) [[]]
       (and (number? rs) (number? cs)) [[(get-in m [rs cs])]]
@@ -661,17 +724,80 @@
         :ret (s/keys :req [::top-left-matrix ::bottom-left-matrix ::top-right-matrix ::bottom-right-matrix]))
 
 (defn some-kv
-  "Returns the first logical true value of (pred row column number) for any number in `m`, else nil."
-  [pred m]
-  (loop [i 0, s m]
-    (when (seq s)
-      (or (pred i (first s)) (recur (inc i) (next s))))))
+  "Returns the first logical true value of (pred row column e) for any e in matrix, else nil.
+  Options: `::by-row?` (default: true)."
+  ([pred m] (some-kv pred m {::by-row? true}))
+  ([pred m {::keys [by-row?] :or {by-row? true}}]
+   (let [mt (if by-row? m (transpose m))
+         rows (rows mt)]
+     (loop [c 0, s mt]
+       (when (< c rows)
+         (or (vector/some-kv #(pred c % %2) (first s)) (recur (inc c) (next s))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :row ::row :column ::column :number ::number)
+        :args (s/cat :pred (s/fspec :args (s/cat :r ::row :c ::column :e ::m/number)
                                     :ret boolean?)
-                     :m ::matrix)
-        :ret ::number)
+                     :m ::matrix
+                     :opts (s/? (s/keys :opt [::by-row?])))
+        :ret (s/nilable ::m/number))
+
+(defn ereduce-kv
+  "Function `f` takes a result, two indexes, and element(s)."
+  ([f init m]
+   (let [nr (rows m)]
+     (loop [c 0, val init, s m]
+       (let [g #(f % c %2 %3)]
+         (if (>= c nr)
+           val
+           (recur (inc c) (reduce-kv g val (first s)) (rest s)))))))
+  ([f init m1 m2]
+   (let [l (min (rows m1) (rows m2))]
+     (loop [c 0, val init, s1 m1, s2 m2]
+       (let [g #(f % c %2 %3 %4)]
+         (if (>= c l)
+           val
+           (recur (inc c)
+                  (co/reduce-kv-ext g val (first s1) (first s2))
+                  (rest s1)
+                  (rest s2)))))))
+  ([f init m1 m2 m3]
+   (let [l (min (rows m1) (rows m2) (rows m3))]
+     (loop [c 0, val init, s1 m1, s2 m2, s3 m3]
+       (let [g #(f % c %2 %3 %4 %5)]
+         (if (>= c l)
+           val
+           (recur (inc c)
+                  (co/reduce-kv-ext g val (first s1) (first s2) (first s3))
+                  (rest s1)
+                  (rest s2)
+                  (rest s3))))))))
+
+(s/fdef ereduce-kv
+        :args (s/or :three (s/cat :f (s/fspec :args (s/cat :res any? :row ::row :column ::column :number ::number)
+                                              :ret any?)
+                                  :init any?
+                                  :m ::matrix)
+                    :four (s/cat :f (s/fspec :args (s/cat :res any?
+                                                          :row ::row
+                                                          :column ::column
+                                                          :number1 ::number
+                                                          :number2 ::number)
+                                             :ret any?)
+                                 :init any?
+                                 :m1 ::matrix
+                                 :m2 ::matrix)
+                    :five (s/cat :f (s/fspec :args (s/cat :res any?
+                                                          :row ::row
+                                                          :column ::column
+                                                          :number1 ::number
+                                                          :number2 ::number
+                                                          :number2 ::number)
+                                             :ret any?)
+                                 :init any?
+                                 :m1 ::matrix
+                                 :m2 ::matrix
+                                 :m3 ::matrix))
+        :ret any?)
 
 (defn size-symmetric
   "Returns the size of the matrix given `ecount`.
@@ -725,7 +851,7 @@
 (defn assoc-row
   "Sets a row in a matrix using the specified numbers."
   [m row numbers]
-  (when (and (= (count numbers) (column-count m)) (<= row (row-count m)))
+  (when (and (= (count numbers) (columns m)) (<= row (rows m)))
     (assoc m row (vec numbers))))
 
 (s/fdef assoc-row
@@ -756,7 +882,7 @@
 (defn insert-column
   "Inserts a column of `numbers` in a matrix at the specified `column`."
   [m column numbers]
-  (when (<= column (column-count m))
+  (when (<= column (columns m))
     (vec (map-indexed (fn [row row-vector] (vector/insertv row-vector column (get numbers row 0.0))) m))))
 
 (s/fdef insert-column
@@ -779,7 +905,7 @@
 (defn remove-column
   "Removes a column in a matrix"
   [m column]
-  (if (<= (inc column) (column-count m))
+  (if (<= (inc column) (columns m))
     (mapv #(vector/removev % column) m)
     m))
 
@@ -812,30 +938,31 @@
         :ret ::matrix)
 
 (defn conj-rows
-  "Appends rows from all the matrices or vectors after the first to the first.
-  Each row must be the same size or will return nil."
-  [mv & mvs]
-  (let [m (if (vector? mv) (row-matrix mv) mv)
-        ms (map #(if (vector? %) (row-matrix %) %) mvs)
-        c (column-count m)
-        cs (map column-count ms)]
-    (when (every? #(= c %) cs)
-      (reduce (fn [tot e] (apply conj tot e)) m ms))))
+  "Appends rows from all the matrices after the first to the first.
+  Each matrix's column count must be the same or will return nil."
+  ([] [[]])
+  ([m & ms]
+   (let [c (columns m)
+         cs (map columns ms)]
+     (when (every? #(= c %) cs)
+       (apply conj m ms)))))
 
 (s/fdef conj-rows
-        :args (s/cat :mv ::matrix-or-vector :mvs (s/* ::matrix-or-vector))
+        :args (s/or :zero (s/cat) :one+ (s/cat :m ::matrix :ms (s/* ::matrix)))
         :ret (s/nilable ::matrix))
 
 (defn conj-columns
-  "Appends columns from all the matrices or vectors after the first to the first.
-  Each column must be the same size or will return nil."
-  [mv & mvs]
-  (let [mt (transpose mv)
-        mts (map transpose mvs)]
-    (transpose (apply conj-rows mt mts))))
+  "Appends columns from all the matrices after the first to the first.
+  Each matrix's row count must be the same or will return nil."
+  ([] [[]])
+  ([m & ms]
+   (let [r (rows m)
+         rs (map rows ms)]
+     (when (every? #(= r %) rs)
+       (apply mapv (comp vec concat) m ms)))))
 
 (s/fdef conj-columns
-        :args (s/cat :mv ::matrix-or-vector :mvs (s/* ::matrix-or-vector))
+        :args (s/or :zero (s/cat) :one+ (s/cat :m ::matrix :ms (s/* ::matrix)))
         :ret (s/nilable ::matrix))
 
 (defn merge-matrices
@@ -848,15 +975,12 @@
         :args (s/cat :args (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
         :ret (s/nilable ::matrix))
 
-(defn conj-symmetrically [m1 m2]
-  {:pre [(have? (fn [[m1 m2]]
-                  (let [nr1 (row-count m1), nr2 (row-count m2),
-                        nc2 (if (vector? m2) 1 (column-count m2))]
-                    (and (square-matrix? m1) (or (= nr2 (+ nc2 nr1)) (= nc2 (+ nr2 nr1))))))
-                [m1 m2])]}
-  (let [nr1 (row-count m1)
+(defn conj-symmetrically
+  ""
+  [m1 m2]
+  (let [nr1 (rows m1)
         m2 (if (vector? m2) (row-matrix m2) m2)
-        c? (> (row-count m2) (column-count m2))
+        c? (> (rows m2) (columns m2))
         k (if c? ::row-indices ::column-indices)
         k2 (if c? ::exception-row-indices ::exception-column-indices)
         m (get-slices-as-matrix m2 {k (range nr1)})
@@ -866,22 +990,14 @@
         tr (if c? m mt)]
     (merge-matrices {::top-left m1 ::bottom-left bl ::top-right tr ::bottom-right br})))
 
-(defn conj-diagonally
-  "'x' can be a number, vector, or matrix"
-  [m x]
-  (cond (number? x) (let [v (conj (vec (repeat (row-count m) 0.0)) x)]
-                      (conj-symmetrically m v))
-        (matrix? x) (merge-matrices {::top-left     m
-                                     ::bottom-left  (constant-matrix (row-count x) (column-count m))
-                                     ::top-right    (constant-matrix (row-count m) (column-count x))
-                                     ::bottom-right x})
-        :else (let [d (diagonal-matrix x)
-                    z (constant-matrix (row-count m) (ecount x))
-                    m2 (conj-columns z d)]
-                (conj-symmetrically m m2))))
-
-(s/fdef conj-diagonally
-        :args (s/cat :m ::matrix :x ::matrix-or-less)
+(s/fdef conj-symmetrically
+        :args (s/and (s/cat :m1 ::matrix :m2 ::matrix)
+                     #(let [m1 (:m1 %)
+                            m2 (:m2 %)
+                            nr1 (rows m1)
+                            nr2 (rows m2)
+                            nc2 (columns m2)]
+                        (and (square-matrix? m1) (or (= nr2 (+ nc2 nr1)) (= nc2 (+ nr2 nr1))))))
         :ret ::matrix)
 
 (defn replace-submatrix
@@ -889,8 +1005,8 @@
    'row-start' and 'column-start' can be negative.
    Unassigned elements will be 0.0"
   [m submatrix row-start column-start]
-  (let [sr (row-count submatrix), sc (column-count submatrix), tr (+ sr row-start),
-        tc (+ sc column-start), nr (row-count m), nc (column-count m)]
+  (let [sr (rows submatrix), sc (columns submatrix), tr (+ sr row-start),
+        tc (+ sc column-start), nr (rows m), nc (columns m)]
     (for [r (range (min row-start 0) (max tr nr))]
       (for [c (range (min column-start 0) (max tc nc))]
         (cond (and (>= r row-start) (< r tr) (>= c column-start)
@@ -921,8 +1037,8 @@
 (defn square-matrix
   "Returns a square matrix by truncating values from the given matrix `m`."
   [m]
-  (let [r (row-count m)
-        c (column-count m)
+  (let [r (rows m)
+        c (columns m)
         k (if (> r c) ::exception-row-indices ::exception-column-indices)]
     (get-slices-as-matrix m {k (range (min c r) (max c r))})))
 
@@ -935,7 +1051,7 @@
   at r,c and c,r.
   This is useful to help with rounding errors."
   [square-m]
-  (let [size (row-count square-m)]
+  (let [size (rows square-m)]
     (symmetric-matrix
       (for [r (range size)
             c (range r size)]
@@ -948,130 +1064,67 @@
         :ret ::matrix)
 
 ;;;MATRIX MATH
-(defn matrix-multiply
-  ([] 1.0)
+(defn mx*
+  ""
   ([m] m)
   ([m1 m2]
    (if (or (empty-matrix? m1) (empty-matrix? m2))
      [[]]
      (mapv (fn [a] (mapv (fn [b] (apply + (map * a b))) (transpose m2))) m1)))
-  ([m1 m2 & ms] (apply matrix-multiply (matrix-multiply m1 m2) ms)))
+  ([m1 m2 & ms] (apply mx* (mx* m1 m2) ms)))
 
-(s/fdef matrix-multiply
+(s/fdef mx*
+        :args (s/or :one (s/cat :m ::matrix)
+                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/* ::matrix)))
+        :ret ::matrix)
+
+(defn kronecker-product
+  "Generalization of the outer product."
+  ([] [[]])
+  ([m] m)
+  ([m1 m2]
+   (if (or (empty-matrix? m1) (empty-matrix? m2))
+     [[]]
+     (vec (apply concat (mapv (fn [row] (apply conj-columns (mapv (fn [e] (tensor/multiply e m2)) row))) m1)))))
+  ([m1 m2 & ms] (apply kronecker-product (kronecker-product m1 m2) ms)))
+
+(s/fdef kronecker-product
         :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
-                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/? (s/keys* :mats ::matrix)))))
-
-(defn inner-product                                         ;is this defined for tensors?
-  "Computes the inner product of numerical arrays.
-For matrix/matrix and matrix/vector arguments, this is equivalent to matrix multiplication.
-The inner product of two arrays with indexed dimensions {..i j} and {j k..} has dimensions {..i k..}.
-The inner-product of two vectors will be scalar."
-  ([a] (mxc/inner-product a))
-  ([a b] (mxc/inner-product a b))
-  ([a b & more] (apply mxc/inner-product a b more)))
-
-(defn kronecker-product [m & ms]
-  {:pre [(have? matrix? m) (have? (partial every? matrix?) ms)]}
-  (reduce (fn [a b]
-            (let [a-rows (row-count a)
-                  a-cols (column-count a)]
-              (apply conj-rows (for [i (range a-rows)]
-                                 (apply conj-columns
-                                        (for [j (range a-cols)]
-                                          (tensor/multiply (get-in a [i j]) b)))))))
-          m ms))
-
-(comment "REDUCE MATRIX")
-(defn ereduce-kv
-  "Function f takes a result, two indexes, and element(s)."
-  ([f init m byrow?]
-   {:pre [(have? matrix? m)]}
-   (let [mt (if byrow? m (transpose m)), nr (row-count mt)]
-     (loop [c 0, val init, s mt]
-       (let [g (if byrow? #(f % c %2 %3) #(f % %2 c %3))]
-         (if (>= c nr)
-           val
-           (recur (inc c) (reduce-kv g val (first s)) (rest s)))))))
-  ([f init m1 m2 byrow?]
-   {:pre [(have? matrix? m1 m2)]}
-   (let [mt1 (if byrow? m1 (transpose m1)),
-         mt2 (if byrow? m2 (transpose m2)),
-         l (min (row-count mt1) (row-count mt2))]
-     (loop [c 0, val init, s1 mt1, s2 mt2]
-       (let [g (if byrow? #(f % c %2 %3 %4) #(f % %2 c %3 %4))]
-         (if (>= c l)
-           val
-           (recur (inc c) (co/reduce-kv-ext g val (first s1) (first s2))
-                  (rest s1) (rest s2)))))))
-  ([f init m1 m2 m3 byrow?]
-   {:pre [(have? matrix? m1 m2 m3)]}
-   (let [mt1 (if byrow? m1 (transpose m1))
-         mt2 (if byrow? m2 (transpose m2))
-         mt3 (if byrow? m3 (transpose m3))
-         l (min (row-count mt1) (row-count mt2) (row-count mt3))]
-     (loop [c 0, val init, s1 mt1, s2 mt2, s3 mt3]
-       (let [g (if byrow? #(f % c %2 %3 %4 %5) #(f % %2 c %3 %4 %5))]
-         (if (>= c l)
-           val
-           (recur (inc c) (co/reduce-kv-ext
-                            g val (first s1) (first s2) (first s3)) (rest s1)
-                  (rest s2) (rest s3))))))))
-
-(defn esome
-  "Returns the first logical true value of (pred row col e) for any e in matrix, else nil.
-  Options: `::by-row?` (default: true)."
-  ([pred m] (esome pred m {::by-row? true}))
-  ([pred m {::keys [by-row?] :or {by-row? true}}]
-   (let [mt (if by-row? m (transpose m))
-         num-rows (row-count mt)]
-     (loop [c 0, s mt]
-       (when (< c num-rows)
-         (or (some-kv #(pred c % %2) (first s)) (recur (inc c) (next s))))))))
-
-(s/fdef esome
-        :args (s/cat :pred (s/fspec :args (s/cat :r ::row :c ::column :e ::m/number)
-                                    :ret boolean?)
-                     :m ::matrix
-                     :args (s/? (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::m/number))
+                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/* ::matrix)))
+        :ret ::matrix)
 
 ;;;SPARSE
-(defn sparse-efilter                                        ;;these two sparse filters are how to create 'sparse' from matrix, default pred should be not= 0
-  "Returns a vector of [row column value].
-  pred takes an element"
-  [m pred & {:keys [byrow?] :or {byrow? true}}]
-  {:pre [(have? matrix? m)]}
-  (ereduce-kv #(if (pred %4) (conj % [%2 %3 %4]) %) [] m byrow?))
+;;these two sparse filters are how to create 'sparse' from matrix,
+;; default pred should be not= 0
+(defn sparse-efilter
+  "Returns a sparse-matrix (i.e., a vector of tuples of [row column value]).
+  `pred` takes a number."
+  ([m pred] (sparse-efilter m pred {::by-row? true}))
+  ([m pred & {::keys [by-row?] :or {by-row? true}}]
+   (ereduce-kv #(if (pred %4) (conj % [%2 %3 %4]) %) [] m by-row?)))
+
+(s/fdef sparse-efilter
+        :args (s/cat :m ::matrix
+                     :pred (s/fspec :args (s/cat :number ::number) :ret boolean?)
+                     :opts (s/? (s/keys :opt [::by-row?])))
+        :ret ::sparse-matrix)
 
 (defn sparse-symmetric-efilter
-  "Returns a vector of [row column value].
-pred takes an element and will be evaluated only for upper-right or lower-left triangle of m."
-  [m pred & {:keys [byrow?] :or {byrow? true}}]
-  {:pre [(have? matrix? m)]}
-  (let [f (if byrow? <= >=)]
-    (ereduce-kv #(if (and (f %2 %3) (pred %4)) (conj % [%2 %3 %4]) %)
-                [] m byrow?)))
+  "Returns a sparse-matrix (i.e., a vector of tuples of [row column value]).
+`pred` takes a number and will be evaluated only for upper-right or lower-left triangle of matrix `m`."
+  ([m pred] (sparse-symmetric-efilter m pred {::by-row? true}))
+  ([m pred & {:keys [by-row?] :or {by-row? true}}]
+   (let [f (if by-row? <= >=)]
+     (ereduce-kv #(if (and (f %2 %3) (pred %4)) (conj % [%2 %3 %4]) %)
+                 [] m by-row?))))
 
-(defn sparse-filter-by-row
-  "Returns a vector of [row row-value].
-  'pred' takes a row."
-  [m pred]
-  {:pre [(have? matrix? m)]}
-  (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] m))
-
-(defn sparse-filter-by-column
-  "Returns a vector of [column column-value].
-  'pred' takes a column"
-  [m pred]
-  {:pre [(have? matrix? m)]}
-  (reduce-kv #(if (pred %3) (conj % [%2 %3]) %) [] (transpose m)))
+(s/fdef sparse-symmetric-efilter
+        :args (s/cat :m ::matrix
+                     :pred (s/fspec :args (s/cat :number ::number) :ret boolean?)
+                     :opts (s/? (s/keys :opt [::by-row?])))
+        :ret ::sparse-matrix)
 
 ;;;MATRIX FILTERS
-(defn filter-kv
-  "Returns a vector of the items in coll for which (pred item) returns true.
-  pred must be free of side-effects."
-  [pred m] (persistent! (reduce-kv #(if (pred %2 %3) (conj! % %3) %) (transient []) m)))
-
 (defn filter-by-row
   "Returns a matrix.
   'pred' takes a row."
@@ -1083,42 +1136,60 @@ pred takes an element and will be evaluated only for upper-right or lower-left t
 
 (defn filter-by-column
   "Returns a matrix.
-  'pred' takes a column"
-  [m pred]
-  {:pre [(have? matrix? m)]}
-  (transpose (filter pred (transpose m))))
+  'pred' takes a column."
+  [m pred] (transpose (filter pred (transpose m))))
+
+(s/fdef filter-by-column
+        :args (s/cat :m ::matrix :pred (s/fspec :args (s/cat :column ::column) :ret boolean?))
+        :ret ::matrix)
 
 (defn filter-symmetrically
   "Returns a matrix.
-  'pred' takes a row or column"
-  [m pred & {:keys [by-row?] :or {by-row? true}}]
-  {:pre [(have? matrix? m)]}
-  (let [ma (if by-row? m (transpose m)),
-        keep-set (reduce-kv #(if (pred %3) (conj % %2) %) #{} ma)]
-    (get-slices-as-matrix m {::row-indices keep-set, ::column-indices keep-set})))
+  'pred' takes a row or column."
+  ([m pred] (filter-symmetrically m pred {::by-row? true}))
+  ([m pred & {:keys [by-row?] :or {by-row? true}}]
+   (let [ma (if by-row? m (transpose m))
+         keep-set (reduce-kv #(if (pred %3) (conj % %2) %) #{} ma)]
+     (get-slices-as-matrix m {::row-indices keep-set, ::column-indices keep-set}))))
+
+(s/fdef filter-symmetrically
+        :args (s/cat :m ::matrix
+                     :pred (s/fspec :args (s/cat :row ::row) :ret boolean?)
+                     :opts (s/? (s/keys :opt [::by-row?])))
+        :ret ::matrix)
 
 ;;;MATRIX NUMERICAL STABILITY
 (defn- roughly-zero-row-fn [^double accu]
   #(every? (fn [e] (m/roughly? e 0.0 accu)) %))
 
 (defn round-roughly-zero-rows
-  "Returns a matrix after rounding any roughly-zero rows"
+  "Returns a matrix after rounding any roughly-zero rows."
   [m accu]
-  {:pre [(have? matrix? m)]}
   (map #(if ((roughly-zero-row-fn accu) %)
-          (repeat (column-count m) 0.0)
+          (repeat (columns m) 0.0)
           %)
        m))
 
+(s/fdef round-roughly-zero-rows
+        :args (s/cat :m ::matrix :accu ::accu)
+        :ret ::matrix)
+
 (defn round-roughly-zero-columns
-  "Returns a matrix after rounding any roughly-zero columns"
+  "Returns a matrix after rounding any roughly-zero columns."
   [m accu]
-  {:pre [(have? matrix? m)]}
   (co/flip-dbl-layered
     (map #(if ((roughly-zero-row-fn accu) %)
-            (repeat (row-count m) 0.0) %)
+            (repeat (rows m) 0.0) %)
          (transpose m))))
 
+(s/fdef round-roughly-zero-columns
+        :args (s/cat :m ::matrix :accu ::accu)
+        :ret ::matrix)
+
 (defn round-roughly-zero-rows-and-columns
-  "Returns a matrix after rounding any roughly-zero rows and columns"
+  "Returns a matrix after rounding any roughly-zero rows and columns."
   [m accu] (round-roughly-zero-columns (round-roughly-zero-rows m accu) accu))
+
+(s/fdef round-roughly-zero-rows-and-columns
+        :args (s/cat :m ::matrix :accu ::accu)
+        :ret ::matrix)

@@ -180,7 +180,7 @@ Returns a map containing:
   [square-m ^double accu]
   (if (positive-matrix? square-m)
     (cholesky-decomposition square-m)
-    (let [c (mx/row-count square-m)
+    (let [c (mx/rows square-m)
           {b :B, r :rank} (cholesky-rectangular square-m accu)
           s (- c r)
           nm (if (zero? s) b (mx/conj-columns b (mx/constant-matrix c s)))]
@@ -323,10 +323,10 @@ Returns a map containing:
   (let [d (QRDecomposition. apache-m1)
         r (.getR d)
         r (mx/square-matrix r)]
-    (when-not (= (mx/column-count r) (mx/column-count apache-m1))
+    (when-not (= (mx/columns r) (mx/columns apache-m1))
       (ex-info "Icky matrices" {:fn (var linear-least-squares-with-error-matrix)}))
     (let [ri (inverse r)
-          e (mx/matrix-multiply ri (mx/transpose ri))
+          e (mx/mx* ri (mx/transpose ri))
           ^DecompositionSolver s (.getSolver d)]
       {:S (vec (.toArray (if (apache-vector? apache-m2-or-v)
                            ^RealVector (.solve s ^RealVector apache-m2-or-v)
