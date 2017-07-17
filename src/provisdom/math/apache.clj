@@ -7,8 +7,7 @@
             [provisdom.math.arrays :as ar]
             [provisdom.math.matrix :as mx]
             [provisdom.math.bounds :as bo]
-            [clojure.core.matrix.protocols :as mp]
-            [clojure.core.matrix :as mxc]
+            [provisdom.math.apache-matrix :as apache-mx]
             [provisdom.math.vector :as vector])
   (:import [java.util ArrayList]
            [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
@@ -381,12 +380,12 @@ Returns map of ::point and ::errors."
              nil)
          checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
          observed (if (and (some? target) (= (count target) n-cons))
-                    (apache-vector target)
-                    (apache-vector (vector/compute-vector n-cons 0.0)))
-         start (apache-vector guesses)
+                    (apache-mx/apache-vector target)
+                    (apache-mx/apache-vector (vector/compute-vector n-cons 0.0)))
+         start (apache-mx/apache-vector guesses)
          weights (if (and (some? weights) (= (count weights) n-cons))
-                   (apache-matrix (mx/diagonal-matrix weights))
-                   (apache-matrix (mx/diagonal-matrix n-cons 1.0)))]
+                   (apache-mx/apache-matrix (mx/diagonal-matrix weights))
+                   (apache-mx/apache-matrix (mx/diagonal-matrix n-cons 1.0)))]
      (try
        (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                      problem (LeastSquaresFactory/create

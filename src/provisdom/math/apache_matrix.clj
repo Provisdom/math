@@ -5,12 +5,8 @@
             [orchestra.spec.test :as ost]
             [provisdom.math.core :as m]
             [provisdom.math.matrix :as mx]
-            [clojure.core.matrix.protocols :as mp]
-            [clojure.core.matrix :as mxc]
-            [clatrix.core :as clx]
             [provisdom.math.vector :as vector]
             [provisdom.math.tensor :as tensor]
-            [provisdom.math.apache :as apache]
             [provisdom.math.arrays :as ar])
   (:import [org.apache.commons.math3.linear RealVector RealMatrix Array2DRowRealMatrix ArrayRealVector
                                             QRDecomposition LUDecomposition CholeskyDecomposition
@@ -121,9 +117,13 @@
         :ret boolean?)
 
 ;;;MATRIX DECOMPOSITION
-(defn inverse                                               ;;possible that Clatrix is faster
-  "Computes the inverse of an Apache matrix."
-  [apache-square-m] (mxc/inverse apache-square-m))
+(defn inverse                                               ;;probable that Clatrix is faster
+  "Computes the inverse of an Apache matrix through LU Decomposition."
+  [apache-square-m]
+  (let [lud (LUDecomposition. apache-square-m)
+        s (.getSolver lud)
+        sol (.getInverse s)]
+    sol))
 
 (s/fdef inverse
         :args (s/cat :apache-square-m ::apache-square-matrix)
@@ -146,25 +146,22 @@
 
 (defn cholesky-rectangular
   "Calculates the rectangular Cholesky decomposition of a matrix.
-The rectangular Cholesky decomposition of a real symmetric positive
-   semidefinite matrix m consists of a rectangular matrix B with the same
-   number of rows such that:
+  The rectangular Cholesky decomposition of a real symmetric positive semidefinite matrix m consists of a
+  rectangular matrix B with the same number of rows such that:
       m is almost equal to BB*, depending on a user-defined tolerance.
-In a sense, this is the square root of m.
-The difference with respect to the regular CholeskyDecomposition is that
-   rows/columns may be permuted (hence the rectangular shape instead of the
-   traditional triangular shape) and there is a threshold to ignore small
+  In a sense, this is the square root of m.
+  The difference with respect to the regular CholeskyDecomposition is that rows/columns may be permuted
+  (hence the rectangular shape instead of the traditional triangular shape) and there is a threshold to ignore small
    diagonal elements.
-This is used for example to generate correlated random n-dimensions vectors
-   in a p-dimension subspace (p < n).
-In other words, it allows generating random vectors from a covariance matrix
-   that is only positive semidefinite, and not positive definite.
-accu - Diagonal elements threshold under which columns are considered to be
-       dependent on previous ones and are discarded.
-Returns a map containing:
-      :B -- rectangular root matrix
-      :rank -- rank is the number of independent rows of original matrix,
-               and the number of columns of root matrix B"
+   This is used for example to generate correlated random n-dimensions vectors in a p-dimension subspace (p < n).
+   In other words, it allows generating random vectors from a covariance matrix that is only positive semidefinite,
+   and not positive definite.
+   accu - Diagonal elements threshold under which columns are considered to be dependent on
+      previous ones and are discarded.
+      Returns a map containing:
+         :B -- rectangular root matrix
+         :rank -- rank is the number of independent rows of original matrix,
+            and the number of columns of root matrix B"
   [apache-square-m accu]
   (let [r (RectangularCholeskyDecomposition. apache-square-m (double accu))]
     {::B    (.getRootMatrix r)
@@ -234,8 +231,11 @@ Returns a map containing:
         :ret (s/keys :req [::L ::U ::P]))
 
 (defn determinant
-  "Calculates the determinant of a square matrix."
-  [apache-square-m] (mxc/det apache-square-m))
+  "Calculates the determinant of a square matrix through LU Decomposition."
+  [apache-square-m]
+  (let [lud (LUDecomposition. apache-square-m)
+        det (.getDeterminant lud)]
+    det))
 
 (s/fdef determinant
         :args (s/cat :apache-square-m ::apache-square-matrix)

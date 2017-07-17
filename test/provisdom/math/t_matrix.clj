@@ -178,6 +178,8 @@
   (is= [[1.0 1.0 2.0] [1.0 1.0 4.0] [2.0 4.0 1.0]]
        (mx/symmetric-matrix-with-unit-diagonal 3 #(double (+ %1 (* 2 %2))) {::mx/by-row? false})))
 
+(deftest positive-matrix)                                   ;create tests for this
+
 (deftest toeplitz-matrix-test                               ;also called [[diagonal-constant-matrix]]
   (is= [[1.0 2.0 3.0] [4.0 1.0 2.0] [5.0 4.0 1.0]] (mx/toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0 5.0]))
   (is= [[1.0 2.0] [4.0 1.0] [5.0 4.0]] (mx/toeplitz-matrix [1.0 2.0] [1.0 4.0 5.0]))

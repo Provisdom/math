@@ -6,15 +6,17 @@
             [provisdom.math.core :as m]
             [provisdom.math.vector :as vector]
             [provisdom.math.matrix :as mx]
-            [clojure.core.matrix :as mxc]
-            [clatrix.core :as clx]))
+            [clatrix.core :as clatrix]))
 
 (set! *warn-on-reflection* true)
 
-(declare clatrix? clatrix square-clatrix? maybe-convert-clatrix-row-or-column eigenvalues
-         rows columns transpose diagonal diagonal-clatrix? upper-triangular-clatrix?
-         lower-triangular-clatrix? symmetric-clatrix? some-kv)
+(declare clatrix? square-clatrix? diagonal-clatrix? upper-triangular-clatrix? lower-triangular-clatrix?
+         symmetric-clatrix? positive-clatrix? clatrix rows columns diagonal some-kv transpose eigen-decomposition)
 
+(s/def ::accu ::mx/accu)
+(s/def ::by-row? ::mx/by-row?)
+(s/def ::row ::mx/row)
+(s/def ::column ::mx/column)
 (s/def ::rows ::mx/rows)
 (s/def ::columns ::mx/columns)
 (s/def ::number ::m/number)
@@ -29,19 +31,25 @@
   (s/with-gen lower-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/lower-triangular-matrix))))
 (s/def ::symmetric-clatrix
   (s/with-gen symmetric-clatrix? #(gen/fmap clatrix (s/gen ::mx/symmetric-matrix))))
+(s/def ::positive-clatrix
+  (s/with-gen positive-clatrix?
+              #(gen/fmap (fn [m] (clatrix (mx/positive-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
 (s/def ::S ::diagonal-clatrix)
+(s/def ::D ::clatrix)
+(s/def ::VT ::clatrix)
+(s/def ::L ::lower-triangular-clatrix)
 (s/def ::U ::upper-triangular-clatrix)
-(s/def ::VT ::symmetric-clatrix)
-(s/def ::L ::lower-triangular-matrix)
 (s/def ::P ::clatrix)
-(s/def ::Q ::symmetric-clatrix)
-(s/def ::R ::upper-triangular-clatrix)
+(s/def ::Q ::clatrix)
+(s/def ::R ::clatrix)
 (s/def ::rank ::m/int-non-)
+(s/def ::eigenvalues ::vector)
+(s/def ::eigenvectors ::clatrix)
 
 ;;;TYPES
 (defn clatrix?
   "Returns true if a Clatrix."
-  [x] (clx/matrix? x))
+  [x] (clatrix/matrix? x))
 
 (s/fdef clatrix?
         :args (s/cat :x any?)
@@ -57,7 +65,7 @@
 
 (defn row-clatrix?
   "Returns true is a row Clatrix."
-  [x] (clx/row? x))
+  [x] (clatrix/row? x))
 
 (s/fdef row-clatrix?
         :args (s/cat :x any?)
@@ -65,7 +73,7 @@
 
 (defn column-clatrix?
   "Returns true is a column Clatrix."
-  [x] (clx/column? x))
+  [x] (clatrix/column? x))
 
 (s/fdef column-clatrix?
         :args (s/cat :x any?)
@@ -73,7 +81,7 @@
 
 (defn square-clatrix?
   "Returns true if a square Clatrix."
-  [x] (and (clx/matrix? x) (clx/square? x)))
+  [x] (and (clatrix? x) (clatrix/square? x)))
 
 (s/fdef square-clatrix?
         :args (s/cat :x any?)
@@ -81,23 +89,23 @@
 
 (defn diagonal-clatrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
-  [x] (and (clatrix? x) (nil? (some-kv (fn [i j e] (not (or (= i j) (zero? e)))) x))))
+  [x] (and (clatrix? x) (nil? (some-kv (fn [r c e] (not (or (= r c) (zero? e)))) x))))
 
 (s/fdef diagonal-clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
 
 (defn upper-triangular-clatrix?
-  "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
-  [x] (and (clatrix? x) (nil? (some-kv (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
+  "Returns true if an upper triangular matrix (square with the entries below the main diagonal all zero)."
+  [x] (and (square-clatrix? x) (nil? (some-kv (fn [r c e] (not (or (<= r c) (zero? e)))) x))))
 
 (s/fdef upper-triangular-clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
 
 (defn lower-triangular-clatrix?
-  "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
-  [x] (and (clatrix? x) (nil? (some-kv (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
+  "Returns true if a lower triangular matrix (square with the entries above the main diagonal all zero)."
+  [x] (and (square-clatrix? x) (nil? (some-kv (fn [r c e] (not (or (>= r c) (zero? e)))) x))))
 
 (s/fdef lower-triangular-clatrix?
         :args (s/cat :x any?)
@@ -105,7 +113,7 @@
 
 (defn symmetric-clatrix?
   "Returns true is a symmetric Clatrix."
-  [x] (and (clx/matrix? x) (= (transpose x) x)))
+  [x] (and (clatrix? x) (= (transpose x) x)))
 
 (s/fdef symmetric-clatrix?
         :args (s/cat :x any?)
@@ -113,11 +121,17 @@
 
 (defn positive-clatrix?
   "Returns true if a positive definite Clatrix."
-  ([x] (positive-clatrix? x m/*dbl-close*))
-  ([x accu] (and (symmetric-clatrix? x) (every? #(> % accu) (eigenvalues x)))))
+  ([x] (positive-clatrix? x {::accu m/*dbl-close*}))
+  ([x {::keys [accu] :or {accu true}}]
+   (and (symmetric-clatrix? x)
+        (or (zero? (rows x))
+            (let [eig (eigen-decomposition x)]
+              (if eig
+                (every? #(> % accu) (::eigenvalues eig))
+                false))))))
 
 (s/fdef positive-clatrix?
-        :args (s/cat :x any? :accu (s/? ::accu))
+        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
         :ret boolean?)
 
 (defn clatrix-with-unit-diagonal?
@@ -130,26 +144,33 @@
 
 (defn positive-clatrix-with-unit-diagonal?
   "Returns true if a positive definite Clatrix with a unit diagonal (all ones on the diagonal)."
-  ([x] (positive-clatrix-with-unit-diagonal? x))
-  ([x accu] (and (clatrix-with-unit-diagonal? x) (positive-clatrix? x accu))))
+  ([x] (positive-clatrix-with-unit-diagonal? x {::accu m/*dbl-close*}))
+  ([x {::keys [accu] :or {accu true}}]
+   (and (clatrix-with-unit-diagonal? x) (positive-clatrix? x {::accu accu}))))
 
 (s/fdef positive-clatrix-with-unit-diagonal?
-        :args (s/cat :x any? :accu (s/? ::accu))
+        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
         :ret boolean?)
 
 (defn non-negative-clatrix?
   "Returns true if a non-negative Clatrix."
-  ([x] (non-negative-clatrix? x m/*dbl-close*))
-  ([x accu] (and (symmetric-clatrix? x) (every? #(m/roughly-non-? % accu) (eigenvalues x)))))
+  ([x] (non-negative-clatrix? x {::accu m/*dbl-close*}))
+  ([x {::keys [accu] :or {accu true}}]
+   (and (symmetric-clatrix? x)
+        (or (zero? (rows x))
+            (let [eig (eigen-decomposition x)]
+              (if eig
+                (every? #(m/roughly-non-? % accu) (::eigenvalues eig))
+                false))))))
 
 (s/fdef non-negative-clatrix?
-        :args (s/cat :x any? :accu (s/? ::accu))
+        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
         :ret boolean?)
 
 ;;;CONSTRUCTORS
 (defn clatrix
   "Returns a Clatrix (Clatrix matrix)."
-  [m] (mxc/matrix :clatrix m))
+  [m] (clatrix/clatrix m))
 
 (s/fdef clatrix
         :args (s/cat :m ::matrix)
@@ -170,7 +191,7 @@
 ;;;MATRIX INFO
 (defn rows
   "Returns the number of rows of a Clatrix."
-  [clatrix-m] (clx/nrows clatrix-m))
+  [clatrix-m] (clatrix/nrows clatrix-m))
 
 (s/fdef rows
         :args (s/cat :clatrix-m ::clatrix)
@@ -178,7 +199,7 @@
 
 (defn columns
   "Returns the number of columns of a Clatrix."
-  [clatrix-m] (clx/ncols clatrix-m))
+  [clatrix-m] (clatrix/ncols clatrix-m))
 
 (s/fdef columns
         :args (s/cat :clatrix-m ::clatrix)
@@ -186,25 +207,25 @@
 
 (defn diagonal
   "Returns diagonal of a Clatrix."
-  [clatrix-m] (vec (clx/diag clatrix-m)))
+  [clatrix-m] (vec (clatrix/diag clatrix-m)))
 
 (s/fdef diagonal
         :args (s/cat :clatrix-m ::clatrix)
         :ret ::vector)
 
 (defn some-kv
-  "Returns the first logical true value of (pred row column e) for any e in Clatrix, else nil.
+  "Returns the first logical true value of (pred row column number) for any number in Clatrix, else nil.
   Options: `::by-row?` (default: true)."
   ([pred clatrix-m] (some-kv pred clatrix-m {::by-row? true}))
   ([pred clatrix-m {::keys [by-row?] :or {by-row? true}}]
    (let [mt (if by-row? clatrix-m (transpose clatrix-m))
          rows (rows mt)]
-     (loop [c 0, s mt]
+     (loop [c 0, s (clatrix->matrix mt)]
        (when (< c rows)
          (or (vector/some-kv #(pred c % %2) (first s)) (recur (inc c) (next s))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :r ::row :c ::column :e ::m/number)
+        :args (s/cat :pred (s/fspec :args (s/cat :row ::row :column ::column :number ::m/number)
                                     :ret boolean?)
                      :clatrix-m ::clatrix
                      :opts (s/? (s/keys :opt [::by-row?])))
@@ -213,7 +234,7 @@
 ;;;MATRIX MANIPULATION
 (defn transpose
   "Returns transpose of a Clatrix."
-  [clatrix-m] (clx/t clatrix-m))
+  [clatrix-m] (clatrix/t clatrix-m))
 
 (s/fdef transpose
         :args (s/cat :clatrix-m ::clatrix)
@@ -226,14 +247,21 @@
   ([clatrix-m1 clatrix-m2]
    (if (or (empty-clatrix? clatrix-m1) (empty-clatrix? clatrix-m2))
      (clatrix [[]])
-     (clx/* clatrix-m1 clatrix-m2)))
-  ([clatrix-m1 clatrix-m2 & clatrix-ms] (apply clx/* clatrix-m1 clatrix-m2 clatrix-ms)))
+     (clatrix/* clatrix-m1 clatrix-m2)))
+  ([clatrix-m1 clatrix-m2 & clatrix-ms] (apply mx* (mx* clatrix-m1 clatrix-m2) clatrix-ms)))
 
 (s/fdef mx*
         :args (s/or :one (s/cat :clatrix-m ::clatrix)
-                    :two+ (s/cat :clatrix-m1 ::clatrix
-                                 :clatrix-m2 ::clatrix
-                                 :clatrix-ms (s/? (s/keys* :opt [::clatrix])))))
+                    :two (s/and (s/cat :clatrix-m1 ::clatrix
+                                       :clatrix-m2 ::clatrix)
+                                #(= (columns (:clatrix-m1 %)) (rows (:clatrix-m2 %))))
+                    :three+ (s/and (s/cat :clatrix-m1 ::clatrix
+                                          :clatrix-m2 ::clatrix
+                                          :clatrix-ms (s/with-gen (s/* ::clatrix) #(gen/vector (s/gen ::clatrix) 0 2)))
+                                   #(not (true? (reduce (fn [lc e] (if (= (rows e) lc) (columns e) (reduced true)))
+                                                        (columns (:clatrix-m1 %))
+                                                        (cons (:clatrix-m2 %) (:clatrix-ms %)))))))
+        :ret ::clatrix)
 
 ;;;MATRIX DECOMPOSITION
 (defn inverse
@@ -241,97 +269,126 @@
    This is done via Gaussian elimination.
    It can be numerically very unstable if the matrix is nearly singular.
    Positivity and symmetry hints are used to cause the solve to use optimized LAPACK routines."
-  [clatrix-square-m] (clx/i (clx/maybe-positive (clx/maybe-symmetric clatrix-square-m))))
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    (clatrix [[]])
+    (try (clatrix/i (clatrix/maybe-positive (clatrix/maybe-symmetric square-clatrix-m)))
+         (catch Exception _ nil))))
 
 (s/fdef inverse
-        :args (s/cat :clatrix-square-m ::clatrix-square-matrix)
-        :ret ::clatrix-square-matrix)
+        :args (s/cat :square-clatrix-m ::square-clatrix)
+        :ret (s/nilable ::square-clatrix))
+
+(defn eigen-decomposition
+  "Returns map with a vector of the real parts of eigenvalues and a Clatrix of eigenvectors.
+  A matrix can be decomposed as A=Q*L*QT, where L is the diagonal matrix of `eigenvalues`,
+  Q is the `eigenvalues` matrix, and QT is the transpose of Q."
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    {::eigenvalues  []
+     ::eigenvectors (clatrix [[]])}
+    (try (let [r (clatrix/eigen (clatrix/maybe-symmetric square-clatrix-m))]
+           (when-not (or (:ivalues r) (:ivectors r))
+             {::eigenvalues  (vec (:values r))
+              ::eigenvectors (:vectors r)}))
+         (catch Exception _ nil))))
+
+(s/fdef eigen-decomposition
+        :args (s/cat :square-clatrix-m ::square-clatrix)
+        :ret (s/nilable (s/keys :req [::eigenvalues ::eigenvectors])))
 
 (defn upper-cholesky-decomposition
   "Computes the Cholesky decomposition of a Clatrix.
    This is the Cholesky square root of a Clatrix, U such that (matrix-multiply UT U) = m
-   Note that `clatrix-square-m` must be positive (semi) definite for this to exist,
+   Note that `positive-clatrix-m` must be positive (semi) definite for this to exist,
       but [[upper-cholesky-decomposition]] requires strict positivity."
-  [clatrix-square-m] (clx/cholesky clatrix-square-m))
+  [positive-clatrix-m]
+  (if (empty-clatrix? positive-clatrix-m)
+    (clatrix [[]])
+    (clatrix/cholesky positive-clatrix-m)))
 
 (s/fdef upper-cholesky-decomposition
-        :args (s/cat :clatrix-square-m ::clatrix-square-matrix)
-        :ret ::clatrix)
+        :args (s/cat :positive-clatrix-m ::positive-clatrix)
+        :ret ::upper-triangular-clatrix)
 
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of a Clatrix.
-  The Singular Value Decomposition of Clatrix A is a set of three matrices: U, S and V such that A = U × S × VT.
-  Let A be a m × n matrix, then U is a m × p orthogonal matrix,
+  The Singular Value Decomposition of Clatrix A is a set of three matrices: D, S and V such that A = D × S × VT.
+  Let A be a m × n matrix, then D is a m × p orthogonal matrix,
   S is a p × p diagonal matrix with positive or null elements,
   V is a p × n orthogonal matrix (hence VT is also orthogonal) where p=min(m,n).
   Returns a map containing:
       :S -- diagonal Clatrix S
-      :U -- Clatrix U
+      :D -- Clatrix D
       :VT -- transpose of Clatrix V
       :rank -- rank."
   [clatrix-m]
-  (let [r (clx/svd clatrix-m)]
-    {::S    (clatrix (mx/diagonal-matrix (vec (:values r))))
-     ::U    (:left r)
-     ::VT   (:right r)
-     ::rank (:rank r)}))
+  (if (empty-clatrix? clatrix-m)
+    {::S    (clatrix [[]])
+     ::D    (clatrix [[]])
+     ::VT   (clatrix [[]])
+     ::rank 0}
+    (let [r (clatrix/svd clatrix-m)]
+      {::S    (clatrix (mx/diagonal-matrix (vec (:values r))))
+       ::D    (:left r)
+       ::VT   (:right r)
+       ::rank (:rank r)})))
 
 (s/fdef sv-decomposition
         :args (s/cat :clatrix-m ::clatrix)
-        :ret (s/keys :req [::S ::U ::VT ::rank]))
+        :ret (s/keys :req [::S ::D ::VT ::rank]))
 
 (defn condition
   "The `singular-values-clatrix` is the diagonal Clatrix of singular values, the `S`, from an SVD decomposition.
   Returns the norm2 condition number,
   which is the maximum element value from the `singular-values-clatrix` divided by the minimum element value."
   [singular-values-clatrix]
-  (let [vs (flatten singular-values-clatrix)]
-    (m/div (apply max vs) (apply min vs) nil)))
+  (let [vs (diagonal singular-values-clatrix)]
+    (if (empty? vs)
+      m/nan
+      (m/div (apply max vs) (apply min vs) m/nan))))
 
 (s/fdef condition
-        :args (s/cat :clatrix-singular-values-matrix ::clatrix)
-        :ret (s/nilable ::number))
+        :args (s/cat :singular-values-clatrix ::diagonal-clatrix)
+        :ret ::number)
 
 (defn lu-decomposition
   "Returns a map containing:
       :L -- the lower triangular factor
       :U -- the upper triangular factor
       :P -- the permutation matrix."
-  [clatrix-square-m]
-  (let [r (clx/lu clatrix-square-m)]
-    {::L (:l r), ::U (:u r), ::P (:p r)}))
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    {::L (clatrix [[]]), ::U (clatrix [[]]), ::P (clatrix [[]])}
+    (let [r (clatrix/lu square-clatrix-m)]
+      {::L (:l r), ::U (:u r), ::P (:p r)})))
 
 (s/fdef lu-decomposition
-        :args (s/cat :clatrix-square-m ::clatrix-square-matrix)
+        :args (s/cat :square-clatrix-m ::square-clatrix)
         :ret (s/keys :req [::L ::U ::P]))
 
 (defn determinant
   "Calculates the determinant of a square Clatrix."
-  [clatrix-square-m] (clx/det clatrix-square-m))
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    m/nan
+    (clatrix/det square-clatrix-m)))
 
 (s/fdef determinant
-        :args (s/cat :clatrix-square-m ::clatrix-square-matrix)
+        :args (s/cat :square-clatrix-m ::square-clatrix)
         :ret ::number)
 
 (defn qr-decomposition
   "Computes the QR decomposition of a Clatrix.
   Returns a map containing Clatrices Q and R.
    Q -- orthogonal factors
-   R -- the upper triangular factors."
+   R -- the upper triangular factors (not necessarily an upper triangular Clatrix)"
   [clatrix-m]
-  (let [r (clx/qr clatrix-m)]
-    {::Q (:q r), ::R (:r r)}))
+  (if (empty-clatrix? clatrix-m)
+    {::Q (clatrix [[]]), ::R (clatrix [[]])}
+    (let [r (clatrix/qr clatrix-m)]
+      {::Q (:q r), ::R (:r r)})))
 
 (s/fdef qr-decomposition
         :args (s/cat :clatrix-m ::clatrix)
         :ret (s/keys :req [::Q ::R]))
-
-(defn eigenvalues
-  "Returns vector of the real parts of eigenvalues."
-  [clatrix-square-m]
-  (let [r (clx/eigen (clx/maybe-symmetric (clatrix clatrix-square-m)))]
-    (when-not (or (:ivalues r) (:ivectors r)) (vec (:values r)))))
-
-(s/fdef eigenvalues
-        :args (s/cat :clatrix-square-m ::clatrix-square-matrix)
-        :ret ::vector)

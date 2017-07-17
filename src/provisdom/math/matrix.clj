@@ -13,13 +13,13 @@
 
 ;;;DECLARATIONS
 (declare column-matrix transpose diagonal
-         get-slices-as-matrix esome matrix? row-matrix? column-matrix? square-matrix?
+         get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
-         rows columns size-symmetric size-symmetric-with-unit-diagonal
+         rows columns size-triangular-or-symmetric size-triangular-or-symmetric-without-diagonal
          compute-vector coerce to-vector ecount to-matrix
          inner-product emap constant-matrix mx*
-         ecount-symmetric symmetric-matrix ecount-triangular upper-triangular-matrix
-         lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
+         ecount-triangular-or-symmetric symmetric-matrix ecount-triangular-or-symmetric-without-diagonal
+         upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -50,20 +50,23 @@
 (s/def ::square-matrix
   (s/with-gen square-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/vector (gen/vector i) i)))))
+                         (fn [i] (gen/vector (gen/vector (s/gen ::number) i) i)))))
 (s/def ::diagonal-matrix (s/with-gen diagonal-matrix? #(gen/fmap diagonal-matrix (s/gen ::vector))))
 (s/def ::upper-triangular-matrix
   (s/with-gen upper-triangular-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap upper-triangular-matrix (gen/vector (ecount-triangular i)))))))
+                         (fn [i] (gen/fmap upper-triangular-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 (s/def ::lower-triangular-matrix
   (s/with-gen lower-triangular-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap lower-triangular-matrix (gen/vector (ecount-triangular i)))))))
+                         (fn [i] (gen/fmap lower-triangular-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 (s/def ::symmetric-matrix
   (s/with-gen symmetric-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap symmetric-matrix (gen/vector (ecount-symmetric i)))))))
+                         (fn [i] (gen/fmap symmetric-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix))
 (s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix-num))
 (s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :m ::matrix-finite))
@@ -152,7 +155,7 @@
 
 (defn diagonal-matrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
-  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (= i j) (zero? e)))) x))))
+  [x] (and (matrix? x) (nil? (some-kv (fn [i j e] (not (or (= i j) (zero? e)))) x))))
 
 (s/fdef diagonal-matrix?
         :args (s/cat :x any?)
@@ -160,7 +163,7 @@
 
 (defn upper-triangular-matrix?
   "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
-  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
+  [x] (and (matrix? x) (nil? (some-kv (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
 
 (s/fdef upper-triangular-matrix?
         :args (s/cat :x any?)
@@ -168,7 +171,7 @@
 
 (defn lower-triangular-matrix?
   "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
-  [x] (and (matrix? x) (nil? (esome (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
+  [x] (and (matrix? x) (nil? (some-kv (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
 
 (s/fdef lower-triangular-matrix?
         :args (s/cat :x any?)
@@ -313,7 +316,7 @@
   The elements are placed `by-row?` (default is true)."
   ([numbers] (lower-triangular-matrix numbers {::by-row? true}))
   ([numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-symmetric (count numbers))
+   (let [size (size-triangular-or-symmetric (count numbers))
          f (fn [r c] (if (< r c)
                        0.0
                        (if by-row?
@@ -321,7 +324,7 @@
                          (symmetric-row-fill c r size numbers))))]
      (when size (compute-matrix size size f))))
   ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-symmetric-with-unit-diagonal (count off-diagonal-numbers))
+   (let [size (size-triangular-or-symmetric-without-diagonal (count off-diagonal-numbers))
          f (fn [r c] (cond (< r c) 0.0
                            (= r c) (get diagonal-numbers r 0.0)
                            :else (if by-row?
@@ -344,7 +347,7 @@
   The elements are placed `by-row?` (default is true)."
   ([numbers] (upper-triangular-matrix numbers {::by-row? true}))
   ([numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-symmetric (count numbers))
+   (let [size (size-triangular-or-symmetric (count numbers))
          f (fn [r c] (if (> r c)
                        0.0
                        (if by-row?
@@ -352,7 +355,7 @@
                          (symmetric-column-fill r c numbers))))]
      (when size (compute-matrix size size f))))
   ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-symmetric-with-unit-diagonal (count off-diagonal-numbers))
+   (let [size (size-triangular-or-symmetric-without-diagonal (count off-diagonal-numbers))
          f (fn [r c] (cond (> r c) 0.0
                            (= r c) (get diagonal-numbers r 0.0)
                            :else (if by-row?
@@ -375,7 +378,7 @@
   `f` is only called for each element on the diagonal and either the upper or lower half of the matrix,
   depending on `by-row?`."
   ([numbers]
-   (let [size (size-symmetric (count numbers))
+   (let [size (size-triangular-or-symmetric (count numbers))
          f (fn [r c] (if (<= r c)
                        (symmetric-row-fill r c size numbers)
                        (symmetric-row-fill c r size numbers)))]
@@ -401,7 +404,7 @@
   by calling `f` with `row` and `column` and return a number.
   `f` is only called for each element on either the upper or lower half of the matrix, depending on `by-row?`."
   ([numbers]
-   (let [size (size-symmetric-with-unit-diagonal (count numbers))
+   (let [size (size-triangular-or-symmetric-without-diagonal (count numbers))
          f (fn [r c] (cond (= r c) 1.0
                            (< r c) (symmetric-without-diagonal-row-fill r c size numbers)
                            :else (symmetric-without-diagonal-row-fill c r size numbers)))]
@@ -420,6 +423,14 @@
                                                   :ret ::number)
                                       :opts (s/? (s/keys :opt [::by-row?]))))
         :ret (s/nilable ::matrix))
+
+(defn positive-matrix
+  "Returns a positive definite matrix from `tensor`."
+  [tensor size] (let [m (to-matrix tensor size)] (mx* (transpose m) m)))
+
+(s/fdef positive-matrix
+        :args (s/cat :tensor ::tensor :size ::size)
+        :ret ::matrix)
 
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the same).
@@ -494,7 +505,7 @@
   "Returns a positive definite matrix with a random spectrum.
   The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
   Alternative #1: Sample from the Inverse-Wishart Distribution.
-  Alternative #2: (let [[m s] (rnd-matrix size size)] [(matrix-multiply (transpose m) m), s])"
+  Alternative #2: Use [[positive-matrix]]."
   [size] (rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!)))))
 
 (s/fdef rnd-positive-matrix!
@@ -799,43 +810,43 @@
                                  :m3 ::matrix))
         :ret any?)
 
-(defn size-symmetric
+(defn size-triangular-or-symmetric
   "Returns the size of the matrix given `ecount`.
-  `ecount` is the number of independent symmetric matrix elements (the number of elements on the diagonal plus
-  the number either above or below the diagonal)."
+  `ecount` is the number of independent triangular or symmetric matrix elements
+  (the number of elements on the diagonal plus the number either above or below the diagonal)."
   [ecount]
   (let [s (-> ecount (* 8) inc m/sqrt dec (* 0.5))]
     (when (m/roughly-round? s 1e-6)
       (long s))))
 
-(s/fdef size-symmetric
+(s/fdef size-triangular-or-symmetric
         :args (s/cat :ecount ::m/int-non-)
         :ret (s/nilable ::m/int-non-))
 
-(defn size-symmetric-with-unit-diagonal
+(defn size-triangular-or-symmetric-without-diagonal
   "Returns the size of the matrix given `ecount`.
-  `ecount` is the number of elements above or below the unit diagonal."
-  [ecount] (let [size (size-symmetric ecount)] (when size (inc size))))
+  `ecount` is the number of elements above or below the diagonal."
+  [ecount] (let [size (size-triangular-or-symmetric ecount)] (when size (inc size))))
 
-(s/fdef size-symmetric-with-unit-diagonal
+(s/fdef size-triangular-or-symmetric-without-diagonal
         :args (s/cat :ecount ::m/int-non-)
         :ret (s/nilable ::m/int-non-))
 
-(defn ecount-symmetric
-  "Returns the element count (`ecount`) for a symmetric matrix.
+(defn ecount-triangular-or-symmetric
+  "Returns the element count (`ecount`) for a triangular or symmetric matrix.
   This is the number of elements on the diagonal plus the number of elements above or below the diagonal."
   [size] (m/div (+ (m/sq' size) size) 2))
 
-(s/fdef ecount-symmetric
+(s/fdef ecount-triangular-or-symmetric
         :args (s/cat :size ::size)
         :ret ::m/int-non-)
 
-(defn ecount-symmetric-with-unit-diagonal
-  "Returns the element count (`ecount`) for a symmetric matrix with a unit diagonal.
+(defn ecount-triangular-or-symmetric-without-diagonal
+  "Returns the element count (`ecount`) for a triangular or symmetric matrix without the diagonal.
   This is the number of elements above or below the diagonal."
   [size] (m/div (- (m/sq' size) size) 2))
 
-(s/fdef ecount-symmetric-with-unit-diagonal
+(s/fdef ecount-triangular-or-symmetric-without-diagonal
         :args (s/cat :size ::size)
         :ret ::m/int-non-)
 
