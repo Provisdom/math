@@ -10,8 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(declare clatrix? square-clatrix? diagonal-clatrix? upper-triangular-clatrix? lower-triangular-clatrix?
-         symmetric-clatrix? positive-clatrix? clatrix rows columns diagonal some-kv transpose eigen-decomposition)
+(declare clatrix rows columns diagonal some-kv transpose eigen-decomposition)
 
 (s/def ::accu ::mx/accu)
 (s/def ::by-row? ::mx/by-row?)
@@ -22,18 +21,6 @@
 (s/def ::number ::m/number)
 (s/def ::vector ::vector/vector)
 (s/def ::matrix ::mx/matrix)
-(s/def ::clatrix (s/with-gen clatrix? #(gen/fmap clatrix (s/gen ::matrix))))
-(s/def ::square-clatrix (s/with-gen square-clatrix? #(gen/fmap clatrix (s/gen ::mx/square-matrix))))
-(s/def ::diagonal-clatrix (s/with-gen diagonal-clatrix? #(gen/fmap clatrix (s/gen ::mx/diagonal-matrix))))
-(s/def ::upper-triangular-clatrix
-  (s/with-gen upper-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/upper-triangular-matrix))))
-(s/def ::lower-triangular-clatrix
-  (s/with-gen lower-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/lower-triangular-matrix))))
-(s/def ::symmetric-clatrix
-  (s/with-gen symmetric-clatrix? #(gen/fmap clatrix (s/gen ::mx/symmetric-matrix))))
-(s/def ::positive-clatrix
-  (s/with-gen positive-clatrix?
-              #(gen/fmap (fn [m] (clatrix (mx/positive-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
 (s/def ::S ::diagonal-clatrix)
 (s/def ::D ::clatrix)
 (s/def ::VT ::clatrix)
@@ -46,6 +33,8 @@
 (s/def ::eigenvalues ::vector)
 (s/def ::eigenvectors ::clatrix)
 
+;;TODO: finish spec'ing all the types below (not the functions)
+
 ;;;TYPES
 (defn clatrix?
   "Returns true if a Clatrix."
@@ -54,6 +43,8 @@
 (s/fdef clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::clatrix (s/with-gen clatrix? #(gen/fmap clatrix (s/gen ::matrix))))
 
 (defn empty-clatrix?
   "Returns true is an empty Clatrix."
@@ -87,6 +78,8 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::square-clatrix (s/with-gen square-clatrix? #(gen/fmap clatrix (s/gen ::mx/square-matrix))))
+
 (defn diagonal-clatrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
   [x] (and (clatrix? x) (nil? (some-kv (fn [r c e] (not (or (= r c) (zero? e)))) x))))
@@ -94,6 +87,8 @@
 (s/fdef diagonal-clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::diagonal-clatrix (s/with-gen diagonal-clatrix? #(gen/fmap clatrix (s/gen ::mx/diagonal-matrix))))
 
 (defn upper-triangular-clatrix?
   "Returns true if an upper triangular matrix (square with the entries below the main diagonal all zero)."
@@ -103,6 +98,9 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::upper-triangular-clatrix
+  (s/with-gen upper-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/upper-triangular-matrix))))
+
 (defn lower-triangular-clatrix?
   "Returns true if a lower triangular matrix (square with the entries above the main diagonal all zero)."
   [x] (and (square-clatrix? x) (nil? (some-kv (fn [r c e] (not (or (>= r c) (zero? e)))) x))))
@@ -111,6 +109,9 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::lower-triangular-clatrix
+  (s/with-gen lower-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/lower-triangular-matrix))))
+
 (defn symmetric-clatrix?
   "Returns true is a symmetric Clatrix."
   [x] (and (clatrix? x) (= (transpose x) x)))
@@ -118,6 +119,9 @@
 (s/fdef symmetric-clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::symmetric-clatrix
+  (s/with-gen symmetric-clatrix? #(gen/fmap clatrix (s/gen ::mx/symmetric-matrix))))
 
 (defn positive-clatrix?
   "Returns true if a positive definite Clatrix."
@@ -134,23 +138,9 @@
         :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
         :ret boolean?)
 
-(defn clatrix-with-unit-diagonal?
-  "Returns true is a Clatrix with a unit diagonal (all ones on the diagonal)."
-  [x] (and (clatrix? x) (every? m/one? (diagonal x))))
-
-(s/fdef clatrix-with-unit-diagonal?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(defn positive-clatrix-with-unit-diagonal?
-  "Returns true if a positive definite Clatrix with a unit diagonal (all ones on the diagonal)."
-  ([x] (positive-clatrix-with-unit-diagonal? x {::accu m/*dbl-close*}))
-  ([x {::keys [accu] :or {accu true}}]
-   (and (clatrix-with-unit-diagonal? x) (positive-clatrix? x {::accu accu}))))
-
-(s/fdef positive-clatrix-with-unit-diagonal?
-        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
-        :ret boolean?)
+(s/def ::positive-clatrix
+  (s/with-gen positive-clatrix?
+              #(gen/fmap (fn [m] (clatrix (mx/positive-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
 
 (defn non-negative-clatrix?
   "Returns true if a non-negative Clatrix."
@@ -164,6 +154,16 @@
                 false))))))
 
 (s/fdef non-negative-clatrix?
+        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
+        :ret boolean?)
+
+(defn correlation-clatrix?
+  "Returns true if a positive definite Clatrix with a unit diagonal (all ones on the diagonal)."
+  ([x] (correlation-clatrix? x {::accu m/*dbl-close*}))
+  ([x {::keys [accu] :or {accu true}}]
+   (and (clatrix? x) (every? m/one? (diagonal x)) (positive-clatrix? x {::accu accu}))))
+
+(s/fdef correlation-clatrix?
         :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
         :ret boolean?)
 
@@ -281,8 +281,8 @@
 
 (defn eigen-decomposition
   "Returns map with a vector of the real parts of eigenvalues and a Clatrix of eigenvectors.
-  A matrix can be decomposed as A=Q*L*QT, where L is the diagonal matrix of `eigenvalues`,
-  Q is the `eigenvalues` matrix, and QT is the transpose of Q."
+  A matrix can be decomposed as A=Q × L × Q^-1, where L is the diagonal matrix of `eigenvalues`,
+  Q is the `eigenvalues` matrix, and Q^-1 is the inverse of Q."
   [square-clatrix-m]
   (if (empty-clatrix? square-clatrix-m)
     {::eigenvalues  []
@@ -299,7 +299,7 @@
 
 (defn upper-cholesky-decomposition
   "Computes the Cholesky decomposition of a Clatrix.
-   This is the Cholesky square root of a Clatrix, U such that (matrix-multiply UT U) = m
+   This is the Cholesky square root of a Clatrix, U such that `positive-clatrix-m` = UT × U.
    Note that `positive-clatrix-m` must be positive (semi) definite for this to exist,
       but [[upper-cholesky-decomposition]] requires strict positivity."
   [positive-clatrix-m]

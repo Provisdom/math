@@ -16,8 +16,8 @@
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-triangular-or-symmetric size-triangular-or-symmetric-without-diagonal
-         compute-vector coerce to-vector ecount to-matrix
-         inner-product emap constant-matrix mx*
+         compute-vector coerce to-vector ecount to-matrix symmetric-matrix-with-unit-diagonal
+         inner-product emap constant-matrix mx* assoc-diagonal
          ecount-triangular-or-symmetric symmetric-matrix ecount-triangular-or-symmetric-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
@@ -40,102 +40,43 @@
 (s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
 (s/def ::tensor ::tensor/tensor)
-(s/def ::row-matrix (s/with-gen row-matrix? #(gen/fmap row-matrix (s/gen ::vector))))
-(s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap column-matrix (s/gen ::vector))))
-(s/def ::matrix ::tensor/tensor2D)
-(s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
-                                #(gen/vector (s/gen ::vector-num) 1 mdl)))
-(s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
-                                   #(gen/vector (s/gen ::vector-finite) 1 mdl)))
-(s/def ::square-matrix
-  (s/with-gen square-matrix?
-              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/vector (gen/vector (s/gen ::number) i) i)))))
-(s/def ::diagonal-matrix (s/with-gen diagonal-matrix? #(gen/fmap diagonal-matrix (s/gen ::vector))))
-(s/def ::upper-triangular-matrix
-  (s/with-gen upper-triangular-matrix?
-              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap upper-triangular-matrix
-                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
-(s/def ::lower-triangular-matrix
-  (s/with-gen lower-triangular-matrix?
-              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap lower-triangular-matrix
-                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
-(s/def ::symmetric-matrix
-  (s/with-gen symmetric-matrix?
-              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap symmetric-matrix
-                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
-(s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix))
-(s/def ::nan-or-matrix (s/or :nan ::m/nan :m ::matrix-num))
-(s/def ::nan-or-matrix-finite (s/or :nan ::m/nan :m ::matrix-finite))
-(s/def ::matrix-or-vector (s/or :m ::matrix :v ::vector))
-(s/def ::matrix-or-less (s/or :m ::matrix :v ::vector :value ::number))
-(s/def ::top-left ::matrix-or-vector)
-(s/def ::bottom-left ::matrix-or-vector)
-(s/def ::top-right ::matrix-or-vector)
-(s/def ::bottom-right ::matrix-or-vector)
-(s/def ::top-left-matrix ::matrix)
-(s/def ::bottom-left-matrix ::matrix)
-(s/def ::top-right-matrix ::matrix)
-(s/def ::bottom-right-matrix ::matrix)
 (s/def ::sparse-matrix
   (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::m/int-non- ::number) :kind vector? :into [])
               #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
                                     (gen/large-integer* {:min 0 :max mdl})
-                                    (gen/large-integer* {:min 0 :max mdl}))
-                         (fn [[i j k]] (gen/vector (gen/vector
-                                                     (gen/tuple (gen/large-integer* {:min 0 :max (dec i)})
-                                                                (gen/large-integer* {:min 0 :max (dec j)})
-                                                                (s/gen ::number))
-                                                     i)
-                                                   j)))))   ;this needs updating, see vector version
+                                    (gen/large-integer* {:min 0 :max mdl})
+                                    (s/gen boolean?))
+                         (fn [[i j k tf?]]
+                           (let [[a b c] (sort [i j k])
+                                 [b c] (if tf? [b c] [c b])]
+                             (gen/vector
+                               (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec c))})
+                                          (gen/large-integer* {:min 0 :max (max 0 (dec b))})
+                                          (s/gen ::number))
+                               a))))))
 
 ;;;MATRIX TYPES
 (defn matrix?
   "Returns true if a matrix (i.e., dimensionality is 2, contains numbers only, and rows have equal lengths)"
-  [x] (and (= 2 (tensor/dimensionality x))
-           (every? #(= (count %) (count (first x))) x)
-           (every? number? (flatten x))))
+  [x]
+  (and (= 2 (tensor/dimensionality x))
+       (every? #(= (count %) (count (first x))) x)
+       (every? number? (flatten x))))
 
 (s/fdef matrix?
         :args (s/cat :x any?)
         :ret boolean?)
 
-(defn row-matrix?
-  "Returns true if a row-matrix (i.e., matrix with exactly one row)"
-  [x] (and (= 2 (tensor/dimensionality x)) (m/one? (rows x)) (every? number? (flatten x))))
-
-(s/fdef row-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(defn column-matrix?
-  "Returns true if a column-matrix (i.e., matrix with exactly one column)"
-  [x] (and (= 2 (tensor/dimensionality x)) (every? #(m/one? (count %)) x) (every? number? (flatten x))))
-
-(s/fdef column-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(defn row-or-column-matrix?
-  "Returns true if a row or a column matrix."
-  [x] (and (= 2 (tensor/dimensionality x))
-           (every? number? (flatten x))
-           (or (every? #(m/one? (count %)) x) (m/one? (rows x)))))
-
-(s/fdef row-or-column-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(defn zero-matrix?
-  "Returns true if all the elements of the matrix are zeros."
-  [x] (and (matrix? x) (every? zero? (flatten x))))
-
-(s/fdef zero-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+(s/def ::matrix ::tensor/tensor2D)
+(s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
+                                #(gen/vector (s/gen ::vector-num) 0 mdl)))
+(s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
+                                   #(gen/vector (s/gen ::vector-finite) 0 mdl)))
+(s/def ::matrix-or-less (s/or :m ::matrix :v ::vector :value ::number))
+(s/def ::top-left ::matrix)
+(s/def ::bottom-left ::matrix)
+(s/def ::top-right ::matrix)
+(s/def ::bottom-right ::matrix)
 
 (defn empty-matrix?
   "Returns true if the matrix is an empty matrix."
@@ -145,6 +86,39 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::empty-matrix #(= [[]] %))
+
+(defn row-matrix?
+  "Returns true if a row-matrix (i.e., matrix with exactly one row)"
+  [x] (and (= 2 (tensor/dimensionality x)) (m/one? (rows x)) (every? number? (flatten x))))
+
+(s/fdef row-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::row-matrix (s/with-gen row-matrix? #(gen/fmap row-matrix (s/gen ::vector))))
+
+(defn column-matrix?
+  "Returns true if a column-matrix (i.e., matrix with exactly one column)"
+  [x] (and (= 2 (tensor/dimensionality x)) (every? #(m/one? (count %)) x) (every? number? (flatten x))))
+
+(s/fdef column-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::column-matrix (s/with-gen column-matrix? #(gen/fmap column-matrix (s/gen ::vector))))
+
+(defn zero-matrix?
+  "Returns true if all the elements of the matrix are zeros."
+  [x] (and (matrix? x) (every? zero? (flatten x))))
+
+(s/fdef zero-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::zero-matrix (s/with-gen (s/coll-of (s/coll-of zero? :kind vector? :into []) :kind vector? :into [])
+                                 #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 0 mdl)))
+
 (defn square-matrix?
   "Returns true if matrix is square (i.e., same number of rows and columns)"
   [x] (and (matrix? x) (= (rows x) (columns x))))
@@ -152,6 +126,11 @@
 (s/fdef square-matrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::square-matrix
+  (s/with-gen square-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/vector (gen/vector (s/gen ::number) i) i)))))
 
 (defn diagonal-matrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
@@ -161,6 +140,8 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::diagonal-matrix (s/with-gen diagonal-matrix? #(gen/fmap diagonal-matrix (s/gen ::vector))))
+
 (defn upper-triangular-matrix?
   "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
   [x] (and (matrix? x) (nil? (some-kv (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
@@ -168,6 +149,12 @@
 (s/fdef upper-triangular-matrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::upper-triangular-matrix
+  (s/with-gen upper-triangular-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap upper-triangular-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 
 (defn lower-triangular-matrix?
   "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
@@ -177,29 +164,40 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
-(defn matrix-with-unit-diagonal?
-  "Returns true if matrix has a unit diagonal."
-  [m] (every? m/one? (diagonal m)))
-
-(s/fdef matrix-with-unit-diagonal?
-        :args (s/cat :m ::matrix)
-        :ret boolean?)
+(s/def ::lower-triangular-matrix
+  (s/with-gen lower-triangular-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap lower-triangular-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 
 (defn symmetric-matrix?
   "Returns true if a symmetric matrix."
-  [m] (= (transpose m) m))
+  [x] (and (square-matrix? x) (= (transpose x) x)))
 
 (s/fdef symmetric-matrix?
-        :args (s/cat :m ::matrix)
+        :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::symmetric-matrix
+  (s/with-gen symmetric-matrix?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap symmetric-matrix
+                                           (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 
 (defn symmetric-matrix-with-unit-diagonal?
   "Returns true if a symmetric matrix with a unit diagonal."
-  [m] (and (matrix-with-unit-diagonal? m) (symmetric-matrix? m)))
+  [x] (and (symmetric-matrix? x) (every? m/one? (diagonal x))))
 
 (s/fdef symmetric-matrix-with-unit-diagonal?
-        :args (s/cat :m ::matrix)
+        :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::symmetric-matrix-with-unit-diagonal
+  (s/with-gen symmetric-matrix-with-unit-diagonal?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/fmap symmetric-matrix-with-unit-diagonal
+                                           (gen/vector (s/gen ::number)
+                                                       (ecount-triangular-or-symmetric-without-diagonal i)))))))
 
 ;;;MATRIX CONSTRUCTORS
 (defn to-matrix
@@ -721,18 +719,18 @@
   `first-bottom-row` is the bottom of where the slice will occur.
   `first-right-column` is the right edge of where the slice will occur."
   [m first-bottom-row first-right-column]
-  {::top-left-matrix     (get-slices-as-matrix m {::row-indices    (range first-bottom-row)
-                                                  ::column-indices (range first-right-column)})
-   ::bottom-left-matrix  (get-slices-as-matrix m {::exception-row-indices (range first-bottom-row)
-                                                  ::column-indices        (range first-right-column)})
-   ::top-right-matrix    (get-slices-as-matrix m {::row-indices              (range first-bottom-row)
-                                                  ::exception-column-indices (range first-right-column)})
-   ::bottom-right-matrix (get-slices-as-matrix m {::exception-row-indices    (range first-bottom-row)
-                                                  ::exception-column-indices (range first-right-column)})})
+  {::top-left     (get-slices-as-matrix m {::row-indices    (range first-bottom-row)
+                                           ::column-indices (range first-right-column)})
+   ::bottom-left  (get-slices-as-matrix m {::exception-row-indices (range first-bottom-row)
+                                           ::column-indices        (range first-right-column)})
+   ::top-right    (get-slices-as-matrix m {::row-indices              (range first-bottom-row)
+                                           ::exception-column-indices (range first-right-column)})
+   ::bottom-right (get-slices-as-matrix m {::exception-row-indices    (range first-bottom-row)
+                                           ::exception-column-indices (range first-right-column)})})
 
 (s/fdef matrix-partition
         :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)
-        :ret (s/keys :req [::top-left-matrix ::bottom-left-matrix ::top-right-matrix ::bottom-right-matrix]))
+        :ret (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
 
 (defn some-kv
   "Returns the first logical true value of (pred row column e) for any e in matrix, else nil.
@@ -871,11 +869,18 @@
 
 (defn assoc-column
   "Sets a column in a matrix using the specified numbers."
-  [m column numbers]
-  (vec (map-indexed (fn [row row-vector] (assoc row-vector column (get numbers row 0.0))) m)))
+  [m column numbers] (vec (map-indexed (fn [row row-vector] (assoc row-vector column (get numbers row 0.0))) m)))
 
 (s/fdef assoc-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
+        :ret (s/nilable ::matrix))
+
+(defn assoc-diagonal
+  "Sets a diagonal in a matrix using the specified numbers."
+  [m numbers] (vec (map-indexed (fn [row row-vector] (assoc row-vector row (get numbers row 0.0))) m)))
+
+(s/fdef assoc-diagonal
+        :args (s/cat :m ::matrix :numbers ::numbers)
         :ret (s/nilable ::matrix))
 
 (defn insert-row
@@ -948,6 +953,17 @@
                      :args (s/* ::number))
         :ret ::matrix)
 
+(defn update-diagonal
+  "Updates the diagonal of matrix `m`, using `f`, which is a function of the `row` and `number` and returns a number."
+  [m f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector row f row args)) m)))
+
+(s/fdef update-diagonal
+        :args (s/cat :m ::matrix
+                     :f (s/fspec :args (s/cat :row ::row :number ::number)
+                                 :ret ::number)
+                     :args (s/* ::number))
+        :ret ::matrix)
+
 (defn conj-rows
   "Appends rows from all the matrices after the first to the first.
   Each matrix's column count must be the same or will return nil."
@@ -990,7 +1006,6 @@
   ""
   [m1 m2]
   (let [nr1 (rows m1)
-        m2 (if (vector? m2) (row-matrix m2) m2)
         c? (> (rows m2) (columns m2))
         k (if c? ::row-indices ::column-indices)
         k2 (if c? ::exception-row-indices ::exception-column-indices)

@@ -67,7 +67,8 @@
             UnivariatePeriodicInterpolator UnivariateInterpolator]
            [org.apache.commons.math3.analysis.polynomials
             PolynomialFunctionNewtonForm PolynomialSplineFunction
-            PolynomialFunctionLagrangeForm]))
+            PolynomialFunctionLagrangeForm]
+           [org.apache.commons.math3.linear ArrayRealVector]))
 
 (declare )
 
@@ -124,6 +125,25 @@
    (.differentiate
      (FiniteDifferencesDifferentiator. points step-size var-low-bound var-high-bound)
      (univariate-function deriv))))
+
+;;;APACHE VECTOR
+(defn apache-vector?
+  "Returns true if an Apache Commons vector."
+  [x] (instance? ArrayRealVector x))
+
+(s/fdef apache-vector?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn apache-vector
+  "Returns a Apache Vector from a vector."
+  [v] (ArrayRealVector. ^"[D" (ar/avec v)))
+
+(s/fdef apache-vector
+        :args (s/cat :v ::vector)
+        :ret ::apache-vector)
+
+(s/def ::apache-vector (s/with-gen apache-vector? #(gen/fmap apache-vector ::vector)))
 
 ;;;INTERPOLATION
 (defn interpolation-1D

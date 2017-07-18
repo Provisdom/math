@@ -16,8 +16,6 @@
 
 (s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 (s/def ::number ::m/number)
-(s/def ::numbers ::tensor/numbers)
-(s/def ::vector ::tensor/tensor1D)
 (s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind clojure.core/vector? :into [] :min-count 2 :max-count 2)
                                #(gen/vector (s/gen ::number) 2)))
 (s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind clojure.core/vector? :into [] :min-count 3 :max-count 3)
@@ -34,8 +32,6 @@
                                        (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
                                                   (s/gen ::number))
                                        (min i j))))))
-
-;(s/def ::accu ::tensor/accu)
 (s/def ::index ::tensor/index)
 
 ;;;VECTOR TYPES
@@ -47,6 +43,8 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::numbers ::tensor/numbers)
+
 (defn vector?
   "Returns true if a vector (i.e., numbers only)."
   [x] (and (numbers? x) (clojure.core/vector? x)))
@@ -54,6 +52,8 @@
 (s/fdef vector?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::vector ::tensor/tensor1D)
 
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
