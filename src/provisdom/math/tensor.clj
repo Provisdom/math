@@ -20,23 +20,23 @@
 (s/def ::tensor1D (s/with-gen (s/coll-of ::number :kind vector? :into [])
                               #(gen/vector (s/gen ::number) 0 mdl)))
 (s/def ::tensor2D (s/with-gen #(and (tensor? %) (= 2 (dimensionality %)))
-                              #(gen/bind (gen/large-integer* {:min 1 :max mdl})
+                              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                                          (fn [i] (gen/vector (gen/vector (s/gen ::number) i) 1 mdl)))))
 (s/def ::tensor3D (s/with-gen #(and (tensor? %) (= 3 (dimensionality %)))
-                              #(gen/bind (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                              #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
                                                     (gen/large-integer* {:min 1 :max mdl}))
                                          (fn [[i j]] (gen/vector
                                                        (gen/vector (gen/vector (s/gen ::number) i) j) 1 mdl)))))
 (s/def ::tensor4D (s/with-gen #(and (tensor? %) (= 4 (dimensionality %)))
                               #(gen/bind
-                                 (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                                 (gen/tuple (gen/large-integer* {:min 0 :max mdl})
                                             (gen/large-integer* {:min 1 :max mdl})
                                             (gen/large-integer* {:min 1 :max mdl}))
                                  (fn [[i j k]]
                                    (gen/vector (gen/vector (gen/vector (gen/vector (s/gen ::number) i) j) k) 1 mdl)))))
 (s/def ::tensor5D+ (s/with-gen #(and (tensor? %) (>= (dimensionality %) 5))
                                #(gen/bind
-                                  (gen/tuple (gen/large-integer* {:min 1 :max mdl})
+                                  (gen/tuple (gen/large-integer* {:min 0 :max mdl})
                                              (gen/large-integer* {:min 1 :max mdl})
                                              (gen/large-integer* {:min 1 :max mdl})
                                              (gen/large-integer* {:min 1 :max mdl}))

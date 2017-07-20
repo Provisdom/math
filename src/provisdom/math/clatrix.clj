@@ -19,19 +19,10 @@
 (s/def ::rows ::mx/rows)
 (s/def ::columns ::mx/columns)
 (s/def ::number ::m/number)
-(s/def ::vector ::vector/vector)
 (s/def ::matrix ::mx/matrix)
-(s/def ::S ::diagonal-clatrix)
-(s/def ::D ::clatrix)
-(s/def ::VT ::clatrix)
-(s/def ::L ::lower-triangular-clatrix)
-(s/def ::U ::upper-triangular-clatrix)
-(s/def ::P ::clatrix)
-(s/def ::Q ::clatrix)
-(s/def ::R ::clatrix)
 (s/def ::rank ::m/int-non-)
+(s/def ::vector ::vector/vector)
 (s/def ::eigenvalues ::vector)
-(s/def ::eigenvectors ::clatrix)
 
 ;;TODO: finish spec'ing all the types below (not the functions)
 
@@ -45,6 +36,12 @@
         :ret boolean?)
 
 (s/def ::clatrix (s/with-gen clatrix? #(gen/fmap clatrix (s/gen ::matrix))))
+(s/def ::D ::clatrix)
+(s/def ::VT ::clatrix)
+(s/def ::P ::clatrix)
+(s/def ::Q ::clatrix)
+(s/def ::R ::clatrix)
+(s/def ::eigenvectors ::clatrix)
 
 (defn empty-clatrix?
   "Returns true is an empty Clatrix."
@@ -89,6 +86,7 @@
         :ret boolean?)
 
 (s/def ::diagonal-clatrix (s/with-gen diagonal-clatrix? #(gen/fmap clatrix (s/gen ::mx/diagonal-matrix))))
+(s/def ::S ::diagonal-clatrix)
 
 (defn upper-triangular-clatrix?
   "Returns true if an upper triangular matrix (square with the entries below the main diagonal all zero)."
@@ -100,6 +98,7 @@
 
 (s/def ::upper-triangular-clatrix
   (s/with-gen upper-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/upper-triangular-matrix))))
+(s/def ::U ::upper-triangular-clatrix)
 
 (defn lower-triangular-clatrix?
   "Returns true if a lower triangular matrix (square with the entries above the main diagonal all zero)."
@@ -111,6 +110,7 @@
 
 (s/def ::lower-triangular-clatrix
   (s/with-gen lower-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/lower-triangular-matrix))))
+(s/def ::L ::lower-triangular-clatrix)
 
 (defn symmetric-clatrix?
   "Returns true is a symmetric Clatrix."
@@ -140,7 +140,7 @@
 
 (s/def ::positive-clatrix
   (s/with-gen positive-clatrix?
-              #(gen/fmap (fn [m] (clatrix (mx/positive-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
+              #(gen/fmap (fn [m] (clatrix (mx/non-negative-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
 
 (defn non-negative-clatrix?
   "Returns true if a non-negative Clatrix."

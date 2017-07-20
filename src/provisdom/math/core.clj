@@ -854,7 +854,7 @@
                    :inf ::inf))
 
 (defn reduce-radians
-  "Returns `radians` between 0 and 2 * PI.
+  "Returns `radians` between 0 and 2 × PI.
   Returns a long if possible."
   [radians]
   (let [m (mod' radians two-pi)]
@@ -873,7 +873,7 @@
                    :inf ::inf))
 
 (defn radians->angle
-  "Returns the reduced angle from `radians`, where angles = 180 * `radians` / PI.
+  "Returns the reduced angle from `radians`, where angles = 180 × `radians` / PI.
   Returns a long if possible."
   [radians] (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
 
@@ -885,7 +885,7 @@
                    :inf ::inf))
 
 (defn angle->radians
-  "Returns the reduced radians from the `angle`, where radians = `angle` * PI / 180.
+  "Returns the reduced radians from the `angle`, where radians = `angle` × PI / 180.
   Returns a long if possible."
   [angle] (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
 

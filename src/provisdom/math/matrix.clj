@@ -16,8 +16,8 @@
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-triangular-or-symmetric size-triangular-or-symmetric-without-diagonal
-         compute-vector coerce to-vector ecount to-matrix symmetric-matrix-with-unit-diagonal
-         inner-product emap constant-matrix mx* assoc-diagonal
+         compute-vector coerce to-vector ecount to-matrix correlation-matrix
+         inner-product emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
          ecount-triangular-or-symmetric symmetric-matrix ecount-triangular-or-symmetric-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
@@ -68,10 +68,12 @@
         :ret boolean?)
 
 (s/def ::matrix ::tensor/tensor2D)
-(s/def ::matrix-num (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :kind vector? :into [])
-                                #(gen/vector (s/gen ::vector-num) 0 mdl)))
-(s/def ::matrix-finite (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :kind vector? :into [])
-                                   #(gen/vector (s/gen ::vector-finite) 0 mdl)))
+(s/def ::matrix-num
+  (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :min-count 1 :kind vector? :into [])
+              #(gen/vector (s/gen ::vector-num) 1 mdl)))
+(s/def ::matrix-finite
+  (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :min-count 1 :kind vector? :into [])
+              #(gen/vector (s/gen ::vector-finite) 1 mdl)))
 (s/def ::matrix-or-less (s/or :m ::matrix :v ::vector :value ::number))
 (s/def ::top-left ::matrix)
 (s/def ::bottom-left ::matrix)
@@ -195,7 +197,7 @@
 (s/def ::symmetric-matrix-with-unit-diagonal
   (s/with-gen symmetric-matrix-with-unit-diagonal?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap symmetric-matrix-with-unit-diagonal
+                         (fn [i] (gen/fmap correlation-matrix
                                            (gen/vector (s/gen ::number)
                                                        (ecount-triangular-or-symmetric-without-diagonal i)))))))
 
@@ -284,8 +286,9 @@
   `f` is a function that takes `index` and returns a number.
   Can also return a rectangular diagonal matrix using `rows` and `columns`."
   ([diagonal-numbers]
-   (let [c (count diagonal-numbers)]
-     (compute-matrix c c (fn [r c] (if (= r c) (get diagonal-numbers r 0.0) 0.0)))))
+   (let [d (vec diagonal-numbers)
+         c (count d)]
+     (compute-matrix c c (fn [r c] (if (= r c) (get d r 0.0) 0.0)))))
   ([size f] (compute-matrix size size (fn [r c] (if (= r c) (f r) 0.0))))
   ([rows columns f] (compute-matrix rows columns (fn [r c] (if (= r c) (f r) 0.0)))))
 
@@ -305,37 +308,6 @@
   [r c size numbers] (get numbers (+ c (* r size) (* -1 m/half (+ (inc r) (m/sq' (inc r))))) m/nan))
 
 (defn- symmetric-without-diagonal-column-fill [r c numbers] (get numbers (+ r (* m/half c (dec c))) m/nan))
-
-(defn lower-triangular-matrix
-  "Returns a (square) lower triangular matrix (a matrix with all elements above the diagonal being 0.0).
-  `numbers` are the elements that will be used to create the lower triangular matrix.
-  `off-diagonal-numbers` can be used to create the off-diagonal elements,
-  and then any existing `diagonal-numbers` will fill the diagonal elements.
-  The elements are placed `by-row?` (default is true)."
-  ([numbers] (lower-triangular-matrix numbers {::by-row? true}))
-  ([numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-triangular-or-symmetric (count numbers))
-         f (fn [r c] (if (< r c)
-                       0.0
-                       (if by-row?
-                         (symmetric-column-fill c r numbers)
-                         (symmetric-row-fill c r size numbers))))]
-     (when size (compute-matrix size size f))))
-  ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-triangular-or-symmetric-without-diagonal (count off-diagonal-numbers))
-         f (fn [r c] (cond (< r c) 0.0
-                           (= r c) (get diagonal-numbers r 0.0)
-                           :else (if by-row?
-                                   (symmetric-without-diagonal-column-fill c r off-diagonal-numbers)
-                                   (symmetric-without-diagonal-row-fill c r size off-diagonal-numbers))))]
-     (when size (compute-matrix size size f)))))
-
-(s/fdef lower-triangular-matrix
-        :args (s/or :one-two (s/cat :numbers ::numbers :opts (s/? (s/keys :opt [::by-row?])))
-                    :three (s/cat :diagonal-numbers ::numbers
-                                  :off-diagonal-numbers ::numbers
-                                  :opts (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::matrix))
 
 (defn upper-triangular-matrix
   "Returns a (square) upper triangular matrix (a matrix with all elements below the diagonal being 0.0).
@@ -368,6 +340,37 @@
                                   :opts (s/keys :opt [::by-row?])))
         :ret (s/nilable ::matrix))
 
+(defn lower-triangular-matrix
+  "Returns a (square) lower triangular matrix (a matrix with all elements above the diagonal being 0.0).
+  `numbers` are the elements that will be used to create the lower triangular matrix.
+  `off-diagonal-numbers` can be used to create the off-diagonal elements,
+  and then any existing `diagonal-numbers` will fill the diagonal elements.
+  The elements are placed `by-row?` (default is true)."
+  ([numbers] (lower-triangular-matrix numbers {::by-row? true}))
+  ([numbers {::keys [by-row?] :or {by-row? true}}]
+   (let [size (size-triangular-or-symmetric (count numbers))
+         f (fn [r c] (if (< r c)
+                       0.0
+                       (if by-row?
+                         (symmetric-column-fill c r numbers)
+                         (symmetric-row-fill c r size numbers))))]
+     (when size (compute-matrix size size f))))
+  ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
+   (let [size (size-triangular-or-symmetric-without-diagonal (count off-diagonal-numbers))
+         f (fn [r c] (cond (< r c) 0.0
+                           (= r c) (get diagonal-numbers r 0.0)
+                           :else (if by-row?
+                                   (symmetric-without-diagonal-column-fill c r off-diagonal-numbers)
+                                   (symmetric-without-diagonal-row-fill c r size off-diagonal-numbers))))]
+     (when size (compute-matrix size size f)))))
+
+(s/fdef lower-triangular-matrix
+        :args (s/or :one-two (s/cat :numbers ::numbers :opts (s/? (s/keys :opt [::by-row?])))
+                    :three (s/cat :diagonal-numbers ::numbers
+                                  :off-diagonal-numbers ::numbers
+                                  :opts (s/keys :opt [::by-row?])))
+        :ret (s/nilable ::matrix))
+
 (defn symmetric-matrix
   "Returns a symmetric matrix (a matrix with elements at r,c equal to elements at c,r).
   `numbers` are the same as the elements used to create a triangular matrix.
@@ -394,41 +397,31 @@
                                       :opts (s/? (s/keys :opt [::by-row?]))))
         :ret (s/nilable ::matrix))
 
-(defn symmetric-matrix-with-unit-diagonal
-  "Returns a symmetric matrix with a unit diagonal (a matrix with a diagonal of all ones and elements
-  at r,c equal to elements at c,r).
-  `numbers` are the same as the elements used to create a triangular matrix but without the diagonal.
-  Alternatively, you can pass `f` and `size` which will create a symmetric matrix of `size`
-  by calling `f` with `row` and `column` and return a number.
-  `f` is only called for each element on either the upper or lower half of the matrix, depending on `by-row?`."
-  ([numbers]
-   (let [size (size-triangular-or-symmetric-without-diagonal (count numbers))
-         f (fn [r c] (cond (= r c) 1.0
-                           (< r c) (symmetric-without-diagonal-row-fill r c size numbers)
-                           :else (symmetric-without-diagonal-row-fill c r size numbers)))]
-     (when size (compute-matrix size size f))))
-  ([size f] (symmetric-matrix-with-unit-diagonal size f {::by-row? true}))
-  ([size f {::keys [by-row?] :or {by-row? true}}]
-   (let [new-f (fn [r c] (cond (= r c) 1.0
-                               (or (and (not by-row?) (> r c)) (and by-row? (< r c))) (f r c)
-                               :else (f c r)))]
-     (compute-matrix size size new-f))))
+(defn non-negative-matrix
+  "Returns a non-negative matrix generated from `tensor`.
+  If first 2 × rows of tensor contains at least -1 + (rows - 1) ^ 2 non-zero elements,
+  then returned matrix will be positive definite.
+  The elements are placed `by-row?` (default is true)."
+  ([tensor rows] (non-negative-matrix tensor rows {::by-row? true}))
+  ([tensor rows {::keys [by-row?] :or {by-row? true}}]
+   (if (zero? rows)
+     [[]]
+     (let [m (to-matrix tensor rows {::by-row? by-row?})] (mx* m (transpose m))))))
 
-(s/fdef symmetric-matrix-with-unit-diagonal
-        :args (s/or :one (s/cat :numbers ::numbers)
-                    :two-three (s/cat :size ::size
-                                      :f (s/fspec :args (s/cat :row ::row :column ::column)
-                                                  :ret ::number)
-                                      :opts (s/? (s/keys :opt [::by-row?]))))
-        :ret (s/nilable ::matrix))
+(s/fdef non-negative-matrix
+        :args (s/cat :tensor ::tensor :rows ::rows :opts (s/? (s/keys :opt [::by-row?])))
+        :ret ::symmetric-matrix)
 
-(defn positive-matrix
-  "Returns a positive definite matrix from `tensor`."
-  [tensor size] (let [m (to-matrix tensor size)] (mx* (transpose m) m)))
+(defn correlation-matrix
+  "Returns a correlation matrix generated from `tensor`.
+  The elements are placed `by-row?` (default is true)."
+  ([tensor rows] (correlation-matrix tensor rows {::by-row? true}))
+  ([tensor rows {::keys [by-row?] :or {by-row? true}}]
+   (covariance->correlation-matrix (non-negative-matrix tensor rows {::by-row? by-row?}))))
 
-(s/fdef positive-matrix
-        :args (s/cat :tensor ::tensor :size ::size)
-        :ret ::matrix)
+(s/fdef correlation-matrix
+        :args (s/cat :tensor ::tensor :rows ::rows :opts (s/? (s/keys :opt [::by-row?])))
+        :ret ::symmetric-matrix-with-unit-diagonal)
 
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the same).
@@ -451,7 +444,7 @@
 (defn outer-product
   "An outer product is the tensor product of two coordinate vectors,
   a special case of the Kronecker product of matrices.
-  The outer product of two coordinate vectors is a matrix such that the coordinates satisfy w_ij = u_i * u_j."
+  The outer product of two coordinate vectors is a matrix such that the coordinates satisfy w_ij = u_i × u_j."
   [v]
   (let [s (count v)]
     (vec (for [r (range s)]
@@ -486,7 +479,7 @@
 
 (defn rnd-spectral-matrix!
   "Returns a random matrix with a particular `spectrum-vector`.
-  The orthogonal matrices are generated by using 2 * size of `spectrum-vector` composed Householder reflections."
+  The orthogonal matrices are generated by using 2 × size of `spectrum-vector` composed Householder reflections."
   [spectrum-vector]
   (let [size (count spectrum-vector)
         v-mat (nth (iterate (fn [prod-mat] (mx* prod-mat (rnd-reflection-matrix! size)))
@@ -501,12 +494,23 @@
 
 (defn rnd-positive-matrix!
   "Returns a positive definite matrix with a random spectrum.
-  The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
+  The orthogonal matrices are generated by using 2 × `size` composed Householder reflections.
   Alternative #1: Sample from the Inverse-Wishart Distribution.
-  Alternative #2: Use [[positive-matrix]]."
+  Alternative #2: Use [[non-negative-matrix]] with a random sequence of non-zero numbers."
   [size] (rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!)))))
 
 (s/fdef rnd-positive-matrix!
+        :args (s/cat :size ::size)
+        :ret ::matrix)
+
+(defn rnd-correlation-matrix!
+  "Returns a correlation matrix from a covariance matrix with a random spectrum.
+  The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
+  Alternative #1: Sample Covariance from the Inverse-Wishart Distribution.
+  Alternative #2: Use [[correlation-matrix]] with a random sequence."
+  [size] (covariance->correlation-matrix (rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!))))))
+
+(s/fdef rnd-correlation-matrix!
         :args (s/cat :size ::size)
         :ret ::matrix)
 
@@ -549,7 +553,7 @@
 ;;;MATRIX INFO
 (defn rows
   "Returns the number of rows."
-  [m] (count m))
+  [m] (if (empty-matrix? m) 0 (count m)))
 
 (s/fdef rows
         :args (s/cat :m ::matrix)
@@ -877,7 +881,9 @@
 
 (defn assoc-diagonal
   "Sets a diagonal in a matrix using the specified numbers."
-  [m numbers] (vec (map-indexed (fn [row row-vector] (assoc row-vector row (get numbers row 0.0))) m)))
+  [m numbers]
+  (let [v (vec numbers)]
+    (vec (map-indexed (fn [row row-vector] (assoc row-vector row (get v row 0.0))) m))))
 
 (s/fdef assoc-diagonal
         :args (s/cat :m ::matrix :numbers ::numbers)
@@ -1060,7 +1066,7 @@
         :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::row-indices ::column-indices])))
         :ret ::matrix)
 
-(defn square-matrix
+(defn square-matrix-by-trimming
   "Returns a square matrix by truncating values from the given matrix `m`."
   [m]
   (let [r (rows m)
@@ -1068,26 +1074,36 @@
         k (if (> r c) ::exception-row-indices ::exception-column-indices)]
     (get-slices-as-matrix m {k (range (min c r) (max c r))})))
 
-(s/fdef square-matrix
+(s/fdef square-matrix-by-trimming
         :args (s/cat :m ::matrix)
         :ret ::matrix)
 
 (defn symmetric-matrix-by-averaging
-  "Returns a symmetric matrix where each element above or below the diagonal is equal to the average of the matrix `m`
-  at r,c and c,r.
+  "Returns a symmetric matrix where each element above or below the diagonal is equal to the
+  average of the corresponding numbers.
   This is useful to help with rounding errors."
   [square-m]
   (let [size (rows square-m)]
-    (symmetric-matrix
-      (for [r (range size)
-            c (range r size)]
-        (if (== c r)
-          (get-in square-m [r c])
-          (* 0.5 (+ (get-in square-m [r c]) (get-in square-m [c r]))))))))
+    (symmetric-matrix size (fn [r c]
+                             (if (== c r)
+                               (get-in square-m [r c] 0.0)
+                               (* 0.5 (+ (get-in square-m [r c] 0.0) (get-in square-m [c r] 0.0))))))))
 
 (s/fdef symmetric-matrix-by-averaging
         :args (s/cat :square-m ::square-matrix)
         :ret ::matrix)
+
+(defn correlation->covariance-matrix
+  ""
+  [correlation-matrix variances]
+  )
+
+(defn covariance->correlation-matrix
+  "Returns Correlation Matrix from a Correlation Matrix."
+  [covariance-matrix]
+  (let [inv-stds (diagonal-matrix (map #(m/pow % -0.5) (diagonal covariance-matrix)))
+        size (rows covariance-matrix)]
+    (symmetric-matrix-by-averaging (assoc-diagonal (mx* inv-stds covariance-matrix inv-stds) (repeat size 1.0)))))
 
 ;;;MATRIX MATH
 (defn mx*

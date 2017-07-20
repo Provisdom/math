@@ -35,7 +35,7 @@
   (s/with-gen symmetric-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/symmetric-matrix))))
 (s/def ::positive-apache-matrix
   (s/with-gen positive-apache-matrix?
-              #(gen/fmap (fn [m] (apache-matrix (mx/positive-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
+              #(gen/fmap (fn [m] (apache-matrix (mx/non-negative-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
 (s/def ::L ::lower-triangular-apache-matrix)
 (s/def ::U ::upper-triangular-apache-matrix)
 (s/def ::UT ::lower-triangular-apache-matrix)
@@ -327,7 +327,7 @@ Returns a map containing:
   [apache-m1 apache-m2]
   (let [d (QRDecomposition. apache-m1)
         r (.getR d)
-        r (mx/square-matrix r)]
+        r (mx/square-matrix-by-trimming r)]
     (when-not (= (mx/columns r) (mx/columns apache-m1))
       (ex-info "Icky matrices" {:fn (var linear-least-squares-with-error-matrix)}))
     (let [ri (inverse r)
