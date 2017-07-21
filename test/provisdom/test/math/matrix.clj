@@ -38,99 +38,6 @@
 (def cl-sym (clatrix se-sym))
 (def ap-sym (apache-commons se-sym))
 
-(facts "get"
-       (fact "row"
-             (get-row-as-matrix se -1) => (throws)
-             (get-row-as-matrix ve 0) => [[1.0 0.5]]
-             (get-row-as-matrix ap 1) => (apache-commons [[2.0 4.0]])
-             (get-row-as-matrix cl 1) => (clatrix [[2.0 4.0]])
-             (get-row-as-matrix se 2) => (throws))
-       (fact "column"
-             (get-column-as-matrix se -1) => (throws)
-             (get-column-as-matrix ve 0) => [[1.0] [2.0]]
-             (get-column-as-matrix ap 1) => (apache-commons [[0.5] [4.0]])
-             (get-column-as-matrix cl 1) => (clatrix [[0.5] [4.0]])
-             (get-column-as-matrix se 2) => (throws))
-       (fact "diagonal"
-             (diagonal ap) => [1.0 4.0]
-             (diagonal cl) => [1.0 4.0]
-             (diagonal ve) => [1.0 4.0]
-             (diagonal [[1]]) => [1]
-             (diagonal [[]]) => []
-             (diagonal ap1D) => (throws)
-             (diagonal cl-row) => [1.0]
-             (diagonal ve-col) => [1.0]
-             (diagonal ve 1) => [0.5]
-             (diagonal ve 2) => nil
-             (diagonal ve -1) => [2.0]
-             (diagonal ve -2) => nil)
-       (fact "slices"
-             (get-slices-as-matrix se :rows 0) => [[1.0 0.5]]
-             (get-slices-as-matrix ve :rows [0 1]) => [[1.0 0.5] [2.0 4.0]]
-             (get-slices-as-matrix cl :columns 0) => (clatrix [[1.0] [2.0]])
-             (get-slices-as-matrix ap :columns [0 1])
-             => (apache-commons [[1.0 0.5] [2.0 4.0]])
-             (get-slices-as-matrix se :except-rows 0) => [[2.0 4.0]]
-             (get-slices-as-matrix se :except-rows [0 1]) => [[]]
-             (get-slices-as-matrix se :except-columns 0) => [[0.5] [4.0]]
-             (get-slices-as-matrix se :except-columns [0 1]) => [[]]
-             (get-slices-as-matrix se :rows 0 :except-rows 0) => [[]]
-             (get-slices-as-matrix se :rows [0] :except-rows 0) => [[]]
-             (get-slices-as-matrix se :rows 0 :except-rows [0]) => [[]]
-             (get-slices-as-matrix se :except-rows '(1) :except-columns '(1))
-             => [[1.0]]
-             (get-slices-as-matrix se :rows [0] :except-rows [0]) => [[]]
-             (get-slices-as-matrix se :rows [0] :columns [0]) => [[1.0]]
-             (get-slices-as-matrix se :rows 0 :columns [0]) => [[1.0]]
-             (get-slices-as-matrix se :rows [0] :columns 0) => [[1.0]]
-             (get-slices-as-matrix se :rows 0 :columns 0) => [[1.0]])
-       (fact "partition"
-             (def s '((1.0 2.0 3.0 4.0) (5.0 6.0 7.0 8.0) (9.0 10.0 11.0 12.0)
-                       (13.0 14.0 15.0 16.0)))
-             (matrix-partition (matrix s) 2 2)
-             => {:bottom-left  [[9.0 10.0] [13.0 14.0]],
-                 :bottom-right [[11.0 12.0] [15.0 16.0]],
-                 :top-left     [[1.0 2.0] [5.0 6.0]],
-                 :top-right    [[3.0 4.0] [7.0 8.0]]}
-             (matrix-partition (apache-commons s) 1 1)
-             => {:bottom-left  (apache-commons [[5.0] [9.0] [13.0]]),
-                 :bottom-right (apache-commons [[6.0 7.0 8.0] [10.0 11.0 12.0]
-                                                [14.0 15.0 16.0]]),
-                 :top-left     (apache-commons [[1.0]]),
-                 :top-right    (apache-commons [[2.0 3.0 4.0]])}
-             (matrix-partition (clatrix s) 0 3)
-             => {:bottom-left  (clatrix [[1.0 2.0 3.0] [5.0 6.0 7.0]
-                                         [9.0 10.0 11.0] [13.0 14.0 15.0]]),
-                 :bottom-right (clatrix [[4.0] [8.0] [12.0] [16.0]]),
-                 :top-left     (clatrix [[]]), :top-right (clatrix [[]])}
-             (matrix-partition s 3 0)
-             => {:bottom-left [[]], :bottom-right [[13.0 14.0 15.0 16.0]],
-                 :top-left    [[]],
-                 :top-right   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                               [9.0 10.0 11.0 12.0]]}
-             (matrix-partition s 0 4)
-             => {:bottom-left  [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]],
-                 :bottom-right [[]], :top-left [[]], :top-right [[]]}
-             (matrix-partition s 4 0)
-             => {:bottom-left [[]], :bottom-right [[]], :top-left [[]],
-                 :top-right   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]}
-             (matrix-partition s 0 0)
-             => {:bottom-left  [[]],
-                 :bottom-right [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]],
-                 :top-left     [[]], :top-right [[]]}
-             (matrix-partition s 4 4)
-             => {:bottom-left [[]], :bottom-right [[]],
-                 :top-left    [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]],
-                 :top-right   [[]]}
-             (matrix-partition s 0 5) => (throws)
-             (matrix-partition s 5 0) => (throws)
-             (matrix-partition s -1 3) => (throws)
-             (matrix-partition s 3 -1) => (throws)))
-
 (facts "manipulation"
        (fact "transpose"
              (transpose ap) => (apache-commons [[1.0 2.0] [0.5 4.0]])
@@ -295,21 +202,6 @@
              (determinant cl) => 3.0
              (determinant ve) => 3.0
              (determinant se) => 3.0))
-
-(facts "reduce"
-       (fact "ereduce-kv"
-             (ereduce-kv #(+ % %2 %3 %4 %5 %6) 3.4 ap cl ve true) => 29.9
-             (ereduce-kv #(+ % %2 %3 %4) 3.4 cl-col true) => 5.9
-             (ereduce-kv #(+ % %2 %3 %4) 3.4 cl-col false) => 5.9
-             (ereduce-kv #(+ % %2 %3 %4) 3.4 cl-row true) => 5.9
-             (ereduce-kv #(+ % %2 %3 %4) 3.4 cl-row false) => 5.9
-             (ereduce-kv #(+ % %2 %3 %4 %5) 3.4 cl-row ap-row false) => 7.4
-             (ereduce-kv #(+ % %2 %3 %4 %5) 3.4 se ve false) => 22.4)
-       (fact "eevery?"
-             (eevery? #(> (+ % %2) %3) se) => false)
-       (fact "esome"
-             (esome #(if (> (+ % %2) %3) %3) se) => 0.5
-             (esome #(if (> (+ % %2) %3) %3) se {::mx/by-row false}) => 0.5))
 
 (facts "filter"
        (fact "element filter"

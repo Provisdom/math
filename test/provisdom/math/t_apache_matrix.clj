@@ -113,6 +113,12 @@
   (is-not (apache-mx/non-negative-clatrix?
             (apache-mx/clatrix [[1.0 (m/next-down -1.0)] [(m/next-down -1.0) 1.0]]) {::apache-mx/accu 1e-40})))
 
+(deftest symmetric-matrix-with-unit-diagonal?-test
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [2.0 4.0]]))
+  (is-not (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 2.0]]))
+  (is (mx/symmetric-matrix-with-unit-diagonal? (mx/identity-matrix 3)))
+  (is (mx/symmetric-matrix-with-unit-diagonal? [[1.0 0.5] [0.5 1.0]])))
+
 (deftest type-tests
   (clatrix?-test)
   (empty-clatrix?-test)
@@ -126,7 +132,8 @@
   (positive-clatrix?-test)
   (clatrix-with-unit-diagonal?-test)
   (positive-clatrix-with-unit-diagonal?-test)
-  (non-negative-clatrix?-test))
+  (non-negative-clatrix?-test)
+  (symmetric-matrix-with-unit-diagonal?-test))
 
 ;(defspec-test test-clatrix? `clx/clatrix?) ;slow-ish
 ;(defspec-test test-empty-clatrix? `clx/empty-clatrix?) ;slow-ish
@@ -141,6 +148,7 @@
 ;(defspec-test test-clatrix-with-unit-diagonal? `clx/clatrix-with-unit-diagonal?) ;slow-ish
 ;(defspec-test test-positive-matrix-with-unit-diagonal? `clx/positive-clatrix-with-unit-diagonal?) ;slow-ish
 ;(defspec-test test-non-negative-matrix? `clx/non-negative-clatrix?) ;slow-ish
+;(defspec-test test-symmetric-matrix-with-unit-diagonal? `mx/symmetric-matrix-with-unit-diagonal?) ;slowish
 
 (deftest clatrix-and-clatrix->matrix-test
   (is= [[]] (apache-mx/clatrix->matrix (apache-mx/clatrix [[]])))
@@ -176,6 +184,41 @@
   (is= [1.0] (apache-mx/diagonal (apache-mx/clatrix [[1.0] [2.0]])))
   (is= [1.0 4.0] (apache-mx/diagonal (apache-mx/clatrix [[1.0 0.5] [2.0 4.0]]))))
 
+(deftest non-negative-matrix-test
+  (is= [[]] (mx/non-negative-matrix [1 2] 0))
+  (is= [[5]] (mx/non-negative-matrix [1 2] 1))
+  (is= [[1 2] [2 4]] (mx/non-negative-matrix [1 2] 2))
+  (is= [[1 2 0.0] [2 4 0.0] [0.0 0.0 0.0]] (mx/non-negative-matrix [1 2] 3))
+  (is= [[5 11] [11 25]] (mx/non-negative-matrix [[1 2] [3 4]] 2)))
+
+(deftest correlation-matrix-test
+  (is= [] (mx/correlation-matrix [1 2] 0))
+  (is= [] (mx/correlation-matrix [1 2] 1))
+  (is= [] (mx/correlation-matrix [1 2] 2))
+  (is= [] (mx/correlation-matrix [1 2] 3))
+  (is= [] (mx/correlation-matrix [[1 2] [3 4]] 2)))
+
+(deftest rnd-positive-matrix!-test
+  (random/bind-seed 0
+                    (is= [[]] (mx/rnd-positive-matrix! 0)))
+  (random/bind-seed 0
+                    (is= [[0.8833108082136426]] (mx/rnd-positive-matrix! 1)))
+  (random/bind-seed 0
+                    (is= [[0.6946098792362991 0.3550851337817903] [0.3550851337817903 0.21513470056994127]]
+                         (mx/rnd-positive-matrix! 2))))
+
+(deftest rnd-correlation-matrix!-test
+  (random/bind-seed 0
+                    (is= [[]] (mx/rnd-correlation-matrix! 0)))
+  (random/bind-seed 0
+                    (is= [[1.0]] (mx/rnd-correlation-matrix! 1)))
+  (random/bind-seed 0
+                    (is= [[0.6946098792362991 0.3550851337817903] [0.3550851337817903 0.21513470056994127]]
+                         (mx/rnd-correlation-matrix! 2)))
+  (random/bind-seed 0
+                    (is= [[0.6946098792362991 0.3550851337817903] [0.3550851337817903 0.21513470056994127]]
+                         (mx/rnd-correlation-matrix! 3))))
+
 (deftest some-kv-test
   (is= nil (apache-mx/some-kv (fn [row column number] (> row (+ column number))) (apache-mx/clatrix [[1.0 4.0] [3.0 5.0]])))
   (is= 1.0 (apache-mx/some-kv (fn [row column number] (< row (+ column number))) (apache-mx/clatrix [[1.0 4.0] [3.0 5.0]])))
@@ -188,12 +231,44 @@
   (rows-test)
   (columns-test)
   (diagonal-test)
+  (non-negative-matrix-test)
+  (correlation-matrix-test)
+  (rnd-positive-matrix!-test)
+  (rnd-correlation-matrix!-test)
   (some-kv-test))
 
 (defspec-test test-rows `apache-mx/rows)
 (defspec-test test-columns `apache-mx/columns)
 (defspec-test test-diagonal `apache-mx/diagonal)
+;(defspec-test test-non-negative-matrix `mx/non-negative-matrix)
+;(defspec-test test-correlation-matrix `mx/correlation-matrix)
+;(defspec-test test-rnd-positive-matrix! `mx/rnd-positive-matrix!)
 (defspec-test test-some-kv `apache-mx/some-kv)
+
+
+(deftest size-symmetric-with-unit-diagonal-test
+  (is= 2 (mx/size-symmetric-with-unit-diagonal 1))
+  (is= nil (mx/size-symmetric-with-unit-diagonal 2))
+  (is= 3 (mx/size-symmetric-with-unit-diagonal 3))
+  (is= 4 (mx/size-symmetric-with-unit-diagonal 6)))
+
+(deftest ecount-symmetric-with-unit-diagonal-test
+  (is= 0 (mx/ecount-symmetric-with-unit-diagonal 1))
+  (is= 1 (mx/ecount-symmetric-with-unit-diagonal 2))
+  (is= 3 (mx/ecount-symmetric-with-unit-diagonal 3))
+  (is= 15 (mx/ecount-symmetric-with-unit-diagonal 6)))
+
+(deftest to-vector-from-symmetric-with-unit-diagonal-test
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector #(+ 3 3) {::mx/by-row? false}))
+  (is= [2.0] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [2.0 4.0]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [2.0 4.0]]))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [0.5 1.0]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [0.5 1.0]]))
+  (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector [1.0 0.5]))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5]] {::mx/by-row? false}))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5]]))
+  (is= [0.5] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0] [0.5]] {::mx/by-row? false}))
+  (is= [] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0] [0.5]])))
 
 (deftest transpose-test
   (is= (apache-mx/clatrix [[]]) (apache-mx/transpose (apache-mx/clatrix [[]])))
