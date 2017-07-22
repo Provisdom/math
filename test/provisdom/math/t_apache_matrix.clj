@@ -245,19 +245,6 @@
 ;(defspec-test test-rnd-positive-matrix! `mx/rnd-positive-matrix!)
 (defspec-test test-some-kv `apache-mx/some-kv)
 
-
-(deftest size-symmetric-with-unit-diagonal-test
-  (is= 2 (mx/size-symmetric-with-unit-diagonal 1))
-  (is= nil (mx/size-symmetric-with-unit-diagonal 2))
-  (is= 3 (mx/size-symmetric-with-unit-diagonal 3))
-  (is= 4 (mx/size-symmetric-with-unit-diagonal 6)))
-
-(deftest ecount-symmetric-with-unit-diagonal-test
-  (is= 0 (mx/ecount-symmetric-with-unit-diagonal 1))
-  (is= 1 (mx/ecount-symmetric-with-unit-diagonal 2))
-  (is= 3 (mx/ecount-symmetric-with-unit-diagonal 3))
-  (is= 15 (mx/ecount-symmetric-with-unit-diagonal 6)))
-
 (deftest to-vector-from-symmetric-with-unit-diagonal-test
   (is= nil (mx/symmetric-matrix-with-unit-diagonal->vector #(+ 3 3) {::mx/by-row? false}))
   (is= [2.0] (mx/symmetric-matrix-with-unit-diagonal->vector [[1.0 0.5] [2.0 4.0]] {::mx/by-row? false}))

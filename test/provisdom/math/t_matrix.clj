@@ -282,28 +282,52 @@
          (defspec-test test-sparse->symmetric-matrix `mx/sparse->symmetric-matrix)
          )
 
-(deftest rows-test)
-(deftest columns-test)
-(deftest get-row-test)
-(deftest get-column-test)
+(deftest rows-test
+  (is= 0 (mx/rows [[]]))
+  (is= 1 (mx/rows [[1.0]]))
+  (is= 1 (mx/rows [[1.0 2.0]]))
+  (is= 2 (mx/rows [[1.0] [2.0]]))
+  (is= 2 (mx/rows [[1.0 0.5] [2.0 4.0]])))
+
+(deftest columns-test
+  (is= 0 (mx/columns [[]]))
+  (is= 1 (mx/columns [[1.0]]))
+  (is= 2 (mx/columns [[1.0 2.0]]))
+  (is= 1 (mx/columns [[1.0] [2.0]]))
+  (is= 2 (mx/columns [[1.0 0.5] [2.0 4.0]])))
+
+(deftest get-row-test
+  (is= [] (mx/get-row [[]] 0))
+  (is= [1.0] (mx/get-row [[1.0]] 0))
+  (is= [] (mx/get-row [[1.0 2.0]] 1))
+  (is= [2.0] (mx/get-row [[1.0] [2.0]] 1))
+  (is= [1.0 0.5] (mx/get-row [[1.0 0.5] [2.0 4.0]] 0)))
+
+(deftest get-column-test
+  (is= [] (mx/get-column [[]] 0))
+  (is= [1.0] (mx/get-column [[1.0]] 0))
+  (is= [2.0] (mx/get-column [[1.0 2.0]] 1))
+  (is= [] (mx/get-column [[1.0] [2.0]] 1))
+  (is= [1.0 2.0] (mx/get-column [[1.0 0.5] [2.0 4.0]] 0)))
 
 (deftest diagonal-test
-  (is= [1.0 4.0] (mx/diagonal [[1.0 0.5] [2.0 4.0]]))
-  (is= [1] (mx/diagonal [[1]]))
   (is= [] (mx/diagonal [[]]))
+  (is= [1] (mx/diagonal [[1]]))
+  (is= [1.0 4.0] (mx/diagonal [[1.0 0.5] [2.0 4.0]]))
   (is= [1.0] (mx/diagonal [[1.0 0.5]]))
   (is= [1.0] (mx/diagonal [[1.0] [0.5]]))
   (is= [0.5] (mx/diagonal [[1.0 0.5] [2.0 4.0]] 1))
-  (is= nil (mx/diagonal [[1.0 0.5] [2.0 4.0]] 2))
+  (is= [] (mx/diagonal [[1.0 0.5] [2.0 4.0]] 2))
   (is= [2.0] (mx/diagonal [[1.0 0.5] [2.0 4.0]] -1))
-  (is= nil (mx/diagonal [[1.0 0.5] [2.0 4.0]] -2)))
+  (is= [] (mx/diagonal [[1.0 0.5] [2.0 4.0]] -2)))
 
 (deftest serialize-symmetric-or-triangular-matrix-test
+  (is= [] (mx/serialize-symmetric-or-triangular-matrix [[]]))
+  (is= [3] (mx/serialize-symmetric-or-triangular-matrix [[3]]))
   (is= [1.0 2.0 4.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [2.0 4.0]] {::mx/by-row? false}))
   (is= [1.0 0.5 4.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [2.0 4.0]]))
-  (is= [1.0 0.5 2.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [0.5 1.0]] {::mx/by-row? false}))
-  (is= [1.0 0.5 2.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [0.5 1.0]]))
-  (is= nil (mx/serialize-symmetric-or-triangular-matrix [1.0 0.5]))
+  (is= [1.0 0.5 1.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [0.5 1.0]] {::mx/by-row? false}))
+  (is= [1.0 0.5 1.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5] [0.5 1.0]]))
   (is= [1.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5]] {::mx/by-row? false}))
   (is= [1.0 0.5] (mx/serialize-symmetric-or-triangular-matrix [[1.0 0.5]]))
   (is= [1.0 0.5] (mx/serialize-symmetric-or-triangular-matrix [[1.0] [0.5]] {::mx/by-row? false}))
@@ -311,9 +335,15 @@
 
 (deftest size-of-symmetric-or-triangular-matrix-test
   (is= 1 (mx/size-of-symmetric-or-triangular-matrix 1))
-  (is= nil (mx/size-of-symmetric-or-triangular-matrix 2))
+  (is (m/nan? (mx/size-of-symmetric-or-triangular-matrix 2)))
   (is= 2 (mx/size-of-symmetric-or-triangular-matrix 3))
   (is= 3 (mx/size-of-symmetric-or-triangular-matrix 6)))
+
+(deftest size-of-symmetric-or-triangular-matrix-without-diagonal-test
+  (is= 2 (mx/size-of-symmetric-or-triangular-matrix-without-diagonal 1))
+  (is (m/nan? (mx/size-of-symmetric-or-triangular-matrix-without-diagonal 2)))
+  (is= 3 (mx/size-of-symmetric-or-triangular-matrix-without-diagonal 3))
+  (is= 4 (mx/size-of-symmetric-or-triangular-matrix-without-diagonal 6)))
 
 (deftest ecount-of-symmetric-or-triangular-matrix-test
   (is= 1 (mx/ecount-of-symmetric-or-triangular-matrix 1))
@@ -321,7 +351,18 @@
   (is= 6 (mx/ecount-of-symmetric-or-triangular-matrix 3))
   (is= 21 (mx/ecount-of-symmetric-or-triangular-matrix 6)))
 
-(deftest trace-test)
+(deftest ecount-of-symmetric-or-triangular-matrix-without-diagonal-test
+  (is= 0 (mx/ecount-of-symmetric-or-triangular-matrix-without-diagonal 1))
+  (is= 1 (mx/ecount-of-symmetric-or-triangular-matrix-without-diagonal 2))
+  (is= 3 (mx/ecount-of-symmetric-or-triangular-matrix-without-diagonal 3))
+  (is= 15 (mx/ecount-of-symmetric-or-triangular-matrix-without-diagonal 6)))
+
+(deftest trace-test
+  (is= 0.0 (mx/trace [[]]))
+  (is= 1 (mx/trace [[1]]))
+  (is= 5.0 (mx/trace [[1.0 0.5] [2.0 4.0]]))
+  (is= 1.0 (mx/trace [[1.0 0.5]]))
+  (is= 1.0 (mx/trace [[1.0] [0.5]])))
 
 (deftest get-slices-as-matrix-test
   (is= [[]] (mx/get-slices-as-matrix [[]] {::mx/row-indices 0}))
@@ -385,17 +426,22 @@
        (mx/matrix-partition s 4 4)))
 
 (deftest some-kv-test
-  (is= 0.5 (mx/some-kv #(if (> (+ % %2) %3) %3) se))
-  (is= 0.5 (mx/some-kv #(if (> (+ % %2) %3) %3) se {::mx/by-row false})))
+  (is= 0.5 (mx/some-kv (fn [row column number] (> (+ row column) number)) [[1.0 0.5] [2.0 4.0]]))
+  (is= 0.5 (mx/some-kv (fn [row column number] (> (+ row column) number)) [[1.0 0.5] [2.0 4.0]] {::mx/by-row false})))
 
 (deftest ereduce-kv-test
   (is= 29.9
-       (mx/ereduce-kv #(+ % %2 %3 %4 %5 %6) 3.4 [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
-  (is= 22.4 (mx/ereduce-kv #(+ % %2 %3 %4 %5) 3.4 [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
-  (is= 10.0 (mx/ereduce-kv #(+ % %2 %3 %4) 3.4 [[1.0 0.5] [2.0 4.0]]))
-  (is= 5.9 (mx/ereduce-kv #(+ % %2 %3 %4) 3.4 [[1.0 0.5]]))
-  (is= 5.9 (mx/ereduce-kv #(+ % %2 %3 %4) 3.4 [[1.0] [0.5]]))
-  (is= 7.4 (mx/ereduce-kv #(+ % %2 %3 %4 %5) 3.4 [[1.0 0.5]] [[1.0 0.5]])))
+       (mx/ereduce-kv (fn [tot r c n1 n2 n3] (+ tot r c n1 n2 n3))
+                      3.4
+                      [[1.0 0.5] [2.0 4.0]]
+                      [[1.0 0.5] [2.0 4.0]]
+                      [[1.0 0.5] [2.0 4.0]]))
+  (is= 22.4
+       (mx/ereduce-kv (fn [tot r c n1 n2] (+ tot r c n1 n2)) 3.4 [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= 14.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0 0.5] [2.0 4.0]]))
+  (is= 5.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0 0.5]]))
+  (is= 5.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0] [0.5]]))
+  (is= 7.4 (mx/ereduce-kv (fn [tot r c n1 n2] (+ tot r c n1 n2)) 3.4 [[1.0 0.5]] [[1.0 0.5]])))
 
 (deftest info-tests
   (rows-test)
@@ -405,7 +451,9 @@
   (diagonal-test)
   (serialize-symmetric-or-triangular-matrix-test)
   (size-of-symmetric-or-triangular-matrix-test)
+  (size-of-symmetric-or-triangular-matrix-without-diagonal-test)
   (ecount-of-symmetric-or-triangular-matrix-test)
+  (ecount-of-symmetric-or-triangular-matrix-without-diagonal-test)
   (trace-test)
   (get-slices-as-matrix-test)
   (matrix-partition-test)
@@ -424,33 +472,79 @@
 (defspec-test test-get-slices-as-matrix `mx/get-slices-as-matrix)
 (defspec-test test-matrix-partition `mx/matrix-partition)
 (defspec-test test-some-kv `mx/some-kv)
-(defspec-test test-ereduce-kv `mx/ereduce-kv)
+;(defspec-test test-ereduce-kv `mx/ereduce-kv) ;too general to spec-test
 
+(deftest transpose-test
+  (is= [[1.0 2.0] [0.5 4.0]] (mx/transpose [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5] [2.0 4.0]] (mx/transpose (mx/transpose [[1.0 0.5] [2.0 4.0]])))
+  (is= [[1.0 0.5]] (mx/transpose [[1.0] [0.5]]))
+  (is= [[1.0] [0.5]] (mx/transpose [[1.0 0.5]])))
 
-(def ve [[1.0 0.5] [2.0 4.0]])
-(def ve-sym [[1.0 0.5] [0.5 1.0]])
-(def ve1D [1.0 0.5])
-(def ve-row [[1.0 0.5]])
-(def ve-col [[1.0] [0.5]])
+(deftest assoc-row-test)
+(deftest assoc-column-test)
+(deftest assoc-diagonal-test)
+(deftest insert-row-test)
+(deftest insert-column-test)
+(deftest update-row-test)
+(deftest update-column-test)
+(deftest update-diagonal-test)
 
-(comment
+(deftest concat-rows-test
+  (is= [[1.0 0.5] [2.0 4.0] [1.0 0.5] [2.0 4.0]] (mx/concat-rows [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0] [2.0]] (mx/concat-rows [[1.0]] [[2.0]]))
+  (is= [[1.0 0.5] [1.0 0.5] [2.0 4.0]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5] [2.0 4.0] [1.0 0.5]] (mx/concat-rows [[1.0 0.5] [2.0 4.0]] [[1.0 0.5]]))
+  (is= [[1.0 0.5] [1.0 0.5]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5]]))
+  (is= [[1.0 0.5] [1.0 0.5] [1.0 0.5]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]])))
 
-  (deftest square-matrix-test
-    (is= [[]] (mx/square-matrix-by-trimming [[]]))
-    (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0]]))
-    (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0] [2.0] [3.0]]))
-    (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0 2.0 3.0]]))
-    (is= [[1.0 2.0] [2.0 3.0]] (mx/square-matrix-by-trimming [[1.0 2.0] [2.0 3.0] [4.0 5.0]])))
+(deftest concat-columns-test
+  (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0]] (mx/concat-columns [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0] [2.0]] (mx/concat-columns [[1.0]] [[2.0]]))
+  (is= [[1.0 1.0 0.5] [0.5 2.0 4.0]] (mx/concat-columns [[1.0] [0.5]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 1.0] [0.5 0.5]] (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]]))
+  (is= [[1.0 1.0] [0.5 0.5]] (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]] [[1.0] [0.5]])))
 
-  (deftest symmetric-matrix-by-averaging-test
-    (is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]])))
+(deftest merge-matrices-test
+  (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0]]
+       (mx/merge-matrices {::top-left    [[1.0 0.5] [2.0 4.0]] ::top-right [[1.0 0.5] [2.0 4.0]]
+                           ::bottom-left [[1.0 0.5] [2.0 4.0]] ::bottom-right [[1.0 0.5] [2.0 4.0]]}))
+  (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5]]
+       (mx/merge-matrices {::top-left    [[1.0 0.5] [2.0 4.0]] ::top-right [[1.0 0.5] [2.0 4.0]]
+                           ::bottom-left [[1.0 0.5]] ::bottom-right [[1.0 0.5]]})))
 
-  (deftest manipulation-tests
-    (square-matrix-test)
-    (symmetric-matrix-by-averaging-test))
+(deftest replace-submatrix-test
+  (is= [[0.0 1.0 2.0] [1.0 0.5 5.0] [2.0 4.0 8.0]]
+       (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] 1 0))
+  (is= [[0.0 1.0 0.5] [3.0 2.0 4.0] [6.0 7.0 8.0]]
+       (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] 0 1))
+  (is= [[0.0 1.0 2.0] [3.0 4.0 5.0] [1.0 0.5 8.0] [2.0 4.0 0.0]]
+       (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] 2 0))
+  (is= [[0.0 0.0 0.0 1.0 0.5] [0.0 1.0 2.0 2.0 4.0] [3.0 4.0 5.0 0.0 0.0] [6.0 7.0 8.0 0.0 0.0]]
+       (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] -1 3)))
 
-  (defspec-test test-square-matrix `mx/square-matrix-by-trimming)
-  (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
-  )
+(deftest permute-matrix-test
+  (is= [[2.0 4.0] [1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/row-indices [1 0]))
+  (is= [[0.5 1.0] [4.0 2.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/column-indices [1 0]))
+  (is= [[4.0 2.0] [0.5 1.0]]
+       (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/row-indices [1 0] ::mx/column-indices [1 0]))
+  (is= (mx/identity-matrix 2)
+       (mx/permute-matrix (mx/identity-matrix 2) ::mx/row-indices [1 0] ::mx/column-indices [1 0])))
+
+(deftest square-matrix-by-trimming-test
+  (is= [[]] (mx/square-matrix-by-trimming [[]]))
+  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0]]))
+  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0] [2.0] [3.0]]))
+  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0 2.0 3.0]]))
+  (is= [[1.0 2.0] [2.0 3.0]] (mx/square-matrix-by-trimming [[1.0 2.0] [2.0 3.0] [4.0 5.0]])))
+
+(deftest symmetric-matrix-by-averaging-test
+  (is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]])))
+
+(deftest manipulation-tests
+  (square-matrix-by-trimming-test)
+  (symmetric-matrix-by-averaging-test))
+
+(defspec-test test-square-matrix-by-trimming `mx/square-matrix-by-trimming)
+(defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
 
 #_(ost/unstrument)
