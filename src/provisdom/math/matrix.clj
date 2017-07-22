@@ -12,13 +12,13 @@
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
-(declare column-matrix transpose diagonal
+(declare column-matrix transpose diagonal deserialize-symmetric-matrix
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-of-symmetric-or-triangular-matrix size-of-symmetric-or-triangular-matrix-without-diagonal
          compute-vector coerce to-vector ecount to-matrix
          inner-product emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
-         ecount-triangular-or-symmetric symmetric-matrix ecount-triangular-or-symmetric-without-diagonal
+         ecount-triangular-or-symmetric ecount-triangular-or-symmetric-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
 (def mdl 6)                                                 ;max-dim-length for generators
@@ -35,6 +35,8 @@
 (s/def ::column (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 (s/def ::rows (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 (s/def ::columns (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+(s/def ::row-start (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
+(s/def ::column-start (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
 (s/def ::size ::vector/size)
 (s/def ::number ::m/number)
 (s/def ::numbers ::vector/numbers)
@@ -59,13 +61,18 @@
 (defn matrix?
   "Returns true if a matrix (i.e., dimensionality is 2, contains numbers only, and rows have equal lengths)"
   [x]
-  (and (vector? x) (not (empty? x)) (every? #(and (vector? %) (= (count %) (count (first x))) (every? number? %)) x)))
+  (and (vector? x)
+       (vector? (first x))
+       (not (and (empty? (first x)) (> (count x) 1)))
+       (every? #(and (vector? %) (= (count %) (count (first x))) (every? number? %)) x)))
 
 (s/fdef matrix?
         :args (s/cat :x any?)
         :ret boolean?)
 
-(s/def ::matrix ::tensor/tensor2D)
+(s/def ::matrix (s/with-gen matrix?
+                            #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                                       (fn [i] (gen/vector (gen/vector (s/gen ::number) i) 1 mdl)))))
 (s/def ::matrix-num
   (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :min-count 1 :kind vector? :into [])
               #(gen/vector (s/gen ::vector-num) 1 mdl)))
@@ -181,7 +188,7 @@
 (s/def ::symmetric-matrix
   (s/with-gen symmetric-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-                         (fn [i] (gen/fmap symmetric-matrix
+                         (fn [i] (gen/fmap deserialize-symmetric-matrix
                                            (gen/vector (s/gen ::number) (ecount-triangular-or-symmetric i)))))))
 
 ;;;MATRIX CONSTRUCTORS
@@ -774,8 +781,9 @@
 (defn assoc-row
   "Sets a row in a matrix using the specified numbers."
   [m row numbers]
-  (when (and (= (count numbers) (columns m)) (<= row (rows m)))
-    (assoc m row (vec numbers))))
+  (cond (and (zero? row) (empty-matrix? m)) (row-matrix numbers)
+        (and (= (count numbers) (columns m)) (<= row (rows m))) (assoc m row (vec numbers))
+        :else nil))
 
 (s/fdef assoc-row
         :args (s/cat :m ::matrix :row ::row :numbers ::numbers)
@@ -783,7 +791,13 @@
 
 (defn assoc-column
   "Sets a column in a matrix using the specified numbers."
-  [m column numbers] (vec (map-indexed (fn [row row-vector] (assoc row-vector column (get numbers row 0.0))) m)))
+  [m column numbers]
+  (cond (and (zero? column) (empty-matrix? m)) (column-matrix numbers)
+
+        (and (= (count numbers) (rows m)) (<= column (columns m)))
+        (vec (map-indexed (fn [row row-vector] (assoc row-vector column (get numbers row 0.0))) m))
+
+        :else nil))
 
 (s/fdef assoc-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
@@ -792,8 +806,15 @@
 (defn assoc-diagonal
   "Sets a diagonal in a matrix using the specified numbers."
   [m numbers]
-  (let [v (vec numbers)]
-    (vec (map-indexed (fn [row row-vector] (assoc row-vector row (get v row 0.0))) m))))
+  (cond (empty-matrix? m) (diagonal-matrix numbers)
+
+        (= (count numbers) (count (diagonal m)))
+        (vec (for [row (range (min (count numbers)))]
+               (let [v (vec numbers)
+                     row-vector (get-row m row)]
+                 (assoc row-vector row (get v row 0.0)))))
+
+        :else nil))
 
 (s/fdef assoc-diagonal
         :args (s/cat :m ::matrix :numbers ::numbers)
@@ -802,10 +823,12 @@
 (defn insert-row
   "Inserts a row of `numbers` in a matrix at the specified `row`."
   [m row numbers]
-  (when (<= row (count m))
-    (let [f (subvec m 0 row)
-          l (subvec m row)]
-      (vec (concat f [numbers] l)))))
+  (cond (and (zero? row) (empty-matrix? m)) (row-matrix numbers)
+
+        (and (= (count numbers) (columns m)) (<= row (rows m)))
+        (vec (concat (subvec m 0 row) [(vec numbers)] (subvec m row)))
+
+        :else nil))
 
 (s/fdef insert-row
         :args (s/cat :m ::matrix :row ::row :numbers ::numbers)
@@ -814,8 +837,12 @@
 (defn insert-column
   "Inserts a column of `numbers` in a matrix at the specified `column`."
   [m column numbers]
-  (when (<= column (columns m))
-    (vec (map-indexed (fn [row row-vector] (vector/insertv row-vector column (get numbers row 0.0))) m))))
+  (cond (and (zero? column) (empty-matrix? m)) (column-matrix numbers)
+
+        (and (= (count numbers) (rows m)) (<= column (columns m)))
+        (vec (map-indexed (fn [row row-vector] (vector/insertv row-vector column (get numbers row 0.0))) m))
+
+        :else nil))
 
 (s/fdef insert-column
         :args (s/cat :m ::matrix :column ::column :numbers ::numbers)
@@ -825,9 +852,8 @@
   "Removes a row in a matrix"
   [m row]
   (if (<= (inc row) (count m))
-    (let [f (subvec m 0 row)
-          l (subvec m (inc row))]
-      (vec (concat f l)))
+    (let [m2 (vec (concat (subvec m 0 row) (subvec m (inc row))))]
+      (if (empty? m2) [[]] m2))
     m))
 
 (s/fdef remove-row
@@ -836,45 +862,55 @@
 
 (defn remove-column
   "Removes a column in a matrix"
-  [m column] (if (<= (inc column) (columns m)) (mapv #(vector/removev % column) m) m))
+  [m column]
+  (if (<= (inc column) (columns m))
+    (let [m2 (mapv #(vector/removev % column) m)]
+      (if (empty? m2) [[]] m2))
+    m))
 
 (s/fdef remove-column
         :args (s/cat :m ::matrix :column ::column)
         :ret ::matrix)
 
 (defn update-row
-  "Updates a `row` of matrix `m`, using `f`, which is a function of the `column` and `number` and returns a number."
-  ([m row f & args] (apply update m row f args)))
+  "Updates a `row` of matrix `m`, using `f`,
+  which is a function of the `column` and `number` and returns a number."
+  [m row f] (when (< row (rows m)) (update m row (fn [row-vector] (vec (map-indexed f row-vector))))))
 
 (s/fdef update-row
-        :args (s/cat :m ::matrix
-                     :row ::row
-                     :f (s/fspec :args (s/cat :column ::column)
-                                 :ret ::number)
-                     :args (s/* ::number))
-        :ret ::matrix)
+        :args (s/and (s/cat :m ::matrix
+                            :row ::row
+                            :f (s/fspec :args (s/cat :row ::row :number ::number)
+                                        :ret ::number)))
+        :ret (s/nilable ::matrix))
 
 (defn update-column
-  "Updates a `column` of matrix `m`, using `f`, which is a function of the `row` and `number` and returns a number."
-  [m column f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector column f row args)) m)))
+  "Updates a `column` of matrix `m`, using `f`,
+  which is a function the `row` and `number` and returns a number."
+  [m column f]
+  (when (< column (columns m))
+    (vec (map-indexed (fn [row row-vector] (update row-vector column #(f row %))) m))))
 
 (s/fdef update-column
-        :args (s/cat :m ::matrix
-                     :column ::column
-                     :f (s/fspec :args (s/cat :row ::row :number ::number)
-                                 :ret ::number)
-                     :args (s/* ::number))
-        :ret ::matrix)
+        :args (s/and (s/cat :m ::matrix
+                            :column ::column
+                            :f (s/fspec :args (s/cat :row ::row :number ::number)
+                                        :ret ::number)))
+        :ret (s/nilable ::matrix))
 
 (defn update-diagonal
-  "Updates the diagonal of matrix `m`, using `f`, which is a function of the `row` and `number` and returns a number."
-  [m f & args] (vec (map-indexed (fn [row row-vector] (apply update row-vector row f row args)) m)))
+  "Updates the diagonal of matrix `m`, using `f`,
+  which is a function of the `row` and `number` and returns a number."
+  [m f]
+  (vec (map-indexed (fn [row row-vector] (if (< row (columns m))
+                                           (update row-vector row #(f row %))
+                                           row-vector))
+                    m)))
 
 (s/fdef update-diagonal
-        :args (s/cat :m ::matrix
-                     :f (s/fspec :args (s/cat :row ::row :number ::number)
-                                 :ret ::number)
-                     :args (s/* ::number))
+        :args (s/and (s/cat :m ::matrix
+                            :f (s/fspec :args (s/cat :row ::row :number ::number)
+                                        :ret ::number)))
         :ret ::matrix)
 
 (defn concat-rows
@@ -885,7 +921,7 @@
    (let [c (columns m)
          cs (map columns ms)]
      (when (every? #(= c %) cs)
-       (apply conj m ms)))))
+       (if (zero? c) [[]] (vec (apply concat m ms)))))))
 
 (s/fdef concat-rows
         :args (s/or :zero (s/cat) :one+ (s/cat :m ::matrix :ms (s/* ::matrix)))
@@ -907,7 +943,7 @@
 
 (defn merge-matrices
   "Returns a Matrix created by binding four matrices together."
-  [{:keys [top-left bottom-left top-right bottom-right]}]
+  [{::keys [top-left bottom-left top-right bottom-right]}]
   (let [top (concat-columns top-left top-right)
         bottom (concat-columns bottom-left bottom-right)]
     (when (and top bottom) (concat-rows top bottom))))
@@ -921,22 +957,19 @@
    'row-start' and 'column-start' can be negative.
    Unassigned elements will be 0.0"
   [m submatrix row-start column-start]
-  (let [sr (rows submatrix)
-        sc (columns submatrix)
-        tr (+ sr row-start)
-        tc (+ sc column-start)
+  (let [tr (+ (rows submatrix) row-start)
+        tc (+ (columns submatrix) column-start)
         nr (rows m)
         nc (columns m)]
-    (for [r (range (min row-start 0) (max tr nr))]
-      (for [c (range (min column-start 0) (max tc nc))]
-        (cond (and (>= r row-start) (< r tr) (>= c column-start) (< c tc))
-              (get-in submatrix [(- r row-start) (- c column-start)])
-
-              (and (m/non-? r) (< r nr) (m/non-? c) (< c nr)) (get-in m [r c])
-              :else 0.0)))))
+    (vec (for [r (range (min row-start 0) (max tr nr))]
+           (vec (for [c (range (min column-start 0) (max tc nc))]
+                  (cond (and (>= r row-start) (< r tr) (>= c column-start) (< c tc))
+                        (get-in submatrix [(- r row-start) (- c column-start)])
+                        (and (m/non-? r) (< r nr) (m/non-? c) (< c nc)) (get-in m [r c])
+                        :else 0.0)))))))
 
 (s/fdef replace-submatrix
-        :args (s/cat :m ::matrix :submatrix ::matrix :row-start ::m/int :column-start ::m/int)
+        :args (s/cat :m ::matrix :submatrix ::matrix :row-start ::row-start :column-start ::column-start)
         :ret ::matrix)
 
 (defn permute-matrix
@@ -944,14 +977,21 @@
     Options:
      ::row-indices provides the row index or indices of the permutation.
      ::column-indices provides the column index or indices of the permutation."
-  [m & {::keys [row-indices column-indices]}]
-  (let [after-rows (if row-indices (mapv (partial get-row m) (vector/to-vector row-indices)) m)]
-    (if column-indices
-      (transpose (mapv (partial get-row (transpose after-rows)) (vector/to-vector column-indices)))
-      after-rows)))
+  [m {::keys [row-indices column-indices]}]
+  (if (or (and (sequential? row-indices) (empty? row-indices))
+          (and (sequential? column-indices) (empty? column-indices)))
+    [[]]
+    (let [rv (remove #(>= % (rows m)) (vector/to-vector row-indices))
+          rv? (not (empty? rv))
+          cv (remove #(>= % (columns m)) (vector/to-vector column-indices))
+          cv? (not (empty? cv))
+          after-rows (if rv? (mapv (partial get-row m) rv) m)]
+      (if cv?
+        (transpose (mapv (partial get-row (transpose after-rows)) cv))
+        after-rows))))
 
 (s/fdef permute-matrix
-        :args (s/cat :m ::matrix :args (s/? (s/keys :opt [::row-indices ::column-indices])))
+        :args (s/cat :m ::matrix :args (s/keys :opt [::row-indices ::column-indices]))
         :ret ::matrix)
 
 (defn square-matrix-by-trimming
@@ -972,10 +1012,10 @@
   This is useful to help with rounding errors."
   [square-m]
   (let [size (rows square-m)]
-    (symmetric-matrix size (fn [r c]
-                             (if (== c r)
-                               (get-in square-m [r c] 0.0)
-                               (* 0.5 (+ (get-in square-m [r c] 0.0) (get-in square-m [c r] 0.0))))))))
+    (compute-matrix size size (fn [r c]
+                                (if (== c r)
+                                  (get-in square-m [r c] 0.0)
+                                  (* 0.5 (+ (get-in square-m [r c] 0.0) (get-in square-m [c r] 0.0))))))))
 
 (s/fdef symmetric-matrix-by-averaging
         :args (s/cat :square-m ::square-matrix)
@@ -1003,7 +1043,7 @@
   ([m1 m2]
    (if (or (empty-matrix? m1) (empty-matrix? m2))
      [[]]
-     (vec (apply concat (mapv (fn [row] (apply conj-columns (mapv (fn [e] (tensor/multiply e m2)) row))) m1)))))
+     (vec (apply concat (mapv (fn [row] (apply concat-columns (mapv (fn [e] (tensor/multiply e m2)) row))) m1)))))
   ([m1 m2 & ms] (apply kronecker-product (kronecker-product m1 m2) ms)))
 
 (s/fdef kronecker-product

@@ -475,21 +475,72 @@
 ;(defspec-test test-ereduce-kv `mx/ereduce-kv) ;too general to spec-test
 
 (deftest transpose-test
+  (is= [[]] (mx/transpose [[]]))
+  (is= [[1]] (mx/transpose [[1]]))
   (is= [[1.0 2.0] [0.5 4.0]] (mx/transpose [[1.0 0.5] [2.0 4.0]]))
   (is= [[1.0 0.5] [2.0 4.0]] (mx/transpose (mx/transpose [[1.0 0.5] [2.0 4.0]])))
   (is= [[1.0 0.5]] (mx/transpose [[1.0] [0.5]]))
   (is= [[1.0] [0.5]] (mx/transpose [[1.0 0.5]])))
 
-(deftest assoc-row-test)
-(deftest assoc-column-test)
-(deftest assoc-diagonal-test)
-(deftest insert-row-test)
-(deftest insert-column-test)
-(deftest update-row-test)
-(deftest update-column-test)
-(deftest update-diagonal-test)
+(deftest assoc-row-test
+  (is= [[8.0 9.0]] (mx/assoc-row [[]] 0 [8.0 9.0]))
+  (is= nil (mx/assoc-row [[1]] 0 [8.0 9.0]))
+  (is= [[2]] (mx/assoc-row [[1]] 0 [2]))
+  (is= [[1] [2]] (mx/assoc-row [[1]] 1 [2]))
+  (is= nil (mx/assoc-row [[1]] 2 [2]))
+  (is= [[8.0 9.0] [2.0 4.0]] (mx/assoc-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0])))
+
+(deftest assoc-column-test
+  (is= [[8.0] [9.0]] (mx/assoc-column [[]] 0 [8.0 9.0]))
+  (is= nil (mx/assoc-column [[1]] 0 [8.0 9.0]))
+  (is= [[2]] (mx/assoc-column [[1]] 0 [2]))
+  (is= [[1 2]] (mx/assoc-column [[1]] 1 [2]))
+  (is= nil (mx/assoc-column [[1]] 2 [2]))
+  (is= [[8.0 0.5] [9.0 4.0]] (mx/assoc-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0])))
+
+(deftest assoc-diagonal-test
+  (is= [[8.0 0.0] [0.0 9.0]] (mx/assoc-diagonal [[]] [8.0 9.0]))
+  (is= nil (mx/assoc-diagonal [[1]] [8.0 9.0]))
+  (is= [[2]] (mx/assoc-diagonal [[1]] [2]))
+  (is= [[8.0 0.5] [2.0 9.0]] (mx/assoc-diagonal [[1.0 0.5] [2.0 4.0]] [8.0 9.0])))
+
+(deftest insert-row-test
+  (is= [[8.0 9.0]] (mx/insert-row [[]] 0 [8.0 9.0]))
+  (is= nil (mx/insert-row [[1]] 0 [8.0 9.0]))
+  (is= [[2] [1]] (mx/insert-row [[1]] 0 [2]))
+  (is= [[1] [2]] (mx/insert-row [[1]] 1 [2]))
+  (is= nil (mx/insert-row [[1]] 2 [2]))
+  (is= [[8.0 9.0] [1.0 0.5] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))
+  (is= [[1.0 0.5] [8.0 9.0] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 1 [8.0 9.0])))
+
+(deftest insert-column-test
+  (is= [[8.0] [9.0]] (mx/insert-column [[]] 0 [8.0 9.0]))
+  (is= nil (mx/insert-column [[1]] 0 [8.0 9.0]))
+  (is= [[2 1]] (mx/insert-column [[1]] 0 [2]))
+  (is= [[1 2]] (mx/insert-column [[1]] 1 [2]))
+  (is= nil (mx/insert-column [[1]] 2 [2]))
+  (is= [[8.0 1.0 0.5] [9.0 2.0 4.0]] (mx/insert-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0])))
+
+(deftest update-row-test
+  (is= nil (mx/update-row [[]] 0 (fn [column number] (+ column number 1))))
+  (is= [[2]] (mx/update-row [[1]] 0 (fn [column number] (+ column number 1))))
+  (is= nil (mx/update-row [[1]] 1 (fn [column number] (+ column number 1))))
+  (is= [[2.0 2.5] [2.0 4.0]] (mx/update-row [[1.0 0.5] [2.0 4.0]] 0 (fn [column number] (+ column number 1)))))
+
+(deftest update-column-test
+  (is= nil (mx/update-column [[]] 0 (fn [row number] (+ row number 1))))
+  (is= [[2]] (mx/update-column [[1]] 0 (fn [row number] (+ row number 1))))
+  (is= nil (mx/update-column [[1]] 1 (fn [row number] (+ row number 1))))
+  (is= [[2.0 0.5] [4.0 4.0]] (mx/update-column [[1.0 0.5] [2.0 4.0]] 0 (fn [row number] (+ row number 1)))))
+
+(deftest update-diagonal-test
+  (is= [[]] (mx/update-diagonal [[]] (fn [row number] (+ row number 1))))
+  (is= [[2]] (mx/update-diagonal [[1]] (fn [row number] (+ row number 1))))
+  (is= [[2.0 0.5] [2.0 6.0]] (mx/update-diagonal [[1.0 0.5] [2.0 4.0]] (fn [row number] (+ row number 1)))))
 
 (deftest concat-rows-test
+  (is= [[]] (mx/concat-rows [[]] [[]]))
+  (is= nil (mx/concat-rows [[]] [[1]]))
   (is= [[1.0 0.5] [2.0 4.0] [1.0 0.5] [2.0 4.0]] (mx/concat-rows [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
   (is= [[1.0] [2.0]] (mx/concat-rows [[1.0]] [[2.0]]))
   (is= [[1.0 0.5] [1.0 0.5] [2.0 4.0]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5] [2.0 4.0]]))
@@ -498,21 +549,40 @@
   (is= [[1.0 0.5] [1.0 0.5] [1.0 0.5]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]])))
 
 (deftest concat-columns-test
+  (is= [[]] (mx/concat-columns [[]] [[]]))
+  (is= nil (mx/concat-columns [[]] [[1]]))
   (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0]] (mx/concat-columns [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
-  (is= [[1.0] [2.0]] (mx/concat-columns [[1.0]] [[2.0]]))
+  (is= [[1.0 2.0]] (mx/concat-columns [[1.0]] [[2.0]]))
   (is= [[1.0 1.0 0.5] [0.5 2.0 4.0]] (mx/concat-columns [[1.0] [0.5]] [[1.0 0.5] [2.0 4.0]]))
   (is= [[1.0 1.0] [0.5 0.5]] (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]]))
-  (is= [[1.0 1.0] [0.5 0.5]] (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]] [[1.0] [0.5]])))
+  (is= [[1.0 1.0 1.0] [0.5 0.5 0.5]] (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]] [[1.0] [0.5]])))
 
 (deftest merge-matrices-test
+  (is= [[]]
+       (mx/merge-matrices {::mx/top-left     [[]]
+                           ::mx/top-right    [[]]
+                           ::mx/bottom-left  [[]]
+                           ::mx/bottom-right [[]]}))
+  (is= nil
+       (mx/merge-matrices {::mx/top-left     [[]]
+                           ::mx/top-right    [[]]
+                           ::mx/bottom-left  [[]]
+                           ::mx/bottom-right [[1]]}))
   (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0]]
-       (mx/merge-matrices {::top-left    [[1.0 0.5] [2.0 4.0]] ::top-right [[1.0 0.5] [2.0 4.0]]
-                           ::bottom-left [[1.0 0.5] [2.0 4.0]] ::bottom-right [[1.0 0.5] [2.0 4.0]]}))
+       (mx/merge-matrices {::mx/top-left     [[1.0 0.5] [2.0 4.0]]
+                           ::mx/top-right    [[1.0 0.5] [2.0 4.0]]
+                           ::mx/bottom-left  [[1.0 0.5] [2.0 4.0]]
+                           ::mx/bottom-right [[1.0 0.5] [2.0 4.0]]}))
   (is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5]]
-       (mx/merge-matrices {::top-left    [[1.0 0.5] [2.0 4.0]] ::top-right [[1.0 0.5] [2.0 4.0]]
-                           ::bottom-left [[1.0 0.5]] ::bottom-right [[1.0 0.5]]})))
+       (mx/merge-matrices {::mx/top-left     [[1.0 0.5] [2.0 4.0]]
+                           ::mx/top-right    [[1.0 0.5] [2.0 4.0]]
+                           ::mx/bottom-left  [[1.0 0.5]]
+                           ::mx/bottom-right [[1.0 0.5]]})))
 
 (deftest replace-submatrix-test
+  (is= [[]] (mx/replace-submatrix [[]] [[]] 1 0))
+  (is= [[0.0 0.0] [1.0 0.5] [2.0 4.0]] (mx/replace-submatrix [[]] [[1.0 0.5] [2.0 4.0]] 1 0))
+  (is= [[1.0 0.5] [2.0 4.0]] (mx/replace-submatrix [[1.0 0.5] [2.0 4.0]] [[]] 1 0))
   (is= [[0.0 1.0 2.0] [1.0 0.5 5.0] [2.0 4.0 8.0]]
        (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] 1 0))
   (is= [[0.0 1.0 0.5] [3.0 2.0 4.0] [6.0 7.0 8.0]]
@@ -523,12 +593,16 @@
        (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] -1 3)))
 
 (deftest permute-matrix-test
-  (is= [[2.0 4.0] [1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/row-indices [1 0]))
-  (is= [[0.5 1.0] [4.0 2.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/column-indices [1 0]))
+  (is= [[1.0 0.5] [2.0 4.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {}))
+  (is= [[2.0 4.0] [1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1 0]}))
+  (is= [[2.0 4.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1]}))
+  (is= [[]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices []}))
+  (is= [[1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [0 2]}))
+  (is= [[0.5 1.0] [4.0 2.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/column-indices [1 0]}))
   (is= [[4.0 2.0] [0.5 1.0]]
-       (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] ::mx/row-indices [1 0] ::mx/column-indices [1 0]))
+       (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1 0] ::mx/column-indices [1 0]}))
   (is= (mx/identity-matrix 2)
-       (mx/permute-matrix (mx/identity-matrix 2) ::mx/row-indices [1 0] ::mx/column-indices [1 0])))
+       (mx/permute-matrix (mx/identity-matrix 2) {::mx/row-indices [1 0] ::mx/column-indices [1 0]})))
 
 (deftest square-matrix-by-trimming-test
   (is= [[]] (mx/square-matrix-by-trimming [[]]))
@@ -538,12 +612,42 @@
   (is= [[1.0 2.0] [2.0 3.0]] (mx/square-matrix-by-trimming [[1.0 2.0] [2.0 3.0] [4.0 5.0]])))
 
 (deftest symmetric-matrix-by-averaging-test
+  (is= [[]] (mx/symmetric-matrix-by-averaging [[]]))
+  (is= [[3]] (mx/symmetric-matrix-by-averaging [[3]]))
   (is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]])))
 
 (deftest manipulation-tests
+  (transpose-test)
+  (assoc-row-test)
+  (assoc-column-test)
+  (assoc-diagonal-test)
+  (insert-row-test)
+  (insert-column-test)
+  (update-row-test)
+  (update-column-test)
+  (update-diagonal-test)
+  (concat-rows-test)
+  (concat-columns-test)
+  (merge-matrices-test)
+  (replace-submatrix-test)
+  (permute-matrix-test)
   (square-matrix-by-trimming-test)
   (symmetric-matrix-by-averaging-test))
 
+(defspec-test test-transpose 'mx/transpose)
+(defspec-test test-assoc-row 'mx/assoc-row)
+(defspec-test test-assoc-column 'mx/assoc-column)
+(defspec-test test-assoc-diagonal 'mx/assoc-diagonal)
+(defspec-test test-insert-row 'mx/insert-row)
+(defspec-test test-insert-column 'mx/insert-column)
+(defspec-test test-update-row 'mx/update-row)
+(defspec-test test-update-column 'mx/update-column)
+(defspec-test test-update-diagonal 'mx/update-diagonal)
+(defspec-test test-concat-rows 'mx/concat-rows)
+(defspec-test test-concat-columns 'mx/concat-columns)
+(defspec-test test-merge-matrices 'mx/merge-matrices)
+(defspec-test test-replace-submatrix 'mx/replace-submatrix)
+(defspec-test test-permute-matrix 'mx/permute-matrix)
 (defspec-test test-square-matrix-by-trimming `mx/square-matrix-by-trimming)
 (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
 

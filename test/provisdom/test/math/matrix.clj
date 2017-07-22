@@ -164,25 +164,6 @@
              (filter-symmetrically ap #(< (esum-squares %) 2.0))
              => (apache-commons [[1.0]])))
 
-(facts "immutable changes"
-       (fact "set column"
-             (assoc-column ap 0 [8.0 9.0])
-             => (apache-commons [[8.0 0.5] [9.0 4.0]])
-             (assoc-column cl 0 [8.0 9.0]) => (clatrix [[8.0 0.5] [9.0 4.0]])
-             (assoc-column cl1D 0 [8.0 9.0]) => (throws))
-       (fact "insert row"
-             (insert-row ap 1 [8.0 9.0])
-             => (apache-commons [[1.0 0.5] [8.0 9.0] [2.0 4.0]])
-             (insert-row cl 0 [8.0 9.0])
-             => (clatrix [[8.0 9.0] [1.0 0.5] [2.0 4.0]])
-             (insert-row cl1D 0 [8.0 9.0]) => (throws))
-       (fact "insert column"
-             (insert-column ap 0 [8.0 9.0])
-             => (apache-commons [[8.0 1.0 0.5] [9.0 2.0 4.0]])
-             (insert-column cl 1 [8.0 9.0])
-             => (clatrix [[1.0 8.0 0.5] [2.0 9.0 4.0]])
-             (insert-column cl1D 1 [8.0 9.0]) => (throws)))
-
 (facts "numerical stability"
        (fact "round roughly zero rows"
              (round-roughly-zero-rows ap 1e-6)
