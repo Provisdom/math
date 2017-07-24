@@ -198,6 +198,9 @@
   (is= [] (mx/correlation-matrix [1 2] 3))
   (is= [] (mx/correlation-matrix [[1 2] [3 4]] 2)))
 
+(deftest determinant-test
+  (is= 3.0 (ap-mx/determinant [[1.0 0.5] [2.0 4.0]])))
+
 (deftest rnd-positive-matrix!-test
   (random/bind-seed 0
                     (is= [[]] (mx/rnd-positive-matrix! 0)))

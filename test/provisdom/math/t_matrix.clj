@@ -4,6 +4,7 @@
             [provisdom.math.matrix :as mx]
             [provisdom.math.core :as m]
             [provisdom.math.random2 :as random]
+            [provisdom.math.tensor :as tensor]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
@@ -11,6 +12,8 @@
 
 (deftest matrix?-test
   (is-not (mx/matrix? [0]))
+  (is-not (mx/matrix? [[] []]))
+  (is (mx/matrix? [[]]))
   (is-not (mx/matrix? 0))
   (is-not (mx/matrix? [[[0.0] [0.0]]]))
   (is-not (mx/matrix? [[nil]]))
@@ -382,6 +385,24 @@
   (is= [[1.0]]
        (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices 0 ::mx/column-indices 0})))
 
+(deftest filter-by-row-test
+  (is= [[]] (mx/filter-by-row #(< (apply + (tensor/emap m/sq %)) 2.0) [[]]))
+  (is= [[1.0 0.5]] (mx/filter-by-row #(< (apply + (tensor/emap m/sq %)) 2.0) [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5]] (mx/filter-by-row #(< (apply + (tensor/emap m/sq %)) 2.0) [[1.0 0.5]]))
+  (is= [[1.0] [0.5]] (mx/filter-by-row #(< (apply + (tensor/emap m/sq %)) 2.0) [[1.0] [0.5]]))
+  (is= [[1.0 0.5]] (mx/filter-by-row #(< (apply + (tensor/emap m/sq %)) 2.0) [[1.0 0.5] [2.0 4.0]])))
+
+(deftest filter-by-column-test
+  (is= [[]] (mx/filter-by-column #(< (apply + (tensor/emap m/sq %)) 6.0) [[]]))
+  (is= [[1.0] [2.0]] (mx/filter-by-column #(< (apply + (tensor/emap m/sq %)) 6.0) [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5]] (mx/filter-by-column #(< (apply + (tensor/emap m/sq %)) 6.0) [[1.0 0.5]]))
+  (is= [[1.0] [0.5]] (mx/filter-by-column #(< (apply + (tensor/emap m/sq %)) 6.0) [[1.0] [0.5]]))
+  (is= [[1.0] [2.0]] (mx/filter-by-column #(< (apply + (tensor/emap m/sq %)) 6.0) [[1.0 0.5] [2.0 4.0]])))
+
+(deftest filter-symmetric-matrix-test
+  (is= [[]] (mx/filter-symmetric-matrix #(< (apply + (tensor/emap m/sq %)) 2.0) [[]]))
+  (is= [[1.0]] (mx/filter-symmetric-matrix #(< (apply + (tensor/emap m/sq %)) 2.0) [[1.0 0.5] [0.5 4.0]])))
+
 (def s [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0] [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
 (deftest matrix-partition-test
   (is= {::mx/bottom-left  [[9.0 10.0] [13.0 14.0]]
@@ -436,12 +457,25 @@
                       [[1.0 0.5] [2.0 4.0]]
                       [[1.0 0.5] [2.0 4.0]]
                       [[1.0 0.5] [2.0 4.0]]))
-  (is= 22.4
-       (mx/ereduce-kv (fn [tot r c n1 n2] (+ tot r c n1 n2)) 3.4 [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= 22.4 (mx/ereduce-kv (fn [tot r c n1 n2] (+ tot r c n1 n2)) 3.4 [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
   (is= 14.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0 0.5] [2.0 4.0]]))
   (is= 5.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0 0.5]]))
   (is= 5.9 (mx/ereduce-kv (fn [tot r c n] (+ tot r c n)) 3.4 [[1.0] [0.5]]))
   (is= 7.4 (mx/ereduce-kv (fn [tot r c n1 n2] (+ tot r c n1 n2)) 3.4 [[1.0 0.5]] [[1.0 0.5]])))
+
+(deftest matrix->sparse-test
+  (is= [] (mx/matrix->sparse [[]]))
+  (is= [[1 0 1.0]] (mx/matrix->sparse [[0.0 0.0] [1.0 0.0]]))
+  (is= [[0 0 1.0] [0 1 0.5] [1 0 2.0] [1 1 4.0]] (mx/matrix->sparse [[1.0 0.5] [2.0 4.0]]))
+  (is= [[0 0 1.0] [0 1 0.5] [1 0 2.0]] (mx/matrix->sparse [[1.0 0.5] [2.0 4.0]] #(< % 2.1)))
+  (is= [] (mx/matrix->sparse [[1.0 0.5] [2.0 4.0]] neg?))
+  (is= [[1 0 0.5]] (mx/matrix->sparse [[1.0] [0.5]] #(< % 0.7))))
+
+(deftest symmetric-matrix->sparse-test
+  (is= [] (mx/symmetric-matrix->sparse [[]]))
+  (is= [[0 1 1.0]] (mx/symmetric-matrix->sparse [[0.0 1.0] [1.0 0.0]]))
+  (is= [[0 0 1.0] [0 1 0.5] [1 1 4.0]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]]))
+  (is= [[0 0 1.0] [0 1 0.5]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]] #(< % 2.1))))
 
 (deftest info-tests
   (rows-test)
@@ -456,9 +490,14 @@
   (ecount-of-symmetric-or-triangular-matrix-without-diagonal-test)
   (trace-test)
   (get-slices-as-matrix-test)
+  (filter-by-row-test)
+  (filter-by-column-test)
+  (filter-symmetric-matrix-test)
   (matrix-partition-test)
   (some-kv-test)
-  (ereduce-kv-test))
+  (ereduce-kv-test)
+  (matrix->sparse-test)
+  (symmetric-matrix->sparse-test))
 
 (defspec-test test-rows `mx/rows)
 (defspec-test test-columns `mx/columns)
@@ -470,9 +509,14 @@
 (defspec-test test-ecount-of-symmetric-or-triangular-matrix `mx/ecount-of-symmetric-or-triangular-matrix)
 (defspec-test test-trace `mx/trace)
 (defspec-test test-get-slices-as-matrix `mx/get-slices-as-matrix)
+(defspec-test test-filter-by-row 'mx/filter-by-row)
+(defspec-test test-filter-by-column 'mx/filter-by-column)
+(defspec-test test-filter-symmetric-matrix 'mx/filter-symmetric-matrix)
 (defspec-test test-matrix-partition `mx/matrix-partition)
 (defspec-test test-some-kv `mx/some-kv)
 ;(defspec-test test-ereduce-kv `mx/ereduce-kv) ;too general to spec-test
+(defspec-test test-matrix->sparse 'mx/matrix->sparse)
+(defspec-test test-symmetric-matrix->sparse 'mx/symmetric-matrix->sparse)
 
 (deftest transpose-test
   (is= [[]] (mx/transpose [[]]))
@@ -650,5 +694,52 @@
 (defspec-test test-permute-matrix 'mx/permute-matrix)
 (defspec-test test-square-matrix-by-trimming `mx/square-matrix-by-trimming)
 (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
+
+(deftest mx*-test
+  (is= [[]] (mx/mx* [[]]))
+  (is= [[1]] (mx/mx* [[1]]))
+  (is= [[]] (mx/mx* [[]] [[]]))
+  (is= [[3.0] [3.0]] (mx/mx* [[1 1 1] [1 1 1]] [[1] [1] [1]]))
+  (is= [[2.0 2.5] [10.0 17.0]] (mx/mx* [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[7.0 11.0] [44.0 73.0]] (mx/mx* [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]])))
+
+(deftest kronecker-product-test
+  (is= [[]] (mx/kronecker-product))
+  (is= [[]] (mx/kronecker-product [[]]))
+  (is= [[1]] (mx/kronecker-product [[1]]))
+  (is= [[]] (mx/kronecker-product [[]] [[1]]))
+  (is= [[1.0 0.5 0.5 0.25] [2.0 4.0 1.0 2.0] [2.0 1.0 4.0 2.0] [4.0 8.0 8.0 16.0]]
+       (mx/kronecker-product [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5 0.5 0.25 0.5 0.25 0.25 0.125] [2.0 4.0 1.0 2.0 1.0 2.0 0.5 1.0]
+        [2.0 1.0 4.0 2.0 1.0 0.5 2.0 1.0] [4.0 8.0 8.0 16.0 2.0 4.0 4.0 8.0]
+        [2.0 1.0 1.0 0.5 4.0 2.0 2.0 1.0] [4.0 8.0 2.0 4.0 8.0 16.0 4.0 8.0]
+        [4.0 2.0 8.0 4.0 8.0 4.0 16.0 8.0] [8.0 16.0 16.0 32.0 16.0 32.0 32.0 64.0]]
+       (mx/kronecker-product [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
+  (is= [[1.0 0.5 0.5 0.25]] (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]]))
+  (is= [[1.0 0.5 0.5 0.25 0.5 0.25 0.25 0.125]] (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]])))
+
+(deftest math-tests
+  (mx*-test)
+  (kronecker-product-test))
+
+(defspec-test test-mx* 'mx/mx*)
+(defspec-test test-kronecker-product 'mx/kronecker-product)
+
+(deftest round-roughly-zero-rows-test
+  (is= [[]] (mx/round-roughly-zero-rows [[]] 1e-6))
+  (is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-rows [[1.0 0.5] [2.0 4.0]] 1e-6))
+  (is= [[0.0 0.0] [1.0 1.0E-17]] (mx/round-roughly-zero-rows [[1e-13 1e-8] [1.0 1e-17]] 1e-6)))
+
+(deftest round-roughly-zero-columns-test
+  (is= [[]] (mx/round-roughly-zero-columns [[]] 1e-6))
+  (is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-columns [[1.0 0.5] [2.0 4.0]] 1e-6))
+  (is= [[1.0E-13 0.0] [1.0 0.0]] (mx/round-roughly-zero-columns [[1e-13 1e-8] [1.0 1e-17]] 1e-6)))
+
+(deftest rounding-tests
+  (round-roughly-zero-rows-test)
+  (round-roughly-zero-columns-test))
+
+(defspec-test test-round-roughly-zero-rows 'mx/round-roughly-zero-rows)
+(defspec-test test-round-roughly-zero-columns 'mx/round-roughly-zero-columns)
 
 #_(ost/unstrument)

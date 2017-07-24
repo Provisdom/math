@@ -270,41 +270,51 @@
 (defn add
   "Performs element-wise addition for one or more tensors."
   ([] 0.0)
-  ([tensor] (emap + tensor))
-  ([tensor & more] (apply emap + tensor more)))
+  ([tensor] tensor)
+  ([tensor1 tensor2] (emap (fn [i j] (+ (double i) j)) tensor1 tensor2))
+  ([tensor1 tensor2 & more] (when-let [tensor3 (add tensor1 tensor2)] (apply emap + tensor3 more))))
 
 (s/fdef add
         :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
+                    :one (s/cat :tensor ::tensor)
+                    :two+ (s/cat :tensor1 ::tensor :tensor2 ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn subtract
   "Performs element-wise subtraction for one or more tensors."
+  ([] 0.0)
   ([tensor] (emap - tensor))
-  ([tensor & more] (apply emap - tensor more)))
+  ([tensor1 tensor2] (emap (fn [i j] (- (double i) j)) tensor1 tensor2))
+  ([tensor1 tensor2 & more] (when-let [tensor3 (subtract tensor1 tensor2)] (apply emap - tensor3 more))))
 
 (s/fdef subtract
-        :args (s/cat :tensor ::tensor :more (s/* ::tensor))
+        :args (s/or :zero (s/cat)
+                    :one (s/cat :tensor ::tensor)
+                    :two+ (s/cat :tensor1 ::tensor :tensor2 ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn multiply
   "Performs element-wise multiplication for one or more tensors."
   ([] 1.0)
-  ([tensor] (emap * tensor))
-  ([tensor & more] (apply emap * tensor more)))
+  ([tensor] tensor)
+  ([tensor1 tensor2] (emap (fn [i j] (* (double i) j)) tensor1 tensor2))
+  ([tensor1 tensor2 & more] (when-let [tensor3 (multiply tensor1 tensor2)] (apply emap * tensor3 more))))
 
 (s/fdef multiply
         :args (s/or :zero (s/cat)
-                    :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
+                    :one (s/cat :tensor ::tensor)
+                    :two+ (s/cat :tensor1 ::tensor :tensor2 ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn divide
   "Performs element-wise division for one or more tensors."
+  ([] 1.0)
   ([tensor] (emap m/div tensor))
   ([tensor & more] (reduce (fn [tot e] (when tot (emap m/div tot e))) tensor more)))
 
 (s/fdef divide
-        :args (s/cat :tensor ::tensor :more (s/* ::tensor))
+        :args (s/or :zero (s/cat)
+                    :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn norm1

@@ -13,6 +13,7 @@
   (is (tensor/tensor? []))
   (is-not (tensor/tensor? "A"))
   (is-not (tensor/tensor? ["A"]))
+  (is (tensor/tensor? [[] []]))                             ;notice tensors can have multiple zero dims
   (is (tensor/tensor? [[]]))
   (is-not (tensor/tensor? [[2] 2]))
   (is-not (tensor/tensor? [2 [2]]))
