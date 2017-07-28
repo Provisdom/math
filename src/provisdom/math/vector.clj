@@ -24,6 +24,8 @@
                                 #(gen/vector (s/gen ::m/num) 0 mdl)))
 (s/def ::vector-finite (s/with-gen (s/coll-of ::m/finite :kind clojure.core/vector? :into [])
                                    #(gen/vector (s/gen ::m/finite) 0 mdl)))
+(s/def ::vector+ (s/with-gen (s/coll-of ::m/pos :kind clojure.core/vector? :into [])
+                             #(gen/vector (s/gen ::m/pos) 0 mdl)))
 (s/def ::sparse-vector
   (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::number))
               #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})

@@ -46,7 +46,7 @@
                        {:lower 0, :open-lower? true, :open-upper? false, 
                         :upper m/inf+}]))
        (fact "matrices"
-             (positive-matrix-bounds 2) 
+             (positive-definite-matrix-bounds 2)
              => (just [{:lower 0, :open-lower? true, :open-upper? false, 
                         :upper m/inf+}
                        {:lower m/inf-, :open-lower? false, :open-upper? false, 

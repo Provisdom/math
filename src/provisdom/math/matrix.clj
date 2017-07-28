@@ -16,7 +16,7 @@
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-of-symmetric-or-triangular-matrix size-of-symmetric-or-triangular-matrix-without-diagonal
-         compute-vector coerce to-vector ecount to-matrix
+         compute-vector coerce to-vector ecount to-matrix symmetric-matrix-by-averaging
          inner-product emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
          ecount-of-symmetric-or-triangular-matrix ecount-of-symmetric-or-triangular-matrix-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
@@ -39,6 +39,7 @@
 (s/def ::column-start (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
 (s/def ::size ::vector/size)
 (s/def ::number ::m/number)
+(s/def ::finite ::m/finite)
 (s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
 (s/def ::tensor ::tensor/tensor)
@@ -139,6 +140,11 @@
   (s/with-gen square-matrix?
               #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                          (fn [i] (gen/vector (gen/vector (s/gen ::number) i) (max 1 i))))))
+(s/def ::square-matrix-finite
+  (s/with-gen (s/and (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :min-count 1 :kind vector? :into [])
+                     #(= (rows %) (columns %)))
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/vector (gen/vector (s/gen ::finite) i) (max 1 i))))))
 
 (defn diagonal-matrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
@@ -249,7 +255,7 @@
 
 (s/fdef identity-matrix
         :args (s/cat :size ::size)
-        :ret ::matrix)
+        :ret ::diagonal-matrix)
 
 (defn row-matrix
   "Returns a row matrix created from `numbers` or from `size` and `f`.
@@ -296,7 +302,7 @@
                                                          :ret ::number))
                     :three (s/cat :rows ::rows :columns ::columns :f (s/fspec :args (s/cat :index ::index)
                                                                               :ret ::number)))
-        :ret ::matrix)
+        :ret ::diagonal-matrix)
 
 (defn- symmetric-row-fill [r c size numbers] (get numbers (+ c (* r size) (* -1 m/half (+ r (m/sq' r)))) m/nan))
 
@@ -336,7 +342,7 @@
                     :three (s/cat :diagonal-numbers ::numbers
                                   :off-diagonal-numbers ::numbers
                                   :opts (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::matrix))
+        :ret (s/nilable ::upper-triangular-matrix))
 
 (defn deserialize-lower-triangular-matrix
   "Returns a (square) lower triangular matrix (a matrix with all elements above the diagonal being 0.0).
@@ -367,7 +373,7 @@
                     :three (s/cat :diagonal-numbers ::numbers
                                   :off-diagonal-numbers ::numbers
                                   :opts (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::matrix))
+        :ret (s/nilable ::lower-triangular-matrix))
 
 (defn deserialize-symmetric-matrix
   "Returns a symmetric matrix (a matrix with elements at r,c equal to elements at c,r).
@@ -385,7 +391,7 @@
 
 (s/fdef deserialize-symmetric-matrix
         :args (s/cat :numbers ::numbers)
-        :ret (s/nilable ::matrix))
+        :ret (s/nilable ::symmetric-matrix))
 
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the same).
@@ -446,7 +452,7 @@
 
 (s/fdef rnd-reflection-matrix!
         :args (s/cat :size ::size)
-        :ret ::square-matrix)
+        :ret ::symmetric-matrix)
 
 (defn rnd-spectral-matrix!
   "Returns a random matrix with a particular `spectrum-vector`.
@@ -457,11 +463,11 @@
                             (identity-matrix size))
                    (* 2 size))
         l-mat (diagonal-matrix spectrum-vector)]
-    (mx* (mx* v-mat l-mat) (transpose v-mat))))
+    (symmetric-matrix-by-averaging (mx* (mx* v-mat l-mat) (transpose v-mat)))))
 
 (s/fdef rnd-spectral-matrix!
         :args (s/cat :spectrum-vector ::vector)
-        :ret ::square-matrix)
+        :ret ::symmetric-matrix)
 
 (defn sparse->matrix
   "Builds a matrix using a sparse representation and an existing matrix (often a zero-matrix).
@@ -520,7 +526,8 @@
   [m row] (vec (get m row)))
 
 (s/fdef get-row
-        :args (s/cat :m ::matrix :row ::row)
+        :args (s/and (s/cat :m ::matrix :row ::row)
+                     #(< (:row %) (rows (:m %))))
         :ret ::vector)
 
 (defn get-column
@@ -530,7 +537,8 @@
     (if (some nil? col) [] (vec col))))
 
 (s/fdef get-column
-        :args (s/cat :m ::matrix :column ::column)
+        :args (s/and (s/cat :m ::matrix :column ::column)
+                     #(< (:column %) (columns (:m %))))
         :ret ::vector)
 
 (defn diagonal
@@ -620,12 +628,11 @@
         :ret ::m/int-non-)
 
 (defn trace
-  "Calculates the trace of a matrix (sum of elements on main diagonal).
-  The matrix need not be square."
-  [m] (if (empty-matrix? m) 0.0 (apply + (diagonal m))))
+  "Calculates the trace of a square matrix (sum of elements on main diagonal)."
+  [square-m] (if (empty-matrix? square-m) 0.0 (apply + (diagonal square-m))))
 
 (s/fdef trace
-        :args (s/cat :m ::matrix)
+        :args (s/cat :square-m ::square-matrix)
         :ret ::number)
 
 (defn get-slices-as-matrix
@@ -878,10 +885,9 @@
   (cond (empty-matrix? m) (diagonal-matrix numbers)
 
         (= (count numbers) (count (diagonal m)))
-        (vec (for [row (range (min (count numbers)))]
-               (let [v (vec numbers)
-                     row-vector (get-row m row)]
-                 (assoc row-vector row (get v row 0.0)))))
+        (let [v (vec numbers)]
+          (vec (for [row (range (count numbers))]
+                 (assoc (get-row m row) row (get v row 0.0)))))
 
         :else nil))
 
@@ -1073,7 +1079,7 @@
 
 (s/fdef square-matrix-by-trimming
         :args (s/cat :m ::matrix)
-        :ret ::matrix)
+        :ret ::square-matrix)
 
 (defn symmetric-matrix-by-averaging
   "Returns a symmetric matrix where each element above or below the diagonal is equal to the
@@ -1088,7 +1094,7 @@
 
 (s/fdef symmetric-matrix-by-averaging
         :args (s/cat :square-m ::square-matrix)
-        :ret ::matrix)
+        :ret ::symmetric-matrix)
 
 ;;;MATRIX MATH
 (defn mx*

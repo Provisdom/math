@@ -300,17 +300,13 @@
   (is= 2 (mx/columns [[1.0 0.5] [2.0 4.0]])))
 
 (deftest get-row-test
-  (is= [] (mx/get-row [[]] 0))
   (is= [1.0] (mx/get-row [[1.0]] 0))
-  (is= [] (mx/get-row [[1.0 2.0]] 1))
   (is= [2.0] (mx/get-row [[1.0] [2.0]] 1))
   (is= [1.0 0.5] (mx/get-row [[1.0 0.5] [2.0 4.0]] 0)))
 
 (deftest get-column-test
-  (is= [] (mx/get-column [[]] 0))
   (is= [1.0] (mx/get-column [[1.0]] 0))
   (is= [2.0] (mx/get-column [[1.0 2.0]] 1))
-  (is= [] (mx/get-column [[1.0] [2.0]] 1))
   (is= [1.0 2.0] (mx/get-column [[1.0 0.5] [2.0 4.0]] 0)))
 
 (deftest diagonal-test
@@ -363,9 +359,7 @@
 (deftest trace-test
   (is= 0.0 (mx/trace [[]]))
   (is= 1 (mx/trace [[1]]))
-  (is= 5.0 (mx/trace [[1.0 0.5] [2.0 4.0]]))
-  (is= 1.0 (mx/trace [[1.0 0.5]]))
-  (is= 1.0 (mx/trace [[1.0] [0.5]])))
+  (is= 5.0 (mx/trace [[1.0 0.5] [2.0 4.0]])))
 
 (deftest get-slices-as-matrix-test
   (is= [[]] (mx/get-slices-as-matrix [[]] {::mx/row-indices 0}))

@@ -9,29 +9,42 @@
             [provisdom.math.tensor :as tensor]
             [provisdom.math.arrays :as ar]
             [provisdom.math.random2 :as random])
-  (:import [org.apache.commons.math3.linear RealMatrix Array2DRowRealMatrix RealVector
+  (:import [org.apache.commons.math3.linear Array2DRowRealMatrix RealVector
                                             QRDecomposition LUDecomposition CholeskyDecomposition
                                             RectangularCholeskyDecomposition Array2DRowRealMatrix
                                             EigenDecomposition SingularValueDecomposition RRQRDecomposition
-                                            DecompositionSolver ConjugateGradient SymmLQ
-                                            PreconditionedIterativeLinearSolver RealLinearOperator
-                                            MatrixUtils]))
+                                            DecompositionSolver MatrixUtils]))
 
 (set! *warn-on-reflection* true)
 
-(declare apache-matrix? apache-square-matrix? apache-matrix eigenvalues rrqr-decomposition rows columns transpose
-         positive-definite-apache-matrix positive-semidefinite-apache-matrix diagonal mx* add
-         covariance-apache-matrix->correlation-apache-matrix correlation-apache-matrix some-kv)
+(declare apache-matrix? apache-square-matrix? apache-matrix eigen-decomposition
+         rrqr-decomposition rows columns
+         transpose positive-definite-apache-matrix-finite-by-squaring
+         positive-semidefinite-apache-matrix-finite-by-squaring diagonal
+         mx* add covariance-apache-matrix->correlation-apache-matrix
+         correlation-apache-matrix-finite-by-squaring some-kv
+         get-entry assoc-entry! symmetric-apache-matrix-by-averaging! assoc-diagonal!)
 
+(def mdl 6)                                                 ;max-dimension-length
+
+(s/def ::exception (partial instance? Exception))
 (s/def ::accu ::tensor/accu)
+(s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 1 :max mdl})))
 (s/def ::number ::m/number)
+(s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
+(s/def ::vector+ ::vector/vector+)
 (s/def ::matrix ::mx/matrix)
-(s/def ::determinant ::number)
 (s/def ::rank ::m/int-non-)
-(s/def ::rows ::mx/rows)
-(s/def ::columns ::mx/columns)
+(s/def ::row ::mx/row)
+(s/def ::column ::mx/column)
+(s/def ::rows (s/with-gen ::m/int-non- #(gen/large-integer* {:min 1 :max mdl})))
+(s/def ::columns (s/with-gen ::m/int-non- #(gen/large-integer* {:min 1 :max mdl})))
 (s/def ::by-row? ::mx/by-row?)
+(s/def ::row-indices ::mx/row-indices)
+(s/def ::column-indices ::mx/column-indices)
+(s/def ::exception-row-indices ::mx/exception-row-indices)
+(s/def ::exception-column-indices ::mx/exception-column-indices)
 
 ;;;MATRIX TYPES
 (defn apache-matrix?
@@ -43,13 +56,63 @@
         :ret boolean?)
 
 (s/def ::apache-matrix (s/with-gen apache-matrix? #(gen/fmap apache-matrix (s/gen ::matrix))))
-(s/def ::VT ::apache-matrix)
-(s/def ::B ::apache-matrix)
-(s/def ::P ::apache-matrix)
-(s/def ::Q ::apache-matrix)
-(s/def ::QT ::apache-matrix)
-(s/def ::R ::apache-matrix)
-(s/def ::D ::apache-matrix)
+
+(defn apache-matrix-finite?
+  "Returns true if an Apache Commons matrix without infinite numbers."
+  [x] (and apache-matrix? (nil? (some-kv (fn [_ _ number] (m/inf? number)) x))))
+
+(s/fdef apache-matrix-finite?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::apache-matrix-finite (s/with-gen apache-matrix-finite? #(gen/fmap apache-matrix (s/gen ::matrix-finite))))
+
+(defn square-apache-matrix?
+  "Returns true if a square Apache Commons matrix (i.e., same number of rows and columns)."
+  [x] (and (apache-matrix? x) (.isSquare ^Array2DRowRealMatrix x)))
+
+(s/fdef square-apache-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::square-apache-matrix (s/with-gen square-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/square-matrix))))
+(s/def ::square-apache-matrix-finite
+  (s/with-gen (s/and square-apache-matrix? apache-matrix-finite?)
+              #(gen/fmap apache-matrix (s/gen ::mx/square-matrix-finite))))
+
+(defn diagonal-apache-matrix?
+  "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
+  [x] (and (apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (= i j) (zero? e)))) x))))
+
+(s/fdef diagonal-apache-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::diagonal-apache-matrix
+  (s/with-gen diagonal-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/diagonal-matrix))))
+(s/def ::permutation ::diagonal-apache-matrix)
+
+(defn upper-triangular-apache-matrix?
+  "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
+  [x] (and (square-apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
+
+(s/fdef upper-triangular-apache-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::upper-triangular-apache-matrix
+  (s/with-gen upper-triangular-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/upper-triangular-matrix))))
+
+(defn lower-triangular-apache-matrix?
+  "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
+  [x] (and (square-apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
+
+(s/fdef lower-triangular-apache-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::lower-triangular-apache-matrix
+  (s/with-gen lower-triangular-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/lower-triangular-matrix))))
 
 (defn symmetric-apache-matrix?
   "Returns true is a symmetric Apache Commons matrix."
@@ -62,94 +125,54 @@
 (s/def ::symmetric-apache-matrix
   (s/with-gen symmetric-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/symmetric-matrix))))
 
-(defn square-apache-matrix?
-  "Returns true if a square Apache Commons matrix (i.e., same number of rows and columns)."
-  [x] (and (apache-matrix? x) (.isSquare ^Array2DRowRealMatrix x)))
+(defn positive-semidefinite-apache-matrix-finite?
+  "Returns true if a positive-semidefinite Apache matrix.
+  Larger `accu` creates more false positives and less false negatives."
+  [x accu]
+  (and (symmetric-apache-matrix? x)
+       (apache-matrix-finite? x)
+       (every? #(m/roughly-non-? % accu)
+               (try (::eigenvalues (eigen-decomposition x))
+                    (catch Exception _ nil)))))
 
-(s/fdef square-apache-matrix?
-        :args (s/cat :x any?)
+(s/fdef positive-semidefinite-apache-matrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
 
-(s/def ::square-apache-matrix (s/with-gen square-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/square-matrix))))
-(s/def ::V ::square-apache-matrix)
-(s/def ::inverse ::square-apache-matrix)
+(s/def ::positive-semidefinite-apache-matrix-finite
+  (s/with-gen #(positive-semidefinite-apache-matrix-finite? % m/*sgl-close*)
+              #(gen/fmap positive-semidefinite-apache-matrix-finite-by-squaring (s/gen ::mx/square-matrix-finite))))
 
-(defn diagonal-apache-matrix?
-  "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
-  [x] (and (apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (= i j) (zero? e)))) x))))
+(defn positive-definite-apache-matrix-finite?
+  "Returns true if a positive definite Apache matrix.
+  Larger `accu` creates more false negatives and less false positives."
+  [x accu]
+  (and (symmetric-apache-matrix? x)
+       (apache-matrix-finite? x)
+       (every? #(> % accu)
+               (try (::eigenvalues (eigen-decomposition x))
+                    (catch Exception _ nil)))))
 
-(s/fdef diagonal-apache-matrix?
-        :args (s/cat :x any?)
+(s/fdef positive-definite-apache-matrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
 
-(s/def ::diagonal-apache-matrix (s/with-gen diagonal-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/diagonal-matrix))))
-(s/def ::S ::diagonal-apache-matrix)
+(s/def ::positive-definite-apache-matrix-finite
+  (s/with-gen #(positive-definite-apache-matrix-finite? % m/*sgl-close*)
+              #(gen/fmap positive-definite-apache-matrix-finite-by-squaring (s/gen ::mx/square-matrix-finite))))
 
-(defn upper-triangular-apache-matrix?
-  "Returns true if an upper triangular matrix (the entries below the main diagonal are all zero)."
-  [x] (and (square-apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (<= i j) (zero? e)))) x))))
+(defn correlation-apache-matrix-finite?
+  "Returns true if a positive definite Apache Commons matrix with a unit diagonal.
+  Larger `accu` creates more false negatives and less false positives."
+  [x accu] (and (positive-definite-apache-matrix-finite? x accu) (every? m/one? (diagonal x))))
 
-(s/fdef upper-triangular-apache-matrix?
-        :args (s/cat :x any?)
+(s/fdef correlation-apache-matrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
 
-(s/def ::upper-triangular-apache-matrix
-  (s/with-gen upper-triangular-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/upper-triangular-matrix))))
-(s/def ::U ::upper-triangular-apache-matrix)
-
-(defn lower-triangular-apache-matrix?
-  "Returns true if a lower triangular matrix (the entries above the main diagonal are all zero)."
-  [x] (and (square-apache-matrix? x) (nil? (some-kv (fn [i j e] (not (or (>= i j) (zero? e)))) x))))
-
-(s/fdef lower-triangular-apache-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(s/def ::lower-triangular-apache-matrix
-  (s/with-gen lower-triangular-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/lower-triangular-matrix))))
-(s/def ::L ::lower-triangular-apache-matrix)
-(s/def ::UT ::lower-triangular-apache-matrix)
-
-(defn positive-semidefinite-apache-matrix?
-  "Returns true if `apache-m` is a positive-semidefinite Apache matrix."
-  ([apache-m] (positive-semidefinite-apache-matrix? apache-m m/*dbl-close*))
-  ([apache-m accu]
-   (and (symmetric-apache-matrix? apache-m) (every? #(m/roughly-non-? % accu) (eigenvalues apache-m)))))
-
-(s/fdef positive-semidefinite-apache-matrix?
-        :args (s/cat :apache-m ::apache-matrix :accu (s/? ::accu))
-        :ret boolean?)
-
-(s/def ::positive-semidefinite-apache-matrix
-  (s/with-gen positive-semidefinite-apache-matrix?
-              #(gen/fmap (fn [m] (positive-semidefinite-apache-matrix m)) (s/gen ::mx/square-matrix))))
-
-(defn positive-definite-apache-matrix?
-  "Returns true if `apache-square-m` is a positive definite Apache matrix."
-  ([square-apache-m] (positive-definite-apache-matrix? square-apache-m m/*dbl-close*))
-  ([square-apache-m accu]
-   (and (symmetric-apache-matrix? square-apache-m) (every? #(> % accu) (eigenvalues square-apache-m)))))
-
-(s/fdef positive-definite-apache-matrix?
-        :args (s/cat :square-apache-m ::square-apache-matrix :accu (s/? ::accu))
-        :ret boolean?)
-
-(s/def ::positive-definite-apache-matrix
-  (s/with-gen positive-definite-apache-matrix?
-              #(gen/fmap (fn [m] (positive-definite-apache-matrix m)) (s/gen ::mx/square-matrix))))
-
-(defn correlation-apache-matrix?
-  "Returns true if `apache-m` has a unit diagonal and is a positive definite Apache Commons matrix."
-  ([apache-m] (and (positive-definite-apache-matrix? apache-m) (every? m/one? (diagonal apache-m))))
-  ([apache-m accu] (and (positive-definite-apache-matrix? apache-m accu) (every? m/one? (diagonal apache-m)))))
-
-(s/fdef correlation-apache-matrix?
-        :args (s/cat :m ::matrix :accu (s/? ::accu))
-        :ret boolean?)
-
-(s/def ::correlation-apache-matrix
-  (s/with-gen correlation-apache-matrix?
-              #(gen/fmap (fn [m] (correlation-apache-matrix m)) (s/gen ::mx/square-matrix))))
+(s/def ::correlation-apache-matrix-finite
+  (s/with-gen #(correlation-apache-matrix-finite? % m/*sgl-close*)
+              #(gen/fmap correlation-apache-matrix-finite-by-squaring (s/gen ::mx/square-matrix-finite))))
 
 ;;;MATRIX CONSTRUCTORS
 (defn apache-matrix
@@ -168,55 +191,91 @@
         :args (s/cat :apache-m ::apache-matrix)
         :ret ::matrix)
 
-(defn positive-semidefinite-apache-matrix
-  "Returns a positive semidefinite Apache Commons matrix."
-  [square-apache-m] (mx* square-apache-m (transpose square-apache-m)))
+(defn positive-semidefinite-apache-matrix-finite-by-squaring
+  "Returns a positive semidefinite Apache Commons matrix by first squaring 'square-apache-m-finite'."
+  [square-apache-m-finite]
+  (let [size (rows square-apache-m-finite)
+        new-m square-apache-m-finite]
+    (loop [i 0]
+      (when (< i 310)
+        (let [lower-m (mx* new-m (apache-matrix (mx/diagonal-matrix (repeat size (m/pow 10 (- (m/pow 2 i)))))))
+              lower-m (mx* lower-m (transpose lower-m))
+              _ (symmetric-apache-matrix-by-averaging! lower-m)]
+          (if (positive-semidefinite-apache-matrix-finite? lower-m m/*sgl-close*)
+            lower-m
+            (recur (inc i))))))))
 
-(s/fdef positive-semidefinite-apache-matrix
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret ::positive-semidefinite-apache-matrix)
+(s/fdef positive-semidefinite-apache-matrix-finite-by-squaring
+        :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
+        :ret (s/nilable ::positive-semidefinite-apache-matrix-finite))
 
-(defn positive-definite-apache-matrix
-  "Returns a positive definite Apache Commons matrix."
-  [square-apache-m]
-  (let [size (rows square-apache-m)
-        shake-m (add square-apache-m (mx/constant-matrix size size 2E-15))]
-    (positive-semidefinite-apache-matrix shake-m)))
+(defn positive-definite-apache-matrix-finite-by-squaring
+  "Returns a positive definite Apache Commons matrix squaring it.
+  Will tweak original matrix if necessary to ensure positive definite."
+  [square-apache-m-finite]
+  (let [size (rows square-apache-m-finite)
+        new-m square-apache-m-finite]
+    (loop [i 0]
+      (when (< i 10)
+        (let [lower-m (mx* new-m (apache-matrix (mx/diagonal-matrix (repeat size (m/pow 10 (- (m/pow 2 i)))))))
+              lower-m (add lower-m (apache-matrix (mx/constant-matrix
+                                                    size size (* (m/sgn i) (m/pow 10 (- i m/*sgl-digits*))))))
+              _ (symmetric-apache-matrix-by-averaging! lower-m)]
+          (if (positive-definite-apache-matrix-finite? lower-m m/*sgl-close*)
+            lower-m
+            (recur (inc i))))))))
 
-(s/fdef positive-definite-apache-matrix
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret ::positive-definite-apache-matrix)
+(s/fdef positive-definite-apache-matrix-finite-by-squaring
+        :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
+        :ret (s/nilable ::positive-definite-apache-matrix-finite))
 
-(defn correlation-apache-matrix
-  "Returns a Correlation Apache Commons matrix."
-  [square-apache-m]
-  (covariance-apache-matrix->correlation-apache-matrix (positive-definite-apache-matrix square-apache-m)))
+(defn correlation-apache-matrix-finite-by-squaring
+  "Returns a Correlation Apache Commons matrix by first squaring 'square-apache-m'."
+  [square-apache-m-finite]
+  (let [new-m (covariance-apache-matrix->correlation-apache-matrix
+                (positive-definite-apache-matrix-finite-by-squaring square-apache-m-finite))
+        size (when new-m (rows new-m))]
+    (when new-m
+      (loop [i 0]
+        (when (< i 100)
+          (let [lower-m (mx* new-m (apache-matrix (mx/diagonal-matrix (repeat size (m/one- (* 0.01 i))))))
+                _ (symmetric-apache-matrix-by-averaging! lower-m)
+                _ (assoc-diagonal! lower-m (repeat size 1.0))]
+            (if (correlation-apache-matrix-finite? lower-m m/*sgl-close*)
+              lower-m
+              (recur (inc i)))))))))
 
-(s/fdef correlation-apache-matrix
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret ::positive-definite-apache-matrix)
+(s/fdef correlation-apache-matrix-finite-by-squaring
+        :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
+        :ret (s/nilable ::correlation-apache-matrix-finite))
 
-(defn rnd-positive-definite-apache-matrix!
+(defn rnd-positive-definite-apache-matrix-finite!
   "Returns a positive definite Apache Commons matrix with a random spectrum.
   The orthogonal matrices are generated by using 2 × `size` composed Householder reflections.
   Alternative #1: Sample from the Inverse-Wishart Distribution.
-  Alternative #2: Use [[positive-definite-apache-matrix]] with a random square matrix."
-  [size] (apache-matrix (mx/rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!))))))
+  Alternative #2: Use [[positive-definite-apache-matrix-by-squaring]] with a random square matrix."
+  [size]
+  (loop [i 0]
+    (if (< i 100)
+      (let [m (apache-matrix (mx/rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!)))))]
+        (if (positive-definite-apache-matrix-finite? m m/*sgl-close*)
+          m
+          (recur (inc i)))))))
 
-(s/fdef rnd-positive-definite-apache-matrix!
+(s/fdef rnd-positive-definite-apache-matrix-finite!
         :args (s/cat :size ::size)
-        :ret ::positive-apache-matrix)
+        :ret ::positive-definite-apache-matrix-finite)
 
-(defn rnd-correlation-apache-matrix!
+(defn rnd-correlation-apache-matrix-finite!
   "Returns a correlation Apache Commons matrix from a covariance matrix with a random spectrum.
   The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
   Alternative #1: Sample Covariance from the Inverse-Wishart Distribution.
-  Alternative #2: Use [[correlation-apache-matrix]] with a random square matrix."
-  [size] (covariance-apache-matrix->correlation-apache-matrix (rnd-positive-definite-apache-matrix! size)))
+  Alternative #2: Use [[correlation-apache-matrix-by-squaring]] with a random square matrix."
+  [size] (covariance-apache-matrix->correlation-apache-matrix (rnd-positive-definite-apache-matrix-finite! size)))
 
-(s/fdef rnd-correlation-apache-matrix!
+(s/fdef rnd-correlation-apache-matrix-finite!
         :args (s/cat :size ::size)
-        :ret ::correlation-apache-matrix)
+        :ret ::correlation-apache-matrix-finite)
 
 ;;;MATRIX INFO
 (defn rows
@@ -240,7 +299,8 @@
   [apache-m row column] (.getEntry ^Array2DRowRealMatrix apache-m row column))
 
 (s/fdef get-entry
-        :args (s/cat :apache-m ::apache-matrix :row ::row :column ::column)
+        :args (s/and (s/cat :apache-m ::apache-matrix :row ::row :column ::column)
+                     #(and (< (:row %) (rows (:apache-m %))) (< (:column %) (columns (:apache-m %)))))
         :ret ::number)
 
 (defn get-row
@@ -248,7 +308,8 @@
   [apache-m row] (vec (.getRow ^Array2DRowRealMatrix apache-m row)))
 
 (s/fdef get-row
-        :args (s/cat :apache-m ::apache-mmatrix :row ::row)
+        :args (s/and (s/cat :apache-m ::apache-matrix :row ::row)
+                     #(< (:row %) (rows (:apache-m %))))
         :ret ::vector)
 
 (defn get-column
@@ -256,7 +317,8 @@
   [apache-m column] (vec (.getColumn ^Array2DRowRealMatrix apache-m column)))
 
 (s/fdef get-column
-        :args (s/cat :apache-mm ::apache-mmatrix :column ::column)
+        :args (s/and (s/cat :apache-m ::apache-matrix :column ::column)
+                     #(< (:column %) (columns (:apache-m %))))
         :ret ::vector)
 
 (defn diagonal
@@ -268,18 +330,76 @@
    (reduce (fn [tot e] (conj tot (get-entry apache-m e e))) [] (range (min (rows apache-m) (columns apache-m)))))
   ([apache-m k]
    (let [r (if (neg? k) (- k) 0)
-           c (if (pos? k) k 0)
-           nc (- (columns apache-m) c)
-           nr (- (rows apache-m) r)
-           start (- (min r c))
-           end (min nc nr)]
-       (if (pos? end)
-         (vec (for [i (range start end)] (get-entry apache-m (+ i r) (+ i c))))
-         []))))
+         c (if (pos? k) k 0)
+         nc (- (columns apache-m) c)
+         nr (- (rows apache-m) r)
+         start (- (min r c))
+         end (min nc nr)]
+     (if (pos? end)
+       (vec (for [i (range start end)] (get-entry apache-m (+ i r) (+ i c))))
+       []))))
 
 (s/fdef diagonal
         :args (s/cat :apache-m ::apache-matrix :k (s/? ::m/int))
         :ret ::vector)
+
+(defn trace
+  "Calculates the trace of a square Apache Commons matrix (sum of elements on main diagonal)."
+  [square-apache-m] (.getTrace ^Array2DRowRealMatrix square-apache-m))
+
+(s/fdef trace
+        :args (s/cat :square-apache-m ::square-apache-matrix)
+        :ret ::number)
+
+(defn get-slices-as-matrix
+  "Performs a slice on the Apache Commons matrix given by the options.
+  Options:
+    `::row-indices` returns all rows by default, can pass a row index or sequence of row indices
+    `::column-indices` returns all columns by default, can pass a column index or sequence of column indices
+    `::exception-row-indices` can pass a row index or sequence of row indices to exclude
+    `::exception-column-indices` can pass a column index or sequence of column indices to exclude.
+    Exceptions override inclusions."
+  [apache-m {::keys [row-indices column-indices exception-row-indices exception-column-indices]}]
+  (let [calc-fn (fn [i except-i n]
+                  (cond (and (not i) (not except-i)) true
+                        (not except-i) (if (number? i)
+                                         (if (< i n) i [])
+                                         (remove #(>= % n) i))
+                        (number? i) (if (number? except-i)
+                                      (if (= except-i i) [] (if (< i n) i []))
+                                      (if (contains? (set except-i) i) [] (if (< i n) i [])))
+                        :else (let [indices (or i (range n))]
+                                (if (number? except-i)
+                                  (remove #(or (= except-i %) (>= % n)) indices)
+                                  (reduce
+                                    (fn [tot e] (if (or (>= e n) (some #(= % e) except-i)) tot (conj tot e)))
+                                    []
+                                    indices)))))
+        rs (calc-fn row-indices exception-row-indices (rows apache-m))
+        cs (calc-fn column-indices exception-column-indices (columns apache-m))
+        new-m (cond
+                (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) nil
+                (and (number? rs) (number? cs)) [[(get-entry apache-m rs cs)]]
+                (and (number? rs) (coll? cs)) (mx/row-matrix (let [r (get-row apache-m rs)] (map #(get r %) cs)))
+                (and (number? rs) (true? cs)) (mx/row-matrix (get-row apache-m rs))
+                (and (coll? rs) (number? cs)) (mx/column-matrix (let [c (get-column apache-m cs)] (map #(nth c %) rs)))
+                (and (coll? rs) (coll? cs)) (mapv (fn [row] (reduce (fn [tot c] (conj tot (get row c))) [] cs))
+                                                  (map #(get-row apache-m %) rs))
+                (and (coll? rs) (true? cs)) (mapv #(get-row apache-m %) rs)
+                (and (true? rs) (number? cs)) (mx/column-matrix (get-column apache-m cs))
+                (and (true? rs) (coll? cs)) (mapv (fn [row] (reduce (fn [tot c] (conj tot (get-row row c))) [] cs))
+                                                  apache-m)
+                (and (true? rs) (true? cs)) apache-m)]
+    (when new-m
+      (if (apache-matrix? new-m) new-m (apache-matrix new-m)))))
+
+(s/fdef get-slices-as-matrix
+        :args (s/cat :apache-m ::apache-matrix
+                     :opts (s/keys :opt [::row-indices
+                                         ::column-indices
+                                         ::exception-row-indices
+                                         ::exception-column-indices]))
+        :ret (s/nilable ::apache-matrix))
 
 (defn some-kv
   "Returns the first logical true value of (pred row column number) for any number in Apache Commons matrix, else nil.
@@ -294,11 +414,11 @@
              (recur (inc row))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :r ::row :c ::column :e ::m/number)
+        :args (s/cat :pred (s/fspec :args (s/cat :row ::row :column ::column :number ::number)
                                     :ret boolean?)
                      :apache-m ::apache-matrix
                      :opts (s/? (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::m/number))
+        :ret (s/nilable ::number))
 
 ;;;MATRIX MANIPULATION
 (defn transpose
@@ -309,6 +429,54 @@
         :args (s/cat :apache-m ::apache-matrix)
         :ret ::apache-matrix)
 
+(defn assoc-entry!
+  "Sets an entry in an Apache Commons matrix."
+  [apache-m row column number]
+  (.setEntry ^Array2DRowRealMatrix apache-m ^long row ^long column ^double (double number)))
+
+(s/fdef assoc-entry!
+        :args (s/cat :apache-m ::apache-matrix :row ::row :column ::column :number ::number)
+        :ret nil)
+
+(defn assoc-diagonal!
+  "Sets a diagonal in an Apache Commons matrix using the specified numbers."
+  [apache-m numbers]
+  (let [v (vec numbers)]
+    (doseq [rc (range (count numbers))]
+      (assoc-entry! apache-m rc rc (get v rc 0.0)))))
+
+(s/fdef assoc-diagonal!
+        :args (s/and (s/cat :apache-m ::apache-matrix :numbers ::numbers)
+                     #(= (count (:numbers %)) (count (diagonal (:apache-m %)))))
+        :ret nil)
+
+(defn symmetric-apache-matrix-by-averaging!
+  "Updates symmetric Apache Commons matrix where each element above or below the diagonal is equal to the
+  average of the corresponding numbers.
+  This is useful to help with rounding errors."
+  [square-apache-m]
+  (doseq [row (range (rows square-apache-m))]
+    (doseq [column (range (inc row) (columns square-apache-m))]
+      (let [number (* 0.5 (+ (get-entry square-apache-m row column) (get-entry square-apache-m column row)))]
+        (assoc-entry! square-apache-m row column number)
+        (assoc-entry! square-apache-m column row number)))))
+
+(s/fdef symmetric-apache-matrix-by-averaging!
+        :args (s/cat :square-apache-m ::square-apache-matrix)
+        :ret nil)
+
+(defn square-apache-matrix-by-trimming
+  "Returns a square Apache Commons matrix by truncating values from the given matrix `apache-m`."
+  [apache-m]
+  (let [r (rows apache-m)
+        c (columns apache-m)
+        k (if (> r c) ::exception-row-indices ::exception-column-indices)]
+    (get-slices-as-matrix apache-m {k (range (min c r) (max c r))})))
+
+(s/fdef square-apache-matrix-by-trimming
+        :args (s/cat :apache-m ::apache-matrix)
+        :ret (s/nilable ::apache-matrix))
+
 (defn correlation-apache-matrix->covariance-apache-matrix
   "Returns Covariance Apache Commons matrix from a Correlation Apache Commons matrix."
   [correlation-apache-matrix variances]
@@ -316,18 +484,21 @@
     (mx* sqrt-m correlation-apache-matrix sqrt-m)))
 
 (s/fdef correlation-apache-matrix->covariance-apache-matrix
-        :args (s/cat :correlation-apache-matrix ::correlation-apache-matrix :variances ::vector)
-        :ret ::positive-definite-apache-matrix)
+        :args (s/cat :correlation-apache-matrix ::correlation-apache-matrix-finite :variances ::vector+)
+        :ret ::positive-definite-apache-matrix-finite)
 
 (defn covariance-apache-matrix->correlation-apache-matrix
   "Returns Correlation Apache Commons matrix from a Covariance Apache Commons matrix."
   [covariance-apache-matrix]
-  (let [inv-sqrt (apache-matrix (mx/diagonal-matrix (map #(m/pow % -0.5) (diagonal covariance-apache-matrix))))]
-    (mx* inv-sqrt covariance-apache-matrix inv-sqrt)))
+  (let [inv-sqrt (apache-matrix (mx/diagonal-matrix (map #(m/pow % -0.5) (diagonal covariance-apache-matrix))))
+        new-mx (mx* inv-sqrt covariance-apache-matrix inv-sqrt)
+        _ (symmetric-apache-matrix-by-averaging! new-mx)
+        _ (assoc-diagonal! new-mx (repeat (rows inv-sqrt) 1.0))]
+    new-mx))
 
 (s/fdef covariance-apache-matrix->correlation-apache-matrix
-        :args (s/cat :covariance-apache-matrix ::positive-definite-apache-matrix)
-        :ret ::correlation-apache-matrix)
+        :args (s/cat :covariance-apache-matrix ::positive-definite-apache-matrix-finite)
+        :ret ::correlation-apache-matrix-finite)
 
 ;;;MATRIX MATH
 (defn mx*
@@ -377,51 +548,98 @@
         :ret (s/nilable ::apache-matrix))
 
 ;;;MATRIX DECOMPOSITION
-(defn lu-decomposition-with-inverse-and-determinant
-  "Computes the LU Decomposition, the inverse, and the determinant."
-  [apache-square-m]
-  (let [lud (LUDecomposition. ^Array2DRowRealMatrix apache-square-m)
-        s (.getSolver lud)
-        inverse (.getInverse s)
-        det (.getDeterminant lud)]
-    {::inverse inverse, ::determinant det, ::L (.getL lud), ::U (.getU lud), ::P (.getP lud)}))
-
-(s/fdef lu-decomposition-with-inverse-and-determinant
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret (s/keys :req [::inverse ::determinant ::L ::U ::P]))
-
-(defn inverse                                               ;;probable that Clatrix is faster
-  "Computes the inverse of an Apache matrix through LU Decomposition."
-  [apache-square-m]
-  (let [lud (LUDecomposition. ^Array2DRowRealMatrix apache-square-m)
-        s (.getSolver lud)
-        sol (.getInverse s)]
-    sol))
+(s/def ::inverse (s/nilable ::square-apache-matrix))
+(defn inverse
+  "Returns the inverse of a square Apache Commons matrix.
+  Uses QR Decompostion by default but will use other methods depending on matrix structure."
+  [square-apache-m]
+  (try (MatrixUtils/inverse square-apache-m)
+       (catch Exception _ nil)))
 
 (s/fdef inverse
         :args (s/cat :square-apache-m ::square-apache-matrix)
         :ret ::inverse)
 
+(s/def ::L ::lower-triangular-apache-matrix)
+(s/def ::U ::upper-triangular-apache-matrix)
+(s/def ::determinant ::number)
+(defn lu-decomposition-with-determinant-and-inverse
+  "Returns a map containing
+      ::L -- the lower triangular factor Apache Commons matrix
+      ::U -- the upper triangular factor Apache Commons matrix
+      ::permutation -- the permutation Apache Commons matrix
+      ::determinant -- the determinant
+      ::inverse -- the inverse Apache Commons matrix."
+  [apache-square-m]
+  (let [lud (LUDecomposition. ^Array2DRowRealMatrix apache-square-m)
+        s (.getSolver lud)
+        inverse (try (.getInverse s) (catch Exception _ nil))
+        det (.getDeterminant lud)]
+    {::L (.getL lud), ::U (.getU lud), ::permutation (.getP lud), ::determinant det, ::inverse inverse}))
+
+(s/fdef lu-decomposition-with-determinant-and-inverse
+        :args (s/cat :square-apache-m ::square-apache-matrix)
+        :ret (s/keys :req [::L ::U ::permutation ::determinant ::inverse]))
+
+(defn lu-decomposition-with-determinant
+  "Returns a map containing:
+      ::L -- the lower triangular factor Apache Commons matrix
+      ::U -- the upper triangular factor Apache Commons matrix
+      ::permutation -- the permutation Apache Commons matrix
+      ::determinant -- the determinant."
+  [square-apache-m]
+  (let [lud (LUDecomposition. ^Array2DRowRealMatrix square-apache-m)]
+    {::L (.getL lud), ::U (.getU lud), ::permutation (.getP lud) ::determinant (.getDeterminant lud)}))
+
+(s/fdef lu-decomposition-with-determinant
+        :args (s/cat :square-apache-m ::square-apache-matrix)
+        :ret (s/keys :req [::L ::U ::P ::determinant]))
+
+(s/def ::eigenvectorsT ::square-apache-matrix)
+(s/def ::eigenvaluesD ::diagonal-apache-matrix)
+(s/def ::eigenvectors ::square-apache-matrix)
+(s/def ::eigenvalues (s/nilable ::vector/vector))
+
+(defn eigen-decomposition
+  "Computes the Eigendecomposition of a diagonalisable matrix.
+   Returns a map containing:
+   ::eigenvectorsT -- square Apache Commons matrix with each column containing the eigenvectors
+   ::eigenvaluesD -- diagonal Apache Commons matrix whose diagonal elements are the eigenvalues
+   ::eigenvalues -- vector of real parts of eigenvalues (nil if imaginary parts exist)
+   ::eigenvectors -- square Apache Commons matrix with each row containing the eigenvectors
+   'square-apache-m-finite' = `eigenvectorsT` × `eigenvaluesD` × (inverse `eigenvectorsT`)."
+  [square-apache-m-finite]
+  (let [r (EigenDecomposition. ^Array2DRowRealMatrix square-apache-m-finite)
+        eigenvalues (when-not (.hasComplexEigenvalues r) (vec (.getRealEigenvalues r)))]
+    {::eigenvectorsT (.getV r) ::eigenvaluesD (.getD r) ::eigenvalues eigenvalues ::eigenvectors (.getVT r)}))
+
+(s/fdef eigen-decomposition
+        :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
+        :ret (s/keys :req [::eigenvectorsT ::eigenvaluesD ::eigenvalues ::eigenvectors]))
+
+(s/def ::cholesky-L ::lower-triangular-apache-matrix)
+(s/def ::cholesky-LT ::upper-triangular-apache-matrix)
 (defn cholesky-decomposition
   "Computes the Cholesky decomposition of a positive definite Apache Commons matrix.
-   Returns a map of two Apache Commons matrices ::L and ::U.
-   Intended usage: (let [[L U] (cholesky-decomposition M)] ....).
-   This is the Cholesky square root of a matrix, `L` and `U` such that `positive-definite-apache-m` = L × U.
+   Returns a map of two Apache Commons matrices ::cholesky-L and ::choleskyLT.
+   This is the Cholesky square root of a matrix, 'L' and 'LT' such that `positive-definite-apache-m` = L × LT.
    Note that `positive-definite-apache-m` must be positive semidefinite for this to exist,
       but [[cholesky-decomposition]] requires strict positivity."
   [positive-definite-apache-m]
   (let [r (CholeskyDecomposition. ^Array2DRowRealMatrix positive-definite-apache-m)]
-    {::L (.getL r) ::U (.getLT r)}))
+    {::cholesky-L (.getL r) ::cholesky-LT (.getLT r)}))
 
 (s/fdef cholesky-decomposition
-        :args (s/cat :positive-definite-apache-m ::positive-definite-apache-matrix)
-        :ret (s/keys :req [::L ::U]))
+        :args (s/cat :positive-definite-apache-m ::positive-definite-apache-matrix-finite)
+        :ret (s/keys :req [::cholesky-L ::cholesky-LT]))
 
-(defn cholesky-rectangular
+(s/def ::rectangular-root ::apache-matrix)
+(defn rectangular-cholesky-decomposition
   "Calculates the rectangular Cholesky decomposition of a positive semidefinite Apache Commons matrix.
   The rectangular Cholesky decomposition of a real 'positive-semidefinite-apache-m' consists of a
-  rectangular matrix B with the same number of rows such that:
-      'positive-semidefinite-apache-m' is almost equal to BB*, depending on a user-defined tolerance.
+  `rectangular-root` matrix with the same number of rows such that:
+      'positive-semidefinite-apache-m' is almost equal to `rectangular-root` × (transpose `rectangular-root`),
+      depending on a user-defined tolerance.
   In a sense, this is the square root of 'positive-semidefinite-apache-m'.
   The difference with respect to the regular CholeskyDecomposition is that rows/columns may be permuted
   (hence the rectangular shape instead of the traditional triangular shape) and there is a threshold to ignore small
@@ -432,42 +650,45 @@
    'accu' - Diagonal elements threshold under which columns are considered to be dependent on
       previous ones and are discarded.
       Returns a map containing:
-         :B -- rectangular root Apache Commons matrix
-         :rank -- rank is the number of independent rows of original matrix,
-            and the number of columns of root matrix B."
+         ::rectangular-root -- rectangular root Apache Commons matrix
+         ::rank -- rank is the number of independent rows of original matrix,
+            and the number of columns of `rectangular-root` matrix."
   [positive-semidefinite-apache-m accu]
   (let [r (RectangularCholeskyDecomposition. ^Array2DRowRealMatrix positive-semidefinite-apache-m (double accu))]
-    {::B    (.getRootMatrix r)
-     ::rank (.getRank r)}))
+    {::rectangular-root (.getRootMatrix r) ::rank (.getRank r)}))
 
-(s/fdef cholesky-rectangular
-        :args (s/cat :positive-semidefinite-apache-m ::positive-semidefinite-apache-matrix :accu ::accu)
-        :ret (s/keys :req [::B ::rank]))
+(s/fdef rectangular-cholesky-decomposition
+        :args (s/cat :positive-semidefinite-apache-m ::positive-semidefinite-apache-matrix-finite :accu ::accu)
+        :ret (s/keys :req [::rectangular-root ::rank]))
 
+(s/def ::svd-left ::apache-matrix)
+(s/def ::singular-values ::diagonal-apache-matrix)
+(s/def ::svd-right ::apache-matrix)
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of an Apache Commons matrix.
-  The Singular Value Decomposition of matrix A is a set of three
-   matrices: U, S and V such that A = U × S × VT.
-   Let A be a m × n matrix, then U is a m × p orthogonal matrix of the left singular vectors,
-   S is a p × p diagonal matrix of singular values with positive or null elements,
-   V is a p × n orthogonal matrix of the right singular vectors (hence VT is also orthogonal) where p=min(m,n).
+  The Singular Value Decomposition of `apache-m` is a set of three
+   matrices: `svd-left`, `singular-values`, and `svd-right` such that:
+    `apache-m` = `svd-left` × `singular-values` × `svd-right`.
+   Let `apache-m` be a m × n matrix, then `svd-left` is a m × p orthogonal matrix of the left singular vectors,
+   `singular-values` is a p × p diagonal matrix of singular values with positive or nil elements,
+   and are ordered from largest to smallest.
+   `svd-right` is a p × n orthogonal matrix of the right singular vectors where p = min(m,n).
+   Note that Identity Matrix = (transpose `svd-left`) × `svd-left` = `svd-right` × (transpose `svd-right`).
    Returns a map containing:
-      :S -- diagonal Apache Commons matrix S
-      :V -- Apache Commons matrix V
-      :U -- Apache Commons matrix U
-      :VT -- transpose of Apache Commons matrix V
-      :UT -- transpose of Apache Commons matrix U
-      :rank -- rank"
+      ::svd-left -- Apache Commons matrix of left singular vectors
+      ::singular-values -- diagonal Apache Commons matrix
+      ::svd-right -- transpose of Apache Commons matrix of right singular vectors
+      ::rank -- rank."
   [apache-m]
   (let [d (SingularValueDecomposition. ^Array2DRowRealMatrix apache-m)]
-    {::S (.getS d), ::V (.getV d), ::U (.getU d), ::VT (.getVT d), ::UT (.getUT d), ::rank (.getRank d)}))
+    {::svd-left (.getU d), ::singular-values (.getS d), ::svd-right (.getVT d), ::rank (.getRank d)}))
 
 (s/fdef sv-decomposition
         :args (s/cat :apache-m ::apache-matrix)
-        :ret (s/keys :req [::S ::V ::U ::VT ::UT ::rank]))
+        :ret (s/keys :req [::svd-left ::singular-values ::svd-right ::rank]))
 
 (defn condition
-  "The `singular-values-apache-matrix` is the diagonal matrix of singular values, the `S`, from [[sv-decomposition]].
+  "The `singular-values-apache-matrix` is the diagonal matrix of ::singular-values from [[sv-decomposition]].
   Returns the norm2 condition number,
   which is the maximum element value from the `singular-values-apache-matrix` divided by the minimum element value."
   [singular-values-apache-matrix]
@@ -475,39 +696,61 @@
     (m/div (apply max vs) (apply min vs) nil)))
 
 (s/fdef condition
-        :args (s/cat :apache-singular-values-matrix ::apache-matrix)
+        :args (s/cat :apache-singular-values-matrix ::singular-values)
         :ret (s/nilable ::number))
 
-(defn lu-decomposition
+(s/def ::Q ::apache-matrix)
+(s/def ::R ::upper-triangular-apache-matrix)
+(s/def ::linear-least-squares-solution (s/or :sol ::vector :exception ::exception))
+(s/def ::error ::symmetric-apache-matrix)
+(defn qr-decomposition-with-linear-least-squares-and-error-matrix
   "Returns a map containing:
-      ::L -- the lower triangular factor Apache Commons matrix
-      ::U -- the upper triangular factor Apache Commons matrix
-      ::P -- the permutation Apache Commons matrix"
-  [square-apache-m]
-  (let [lud (LUDecomposition. ^Array2DRowRealMatrix square-apache-m)]
-    {::L (.getL lud), ::U (.getU lud), ::P (.getP lud)}))
+      ::Q -- orthogonal factors of `apache-m1`
+      ::R -- the upper triangular factors of `apache-m2`
+      ::linear-least-squares -- vector with linear least squares solution
+      ::error -- Apache Commons matrix of errors."
+  [apache-m1 apache-m2]
+  (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
+        r (.getR d)
+        trimmed-r (mx/square-matrix-by-trimming r)]
+    (when-not (= (mx/columns trimmed-r) (mx/columns apache-m1))
+      (ex-info "'apache-m1' doesn't have enough independent rows."
+               {:fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)}))
+    (let [ri (inverse trimmed-r)
+          error (mx/mx* ri (mx/transpose ri))
+          ^DecompositionSolver s (.getSolver d)
+          ex-d {:fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)}
+          solution (try (vec (.toArray ^RealVector (.solve s ^Array2DRowRealMatrix apache-m2)))
+                        (catch Exception e (ex-info (.getMessage e) ex-d)))]
+      {::Q (.getQ d), ::R r, ::linear-least-squares-solution solution, ::error error})))
 
-(s/fdef lu-decomposition
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret (s/keys :req [::L ::U ::P]))
+(s/fdef qr-decomposition-with-linear-least-squares-and-error-matrix
+        :args (s/cat :apache-m1 ::apache-matrix :apache-m2 ::apache-matrix)
+        :ret (s/or :sol (s/keys :req [::Q ::R ::linear-least-squares-solution ::error])
+                   :exception ::exception))
 
-(defn determinant
-  "Calculates the determinant of a square Apache Commons matrix through LU Decomposition."
-  [square-apache-m]
-  (let [lud (LUDecomposition. ^Array2DRowRealMatrix square-apache-m)
-        det (.getDeterminant lud)]
-    det))
+(defn qr-decomposition-with-linear-least-squares
+  "Returns a map containing:
+    ::Q -- orthogonal factors of `apache-m1`
+    ::R -- the upper triangular factors of `apache-m2`
+    ::linear-least-squares -- vector with linear least squares solution."
+  [apache-m1 apache-m2]
+  (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
+        ^DecompositionSolver s (.getSolver d)
+        ex-d {:fn (var qr-decomposition-with-linear-least-squares)}
+        solution (try (vec (.toArray ^RealVector (.solve s ^Array2DRowRealMatrix apache-m2)))
+                      (catch Exception e (ex-info (.getMessage e) ex-d)))]
+    {::Q (.getQ d), ::R (.getR d), ::linear-least-squares-solution solution}))
 
-(s/fdef determinant
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret ::number)
+(s/fdef qr-decomposition-with-linear-least-squares
+        :args (s/cat :apache-m1 ::apache-matrix :apache-m2 ::apache-matrix)
+        :ret (s/keys :req [::Q ::R ::linear-least-squares-solution]))
 
 (defn qr-decomposition
   "Computes the QR decomposition of a matrix.
-Returns a vector containing two matrices [Q R]
-Intended usage: (let [[Q R] (qr-decomposition M)] ....)
-   Q -- orthogonal factors
-   R -- the upper triangular factors."
+  Returns a map containing:
+    ::Q -- orthogonal factors
+    ::R -- the upper triangular factors."
   [apache-m]
   (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m)]
     {::Q (.getQ d), ::R (.getR d)}))
@@ -518,117 +761,24 @@ Intended usage: (let [[Q R] (qr-decomposition M)] ....)
 
 (defn rank-revealing-qr-decomposition
   "Calculates the rank-revealing QR-decomposition of a matrix, with column pivoting.
-The rank-revealing QR-decomposition of a matrix A consists of three matrices Q, R, and P such that AP = QR.
-Q is orthogonal (QTQ = I), and R is upper triangular.
-If A is m×n, Q is m×m and R is m×n and P is n×n.
-QR decomposition with column pivoting produces a rank-revealing QR decomposition.
-This class computes the decomposition using Householder reflectors.
-Returns a map containing:
-      :Q -- orthogonal factors
-      :QT -- transform of orthogonal factors
-      :R -- the upper triangular factors
-      :P -- P Matrix
-      :rank -- the rank."
+  The rank-revealing QR-decomposition of `apache-m` consists of three matrices `Q`, `R`, and `permutation`
+  such that `apache-m` × `permutation` = `Q` × `R`.
+  `Q` is orthogonal (`QT` × `Q` = I), and `R` is upper triangular.
+  If `apache-m` is m × n, `Q` is m × m, `R` is m × n, and `permutation` is n × n.
+  QR decomposition with column pivoting produces a rank-revealing QR decomposition.
+  This class computes the decomposition using Householder reflectors.
+  Returns a map containing:
+      ::Q -- orthogonal factors
+      ::R -- the upper triangular factors
+      ::permutation -- Permutation Matrix
+      ::rank -- the rank."
   [apache-m accu]
   (let [d (RRQRDecomposition. ^Array2DRowRealMatrix apache-m (double accu))]
-    {:Q    (.getQ d), :R (.getR d),
-     :QT   (.getQT d), :P (.getP d),
-     :rank (.getRank d accu)}))
+    {::Q           (.getQ d)
+     ::R           (.getR d)
+     ::permutation (.getP d)
+     ::rank        (.getRank d accu)}))
 
 (s/fdef rank-revealing-qr-decomposition
         :args (s/cat :apache-m ::apache-matrix :accu ::accu)
-        :ret (s/keys :req [::Q ::R ::P ::QT ::rank]))
-
-(defn eigenvalues
-  "Returns vector of real parts of eigenvalues."
-  [square-apache-m]
-  (let [r (EigenDecomposition. ^Array2DRowRealMatrix square-apache-m)]
-    (when-not (.hasComplexEigenvalues r)
-      (vec (.toArray ^RealVector (.getRealEigenvalues r))))))
-
-(s/fdef eigenvalues
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret (s/nilable ::vector))
-
-(defn eigen-decomposition
-  "Computes the Eigendecomposition of a diagonalisable matrix.
-   Returns a map containing two matrices ::V and ::D.
-   ::D is a diagonal Apache Commons matrix whose diagonal elements are the eigenvalues.
-   ::V is a square Apache Commons matrix with each column containing the eigenvectors.
-   'square-apache-m' = V × D × V-1."
-  [square-apache-m]
-  (let [r (EigenDecomposition. ^Array2DRowRealMatrix square-apache-m)]
-    {::V (.getV r) ::D (.getD r)}))
-
-(s/fdef eigen-decomposition
-        :args (s/cat :square-apache-m ::square-apache-matrix)
-        :ret (s/keys :req [::V ::D]))
-
-(comment "MATRIX SOLVE")
-(defn linear-least-squares
-  "Returns a vector."
-  [apache-m1 apache-m2]
-  (let [^DecompositionSolver s (.getSolver (QRDecomposition. ^Array2DRowRealMatrix apache-m1))]
-    (vec (.toArray ^RealVector (.solve s ^Array2DRowRealMatrix apache-m2)))))
-
-(s/fdef linear-least-squares
-        :args (s/cat :apache-m1 ::apache-matrix :apache-m2 ::apache-matrix)
-        :ret ::vector)
-
-(defn linear-least-squares-with-error-matrix
-  "Returns a map containing:
-      :S -- solution
-      :E -- error matrix"
-  [apache-m1 apache-m2]
-  (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
-        r (.getR d)
-        r (mx/square-matrix-by-trimming r)]
-    (when-not (= (mx/columns r) (mx/columns apache-m1))
-      (ex-info "Icky matrices" {:fn (var linear-least-squares-with-error-matrix)}))
-    (let [ri (inverse r)
-          e (mx/mx* ri (mx/transpose ri))
-          ^DecompositionSolver s (.getSolver d)]
-      {:S (vec (.toArray ^RealVector (.solve s ^Array2DRowRealMatrix apache-m2))),
-       :E e})))
-
-(defn matrix-solve-iterative
-  "This seems to solve only when the matrix 'm' is psd.
-  Not sure of any advantages over linear least squares.
-  This could be improved by running both sovers on parallel threads.
-  m * x = v.
-  Returns the vector 'x'.
-  'solver' types:
-  ::cg Conjugate Gradient
-  ::symm SymmLQ (default)
-  A default stopping criterion is implemented.
-  The iterations stop when || r || ≤ δ || v ||, where v is the right-hand side vector,
-  r the current estimate of the residual, and δ a user-specified tolerance.
-  It should be noted that r is the so-called updated residual,
-  which might differ from the true residual due to rounding-off errors (see e.g. Strakos and Tichy, 2002).
-
-  Implementation of the SYMMLQ iterative linear solver proposed by Paige and Saunders (1975).
-  This implementation is largely based on the FORTRAN code by Pr. Michael A. Saunders.
-  SYMMLQ is designed to solve the system of linear equations A · x = b where A
-  is an n × n self-adjoint linear operator (defined as a RealLinearOperator), and b is a given vector.
-  The operator A is not required to be positive definite.
-  If A is known to be definite, the method of conjugate gradients might be preferred,
-  since it will require about the same number of iterations as SYMMLQ but slightly less work per iteration.
-  SYMMLQ is designed to solve the system (A - shift · I) · x = b, where shift is a specified scalar value.
-  If shift and b are suitably chosen, the computed vector x may approximate an (unnormalized) eigenvector of A,
-  as in the methods of inverse iteration and/or Rayleigh-quotient iteration.
-  Again, the linear operator (A - shift · I) need not be positive definite (but must be self-adjoint).
-  The work per iteration is very slightly less if shift = 0."
-  [apache-m apache-v
-   & {:keys [solver apache-matrix-guess max-iter delta check?]
-      :or   {solver ::symm, max-iter m/*max-iter*, delta m/*dbl-close*, check? true}}]
-  (let [^RealMatrix a apache-m
-        ^RealVector b apache-v
-        ^RealVector g apache-matrix-guess
-        ^PreconditionedIterativeLinearSolver s
-        (condp = solver
-          ::cg (ConjugateGradient. ^long max-iter ^double delta ^boolean check?)
-          ::symm (SymmLQ. ^long max-iter ^double delta ^boolean check?)
-          nil)]
-    (vec (.toArray (if g
-                     ^RealVector (.solve s ^RealLinearOperator a b g)
-                     ^RealVector (.solve s a b))))))
+        :ret (s/keys :req [::Q ::R ::permutation ::rank]))

@@ -48,11 +48,11 @@ Bounds are closed by default."
   ([^long size] (vector-bounds size (bounds)))
   ([^long size bounds] (into [] (repeat size bounds))))
 
-(defn positive-matrix-bounds
+(defn positive-definite-matrix-bounds
   "Returns a vector of bounds flattened for a symmetric positive matrix."
   [^long size]
-  (mx/symmetric-matrix->vector
-    (mx/symmetric-matrix #(if (== % %2) bounds+ (bounds)) size true)))
+  (mx/deserialize-symmetric-matrix
+    (mx/serialize-symmetric-or-triangular-matrix #(if (== % %2) bounds+ (bounds)) size)))
 
 ;;;BOUNDS MANIPULATION
 (defn- min-bound
