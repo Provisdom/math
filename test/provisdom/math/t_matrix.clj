@@ -365,8 +365,10 @@
   (is= [[]] (mx/get-slices-as-matrix [[]] {::mx/row-indices 0}))
   (is= [[1.0 0.5]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices 0}))
   (is= [[1.0 0.5] [2.0 4.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [0 1]}))
+  (is= [[2.0 4.0] [1.0 0.5]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1 0]}))
   (is= [[1.0] [2.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/column-indices 0}))
   (is= [[1.0 0.5] [2.0 4.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/column-indices [0 1]}))
+  (is= [[0.5 1.0] [4.0 2.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/column-indices [1 0]}))
   (is= [[2.0 4.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/exception-row-indices 0}))
   (is= [[]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/exception-row-indices [0 1]}))
   (is= [[0.5] [4.0]] (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/exception-column-indices 0}))
@@ -630,25 +632,6 @@
   (is= [[0.0 0.0 0.0 1.0 0.5] [0.0 1.0 2.0 2.0 4.0] [3.0 4.0 5.0 0.0 0.0] [6.0 7.0 8.0 0.0 0.0]]
        (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]] [[1.0 0.5] [2.0 4.0]] -1 3)))
 
-(deftest permute-matrix-test
-  (is= [[1.0 0.5] [2.0 4.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {}))
-  (is= [[2.0 4.0] [1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1 0]}))
-  (is= [[2.0 4.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1]}))
-  (is= [[]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices []}))
-  (is= [[1.0 0.5]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [0 2]}))
-  (is= [[0.5 1.0] [4.0 2.0]] (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/column-indices [1 0]}))
-  (is= [[4.0 2.0] [0.5 1.0]]
-       (mx/permute-matrix [[1.0 0.5] [2.0 4.0]] {::mx/row-indices [1 0] ::mx/column-indices [1 0]}))
-  (is= (mx/identity-matrix 2)
-       (mx/permute-matrix (mx/identity-matrix 2) {::mx/row-indices [1 0] ::mx/column-indices [1 0]})))
-
-(deftest square-matrix-by-trimming-test
-  (is= [[]] (mx/square-matrix-by-trimming [[]]))
-  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0]]))
-  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0] [2.0] [3.0]]))
-  (is= [[1.0]] (mx/square-matrix-by-trimming [[1.0 2.0 3.0]]))
-  (is= [[1.0 2.0] [2.0 3.0]] (mx/square-matrix-by-trimming [[1.0 2.0] [2.0 3.0] [4.0 5.0]])))
-
 (deftest symmetric-matrix-by-averaging-test
   (is= [[]] (mx/symmetric-matrix-by-averaging [[]]))
   (is= [[3]] (mx/symmetric-matrix-by-averaging [[3]]))
@@ -668,8 +651,6 @@
   (concat-columns-test)
   (merge-matrices-test)
   (replace-submatrix-test)
-  (permute-matrix-test)
-  (square-matrix-by-trimming-test)
   (symmetric-matrix-by-averaging-test))
 
 (defspec-test test-transpose 'mx/transpose)
@@ -685,7 +666,6 @@
 (defspec-test test-concat-columns 'mx/concat-columns)
 (defspec-test test-merge-matrices 'mx/merge-matrices)
 (defspec-test test-replace-submatrix 'mx/replace-submatrix)
-(defspec-test test-permute-matrix 'mx/permute-matrix)
 (defspec-test test-square-matrix-by-trimming `mx/square-matrix-by-trimming)
 (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
 

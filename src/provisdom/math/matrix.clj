@@ -642,7 +642,8 @@
     `::column-indices` returns all columns by default, can pass a column index or sequence of column indices
     `::exception-row-indices` can pass a row index or sequence of row indices to exclude
     `::exception-column-indices` can pass a column index or sequence of column indices to exclude.
-    Exceptions override inclusions."
+    Exceptions override inclusions.
+    Can be used to permute matrix through index sequence ordering."
   [m {::keys [row-indices column-indices exception-row-indices exception-column-indices]}]
   (let [calc-fn (fn [i except-i n]
                   (cond (and (not i) (not except-i)) true
@@ -664,14 +665,17 @@
     (cond
       (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) [[]]
       (and (number? rs) (number? cs)) [[(get-in m [rs cs])]]
-      (and (number? rs) (coll? cs)) (row-matrix (let [r (get m rs)] (map #(get r %) cs)))
+      (and (number? rs) (coll? cs)) (row-matrix (let [row-vector (get m rs)] (map #(get row-vector %) cs)))
       (and (number? rs) (true? cs)) (row-matrix (get-row m rs))
-      (and (coll? rs) (number? cs)) (column-matrix (let [c (get-column m cs)] (map #(nth c %) rs)))
-      (and (coll? rs) (coll? cs)) (mapv (fn [row] (reduce (fn [tot c] (conj tot (get row c))) [] cs))
+      (and (coll? rs) (number? cs)) (column-matrix (let [column-vector (get-column m cs)]
+                                                     (map #(nth column-vector %) rs)))
+      (and (coll? rs) (coll? cs)) (mapv (fn [row-vector]
+                                          (reduce (fn [tot column] (conj tot (get row-vector column))) [] cs))
                                         (map #(get m %) rs))
       (and (coll? rs) (true? cs)) (mapv #(get m %) rs)
       (and (true? rs) (number? cs)) (column-matrix (get-column m cs))
-      (and (true? rs) (coll? cs)) (mapv (fn [row] (reduce (fn [tot c] (conj tot (get row c))) [] cs)) m)
+      (and (true? rs) (coll? cs)) (mapv (fn [row-vector]
+                                          (reduce (fn [tot column] (conj tot (get row-vector column))) [] cs)) m)
       (and (true? rs) (true? cs)) m)))
 
 (s/fdef get-slices-as-matrix
@@ -1046,40 +1050,6 @@
 (s/fdef replace-submatrix
         :args (s/cat :m ::matrix :submatrix ::matrix :row-start ::row-start :column-start ::column-start)
         :ret ::matrix)
-
-(defn permute-matrix
-  "Returns a Matrix with the rows and the columns of a matrix permuted.
-    Options:
-     ::row-indices provides the row index or indices of the permutation.
-     ::column-indices provides the column index or indices of the permutation."
-  [m {::keys [row-indices column-indices]}]
-  (if (or (and (sequential? row-indices) (empty? row-indices))
-          (and (sequential? column-indices) (empty? column-indices)))
-    [[]]
-    (let [rv (remove #(>= % (rows m)) (vector/to-vector row-indices))
-          rv? (not (empty? rv))
-          cv (remove #(>= % (columns m)) (vector/to-vector column-indices))
-          cv? (not (empty? cv))
-          after-rows (if rv? (mapv (partial get-row m) rv) m)]
-      (if cv?
-        (transpose (mapv (partial get-row (transpose after-rows)) cv))
-        after-rows))))
-
-(s/fdef permute-matrix
-        :args (s/cat :m ::matrix :args (s/keys :opt [::row-indices ::column-indices]))
-        :ret ::matrix)
-
-(defn square-matrix-by-trimming
-  "Returns a square matrix by truncating values from the given matrix `m`."
-  [m]
-  (let [r (rows m)
-        c (columns m)
-        k (if (> r c) ::exception-row-indices ::exception-column-indices)]
-    (get-slices-as-matrix m {k (range (min c r) (max c r))})))
-
-(s/fdef square-matrix-by-trimming
-        :args (s/cat :m ::matrix)
-        :ret ::square-matrix)
 
 (defn symmetric-matrix-by-averaging
   "Returns a symmetric matrix where each element above or below the diagonal is equal to the
