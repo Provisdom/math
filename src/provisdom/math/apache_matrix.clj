@@ -9,7 +9,7 @@
             [provisdom.math.tensor :as tensor]
             [provisdom.math.arrays :as ar]
             [provisdom.math.random2 :as random])
-  (:import [org.apache.commons.math3.linear Array2DRowRealMatrix RealVector RealMatrix BlockRealMatrix
+  (:import [org.apache.commons.math3.linear Array2DRowRealMatrix RealMatrix
                                             QRDecomposition LUDecomposition CholeskyDecomposition
                                             RectangularCholeskyDecomposition Array2DRowRealMatrix
                                             EigenDecomposition SingularValueDecomposition RRQRDecomposition
