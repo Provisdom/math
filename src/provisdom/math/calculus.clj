@@ -41,7 +41,7 @@
     ;;this can be sped for larger seqs (use ^doubles or even approximate)
     (if (m/one? n-vars)
       (let [[a b] ranges] (apply + (map f (range a b))))
-      (throw (ex-info "Not implmented" (var integer-integrate)))))) ;;to do
+      (throw (ex-info "Not implemented" (var integer-integrate)))))) ;;to do
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
@@ -290,18 +290,18 @@
         un (for [v (range (count ranges))]
              (map (partial unnormalize (nth half-sum v) (nth half-diff v)) n))
         lh (map f (apply mc/cartesian-product un))
-        mult (apply * half-diff)
+        multiplier (apply * half-diff)
         dim (count ranges)
         fl #(mx/inner-product lw (take-nth 2 (rest %)))
         fh #(mx/inner-product hw %)
         f1dim (co/create-dbl-layered dim dim (fn [i j] (if (= i j) fl fh)))
-        fallh (repeat dim fh)
-        falll (repeat dim fl)
+        f-all-h (repeat dim fh)
+        f-all-l (repeat dim fl)
         partitioned-lh (co/partition-recursively lh (count hw))
-        reduce-f #(tensor/multiply mult (reduce (fn [tot ef] (ef tot))
-                                                partitioned-lh %))
-        h (reduce-f fallh)
-        l (reduce-f falll)
+        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot))
+                                                      partitioned-lh %))
+        h (reduce-f f-all-h)
+        l (reduce-f f-all-l)
         dim1 (map reduce-f f1dim)
         err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % h)))]
     [(err-f l) h (map err-f dim1) ranges]))
@@ -309,24 +309,22 @@
 (defn- adaptive-quadrature [implementation f [a b] accu min-iter max-iter wn]
   (let [tol (adj-tol-gk accu)
         [err0 h0] (get-error-and-value f [a b] wn)
-        ftot-val #(mx/coerce
+        f-tot-val #(mx/coerce
                     implementation
                     (apply tensor/add (tensor/emap (fn [e] (-> e second first)) %)))]
     (loop [errs [[err0 [h0 a b]]], i 1]
       (let [tot-err (apply + (map first errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
-          (ftot-val errs)
+          (f-tot-val errs)
           (do (when (>= i max-iter)
                 (throw (ex-info (str "Iteration limit reached.  Error: " tot-err
-                                     " Value: " (ftot-val errs))
+                                     " Value: " (f-tot-val errs))
                                 {:fn (var adaptive-quadrature) :solver? true})))
               (let [[e [h an bn]] (peek errs)
                     mn (* 0.5 (+ an bn))
-                    [[err1 h1] [err2 h2]] (as/thread
-                                            :all
-                                            [#(get-error-and-value f [an mn] wn)
-                                             #(get-error-and-value f [mn bn]
-                                                                   wn)])
+                    [[err1 h1] [err2 h2]] (as/thread :all
+                                                     [#(get-error-and-value f [an mn] wn)
+                                                      #(get-error-and-value f [mn bn] wn)])
                     errs (into
                            []
                            (sort-by
@@ -352,15 +350,15 @@
   [implementation f ranges accu min-iter max-iter wn sort-fn select-dims-fn]
   (let [tol (adj-tol-gk accu),
         [err0 h0 errs1d0 _] (get-error-and-value-n-dim f ranges wn),
-        ftot-val #(mx/coerce
+        f-tot-val #(mx/coerce
                     implementation
                     (apply tensor/add (map (fn [e] (-> e second second)) %)))]
     (loop [errs [[(sort-fn err0 errs1d0) [err0 h0 errs1d0 ranges]]], i 1]
       (let [tot-err (apply + (map (fn [e] (-> e second first)) errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
-          (ftot-val errs)
+          (f-tot-val errs)
           (do (when (>= i max-iter)
-                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err " Value: " (ftot-val errs))
+                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err " Value: " (f-tot-val errs))
                                 {:fn (var adaptive-quadrature-n-dim)})))
               (let [[_ [_ _ e1d rn]] (peek errs),
                     dims (select-dims-fn e1d i min-iter),
@@ -505,8 +503,7 @@
        min-iter default per dimension is 3"
   [f outer-range middle-range-fn inner-range-fn
    & {:keys [points accu min-iter max-iter]
-      :or   {points   15, accu m/*sgl-close*, min-iter 3,
-             max-iter (/ m/*max-iter* 30)}}]
+      :or   {points   15, accu m/*sgl-close*, min-iter 3, max-iter (/ m/*max-iter* 30)}}]
   (integrate
     (fn [outer]
       (integrate
@@ -538,8 +535,7 @@
       min-iter default per dimension is 2"
   [f outer-range outer-middle-range-fn inner-middle-range-fn inner-range-fn
    & {:keys [points accu min-iter max-iter]
-      :or   {points   15, accu m/*sgl-close*, min-iter 2,
-             max-iter (/ m/*max-iter* 50)}}]
+      :or   {points   15, accu m/*sgl-close*, min-iter 2, max-iter (/ m/*max-iter* 50)}}]
   (integrate
     (fn [outer]
       (integrate
@@ -562,19 +558,19 @@
 ;;;    and http://en.wikipedia.org/wiki/Finite_difference_coefficients
 (comment "The zero coefficient is left out below, but can be found because 
     the sum of coefficients equals zero")
-(def ^:const ^:private central-coeff1
+(def ^:const ^:private central-coefficient1
   [[[1 (/ 2)]] [[2 (/ -12)] [1 (/ 2 3)]] [[3 (/ 60)] [2 (/ -3 20)] [1 (/ 3 4)]]
    [[4 (/ -280)] [3 (/ 4 105)] [2 (/ -5)] [1 (/ 4 5)]]])
 
-(def ^:const ^:private central-coeff2
+(def ^:const ^:private central-coefficient2
   [[[1 1]] [[2 (/ -12)] [1 (/ 4 3)]] [[3 (/ 90)] [2 (/ -3 20)] [1 (/ 3 2)]]
    [[4 (/ -560)] [3 (/ 8 315)] [2 (/ -5)] [1 (/ 8 5)]]])
 
-(def ^:const ^:private central-coeff3
+(def ^:const ^:private central-coefficient3
   [[[2 (/ 2)] [1 -1]] [[3 (/ -8)] [2 1] [1 (/ -13 8)]]
    [[4 (/ 7 240)] [3 (/ -3 10)] [2 (/ 169 120)] [1 (/ -61 30)]]])
 
-(def ^:const ^:private central-coeff4
+(def ^:const ^:private central-coefficient4
   [[[2 1] [1 -4]] [[3 (/ -6)] [-2 2] [1 (/ -13 2)]]
    [[4 (/ 7 240)] [3 (/ -2 5)] [2 (/ 169 60)] [1 (/ -122 15)]]])
 
@@ -584,7 +580,7 @@
                      extra (when-not no-zero? [[0 (* -2.0 (apply + (map second v)))]])]
                  (concat v extra r)))
 
-(defn- get-central-coeff
+(defn- get-central-coefficient
   [^long deriv ^long accuracy]
   {:pre [(have? #(>= % 2) accuracy)
          (have? #(<= % 8) accuracy)
@@ -592,11 +588,14 @@
          (have? (fn [[accuracy deriv]] (or (<= accuracy 6) (<= deriv 2))) [accuracy deriv])
          (have? #(<= % 4) deriv)
          (have? pos? deriv)]}
-  (let [a (/ accuracy 2),
-        v (condp = deriv 1 central-coeff1, 2 central-coeff2, 3 central-coeff3, 4 central-coeff4)]
+  (let [a (/ accuracy 2)
+        v (condp = deriv 1 central-coefficient1
+                         2 central-coefficient2
+                         3 central-coefficient3
+                         4 central-coefficient4)]
     (convert-cc (nth v (dec a)) (odd? deriv))))
 
-(def ^:const ^:private forward-coeff1
+(def ^:const ^:private forward-coefficient1
   [[[1 1]]
    [[2 (/ -2)] [1 2]]
    [[3 (/ 3)] [2 (/ -3 2)] [1 3]]
@@ -604,7 +603,7 @@
    [[5 (/ 5)] [4 (/ -5 4)] [3 (/ 10 3)] [2 -5] [1 5]]
    [[6 (/ -6)] [5 (/ 6 5)] [4 (/ -15 4)] [3 (/ 20 3)] [2 -7.5] [1 6]]])
 
-(def ^:const ^:private forward-coeff2
+(def ^:const ^:private forward-coefficient2
   [[[2 1] [1 -2]]
    [[3 -1] [2 4] [1 -5]]
    [[4 (/ 11 12)] [3 (/ -14 3)] [2 (/ 19 2)] [1 (/ -26 3)]]
@@ -614,7 +613,7 @@
    [[7 (/ -7 10)] [6 (/ 1019 180)] [5 (/ -201 10)] [4 41] [3 (/ -949 18)]
     [2 (/ 879 20)] [1 (/ -223 10)]]])
 
-(def ^:const ^:private forward-coeff3
+(def ^:const ^:private forward-coefficient3
   [[[3 1] [2 -3] [1 3]]
    [[4 (/ -3 2)] [3 7] [2 -12] [1 9]]
    [[5 (/ 7 4)] [4 (/ -41 4)] [3 (/ 49 2)] [2 (/ -59 2)] [1 (/ 71 4)]]
@@ -624,7 +623,7 @@
    [[8 (/ -469 240)] [7 (/ 527 30)] [6 (/ -561 8)] [5 (/ 4891 30)]
     [4 (/ -1457 6)] [3 (/ 2391 10)] [2 (/ -18353 120)] [1 (/ 349 6)]]])
 
-(def ^:const ^:private forward-coeff4
+(def ^:const ^:private forward-coefficient4
   [[[4 1] [3 -4] [2 6] [1 -4]]
    [[5 -2] [4 11] [3 -24] [2 26] [1 -14]]
    [[6 (/ 17 6)] [5 -19] [4 (/ 107 2)] [3 (/ -242 3)] [2 (/ 137 2)] [1 -31]]
@@ -633,7 +632,7 @@
    [[8 (/ 967 240)] [7 (/ -536 15)] [6 (/ 2803 20)] [5 (/ -4772 15)]
     [4 (/ 10993 24)] [3 (/ -2144 5)] [2 (/ 15289 60)] [1 (/ -1316 15)]]])
 
-(defn- get-forward-coeff
+(defn- get-forward-coefficient
   [^long deriv ^long accuracy]
   {:pre [(have? (fn [[deriv accuracy]]
                   (and (pos? deriv)
@@ -643,18 +642,18 @@
                        (or (<= accuracy 5) (<= deriv 3))))
                 [deriv accuracy])]}
   (let [v (condp = deriv
-            1 forward-coeff1
-            2 forward-coeff2
-            3 forward-coeff3
-            4 forward-coeff4)
-        coeff (nth v (dec accuracy))]
-    (conj coeff [0 (- (apply + (map second coeff)))])))
+            1 forward-coefficient1
+            2 forward-coefficient2
+            3 forward-coefficient3
+            4 forward-coefficient4)
+        coefficient (nth v (dec accuracy))]
+    (conj coefficient [0 (- (apply + (map second coefficient)))])))
 
-(defn- get-backward-coeff
+(defn- get-backward-coefficient
   "backward is like forward except for odd derivatives the sign switches"
   [^long deriv ^long accuracy]
-  (let [coeff (get-forward-coeff deriv accuracy)]
-    (map #(let [[e1 e2] %] [(- e1) (if (odd? deriv) (- e2) e2)]) coeff)))
+  (let [coefficient (get-forward-coefficient deriv accuracy)]
+    (map #(let [[e1 e2] %] [(- e1) (if (odd? deriv) (- e2) e2)]) coefficient)))
 
 (defn derivative-fn
   "Returns a numerical derivative function.  
@@ -697,17 +696,17 @@
                                       (<= derivative 2) 2
                                       (and (== derivative 4) (not= type :central)) 5
                                       :else 6)
-                       coeff-fn (condp = type
-                                  :central get-central-coeff
-                                  :forward get-forward-coeff
-                                  :backward get-backward-coeff)
-                       mult (/ h)
+                       coefficient-fn (condp = type
+                                        :central get-central-coefficient
+                                        :forward get-forward-coefficient
+                                        :backward get-backward-coefficient)
+                       multiplier (/ h)
                        dx (m/pow h (/ derivative))
-                       coeff (map #(let [[e1 e2] %] [(* dx e1) e2])
-                                  (coeff-fn derivative accuracy))]
+                       coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
+                                        (coefficient-fn derivative accuracy))]
                    (fn [v]
-                     (* mult (apply + (map #(let [[e1 e2] %]
-                                              (* (f (+ v e1)) e2)) coeff)))))))))
+                     (* multiplier (apply + (map #(let [[e1 e2] %]
+                                                    (* (f (+ v e1)) e2)) coefficient)))))))))
 
 (s/def ::f (s/with-gen
              (s/fspec :args (s/cat :a ::m/number) :ret ::m/number)
@@ -744,17 +743,16 @@
          4th deriv), and 1-6 for forward or backward (no 6 for 4th deriv)."
   [f & {:keys [^double h type ^long accuracy]
         :or   {h m/*sgl-close*, type :central, accuracy 2}}]
-  (let [coeff-fn (condp = type :central get-central-coeff,
-                               :forward get-forward-coeff, :backward get-backward-coeff),
-        mult (/ h),
-        dx h,
-        coeff (map #(let [[e1 e2] %] [(* dx e1) e2]) (coeff-fn 1 accuracy))]
+  (let [coefficient-fn (condp = type :central get-central-coefficient
+                                     :forward get-forward-coefficient
+                                     :backward get-backward-coefficient)
+        multiplier (/ h)
+        dx h
+        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
     (fn [v]
       (map-indexed
         (fn [i e]
-          (* mult (apply +
-                         (map #(let [[e1 e2] %]
-                                 (* (f (assoc v i (+ e e1))) e2)) coeff)))) v))))
+          (* multiplier (apply + (map #(let [[e1 e2] %] (* (f (assoc v i (+ e e1))) e2)) coefficient)))) v))))
 
 (defn jacobian-fn
   "Returns a numerical jacobian function.  
@@ -770,13 +768,13 @@
       4th deriv), and 1-6 for forward or backward (no 6 for 4th deriv)."
   [f & {:keys [^double h type ^long accuracy]
         :or   {h m/*sgl-close*, type :central, accuracy 2}}]
-  (let [coeff-fn (condp = type
-                   :central get-central-coeff
-                   :forward get-forward-coeff
-                   :backward get-backward-coeff)
-        mult (/ h)
+  (let [coefficient-fn (condp = type
+                         :central get-central-coefficient
+                         :forward get-forward-coefficient
+                         :backward get-backward-coefficient)
+        multiplier (/ h)
         dx h
-        coeff (map #(let [[e1 e2] %] [(* dx e1) e2]) (coeff-fn 1 accuracy))]
+        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
     (fn [v]
       (co/flip-dbl-layered
         (map-indexed
@@ -784,18 +782,18 @@
             (apply
               tensor/add
               (map
-                #(let [[e1 e2] %] (tensor/multiply e2 mult (f (assoc v i (+ e e1)))))
-                coeff)))
+                #(let [[e1 e2] %] (tensor/multiply e2 multiplier (f (assoc v i (+ e e1)))))
+                coefficient)))
           v)))))
 
-(defn- joint-central-derivative [f v i j dx mult]
+(defn- joint-central-derivative [f v i j dx multiplier]
   (let [i+ (assoc v i (+ (get v i) dx)),
         i- (assoc v i (- (get v i) dx)),
         e++ (assoc i+ j (+ (get v j) dx)),
         e+- (assoc i+ j (- (get v j) dx)),
         e-+ (assoc i- j (+ (get v j) dx)),
         e-- (assoc i- j (- (get v j) dx))]
-    (* 0.25 mult (- (+ (f e++) (f e--)) (f e+-) (f e-+)))))
+    (* 0.25 multiplier (- (+ (f e++) (f e--)) (f e+-) (f e-+)))))
 
 (defn hessian-fn
   "Returns a numerical Hessian function using central differences with an 
@@ -821,20 +819,20 @@
         ((jacobian-fn
            (gradient-fn f :h (m/sqrt h), :type type, :accuracy accuracy)
            :h (m/sqrt h), :type type, :accuracy accuracy) v)))
-    (let [mult (/ h), dx (m/sqrt h),
-          coeff (map #(let [[e1 e2] %]
-                        [(* dx e1) e2]) (get-central-coeff 2 2))]
+    (let [multiplier (/ h),
+          dx (m/sqrt h),
+          coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (get-central-coefficient 2 2))]
       (fn [v] (mx/compute-matrix
                 (count v)
                 (count v)
                 (fn [i j]
                   (if (== i j)
-                    (* mult
+                    (* multiplier
                        (apply + (map #(let [[e1 e2] %]
                                         (* (f (assoc v i (+ (get v i) e1)))
                                            e2))
-                                     coeff)))
-                    (joint-central-derivative f v i j dx mult))))))))
+                                     coefficient)))
+                    (joint-central-derivative f v i j dx multiplier))))))))
 
 (defn partial-derivative-x-of-fxy
   [fxy & {:keys [^double h] :or {h m/*sgl-close*}}]
@@ -854,8 +852,7 @@
 
 (defn second-partial-derivative-xy-of-fxy
   [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] (joint-central-derivative
-              #(fxy (first %) (second %)) [x y] 0 1 (m/sqrt h) (/ h))))
+  (fn [x y] (joint-central-derivative #(fxy (first %) (second %)) [x y] 0 1 (m/sqrt h) (/ h))))
 
 ;;COMPARE AGAINST THE FOLLOWING
 ; Implements the adaptive quadrature described on page 511 of Numerical Analysis Kinkade et al.

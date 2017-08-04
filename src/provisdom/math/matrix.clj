@@ -1095,7 +1095,7 @@
     (compute-matrix size size (fn [r c]
                                 (if (== c r)
                                   (get-in square-m [r c] 0.0)
-                                  (* 0.5 (+ (get-in square-m [r c] 0.0) (get-in square-m [c r] 0.0))))))))
+                                  (* 0.5 (+ (get-in square-m [r c] 0.0) (double (get-in square-m [c r] 0.0)))))))))
 
 (s/fdef symmetric-matrix-by-averaging
         :args (s/cat :square-m ::square-matrix)
