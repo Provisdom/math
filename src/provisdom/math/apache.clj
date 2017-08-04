@@ -74,6 +74,16 @@
 (declare apache-vector)
 
 (s/def ::vector ::vector/vector)
+(s/def ::apache-matrix ::apache-mx/apache-matrix)
+(s/def ::symmetric-apache-matrix ::apache-mx/symmetric-apache-matrix)
+(s/def ::exception (partial instance? Exception))
+(s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
+(s/def ::rel-accu
+  (s/with-gen ::m/finite+
+              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
+(s/def ::abs-accu
+  (s/with-gen ::m/finite+
+              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
 
 ;;; name all internal ns differently somehow
 ;;;TODO:
@@ -268,8 +278,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   {:value (.getValue pv), :point (vec (.getPoint pv))})
 
 (defn- errors-vector-point [^LeastSquaresProblem$Evaluation e]
-  {::point  (mx/coerce :persistent-vector (.getPoint e))
-   ::errors (mx/coerce :persistent-vector (.getResiduals e))})
+  {::point  (apache-vector->vector (.getPoint e))
+   ::errors (apache-vector->vector (.getResiduals e))})
 
 (defn- uni-value-point [^UnivariatePointValuePair pv]
   {:value (.getValue pv), :point (.getPoint pv)})
@@ -280,15 +290,12 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
              (throw (ex-info (format "Invalid goal type specified %s" g) {:fn (var goal-fn)}))))
 
 (defn- checker-fn [check-by-objective? rel abs]
-  (if check-by-objective? (SimpleValueChecker. rel abs)
-                          (SimplePointChecker. rel abs)))
+  (if check-by-objective? (SimpleValueChecker. rel abs) (SimplePointChecker. rel abs)))
 
 (defn- vector-checker-fn [check-by-objective? rel abs]
-  (if check-by-objective? (SimpleVectorValueChecker. rel abs)
-                          (SimplePointChecker. rel abs)))
+  (if check-by-objective? (SimpleVectorValueChecker. rel abs) (SimplePointChecker. rel abs)))
 
 ;;;ROOT SOLVERS
-(s/def ::exception (partial instance? Exception))
 (s/def ::root-f (s/fspec :args (s/cat :a ::m/number) :ret ::m/number))
 (s/def ::guess ::m/finite)
 (s/def ::bounds ::bo/finite-interval)
@@ -301,11 +308,6 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
                       (list {::root-f identity ::guess 3.0 ::bounds [-5.0 5.0]}
                             {::root-f (fn [v] (- (m/cube v) (* 3 v))) ::guess 3.0 ::bounds [-50.0 50.0]}
                             {::root-f (fn [v] (- (m/exp v) (* 5 v))) ::guess 3.0 ::bounds [-50.0 50.0]})))))
-(s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
-(s/def ::rel-accu ::m/finite+)
-(s/def ::abs-accu
-  (s/with-gen ::m/finite+
-              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
 (s/def ::root-solver #{:bisection :bracketing-brent :brent :illinois :muller :muller2
                        :pegasus :regula :ridders :secant :newton-raphson})
 
@@ -391,53 +393,55 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
     (value-point pv)))
 
 ;;;LINEAR LEAST SQUARES
-(defn matrix-solve-iterative
-  "This seems to solve only when `apache-m` is positive semidefinite.
-  Not sure of any advantages over linear least squares.
-  This could be improved by running both solvers on parallel threads.
-  `apache-m` × `x` = v.
-  Returns the vector 'x'.
-  `solver` types:
-     ::conjugate-gradient
-     ::symm-lq (default)
-  A default stopping criterion is implemented.
-  The iterations stop when || r || ≤ δ || `v` ||, where `v` is the right-hand side vector,
-     where r is the current estimate of the residual, and δ a user-specified tolerance.
-  It should be noted that r is the so-called updated residual,
-  which might differ from the true residual due to rounding-off errors (see e.g. Strakos and Tichy, 2002).
+(comment
+  (s/def ::iterative-solver #{::conjugate-gradient ::symm-lq})
+  (s/def ::apache-matrix-guess ::apache-matrix)
 
-  Implementation of the SYMMLQ iterative linear solver proposed by Paige and Saunders (1975).
-  This implementation is largely based on the FORTRAN code by Pr. Michael A. Saunders.
-  SYMMLQ is designed to solve the system of linear equations A × x = b where A
-  is an n × n self-adjoint linear operator (defined as a RealLinearOperator), and b is a given vector.
-  The operator A is not required to be positive definite.
-  If A is known to be definite, the method of conjugate gradients might be preferred,
-  since it will require about the same number of iterations as SYMMLQ but slightly less work per iteration.
-  SYMMLQ is designed to solve the system (A - shift × I) × x = b, where shift is a specified scalar value.
-  If shift and b are suitably chosen, the computed vector x may approximate an (unnormalized) eigenvector of A,
-  as in the methods of inverse iteration and/or Rayleigh-quotient iteration.
-  Again, the linear operator (A - shift × I) need not be positive definite (but must be self-adjoint).
-  The work per iteration is very slightly less if shift = 0."
-  ([apache-m v] (matrix-solve-iterative apache-m v {}))
-  ([apache-m v {::keys [solver apache-matrix-guess max-iter delta check?]
-                :or    {solver ::symm-lq, max-iter m/*max-iter*, delta m/*dbl-close*, check? true}}]
-   (let [^RealMatrix a apache-m
-         ^RealVector b (apache-vector v)
-         ^RealVector g apache-matrix-guess
-         ^PreconditionedIterativeLinearSolver s
-         (condp = solver
-           ::conjugate-gradient (ConjugateGradient. ^long max-iter ^double delta ^boolean check?)
-           ::symm-lq (SymmLQ. ^long max-iter ^double delta ^boolean check?)
-           nil)]
-     (vec (.toArray (if g
-                      ^RealVector (.solve s ^RealLinearOperator a b g)
-                      ^RealVector (.solve s a b)))))))
+  (defn matrix-solve-iterative
+    "`symmetric-apache-m` × `x` = v.
+    Returns the vector 'x'.
+    `::iterative-solver` types:
+       ::conjugate-gradient
+       ::symm-lq (default)
+    A default stopping criterion is implemented.
+    The iterations stop when || r || ≤ `rel-accu` || `v` ||, where `v` is the right-hand side vector,
+       where r is the current estimate of the residual, and `rel-accu` a user-specified tolerance.
+    It should be noted that r is the so-called updated residual,
+    which might differ from the true residual due to rounding-off errors (see e.g. Strakos and Tichy, 2002).
 
-(s/fdef matrix-solve-iterative
-        :args (s/cat :apache-m ::apache-matrix
-                     :v ::vector
-                     :opts (s/? (s/keys :opt [::solver ::apache-matrix-guess])))
-        :ret (s/keys :req [::Q ::R ::permutation ::rank]))
+    Implementation of the SYMMLQ iterative linear solver proposed by Paige and Saunders (1975).
+    This implementation is largely based on the FORTRAN code by Pr. Michael A. Saunders.
+    SYMMLQ is designed to solve the system of linear equations A × x = b where A
+    is an n × n self-adjoint linear operator (defined as a RealLinearOperator), and b is a given vector.
+    The operator A is not required to be positive definite.
+    If A is known to be definite, the method of conjugate gradients might be preferred,
+    since it will require about the same number of iterations as SYMMLQ but slightly less work per iteration.
+    SYMMLQ is designed to solve the system (A - shift × I) × x = b, where shift is a specified scalar value.
+    If shift and b are suitably chosen, the computed vector x may approximate an (unnormalized) eigenvector of A,
+    as in the methods of inverse iteration and/or Rayleigh-quotient iteration.
+    Again, the linear operator (A - shift × I) need not be positive definite (but must be self-adjoint).
+    The work per iteration is very slightly less if shift = 0."
+    ([symmetric-apache-m v] (matrix-solve-iterative symmetric-apache-m v {}))
+    ([symmetric-apache-m v {::keys [iterative-solver apache-matrix-guess max-iter rel-accu check?]
+                            :or    {iterative-solver ::symm-lq, max-iter m/*max-iter*, rel-accu m/*dbl-close*, check? true}}]
+     (let [^RealMatrix a symmetric-apache-m
+           ^RealVector b (apache-vector v)
+           ^RealVector g apache-matrix-guess
+           ^PreconditionedIterativeLinearSolver s
+           (condp = iterative-solver
+             ::conjugate-gradient (ConjugateGradient. ^long max-iter ^double rel-accu ^boolean check?)
+             ::symm-lq (SymmLQ. ^long max-iter ^double rel-accu ^boolean check?)
+             nil)]
+       (vec (.toArray (if g
+                        ^RealVector (.solve s ^RealLinearOperator a b g)
+                        ^RealVector (.solve s a b)))))))
+
+  (s/fdef matrix-solve-iterative
+          :args (s/cat :symmetric-apache-m ::symmetric-apache-matrix
+                       :v ::vector
+                       :opts (s/? (s/keys :opt [::iterative-solver ::apache-matrix-guess ::max-iter ::abs-accu ::check?])))
+          :ret ::vector)
+  )
 
 ;;;NONLINEAR LEAST SQUARES and SYSTEMS
 (defn nonlinear-least-squares
@@ -461,11 +465,11 @@ Returns map of ::point and ::errors."
          checker (LeastSquaresFactory/evaluationChecker (vector-checker-fn check-by-objective? rel-accu abs-accu))
          observed (if (and (some? target) (= (count target) n-cons))
                     (apache-vector target)
-                    (apache-vector (vector/compute-vector n-cons 0.0)))
+                    (apache-vector (vec (repeat n-cons 0.0))))
          start (apache-vector guesses)
          weights (if (and (some? weights) (= (count weights) n-cons))
                    (apache-mx/apache-matrix (mx/diagonal-matrix weights))
-                   (apache-mx/apache-matrix (mx/diagonal-matrix n-cons 1.0)))]
+                   (apache-mx/apache-matrix (mx/diagonal-matrix (repeat n-cons 1.0))))]
      (try
        (when s (let [multivariate-jacobian-fn (LeastSquaresFactory/model c j)
                      problem (LeastSquaresFactory/create
