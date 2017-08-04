@@ -1,7 +1,8 @@
 image: provisdom/docker-clojure:e75a1d154dc5f5d629c7be5c24f6b34cf6a4e4cf
 
 before_script:
-  - apt-get install gfortran
+  - apt-get update
+  - apt-get install libgfortran3 -y
 
 test:
   stage: test
