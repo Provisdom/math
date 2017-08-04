@@ -251,7 +251,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   [a] (ap/trigamma a))
 
 (s/fdef trigamma
-        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -29610))))
+        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -29602))))
         :ret ::m/number)
 
 (defn multivariate-gamma
@@ -311,7 +311,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
         :args (s/cat :c ::m/prob
                      :x (s/and ::m/finite+ #(< % 1E305))
                      :y (s/and ::m/finite+ #(< % 1E305)))
-        :ret ::m/nan-or-finite)
+        :ret ::m/number)
 
 (defn incomplete-beta
   "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt."

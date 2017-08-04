@@ -6,6 +6,7 @@
             [provisdom.utility-belt.core :as co]
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
+            [provisdom.math.bounds :as bo]
             [provisdom.math.matrix :as mx]
             [provisdom.math.combinatorics :as mc]
             [taoensso.truss :as truss :refer (have have! have?)]
@@ -13,6 +14,9 @@
             [provisdom.math.vector :as vector]))
 
 (set! *warn-on-reflection* true)
+
+(s/def ::interval ::bo/interval)
+(s/def ::number ::m/number)
 
 ;;;;LOOK AT STIELTJES STUFF OR WHATEVER FOR DISCRETIZING A GAUSSIAN FOR MORE 
 ;;;;THAN 11 OUTCOMES -- KRONROD? vs. GAUSS? vs ...?
@@ -33,9 +37,9 @@
           ranges ([a1 b1] [a2 b2]...); default is nil"
   [f ranges]
   (let [ranges (if (sequential? (first ranges)) ranges [ranges])
-        nvars (count ranges)]
+        n-vars (count ranges)]
     ;;this can be sped for larger seqs (use ^doubles or even approximate)
-    (if (m/one? nvars)
+    (if (m/one? n-vars)
       (let [[a b] ranges] (apply + (map f (range a b))))
       (throw (ex-info "Not implmented" (var integer-integrate)))))) ;;to do
 
@@ -250,14 +254,12 @@
    0.9968934840746495402716301, 0.9994844100504906375713259])
 
 (def ^:const ^:private g30-k61
-  [(convert-gk-wt gauss30-weights false) (convert-gk-wt kronrod61-weights)
-   (convert-gk-n kronrod61-nodes)])
+  [(convert-gk-wt gauss30-weights false) (convert-gk-wt kronrod61-weights) (convert-gk-n kronrod61-nodes)])
 
 (defn- adj-tol-gk ^double [^double tol] (-> tol (m/pow (/ 2.0 3.0)) (* 0.005)))
 
 (defn- weights-and-nodes-gk [^Number points]
-  (condp >= points 15 g7-k15, 21 g10-k21, 31 g15-k31, 41 g20-k41, 51 g25-k51,
-                   g30-k61))
+  (condp >= points 15 g7-k15, 21 g10-k21, 31 g15-k31, 41 g20-k41, 51 g25-k51, g30-k61))
 
 ;ADAPTIVE INTEGRATION
 (defn- unnormalize
@@ -279,7 +281,7 @@
         err (tensor/average (tensor/emap m/abs (tensor/subtract l h)))]
     [err h]))
 
-(defn- get-error-and-value-ndim
+(defn- get-error-and-value-n-dim
   "Returns a vector containing the error, the higher precision value, 
       a vector of the 1-dim errors for a single integration approximation, and the ranges (unchanged)"
   [f ranges [lw hw n]]
@@ -338,17 +340,18 @@
 (defn- simple-select-dims-fn [errs1d i min-iter]
   (let [m (apply max errs1d)
         ps (map vector (range) errs1d)]
-    (if (< i min-iter) [(ffirst (filter #(= (second %) m) ps))]
-                       (mapv first (filter #(>= (second %) (* m 0.1)) ps)))))
+    (if (< i min-iter)
+      [(ffirst (filter #(= (second %) m) ps))]
+      (mapv first (filter #(>= (second %) (* m 0.1)) ps)))))
 
-(defn- adaptive-quadrature-ndim
+(defn- adaptive-quadrature-n-dim
   "sort-fn takes the error of the approx and the sequence of 1-dim errors, 
       and should return a number representing it's importance in splitting.
    select-dims-fn takes the sequence of 1-dim errors, and should return 
       a vector of the dimensions to split."
   [implementation f ranges accu min-iter max-iter wn sort-fn select-dims-fn]
   (let [tol (adj-tol-gk accu),
-        [err0 h0 errs1d0 _] (get-error-and-value-ndim f ranges wn),
+        [err0 h0 errs1d0 _] (get-error-and-value-n-dim f ranges wn),
         ftot-val #(mx/coerce
                     implementation
                     (apply tensor/add (map (fn [e] (-> e second second)) %)))]
@@ -358,7 +361,7 @@
           (ftot-val errs)
           (do (when (>= i max-iter)
                 (throw (ex-info (str "Iteration limit reached.  Error: " tot-err " Value: " (ftot-val errs))
-                                {:fn (var adaptive-quadrature-ndim)})))
+                                {:fn (var adaptive-quadrature-n-dim)})))
               (let [[_ [_ _ e1d rn]] (peek errs),
                     dims (select-dims-fn e1d i min-iter),
                     dims-with-new-ranges (map #(let [[an bn] (nth rn %),
@@ -369,7 +372,7 @@
                                          (assoc tot d [an bn])) rn %)
                                     (apply mc/cartesian-product
                                            dims-with-new-ranges))
-                    new-fns (map (fn [r] #(get-error-and-value-ndim f r wn)) new-ranges)
+                    new-fns (map (fn [r] #(get-error-and-value-n-dim f r wn)) new-ranges)
                     new-errs (map (fn [[e h errs1d r]]
                                     [(sort-fn e errs1d)
                                      [e h errs1d r]]) (as/thread :all new-fns))
@@ -377,32 +380,48 @@
                 (recur errs (inc i)))))))))
 
 (defn change-of-variable
-  "Returns two functions and the new range as a triple.  
-   The first function is a multiplicative function.  
-   The second is the converter for within the function to integrate."
+  "Takes the range and returns a map containing:
+  ::multiplicative-fn
+  ::converter-fn -- for within the function to integrate.
+  ::interval."
   [[a b]]
   (cond
-    (and (m/inf-? a) (m/inf+? b)) [#(let [s (m/sq %)] (m/div (inc s) (m/sq (m/one- s))))
-                                   #(m/div % (m/one- (m/sq %)))
-                                   [-1 1]]
-    (m/inf+? b) [#(m/div (m/sq %)), #(+ a (m/div (m/one- %) %)), [0 1]]
-    (m/inf-? a) [#(m/div (m/sq %)), #(- b (m/div (m/one- %) %)), [0 1]]
-    :else [(constantly 1.0), identity, [a b]]))
+    (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn (fn [number]
+                                                         (let [s (m/sq number)] (m/div (inc s) (m/sq (m/one- s)))))
+                                   ::converter-fn      (fn [number] (m/div number (m/one- (m/sq number))))
+                                   ::interval          [-1 1]}
+    (m/inf+? b) {::multiplicative-fn (fn [number] (m/div (m/sq number)))
+                 ::converter-fn      (fn [number] (+ a (m/div (m/one- number) number)))
+                 ::interval          [0 1]}
+    (m/inf-? a) {::multiplicative-fn (fn [number] (m/div (m/sq number)))
+                 ::converter-fn      (fn [number] (- b (m/div (m/one- number) number)))
+                 ::interval          [0 1]}
+    :else {::multiplicative-fn (constantly 1.0)
+           ::converter-fn      identity
+           ::interval          [a b]}))
+
+(s/def ::multiplicative-fn (s/fspec :args (s/cat :number ::number) :ret ::number))
+(s/def ::converter-fn (s/fspec :args (s/cat :number ::number) :ret ::number))
+(s/fdef change-of-variable
+        :args (s/cat :interval ::interval)
+        :ret (s/keys :req [::multiplicative-fn ::converter-fn ::interval]))
 
 (defn- change-of-var
-  "Returns the new function and range as a tuple"
+  "Returns the new function and range as a tuple."
   [f [a b]]
-  (let [[fm fv r] (change-of-variable [a b])]
-    [#(tensor/multiply (fm %) (f (fv %))) r]))
+  (let [{::keys [multiplicative-fn converter-fn interval]} (change-of-variable [a b])]
+    [#(tensor/multiply (multiplicative-fn %) (f (converter-fn %))) interval]))
 
-(defn- change-of-var-ndim
+(defn- change-of-var-n-dim
   "Returns the new function and ranges.  
    Function f takes a sequence and returns a number."
   [f ranges]
-  (let [trips (map change-of-variable ranges), fms (map first trips),
-        fvs (map second trips), newr (into [] (map #(nth % 2) trips))]
+  (let [maps (map change-of-variable ranges)
+        fms (map ::multiplicative-fn maps)
+        fvs (map ::converter-fn maps)
+        new-ranges (into [] (map ::interval maps))]
     [#(tensor/multiply (apply * (co/in-place-functional fms %))
-                       (f (co/in-place-functional fvs %))) newr]))
+                       (f (co/in-place-functional fvs %))) new-ranges]))
 
 (defn integrate
   "Returns the integral of a function f over ranges from a to b using 
@@ -436,16 +455,16 @@
         accu (cond accu accu,
                    (or (and cov (>= n-vars 3)) (>= n-vars 4)) m/*sgl-close*,
                    :else m/*dbl-close*)
-        [newf newr] (if (m/one? n-vars) (change-of-var f (first ranges))
-                                        (change-of-var-ndim f ranges))
-        implementation (newf (if (m/one? n-vars) (tensor/average newr)
-                                                 (map tensor/average newr)))]
+        [new-fn new-ranges] (if (m/one? n-vars) (change-of-var f (first ranges))
+                                                (change-of-var-n-dim f ranges))
+        implementation (new-fn (if (m/one? n-vars) (tensor/average new-ranges)
+                                                   (map tensor/average new-ranges)))]
     (if (m/one? n-vars)
       (adaptive-quadrature
-        implementation newf newr accu min-iter max-iter
+        implementation new-fn new-ranges accu min-iter max-iter
         (weights-and-nodes-gk points))
-      (adaptive-quadrature-ndim
-        implementation newf newr accu min-iter max-iter
+      (adaptive-quadrature-n-dim
+        implementation new-fn new-ranges accu min-iter max-iter
         (weights-and-nodes-gk points) simple-sort-fn simple-select-dims-fn))))
 
 (defn integrate-non-rectangular-2D

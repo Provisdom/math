@@ -8,7 +8,6 @@
                           [adzerk/boot-test "1.2.0" :scope "test"]
                           [midje "1.9.0-alpha6" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
-                          [boot-codox "0.10.3" :scope "test"]
 
                           [provisdom/boot-tasks "1.4" :scope "test"]
                           [provisdom/test "0.3.0" :scope "test"]
@@ -28,8 +27,7 @@
 
 (require
   '[adzerk.boot-test :refer [test]]
-  '[provisdom.boot-tasks.core :refer [build push-jar]]
-  '[codox.boot :refer [codox]])
+  '[provisdom.boot-tasks.core :refer [build push-jar]])
 
 (task-options!
   pom {:project     project
@@ -48,7 +46,7 @@
                        provisdom.math.t-core
                        provisdom.math.t-format
                        provisdom.math.t-matrix
-                       provisdom.math.t-random2
+                       ;provisdom.math.t-random2
                        provisdom.math.t-special-functions
                        provisdom.math.t-tensor
                        provisdom.math.t-vector}})
