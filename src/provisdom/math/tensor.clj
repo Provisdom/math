@@ -270,7 +270,11 @@
 (defn ===
   "Tensor equality that works with NaN."
   ([tensor] true)
-  ([tensor1 tensor2] (every? true? (flatten (emap (fn [i j] (m/=== i j)) tensor1 tensor2))))
+  ([tensor1 tensor2]
+   (let [bs (emap (fn [i j] (m/=== i j)) tensor1 tensor2)]
+     (if (and bs (every? true? (flatten bs)))
+       true
+       false)))
   ([tensor1 tensor2 & more] (and (=== tensor1 tensor2) (apply === tensor2 more))))
 
 (s/fdef ===

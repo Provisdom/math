@@ -310,8 +310,8 @@
   (let [tol (adj-tol-gk accu)
         [err0 h0] (get-error-and-value f [a b] wn)
         f-tot-val #(mx/coerce
-                    implementation
-                    (apply tensor/add (tensor/emap (fn [e] (-> e second first)) %)))]
+                     implementation
+                     (apply tensor/add (tensor/emap (fn [e] (-> e second first)) %)))]
     (loop [errs [[err0 [h0 a b]]], i 1]
       (let [tot-err (apply + (map first errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
@@ -351,8 +351,8 @@
   (let [tol (adj-tol-gk accu),
         [err0 h0 errs1d0 _] (get-error-and-value-n-dim f ranges wn),
         f-tot-val #(mx/coerce
-                    implementation
-                    (apply tensor/add (map (fn [e] (-> e second second)) %)))]
+                     implementation
+                     (apply tensor/add (map (fn [e] (-> e second second)) %)))]
     (loop [errs [[(sort-fn err0 errs1d0) [err0 h0 errs1d0 ranges]]], i 1]
       (let [tot-err (apply + (map (fn [e] (-> e second first)) errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
@@ -503,7 +503,7 @@
        min-iter default per dimension is 3"
   [f outer-range middle-range-fn inner-range-fn
    & {:keys [points accu min-iter max-iter]
-      :or   {points   15, accu m/*sgl-close*, min-iter 3, max-iter (/ m/*max-iter* 30)}}]
+      :or   {points 15, accu m/*sgl-close*, min-iter 3, max-iter (/ m/*max-iter* 30)}}]
   (integrate
     (fn [outer]
       (integrate
@@ -535,7 +535,7 @@
       min-iter default per dimension is 2"
   [f outer-range outer-middle-range-fn inner-middle-range-fn inner-range-fn
    & {:keys [points accu min-iter max-iter]
-      :or   {points   15, accu m/*sgl-close*, min-iter 2, max-iter (/ m/*max-iter* 50)}}]
+      :or   {points 15, accu m/*sgl-close*, min-iter 2, max-iter (/ m/*max-iter* 50)}}]
   (integrate
     (fn [outer]
       (integrate
@@ -702,11 +702,8 @@
                                         :backward get-backward-coefficient)
                        multiplier (/ h)
                        dx (m/pow h (/ derivative))
-                       coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
-                                        (coefficient-fn derivative accuracy))]
-                   (fn [v]
-                     (* multiplier (apply + (map #(let [[e1 e2] %]
-                                                    (* (f (+ v e1)) e2)) coefficient)))))))))
+                       coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn derivative accuracy))]
+                   (fn [v] (* multiplier (apply + (map #(let [[e1 e2] %] (* (f (+ v e1)) e2)) coefficient)))))))))
 
 (s/def ::f (s/with-gen
              (s/fspec :args (s/cat :a ::m/number) :ret ::m/number)
@@ -735,12 +732,11 @@
    Function f takes a sequence of numbers and returns a number.
    The output function takes and returns a sequence.
    Options:
-      h (default m/*sgl-close*) is the denominator, which is equal 
-         to (dx ^ derivative), where dx is the small change (smaller h 
-         isn't usually better, changes to h can be important)
+      h (default m/*sgl-close*) is the denominator, which is equal to (dx ^ derivative),
+      where dx is the small change (smaller h isn't usually better, changes to h can be important)
       type can be :central (default), :forward, or :backward
-      accuracy can be 2 (default), 4, 6, or 8 for central (no 8 for 3rd or 
-         4th deriv), and 1-6 for forward or backward (no 6 for 4th deriv)."
+      accuracy can be 2 (default), 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
+      and 1-6 for forward or backward (no 6 for 4th deriv)."
   [f & {:keys [^double h type ^long accuracy]
         :or   {h m/*sgl-close*, type :central, accuracy 2}}]
   (let [coefficient-fn (condp = type :central get-central-coefficient
@@ -778,12 +774,8 @@
     (fn [v]
       (co/flip-dbl-layered
         (map-indexed
-          (fn [i e]
-            (apply
-              tensor/add
-              (map
-                #(let [[e1 e2] %] (tensor/multiply e2 multiplier (f (assoc v i (+ e e1)))))
-                coefficient)))
+          (fn [i e] (apply tensor/add (map #(let [[e1 e2] %]
+                                              (tensor/multiply e2 multiplier (f (assoc v i (+ e e1))))) coefficient)))
           v)))))
 
 (defn- joint-central-derivative [f v i j dx multiplier]
@@ -818,7 +810,8 @@
         implementation
         ((jacobian-fn
            (gradient-fn f :h (m/sqrt h), :type type, :accuracy accuracy)
-           :h (m/sqrt h), :type type, :accuracy accuracy) v)))
+           :h (m/sqrt h), :type type, :accuracy accuracy)
+          v)))
     (let [multiplier (/ h),
           dx (m/sqrt h),
           coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (get-central-coefficient 2 2))]
@@ -880,11 +873,16 @@
 (defn- adapt-quad-internal
   "Do not call this fn directly.  Start with adaptive-quadrature instead."
   [f delta eps n k sigma a h fa fc fb S]
-  (let [delta (double delta) eps (double eps)
-        n (long n) k (long k)
-        sigma (double sigma) a (double a)
-        h (double h) fa (double fa)
-        fc (double fc) fb (double fb)
+  (let [delta (double delta)
+        eps (double eps)
+        n (long n)
+        k (long k)
+        sigma (double sigma)
+        a (double a)
+        h (double h)
+        fa (double fa)
+        fc (double fc)
+        fb (double fb)
         S (double S)
         b (+ a (* 2.0 h))
         c (+ a h)
@@ -895,11 +893,9 @@
       (close-enough? (+ S-left S-right) S (/ (* 60.0 eps h) delta))
       (+ sigma (insured-approximation S-left S-right S))
       (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
-      :else (+ (adapt-quad-internal                         ;From a to the midpoint
-                 f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
-               (adapt-quad-internal
-                 f delta eps n (inc k)                      ;From the midpoint to b
-                 sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
+      :else (+ (adapt-quad-internal f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left) ;From a to the midpoint
+               ;;From the midpoint to b
+               (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
 
 (defn- adaptive-quadrature-test
   "Approximates the definite integral of f over [a b] with an error less
@@ -907,12 +903,18 @@
   The parameter n specifies how many recursive calls are allowed.  An
   exception is thrown before the n+1st recursive call."
   [f a b eps n]
-  (let [a (double a) b (double b)
-        eps (double eps) n (long n)
-        delta (- b a) sigma 0
-        h (/ delta 2.0) c (/ (+ a b) 2.0)
-        k 1 fa (f a)
-        fb (f b) fc (f c)
+  (let [a (double a)
+        b (double b)
+        eps (double eps)
+        n (long n)
+        delta (- b a)
+        sigma 0
+        h (/ delta 2.0)
+        c (/ (+ a b) 2.0)
+        k 1
+        fa (f a)
+        fb (f b)
+        fc (f c)
         S (simpsons-estimate f a b h)]
     (adapt-quad-internal f delta eps n k sigma a h fa fc fb S)))
 
@@ -920,7 +922,7 @@
   "Univariate Integration using Romberg."
   [f lower-bound upper-bound]
   (let [max-eval 100]
-    (if (= lower-bound upper-bound)
+    (if (== lower-bound upper-bound)
       0.0
       (adaptive-quadrature-test f lower-bound upper-bound 1e-6 max-eval))))
 
