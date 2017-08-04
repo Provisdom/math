@@ -410,6 +410,13 @@
   (open-corr?-test)
   (maybe-long-able-test))
 
+(deftest ===-test
+  (is (m/=== m/nan))
+  (is (m/=== m/nan m/nan))
+  (is (m/=== m/nan m/nan m/nan))
+  (is (m/=== 3 3 3 3))
+  (is-not (m/=== 3 m/nan)))
+
 (deftest next-up-test
   (is= 3.0000000000000004 (m/next-up 3))
   (is= -2.9999999999999996 (m/next-up -3))
@@ -518,6 +525,7 @@
   (is (m/nan? (m/cbrt m/nan))))
 
 (deftest basic-math-test
+  (===-test)
   (next-up-test)
   (next-down-test)
   (div-test)
@@ -530,6 +538,8 @@
   (abs'-test)
   (cbrt-test))
 
+(defspec-test test-=' `m/=')
+(defspec-test test-==' `m/==')
 (defspec-test test-next-up `m/next-up)
 (defspec-test test-next-down `m/next-down)
 (defspec-test test-div `m/div)

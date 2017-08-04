@@ -345,6 +345,17 @@
   [x] (if (long-able? x) (long x) x))
 
 ;;;BASIC MATH
+(defn ===
+  "Equality for numbers that works with NaN."
+  ([number] true)
+  ([number1 number2] (or (and (nan? number1) (nan? number2)) (== number1 number2)))
+  ([number1 number2 & more] (and (=== number1 number2) (apply === number2 more))))
+
+(s/fdef ===
+        :args (s/or :one (s/cat :number ::number)
+                    :two+ (s/cat :number1 ::number :number2 ::number :more (s/* ::number)))
+        :ret boolean?)
+
 (defn next-up
   "Returns `number` plus smallest amount to make a change."
   [number] (Math/nextAfter (double number) inf+))

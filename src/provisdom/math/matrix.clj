@@ -39,6 +39,7 @@
 (s/def ::column-start (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
 (s/def ::size ::vector/size)
 (s/def ::number ::m/number)
+(s/def ::num ::m/num)
 (s/def ::finite ::m/finite)
 (s/def ::numbers ::vector/numbers)
 (s/def ::vector ::vector/vector)
@@ -75,17 +76,40 @@
 (s/def ::matrix (s/with-gen matrix?
                             #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                                        (fn [i] (gen/vector (gen/vector (s/gen ::number) i) 1 mdl)))))
+
+(defn matrix-num?
+  "Returns true if a matrix of num (numbers without NaN)."
+  [x]
+  (and (vector? x)
+       (vector? (first x))
+       (not (and (empty? (first x)) (> (count x) 1)))
+       (every? #(and (vector? %) (= (count %) (count (first x))) (every? m/num? %)) x)))
+
+(s/fdef matrix-num?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
 (s/def ::matrix-num
-  (s/with-gen (s/coll-of (s/coll-of ::m/num :kind vector? :into []) :min-count 1 :kind vector? :into [])
-              #(gen/vector (s/gen ::vector-num) 1 mdl)))
+  (s/with-gen matrix-num?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/vector (gen/vector (s/gen ::num) i) 1 mdl)))))
+
+(defn matrix-finite?
+  "Returns true if a matrix of finite numbers."
+  [x]
+  (and (vector? x)
+       (vector? (first x))
+       (not (and (empty? (first x)) (> (count x) 1)))
+       (every? #(and (vector? %) (= (count %) (count (first x))) (every? m/finite? %)) x)))
+
+(s/fdef matrix-finite?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
 (s/def ::matrix-finite
-  (s/with-gen (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :min-count 1 :kind vector? :into [])
-              #(gen/vector (s/gen ::vector-finite) 1 mdl)))
-(s/def ::matrix-or-less (s/or :m ::matrix :v ::vector :value ::number))
-(s/def ::top-left ::matrix)
-(s/def ::bottom-left ::matrix)
-(s/def ::top-right ::matrix)
-(s/def ::bottom-right ::matrix)
+  (s/with-gen matrix-finite?
+              #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+                         (fn [i] (gen/vector (gen/vector (s/gen ::finite) i) 1 mdl)))))
 
 (defn empty-matrix?
   "Returns true if the matrix is an empty matrix."
@@ -188,7 +212,7 @@
 
 (defn symmetric-matrix?
   "Returns true if a symmetric matrix."
-  [x] (and (square-matrix? x) (= (transpose x) x)))
+  [x] (and (square-matrix? x) (tensor/=== (transpose x) x)))
 
 (s/fdef symmetric-matrix?
         :args (s/cat :x any?)
@@ -240,7 +264,7 @@
   [rows columns f]
   (if (zero? (* rows columns))
     [[]]
-    (mapv (fn [r] (mapv (fn [c] (f r c)) (range columns))) (range rows))))
+    (mapv (fn [row] (mapv (fn [column] (f row column)) (range columns))) (range rows))))
 
 (s/fdef compute-matrix
         :args (s/cat :rows ::rows
@@ -251,7 +275,7 @@
 
 (defn identity-matrix
   "Constructs an identity matrix with the given `size`."
-  [size] (compute-matrix size size (fn [r c] (if (= r c) 1.0 0.0))))
+  [size] (compute-matrix size size (fn [row column] (if (= row column) 1.0 0.0))))
 
 (s/fdef identity-matrix
         :args (s/cat :size ::size)
@@ -716,9 +740,14 @@
                      :symmetric-m ::symmetric-matrix)
         :ret ::symmetric-matrix)
 
+(s/def ::top-left ::matrix)
+(s/def ::bottom-left ::matrix)
+(s/def ::top-right ::matrix)
+(s/def ::bottom-right ::matrix)
 (defn matrix-partition
   "Returns a map containing the four sub-matrices labeled `::top-left`, `::bottom-left`, `::top-right`, and
   `::bottom-right`.
+  Matrices can be merged back together using [[merge-matrices]].
   `first-bottom-row` is the bottom of where the slice will occur.
   `first-right-column` is the right edge of where the slice will occur."
   [m first-bottom-row first-right-column]
@@ -1021,7 +1050,13 @@
         :ret (s/nilable ::matrix))
 
 (defn merge-matrices
-  "Returns a Matrix created by binding four matrices together."
+  "Returns a Matrix created by binding four matrices together.
+  Matrices can be partitioned into four matrices using [[matrix-partition]].
+  Takes a map containing keys:
+  `::top-left`
+  `::bottom-left`
+  `::top-right`
+  `::bottom-right`."
   [{::keys [top-left bottom-left top-right bottom-right]}]
   (let [top (concat-columns top-left top-right)
         bottom (concat-columns bottom-left bottom-right)]

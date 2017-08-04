@@ -21,7 +21,36 @@
   (is-not (mx/matrix? '((0))))
   (is (mx/matrix? [[0]]))
   (is (mx/matrix? [[m/nan]]))
+  (is (mx/matrix? [[m/inf+]]))
   (is (mx/matrix? [[0.0] [0.0]])))
+
+(deftest matrix-num?-test
+  (is-not (mx/matrix-num? [0]))
+  (is-not (mx/matrix-num? [[] []]))
+  (is (mx/matrix-num? [[]]))
+  (is-not (mx/matrix-num? 0))
+  (is-not (mx/matrix-num? [[[0.0] [0.0]]]))
+  (is-not (mx/matrix-num? [[nil]]))
+  (is-not (mx/matrix-num? [["A"]]))
+  (is-not (mx/matrix-num? '((0))))
+  (is (mx/matrix-num? [[0]]))
+  (is-not (mx/matrix-num? [[m/nan]]))
+  (is (mx/matrix-num? [[m/inf+]]))
+  (is (mx/matrix-num? [[0.0] [0.0]])))
+
+(deftest matrix-finite?-test
+  (is-not (mx/matrix-finite? [0]))
+  (is-not (mx/matrix-finite? [[] []]))
+  (is (mx/matrix-finite? [[]]))
+  (is-not (mx/matrix-finite? 0))
+  (is-not (mx/matrix-finite? [[[0.0] [0.0]]]))
+  (is-not (mx/matrix-finite? [[nil]]))
+  (is-not (mx/matrix-finite? [["A"]]))
+  (is-not (mx/matrix-finite? '((0))))
+  (is (mx/matrix-finite? [[0]]))
+  (is-not (mx/matrix-finite? [[m/nan]]))
+  (is-not (mx/matrix-finite? [[m/inf+]]))
+  (is (mx/matrix-finite? [[0.0] [0.0]])))
 
 (deftest empty-matrix?-test
   (is-not (mx/empty-matrix? []))
@@ -92,6 +121,8 @@
 
 (deftest type-tests
   (matrix?-test)
+  (matrix-num?-test)
+  (matrix-finite?-test)
   (empty-matrix?-test)
   (row-matrix?-test)
   (column-matrix?-test)
@@ -103,6 +134,8 @@
   (symmetric-matrix?-test))
 
 ;(defspec-test test-matrix? `mx/matrix?) ;slowish
+;(defspec-test test-matrix-num? `mx/matrix-num?) ;slowish
+;(defspec-test test-matrix-finite? `mx/matrix-finite?) ;slowish
 ;(defspec-test test-empty-matrix? `mx/empty-matrix?) ;slowish
 ;(defspec-test test-row-matrix? `mx/row-matrix?) ;slowish
 ;(defspec-test test-column-matrix? `mx/column-matrix?) ;slowish
@@ -666,7 +699,6 @@
 (defspec-test test-concat-columns 'mx/concat-columns)
 (defspec-test test-merge-matrices 'mx/merge-matrices)
 (defspec-test test-replace-submatrix 'mx/replace-submatrix)
-(defspec-test test-square-matrix-by-trimming `mx/square-matrix-by-trimming)
 (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
 
 (deftest mx*-test

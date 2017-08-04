@@ -190,7 +190,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (defn regularized-gamma-p
   "Returns the regularized gamma function P(a, x) = 1 - Q(a, x).
-Equal to lower incomplete gamma function (a, x) divided by gamma function (a)."
+  Equal to lower incomplete gamma function (a, x) divided by gamma function (a)."
   [a x]
   (cond (m/nan? a) m/nan
         (zero? x) 0.0
@@ -203,7 +203,7 @@ Equal to lower incomplete gamma function (a, x) divided by gamma function (a)."
 
 (defn regularized-gamma-q
   "Returns the regularized gamma function Q(a, x) = 1 - P(a, x).
-Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
+  Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
   [a x]
   (cond (or (m/nan? a) (m/nan? x)) m/nan
         (zero? x) 1.0
@@ -255,12 +255,12 @@ Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
         :ret ::m/number)
 
 (defn multivariate-gamma
-  "Returns the multivariate gamma of a with dimension p"
+  "Returns the multivariate gamma of a with dimension p."
   [a p]
   (if (m/nan? a)
     m/nan
     (* (m/pow m/PI (* 0.25 p (dec p)))
-       (mx/eproduct (fn [i] (gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p))))))
+       (apply * (map (fn [i] (gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p)))))))
 
 (s/fdef multivariate-gamma
         :args (s/and (s/cat :a ::m/number
@@ -271,12 +271,12 @@ Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
         :ret ::m/nan-or-non-inf-)
 
 (defn multivariate-log-gamma
-  "Returns the multivariate log gamma of a with dimension p"
+  "Returns the multivariate log gamma of a with dimension p."
   [a p]
   (if (m/nan? a)
     m/nan
     (+ (* m/log-pi 0.25 p (dec p))
-       (mx/esum (fn [i] (log-gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p))))))
+       (apply + (map (fn [i] (log-gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p)))))))
 
 (s/fdef multivariate-log-gamma
         :args (s/and (s/cat :a ::m/nan-or-pos
@@ -286,8 +286,8 @@ Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
 
 ;;;BETA FUNCTIONS
 (defn beta
-  "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt
-Although beta is defined for pos x and y, you can use this function at your own risk for all non-zero x and y."
+  "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt.
+  Although beta is defined for pos x and y, you can use this function at your own risk for all non-zero x and y."
   [x y] (Gamma/beta x y))
 
 (s/fdef beta
@@ -303,8 +303,8 @@ Although beta is defined for pos x and y, you can use this function at your own 
         :ret ::m/nan-or-non-inf-)
 
 (defn regularized-beta
-  "Returns the regularized beta.  
-Equal to incomplete beta function divided by beta function."
+  "Returns the regularized beta.
+  Equal to incomplete beta function divided by beta function."
   [c x y] (if (zero? c) 0.0 (Gamma/incompleteBeta x y c)))  ;NOTE: cern misnamed this
 
 (s/fdef regularized-beta
@@ -314,7 +314,7 @@ Equal to incomplete beta function divided by beta function."
         :ret ::m/nan-or-finite)
 
 (defn incomplete-beta
-  "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt"
+  "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt."
   [c x y] (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) ;NOTE cern misnamed this
 
 (s/fdef incomplete-beta

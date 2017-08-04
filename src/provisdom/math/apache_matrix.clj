@@ -18,7 +18,7 @@
 (set! *warn-on-reflection* true)
 
 (declare apache-matrix? apache-square-matrix? apache-matrix eigen-decomposition
-         rrqr-decomposition rows columns
+         rrqr-decomposition rows columns ===
          transpose positive-definite-apache-matrix-finite-by-squaring
          positive-semidefinite-apache-matrix-finite-by-squaring diagonal
          mx* add covariance-apache-matrix->correlation-apache-matrix
@@ -63,6 +63,8 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::empty-apache-matrix (s/with-gen empty-apache-matrix? #(= (apache-matrix [[]]) %)))
+
 (defn apache-matrix-finite?
   "Returns true if an Apache Commons matrix without infinite numbers."
   [x] (and (apache-matrix? x) (nil? (some-kv (fn [_ _ number] (m/inf? number)) x))))
@@ -71,7 +73,7 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
-(s/def ::apache-matrix-finite (s/with-gen apache-matrix-finite? #(gen/fmap apache-matrix (s/gen ::matrix-finite))))
+(s/def ::apache-matrix-finite (s/with-gen apache-matrix-finite? #(gen/fmap apache-matrix (s/gen ::mx/matrix-finite))))
 
 (defn square-apache-matrix?
   "Returns true if a square Apache Commons matrix (i.e., same number of rows and columns)."
@@ -131,7 +133,7 @@
   (s/with-gen symmetric-apache-matrix? #(gen/fmap apache-matrix (s/gen ::mx/symmetric-matrix))))
 
 (defn positive-semidefinite-apache-matrix-finite?
-  "Returns true if a positive-semidefinite Apache matrix.
+  "Returns true if a finite positive-semidefinite Apache matrix.
   Larger `accu` creates more false positives and less false negatives."
   [x accu]
   (and (symmetric-apache-matrix? x)
@@ -146,12 +148,11 @@
 
 (s/def ::positive-semidefinite-apache-matrix-finite
   (s/with-gen #(positive-semidefinite-apache-matrix-finite? % m/*sgl-close*)
-              #(gen/fmap (fn [m] (when-not (mx/empty-matrix? m)
-                                   (positive-semidefinite-apache-matrix-finite-by-squaring (apache-matrix m))))
+              #(gen/fmap (fn [m] (positive-semidefinite-apache-matrix-finite-by-squaring (apache-matrix m)))
                          (s/gen ::mx/square-matrix-finite))))
 
 (defn positive-definite-apache-matrix-finite?
-  "Returns true if a positive definite Apache matrix.
+  "Returns true if a finite positive definite Apache matrix.
   Larger `accu` creates more false negatives and less false positives."
   [x accu]
   (and (symmetric-apache-matrix? x)
@@ -166,12 +167,11 @@
 
 (s/def ::positive-definite-apache-matrix-finite
   (s/with-gen #(positive-definite-apache-matrix-finite? % m/*sgl-close*)
-              #(gen/fmap (fn [m] (when-not (mx/empty-matrix? m)
-                                   (positive-definite-apache-matrix-finite-by-squaring (apache-matrix m))))
+              #(gen/fmap (fn [m] (positive-definite-apache-matrix-finite-by-squaring (apache-matrix m)))
                          (s/gen ::mx/square-matrix-finite))))
 
 (defn correlation-apache-matrix-finite?
-  "Returns true if a positive definite Apache Commons matrix with a unit diagonal.
+  "Returns true if a finite positive definite Apache Commons matrix with a unit diagonal.
   Larger `accu` creates more false negatives and less false positives."
   [x accu] (and (positive-definite-apache-matrix-finite? x accu) (every? m/one? (diagonal x))))
 
@@ -181,8 +181,7 @@
 
 (s/def ::correlation-apache-matrix-finite
   (s/with-gen #(correlation-apache-matrix-finite? % m/*sgl-close*)
-              #(gen/fmap (fn [m] (when-not (mx/empty-matrix? m)
-                                   (correlation-apache-matrix-finite-by-squaring (apache-matrix m))))
+              #(gen/fmap (fn [m] (correlation-apache-matrix-finite-by-squaring (apache-matrix m)))
                          (s/gen ::mx/square-matrix-finite))))
 
 ;;;MATRIX CONSTRUCTORS
@@ -216,14 +215,14 @@
         :ret ::matrix)
 
 (defn positive-semidefinite-apache-matrix-finite-by-squaring
-  "Returns a positive semidefinite Apache Commons matrix by first squaring 'square-apache-m-finite'."
+  "Returns a finite positive semidefinite Apache Commons matrix by first squaring 'square-apache-m-finite'."
   [square-apache-m-finite]
   (let [size (rows square-apache-m-finite)
         new-m square-apache-m-finite]
     (if (zero? size)
       square-apache-m-finite
       (loop [i 0]
-        (when (< i 310)
+        (when (< i 10)
           (let [lower-m (mx* new-m (apache-matrix (mx/diagonal-matrix (repeat size (m/pow 10 (m/one- (m/pow 2 i)))))))
                 lower-m (mx* lower-m (transpose lower-m))
                 _ (symmetric-apache-matrix-by-averaging! lower-m)]
@@ -236,7 +235,7 @@
         :ret (s/nilable ::positive-semidefinite-apache-matrix-finite))
 
 (defn positive-definite-apache-matrix-finite-by-squaring
-  "Returns a positive definite Apache Commons matrix squaring it.
+  "Returns a finite positive definite Apache Commons matrix squaring it.
   Will tweak original matrix if necessary to ensure positive definite."
   [square-apache-m-finite]
   (let [size (rows square-apache-m-finite)
@@ -263,7 +262,7 @@
         :ret (s/nilable ::positive-definite-apache-matrix-finite))
 
 (defn correlation-apache-matrix-finite-by-squaring
-  "Returns a Correlation Apache Commons matrix by first squaring 'square-apache-m'."
+  "Returns a finite Correlation Apache Commons matrix by first squaring 'square-apache-m'."
   [square-apache-m-finite]
   (if (zero? (rows square-apache-m-finite))
     square-apache-m-finite
@@ -285,10 +284,10 @@
         :ret (s/nilable ::correlation-apache-matrix-finite))
 
 (defn rnd-positive-definite-apache-matrix-finite!
-  "Returns a positive definite Apache Commons matrix with a random spectrum.
+  "Returns a finite positive definite Apache Commons matrix with a random spectrum.
   The orthogonal matrices are generated by using 2 × `size` composed Householder reflections.
   Alternative #1: Sample from the Inverse-Wishart Distribution.
-  Alternative #2: Use [[positive-definite-apache-matrix-by-squaring]] with a random square matrix."
+  Alternative #2: Use [[positive-definite-apache-matrix-finite-by-squaring]] with a random square matrix."
   [size]
   (if (zero? size)
     (apache-matrix [[]])
@@ -304,10 +303,10 @@
         :ret ::positive-definite-apache-matrix-finite)
 
 (defn rnd-correlation-apache-matrix-finite!
-  "Returns a correlation Apache Commons matrix from a covariance matrix with a random spectrum.
+  "Returns a finite correlation Apache Commons matrix from a covariance matrix with a random spectrum.
   The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
   Alternative #1: Sample Covariance from the Inverse-Wishart Distribution.
-  Alternative #2: Use [[correlation-apache-matrix-by-squaring]] with a random square matrix."
+  Alternative #2: Use [[correlation-apache-matrix-finite-by-squaring]] with a random square matrix."
   [size]
   (if (zero? size)
     (apache-matrix [[]])
@@ -336,7 +335,7 @@
 
 (defn get-entry
   "Returns the specified Apache Commons matrix element."
-  [apache-m row column] (.getEntry ^Array2DRowRealMatrix apache-m row column))
+  [apache-m row column] (try (.getEntry ^Array2DRowRealMatrix apache-m row column) (catch Exception _ m/nan)))
 
 (s/fdef get-entry
         :args (s/and (s/cat :apache-m ::apache-matrix :row ::row :column ::column)
@@ -345,21 +344,21 @@
 
 (defn get-row
   "Gets a `row` of an Apache Commons matrix, as a vector."
-  [apache-m row] (vec (.getRow ^Array2DRowRealMatrix apache-m row)))
+  [apache-m row] (try (vec (.getRow ^Array2DRowRealMatrix apache-m row)) (catch Exception _ nil)))
 
 (s/fdef get-row
         :args (s/and (s/cat :apache-m ::apache-matrix :row ::row)
                      #(< (:row %) (rows (:apache-m %))))
-        :ret ::vector)
+        :ret (s/nilable ::vector))
 
 (defn get-column
   "Gets a `column` of an Apache Commons matrix, as a vector."
-  [apache-m column] (vec (.getColumn ^Array2DRowRealMatrix apache-m column)))
+  [apache-m column] (try (vec (.getColumn ^Array2DRowRealMatrix apache-m column)) (catch Exception _ nil)))
 
 (s/fdef get-column
         :args (s/and (s/cat :apache-m ::apache-matrix :column ::column)
                      #(< (:column %) (columns (:apache-m %))))
-        :ret ::vector)
+        :ret (s/nilable ::vector))
 
 (defn diagonal
   "Returns the specified diagonal of an Apache Commons matrix as a vector.
@@ -572,13 +571,29 @@
           corr (mx* inv-sqrt covariance-apache-matrix inv-sqrt)
           _ (symmetric-apache-matrix-by-averaging! corr)
           _ (assoc-diagonal! corr (repeat (rows inv-sqrt) 1.0))]
-      (when (positive-definite-apache-matrix-finite? corr m/*sgl-close*) corr))))
+      (when (correlation-apache-matrix-finite? corr m/*sgl-close*) corr))))
 
 (s/fdef covariance-apache-matrix->correlation-apache-matrix
         :args (s/cat :covariance-apache-matrix ::positive-definite-apache-matrix-finite)
         :ret (s/nilable ::correlation-apache-matrix-finite))
 
 ;;;MATRIX MATH
+(defn ===
+  "Apache Commons matrix equality that works with NaN."
+  ([apache-m] true)
+  ([apache-m1 apache-m2] (tensor/=== (apache-matrix->matrix apache-m1) (apache-matrix->matrix apache-m2)))
+  ([apache-m1 apache-m2 & apache-ms]
+   (apply tensor/=== (apache-matrix->matrix apache-m1)
+               (apache-matrix->matrix apache-m2)
+               (map apache-matrix->matrix apache-ms))))
+
+(s/fdef ===
+        :args (s/or :one (s/cat :apache-m ::apache-matrix)
+                    :two+ (s/cat :apache-m1 ::apache-matrix
+                                 :apache-m2 ::apache-matrix
+                                 :apache-ms (s/* ::apache-matrix)))
+        :ret boolean?)
+
 (defn mx*
   "Apache Commons matrix multiplication.
   Number of columns of the first matrix must match the number of rows of the second matrix."
@@ -647,7 +662,7 @@
         :args (s/cat :square-apache-m ::square-apache-matrix)
         :ret ::inverse)
 
-(s/def ::LU-permutation (s/nilable ::apache-matrix))
+(s/def ::LU-permutation (s/nilable ::square-apache-matrix))
 (s/def ::L (s/nilable ::lower-triangular-apache-matrix))
 (s/def ::U (s/nilable ::upper-triangular-apache-matrix))
 (s/def ::determinant ::number)
@@ -695,7 +710,6 @@
 (s/def ::eigenvalues-matrix ::apache-matrix)
 (s/def ::eigenvectors ::square-apache-matrix)
 (s/def ::eigenvalues (s/nilable ::vector/vector))
-
 (defn eigen-decomposition
   "Computes the Eigendecomposition of a diagonalisable matrix.
    Returns a map containing:
@@ -814,7 +828,7 @@
       (m/div (apply max vs) (apply min vs) m/nan))))
 
 (s/fdef condition
-        :args (s/cat :apache-singular-values-matrix ::singular-values)
+        :args (s/cat :singular-values-apache-matrix ::singular-values)
         :ret ::number)
 
 (s/def ::Q ::apache-matrix)
@@ -868,10 +882,10 @@
         :ret (s/keys :req [::Q ::R ::LLS-solution]))
 
 (defn qr-decomposition
-  "Computes the QR decomposition of a matrix.
-  Returns a map containing:
+  "Computes the QR decomposition of an Apache Commons matrix.
+  Returns a map containing Apache Commons matrices Q and R:
     ::Q -- orthogonal factors
-    ::R -- the upper triangular factors."
+    ::R -- the upper triangular factors (not necessarily an upper triangular Apache Commons matrix)."
   [apache-m]
   (if (zero? (rows apache-m))
     {::Q apache-m, ::R apache-m}

@@ -6,12 +6,18 @@
             [provisdom.math.core :as m]
             [provisdom.math.vector :as vector]
             [provisdom.math.matrix :as mx]
-            [clatrix.core :as clatrix]))
+            [clatrix.core :as clatrix]
+            [provisdom.math.random2 :as random]
+            [provisdom.math.tensor :as tensor]))
 
 (set! *warn-on-reflection* true)
 
-(declare clatrix rows columns diagonal some-kv transpose eigen-decomposition)
+(declare clatrix rows columns diagonal some-kv transpose eigen-decomposition mx*
+         correlation-clatrix-finite-by-squaring positive-semidefinite-clatrix-finite-by-squaring
+         positive-definite-clatrix-finite-by-squaring symmetric-clatrix-by-averaging add
+         covariance-clatrix->correlation-clatrix assoc-diagonal ===)
 
+(s/def ::exception (partial instance? Exception))
 (s/def ::accu ::mx/accu)
 (s/def ::by-row? ::mx/by-row?)
 (s/def ::row ::mx/row)
@@ -22,9 +28,10 @@
 (s/def ::matrix ::mx/matrix)
 (s/def ::rank ::m/int-non-)
 (s/def ::vector ::vector/vector)
-(s/def ::eigenvalues ::vector)
-
-;;TODO: finish spec'ing all the types below (not the functions)
+(s/def ::vector-finite ::vector/vector-finite)
+(s/def ::vector-finite+ ::vector/vector-finite+)
+(s/def ::size ::mx/size)
+(s/def ::numbers ::mx/numbers)
 
 ;;;TYPES
 (defn clatrix?
@@ -36,12 +43,6 @@
         :ret boolean?)
 
 (s/def ::clatrix (s/with-gen clatrix? #(gen/fmap clatrix (s/gen ::matrix))))
-(s/def ::D ::clatrix)
-(s/def ::VT ::clatrix)
-(s/def ::P ::clatrix)
-(s/def ::Q ::clatrix)
-(s/def ::R ::clatrix)
-(s/def ::eigenvectors ::clatrix)
 
 (defn empty-clatrix?
   "Returns true is an empty Clatrix."
@@ -51,6 +52,18 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::empty-clatrix (s/with-gen empty-clatrix? #(= (clatrix [[]]) %)))
+
+(defn clatrix-finite?
+  "Returns true if an Clatrix without infinite numbers."
+  [x] (and (clatrix? x) (nil? (some-kv (fn [_ _ number] (m/inf? number)) x))))
+
+(s/fdef clatrix-finite?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::clatrix-finite (s/with-gen clatrix-finite? #(gen/fmap clatrix (s/gen ::mx/matrix-finite))))
+
 (defn row-clatrix?
   "Returns true is a row Clatrix."
   [x] (clatrix/row? x))
@@ -59,6 +72,8 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
+(s/def ::row-clatrix (s/with-gen row-clatrix? #(gen/fmap clatrix (s/gen ::mx/row-matrix))))
+
 (defn column-clatrix?
   "Returns true is a column Clatrix."
   [x] (clatrix/column? x))
@@ -66,6 +81,8 @@
 (s/fdef column-clatrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::column-clatrix (s/with-gen column-clatrix? #(gen/fmap clatrix (s/gen ::mx/column-matrix))))
 
 (defn square-clatrix?
   "Returns true if a square Clatrix."
@@ -76,6 +93,9 @@
         :ret boolean?)
 
 (s/def ::square-clatrix (s/with-gen square-clatrix? #(gen/fmap clatrix (s/gen ::mx/square-matrix))))
+(s/def ::square-clatrix-finite
+  (s/with-gen (s/and square-clatrix? clatrix-finite?)
+              #(gen/fmap clatrix (s/gen ::mx/square-matrix-finite))))
 
 (defn diagonal-clatrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are all zero)."
@@ -86,7 +106,6 @@
         :ret boolean?)
 
 (s/def ::diagonal-clatrix (s/with-gen diagonal-clatrix? #(gen/fmap clatrix (s/gen ::mx/diagonal-matrix))))
-(s/def ::S ::diagonal-clatrix)
 
 (defn upper-triangular-clatrix?
   "Returns true if an upper triangular matrix (square with the entries below the main diagonal all zero)."
@@ -98,7 +117,6 @@
 
 (s/def ::upper-triangular-clatrix
   (s/with-gen upper-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/upper-triangular-matrix))))
-(s/def ::U ::upper-triangular-clatrix)
 
 (defn lower-triangular-clatrix?
   "Returns true if a lower triangular matrix (square with the entries above the main diagonal all zero)."
@@ -110,11 +128,10 @@
 
 (s/def ::lower-triangular-clatrix
   (s/with-gen lower-triangular-clatrix? #(gen/fmap clatrix (s/gen ::mx/lower-triangular-matrix))))
-(s/def ::L ::lower-triangular-clatrix)
 
 (defn symmetric-clatrix?
   "Returns true is a symmetric Clatrix."
-  [x] (and (clatrix? x) (= (transpose x) x)))
+  [x] (and (clatrix? x) (=== (transpose x) x)))
 
 (s/fdef symmetric-clatrix?
         :args (s/cat :x any?)
@@ -123,49 +140,58 @@
 (s/def ::symmetric-clatrix
   (s/with-gen symmetric-clatrix? #(gen/fmap clatrix (s/gen ::mx/symmetric-matrix))))
 
-(defn positive-clatrix?
-  "Returns true if a positive definite Clatrix."
-  ([x] (positive-clatrix? x {::accu m/*dbl-close*}))
-  ([x {::keys [accu] :or {accu true}}]
-   (and (symmetric-clatrix? x)
-        (or (zero? (rows x))
-            (let [eig (eigen-decomposition x)]
-              (if eig
-                (every? #(> % accu) (::eigenvalues eig))
-                false))))))
+(defn positive-semidefinite-clatrix-finite?
+  "Returns true if a finite positive semi-definite Clatrix."
+  [x accu]
+  (and (symmetric-clatrix? x)
+       (clatrix-finite? x)
+       (or (zero? (rows x))
+           (let [eig (eigen-decomposition x)]
+             (if eig
+               (every? #(m/roughly-non-? % accu) (::eigenvalues eig))
+               false)))))
 
-(s/fdef positive-clatrix?
-        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
+(s/fdef positive-semidefinite-clatrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
 
-(s/def ::positive-clatrix
-  (s/with-gen positive-clatrix?
-              #(gen/fmap (fn [m] (clatrix (mx/non-negative-matrix m (mx/rows m)))) (s/gen ::mx/square-matrix))))
+(s/def ::positive-semidefinite-clatrix-finite
+  (s/with-gen #(positive-semidefinite-clatrix-finite? % m/*sgl-close*)
+              #(gen/fmap (fn [m] (positive-semidefinite-clatrix-finite-by-squaring (clatrix m)))
+                         (s/gen ::mx/square-matrix-finite))))
 
-(defn non-negative-clatrix?
-  "Returns true if a non-negative Clatrix."
-  ([x] (non-negative-clatrix? x {::accu m/*dbl-close*}))
-  ([x {::keys [accu] :or {accu true}}]
-   (and (symmetric-clatrix? x)
-        (or (zero? (rows x))
-            (let [eig (eigen-decomposition x)]
-              (if eig
-                (every? #(m/roughly-non-? % accu) (::eigenvalues eig))
-                false))))))
+(defn positive-definite-clatrix-finite?
+  "Returns true if a finite positive definite Clatrix."
+  [x accu]
+  (and (symmetric-clatrix? x)
+       (clatrix-finite? x)
+       (or (zero? (rows x))
+           (let [eig (eigen-decomposition x)]
+             (if eig
+               (every? #(> % accu) (::eigenvalues eig))
+               false)))))
 
-(s/fdef non-negative-clatrix?
-        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
+(s/fdef positive-definite-clatrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
 
-(defn correlation-clatrix?
-  "Returns true if a positive definite Clatrix with a unit diagonal (all ones on the diagonal)."
-  ([x] (correlation-clatrix? x {::accu m/*dbl-close*}))
-  ([x {::keys [accu] :or {accu true}}]
-   (and (clatrix? x) (every? m/one? (diagonal x)) (positive-clatrix? x {::accu accu}))))
+(s/def ::positive-definite-clatrix-finite
+  (s/with-gen #(positive-definite-clatrix-finite? % m/*sgl-close*)
+              #(gen/fmap (fn [m] (positive-definite-clatrix-finite-by-squaring (clatrix m)))
+                         (s/gen ::mx/square-matrix-finite))))
 
-(s/fdef correlation-clatrix?
-        :args (s/cat :x any? :accu (s/? (s/keys :opt [::accu])))
+(defn correlation-clatrix-finite?
+  "Returns true if a finite positive definite Clatrix with a unit diagonal (all ones on the diagonal)."
+  [x accu] (and (clatrix? x) (every? m/one? (diagonal x)) (positive-definite-clatrix-finite? x accu)))
+
+(s/fdef correlation-clatrix-finite?
+        :args (s/cat :x any? :accu ::accu)
         :ret boolean?)
+
+(s/def ::correlation-clatrix-finite
+  (s/with-gen #(correlation-clatrix-finite? % m/*sgl-close*)
+              #(gen/fmap (fn [m] (correlation-clatrix-finite-by-squaring (clatrix m)))
+                         (s/gen ::mx/square-matrix-finite))))
 
 ;;;CONSTRUCTORS
 (defn clatrix
@@ -188,6 +214,108 @@
         :args (s/cat :clatrix-m ::clatrix)
         :ret ::matrix)
 
+(defn positive-semidefinite-clatrix-finite-by-squaring
+  "Returns a finite positive semidefinite Clatrix by first squaring 'square-clatrix-m-finite'."
+  [square-clatrix-m-finite]
+  (let [size (rows square-clatrix-m-finite)]
+    (if (zero? size)
+      square-clatrix-m-finite
+      (loop [i 0]
+        (when (< i 10)
+          (let [lower-m (mx* square-clatrix-m-finite
+                             (clatrix (mx/diagonal-matrix (repeat size (m/pow 10 (m/one- (m/pow 2 i)))))))
+                lower-m (mx* lower-m (transpose lower-m))
+                lower-m (symmetric-clatrix-by-averaging lower-m)]
+            (if (positive-semidefinite-clatrix-finite? lower-m m/*sgl-close*)
+              lower-m
+              (recur (inc i)))))))))
+
+(s/fdef positive-semidefinite-clatrix-finite-by-squaring
+        :args (s/cat :square-clatrix-m-finite ::square-clatrix-finite)
+        :ret (s/nilable ::positive-semidefinite-clatrix-finite))
+
+(defn positive-definite-clatrix-finite-by-squaring
+  "Returns a finite positive definite Clatrix squaring it.
+  Will tweak original matrix if necessary to ensure positive definite."
+  [square-clatrix-m-finite]
+  (let [size (rows square-clatrix-m-finite)]
+    (if (zero? size)
+      square-clatrix-m-finite
+      (loop [i 0]
+        (when (< i 10)
+          (let [lower-m (mx* square-clatrix-m-finite
+                             (clatrix (mx/diagonal-matrix (repeat size (m/pow 10 (m/one- (m/pow 2 i)))))))
+                lower-m (if (zero? i)
+                          lower-m
+                          (add lower-m
+                               (clatrix
+                                 (mx/diagonal-matrix
+                                   size (fn [_] (* (if (odd? i) (- 1.0) 1.0) (m/pow 10 (- i m/*sgl-digits*))))))))
+                lower-m (mx* lower-m (transpose lower-m))
+                lower-m (symmetric-clatrix-by-averaging lower-m)]
+            (if (positive-definite-clatrix-finite? lower-m m/*sgl-close*)
+              lower-m
+              (recur (inc i)))))))))
+
+(s/fdef positive-definite-clatrix-finite-by-squaring
+        :args (s/cat :square-clatrix-m-finite ::square-clatrix-finite)
+        :ret (s/nilable ::positive-definite-clatrix-finite))
+
+(defn correlation-clatrix-finite-by-squaring
+  "Returns a finite Correlation Clatrix by first squaring 'square-clatrix-m'."
+  [square-clatrix-m-finite]
+  (if (zero? (rows square-clatrix-m-finite))
+    square-clatrix-m-finite
+    (let [new-m (covariance-clatrix->correlation-clatrix
+                  (positive-definite-clatrix-finite-by-squaring square-clatrix-m-finite))
+          size (when new-m (rows new-m))]
+      (when new-m
+        (loop [i 0]
+          (when (< i 100)
+            (let [lower-m (mx* new-m (clatrix (mx/diagonal-matrix (repeat size (m/one- (* 0.01 i))))))
+                  lower-m (symmetric-clatrix-by-averaging lower-m)
+                  lower-m (assoc-diagonal lower-m (repeat size 1.0))]
+              (if (correlation-clatrix-finite? lower-m m/*sgl-close*)
+                lower-m
+                (recur (inc i))))))))))
+
+(s/fdef correlation-clatrix-finite-by-squaring
+        :args (s/cat :square-clatrix-m-finite ::square-clatrix-finite)
+        :ret (s/nilable ::correlation-clatrix-finite))
+
+(defn rnd-positive-definite-clatrix-finite!
+  "Returns a finite positive definite Clatrix with a random spectrum.
+  The orthogonal matrices are generated by using 2 × `size` composed Householder reflections.
+  Alternative #1: Sample from the Inverse-Wishart Distribution.
+  Alternative #2: Use [[positive-definite-clatrix-by-squaring]] with a random square matrix."
+  [size]
+  (if (zero? size)
+    (clatrix [[]])
+    (loop [i 0]
+      (if (< i 100)
+        (let [m (clatrix (mx/rnd-spectral-matrix! (vec (take size (random/rand-double-lazy!)))))]
+          (if (positive-definite-clatrix-finite? m m/*sgl-close*)
+            m
+            (recur (inc i))))))))
+
+(s/fdef rnd-positive-definite-clatrix-finite!
+        :args (s/cat :size ::size)
+        :ret ::positive-definite-clatrix-finite)
+
+(defn rnd-correlation-clatrix-finite!
+  "Returns a finite correlation Clatrix from a covariance matrix with a random spectrum.
+  The orthogonal matrices are generated by using 2 * `size` composed Householder reflections.
+  Alternative #1: Sample Covariance from the Inverse-Wishart Distribution.
+  Alternative #2: Use [[correlation-clatrix-by-squaring]] with a random square matrix."
+  [size]
+  (if (zero? size)
+    (clatrix [[]])
+    (covariance-clatrix->correlation-clatrix (rnd-positive-definite-clatrix-finite! size))))
+
+(s/fdef rnd-correlation-clatrix-finite!
+        :args (s/cat :size ::size)
+        :ret ::correlation-clatrix-finite)
+
 ;;;MATRIX INFO
 (defn rows
   "Returns the number of rows of a Clatrix."
@@ -204,6 +332,34 @@
 (s/fdef columns
         :args (s/cat :clatrix-m ::clatrix)
         :ret ::columns)
+
+(defn get-entry
+  "Returns the specified Clatrix element."
+  [clatrix-m row column] (try (clatrix/get clatrix-m row column) (catch Exception _ m/nan)))
+
+(s/fdef get-entry
+        :args (s/and (s/cat :clatrix-m ::clatrix :row ::row :column ::column)
+                     #(and (< (:row %) (rows (:clatrix-m %))) (< (:column %) (columns (:clatrix-m %)))))
+        :ret ::number)
+
+(defn get-row
+  "Gets a `row` of an Clatrix, as a vector."
+  [clatrix-m row] (try (vec (clatrix/slice-row clatrix-m row)) (catch Exception _ nil)))
+
+(s/fdef get-row
+        :args (s/and (s/cat :clatrix-m ::clatrix :row ::row)
+
+                     #(< (:row %) (rows (:clatrix-m %))))
+        :ret (s/nilable ::vector))
+
+(defn get-column
+  "Gets a `column` of an Clatrix, as a vector."
+  [clatrix-m column] (try (vec (clatrix/slice-column clatrix-m column)) (catch Exception _ nil)))
+
+(s/fdef get-column
+        :args (s/and (s/cat :clatrix-m ::clatrix :column ::column)
+                     #(< (:column %) (columns (:clatrix-m %))))
+        :ret (s/nilable ::vector))
 
 (defn diagonal
   "Returns diagonal of a Clatrix."
@@ -240,30 +396,139 @@
         :args (s/cat :clatrix-m ::clatrix)
         :ret ::clatrix)
 
+(defn assoc-diagonal
+  "Sets a diagonal in a Clatrix using the specified numbers."
+  [clatrix-m numbers]
+  (cond (empty-clatrix? clatrix-m) (clatrix (mx/diagonal-matrix numbers))
+
+        (= (count numbers) (count (diagonal clatrix-m)))
+        (let [v (vec numbers)]
+          (clatrix (vec (for [row (range (count numbers))]
+                          (assoc (get-row clatrix-m row) row (get v row 0.0))))))
+
+        :else nil))
+
+(s/fdef assoc-diagonal
+        :args (s/cat :clatrix-m ::clatrix :numbers ::numbers)
+        :ret (s/nilable ::clatrix))
+
+(defn symmetric-clatrix-by-averaging
+  "Returns a symmetric Clatrix where each element above or below the diagonal is equal to the
+  average of the corresponding numbers.
+  This is useful to help with rounding errors."
+  [square-clatrix-m]
+  (let [size (rows square-clatrix-m)]
+    (clatrix (mx/compute-matrix size size (fn [row column]
+                                            (if (== column row)
+                                              (or (get-entry square-clatrix-m row column) 0.0)
+                                              (* 0.5 (+ (or (get-entry square-clatrix-m row column) 0.0)
+                                                        (or (get-entry square-clatrix-m column row) 0.0)))))))))
+
+(s/fdef symmetric-clatrix-by-averaging
+        :args (s/cat :square-clatrix-m ::square-clatrix)
+        :ret ::symmetric-clatrix)
+
+(defn correlation-clatrix->covariance-clatrix
+  "Returns Covariance Clatrix from a Correlation Clatrix."
+  [correlation-clatrix-m-finite variances]
+  (when (= (count variances) (rows correlation-clatrix-m-finite))
+    (if (zero? (count variances))
+      correlation-clatrix-m-finite
+      (let [sqrt-m (clatrix (mx/diagonal-matrix (mapv m/sqrt variances)))
+            cov (mx* sqrt-m correlation-clatrix-m-finite sqrt-m)
+            cov (symmetric-clatrix-by-averaging cov)]
+        (when (positive-definite-clatrix-finite? cov m/*sgl-close*) cov)))))
+
+(s/fdef correlation-clatrix->covariance-clatrix
+        :args (s/cat :correlation-clatrix-m-finite ::correlation-clatrix-finite :variances ::vector-finite+)
+        :ret (s/nilable ::positive-definite-clatrix-finite))
+
+(defn covariance-clatrix->correlation-clatrix
+  "Returns Correlation Clatrix from a Covariance Clatrix."
+  [covariance-clatrix-m-finite]
+  (if (zero? (rows covariance-clatrix-m-finite))
+    covariance-clatrix-m-finite
+    (let [inv-sqrt (clatrix (mx/diagonal-matrix (map #(m/pow % -0.5) (diagonal covariance-clatrix-m-finite))))
+          corr (mx* inv-sqrt covariance-clatrix-m-finite inv-sqrt)
+          corr (symmetric-clatrix-by-averaging corr)
+          corr (assoc-diagonal corr (repeat (rows inv-sqrt) 1.0))]
+      (when (correlation-clatrix-finite? corr m/*sgl-close*) corr))))
+
+(s/fdef covariance-clatrix->correlation-clatrix
+        :args (s/cat :covariance-clatrix-m-finite ::positive-definite-clatrix-finite)
+        :ret (s/nilable ::correlation-clatrix-finite))
+
 ;;;MATRIX MATH
+(defn ===
+  "Clatrix equality that works with NaN."
+  ([clatrix-m] true)
+  ([clatrix-m1 clatrix-m2] (tensor/=== (clatrix->matrix clatrix-m1) (clatrix->matrix clatrix-m2)))
+  ([clatrix-m1 clatrix-m2 & clatrix-ms]
+   (apply tensor/=== (clatrix->matrix clatrix-m1) (clatrix->matrix clatrix-m2) (map clatrix->matrix clatrix-ms))))
+
+(s/fdef ===
+        :args (s/or :one (s/cat :clatrix-m ::clatrix)
+                    :two+ (s/cat :clatrix-m1 ::clatrix
+                                 :clatrix-m2 ::clatrix
+                                 :clatrix-ms (s/* ::clatrix)))
+        :ret boolean?)
+
 (defn mx*
   "Multiplies Clatrices."
   ([clatrix-m] clatrix-m)
   ([clatrix-m1 clatrix-m2]
-   (if (or (empty-clatrix? clatrix-m1) (empty-clatrix? clatrix-m2))
-     (clatrix [[]])
-     (clatrix/* clatrix-m1 clatrix-m2)))
-  ([clatrix-m1 clatrix-m2 & clatrix-ms] (apply mx* (mx* clatrix-m1 clatrix-m2) clatrix-ms)))
+   (when (= (columns clatrix-m1) (rows clatrix-m2))
+     (if (zero? (rows clatrix-m1))
+       clatrix-m1
+       (clatrix/* clatrix-m1 clatrix-m2))))
+  ([clatrix-m1 clatrix-m2 & clatrix-ms]
+   (when-let [clatrix-m3 (mx* clatrix-m1 clatrix-m2)] (apply mx* clatrix-m3 clatrix-ms))))
 
 (s/fdef mx*
         :args (s/or :one (s/cat :clatrix-m ::clatrix)
-                    :two (s/and (s/cat :clatrix-m1 ::clatrix
-                                       :clatrix-m2 ::clatrix)
-                                #(= (columns (:clatrix-m1 %)) (rows (:clatrix-m2 %))))
-                    :three+ (s/and (s/cat :clatrix-m1 ::clatrix
-                                          :clatrix-m2 ::clatrix
-                                          :clatrix-ms (s/with-gen (s/* ::clatrix) #(gen/vector (s/gen ::clatrix) 0 2)))
-                                   #(not (true? (reduce (fn [lc e] (if (= (rows e) lc) (columns e) (reduced true)))
-                                                        (columns (:clatrix-m1 %))
-                                                        (cons (:clatrix-m2 %) (:clatrix-ms %)))))))
-        :ret ::clatrix)
+                    :two+ (s/cat :clatrix-m1 ::clatrix
+                                 :clatrix-m2 ::clatrix
+                                 :clatrix-ms (s/* ::clatrix)))
+        :ret (s/nilable ::clatrix))
+
+(defn add
+  "Clatrix addition."
+  ([clatrix-m] clatrix-m)
+  ([clatrix-m1 clatrix-m2]
+   (if (and (zero? (rows clatrix-m1)) (zero? (rows clatrix-m2)))
+     clatrix-m1
+     (try (clatrix/+ clatrix-m1 clatrix-m2)
+          (catch Exception _ nil))))
+  ([clatrix-m1 clatrix-m2 & clatrix-ms]
+   (when-let [clatrix-m3 (add clatrix-m1 clatrix-m2)] (apply add clatrix-m3 clatrix-ms))))
+
+(s/fdef add
+        :args (s/or :one (s/cat :clatrix-m ::clatrix)
+                    :two+ (s/cat :clatrix-m1 ::clatrix
+                                 :clatrix-m2 ::clatrix
+                                 :clatrix-ms (s/* ::clatrix)))
+        :ret (s/nilable ::clatrix))
+
+(defn subtract
+  "Clatrix subtraction."
+  ([clatrix-m] clatrix-m)
+  ([clatrix-m1 clatrix-m2]
+   (if (and (zero? (rows clatrix-m1)) (zero? (rows clatrix-m2)))
+     clatrix-m1
+     (try (clatrix/- clatrix-m1 clatrix-m2)
+          (catch Exception _ nil))))
+  ([clatrix-m1 clatrix-m2 & clatrix-ms]
+   (when-let [clatrix-m3 (subtract clatrix-m1 clatrix-m2)] (apply subtract clatrix-m3 clatrix-ms))))
+
+(s/fdef subtract
+        :args (s/or :one (s/cat :clatrix-m ::clatrix)
+                    :two+ (s/cat :clatrix-m1 ::clatrix
+                                 :clatrix-m2 ::clatrix
+                                 :clatrix-ms (s/* ::clatrix)))
+        :ret (s/nilable ::clatrix))
 
 ;;;MATRIX DECOMPOSITION
+(s/def ::inverse (s/nilable ::square-clatrix))
 (defn inverse
   "Computes the inverse of a number, vector, or matrix.
    This is done via Gaussian elimination.
@@ -277,11 +542,42 @@
 
 (s/fdef inverse
         :args (s/cat :square-clatrix-m ::square-clatrix)
-        :ret (s/nilable ::square-clatrix))
+        :ret (s/nilable ::inverse))
 
+(defn determinant
+  "Calculates the determinant of a square Clatrix."
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    m/nan
+    (clatrix/det square-clatrix-m)))
+
+(s/fdef determinant
+        :args (s/cat :square-clatrix-m ::square-clatrix)
+        :ret ::number)
+
+(s/def ::L ::lower-triangular-clatrix)
+(s/def ::U ::upper-triangular-clatrix)
+(s/def ::LU-permutation (s/nilable ::square-clatrix))
+(defn lu-decomposition
+  "Returns a map containing:
+      ::L -- the lower triangular factor
+      ::U -- the upper triangular factor
+      ::LU-permutation -- the permutation matrix."
+  [square-clatrix-m]
+  (if (empty-clatrix? square-clatrix-m)
+    {::L (clatrix [[]]), ::U (clatrix [[]]), ::LU-permutation (clatrix [[]])}
+    (let [r (clatrix/lu square-clatrix-m)]
+      {::L (:l r), ::U (:u r), ::LU-permutation (:p r)})))
+
+(s/fdef lu-decomposition
+        :args (s/cat :square-clatrix-m ::square-clatrix)
+        :ret (s/keys :req [::L ::U ::LU-permutation]))
+
+(s/def ::eigenvalues ::vector)
+(s/def ::eigenvectors ::clatrix)
 (defn eigen-decomposition
   "Returns map with a vector of the real parts of eigenvalues and a Clatrix of eigenvectors.
-  A matrix can be decomposed as A=Q × L × Q^-1, where L is the diagonal matrix of `eigenvalues`,
+  A matrix can be decomposed as A = Q × L × Q^-1, where L is the diagonal matrix of `eigenvalues`,
   Q is the `eigenvalues` matrix, and Q^-1 is the inverse of Q."
   [square-clatrix-m]
   (if (empty-clatrix? square-clatrix-m)
@@ -299,90 +595,77 @@
 
 (defn upper-cholesky-decomposition
   "Computes the Cholesky decomposition of a Clatrix.
-   This is the Cholesky square root of a Clatrix, U such that `positive-clatrix-m` = UT × U.
-   Note that `positive-clatrix-m` must be positive (semi) definite for this to exist,
+   This is the Cholesky square root of a Clatrix, U such that `positive-definite-clatrix-m` = UT × U.
+   Note that `positive-definite-clatrix-m` must be positive (semi) definite for this to exist,
       but [[upper-cholesky-decomposition]] requires strict positivity."
-  [positive-clatrix-m]
-  (if (empty-clatrix? positive-clatrix-m)
+  [positive-definite-clatrix-m-finite]
+  (if (empty-clatrix? positive-definite-clatrix-m-finite)
     (clatrix [[]])
-    (clatrix/cholesky positive-clatrix-m)))
+    (try (clatrix/cholesky positive-definite-clatrix-m-finite)
+         (catch Exception e (ex-info (.getMessage e) {:fn (var upper-cholesky-decomposition)})))))
 
 (s/fdef upper-cholesky-decomposition
-        :args (s/cat :positive-clatrix-m ::positive-clatrix)
-        :ret ::upper-triangular-clatrix)
+        :args (s/cat :positive-definite-clatrix-m-finite ::positive-definite-clatrix-finite)
+        :ret (s/or :exception ::exception
+                   :res ::upper-triangular-clatrix))
 
+(s/def ::svd-left ::clatrix-finite)
+(s/def ::svd-right ::clatrix-finite)
+(s/def ::singular-values ::diagonal-clatrix)
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of a Clatrix.
-  The Singular Value Decomposition of Clatrix A is a set of three matrices: D, S and V such that A = D × S × VT.
-  Let A be a m × n matrix, then D is a m × p orthogonal matrix,
-  S is a p × p diagonal matrix with positive or null elements,
-  V is a p × n orthogonal matrix (hence VT is also orthogonal) where p=min(m,n).
+  The Singular Value Decomposition of `clatrix-m-finite` is a set of three
+  matrices: `svd-left`, `singular-values`, and `svd-right` such that:
+  `clatrix-m-finite` = `svd-left` × `singular-values` × `svd-right`.
+  Let `clatrix-m-finite` be a m × n matrix, then `svd-left` is a m × p orthogonal matrix of the left singular vectors,
+  `singular-values` is a p × p diagonal matrix of singular values with positive or nil elements,
+  and are ordered from largest to smallest.
+  `svd-right` is a p × n orthogonal matrix of the right singular vectors where p = min(m,n).
+  Note that Identity Matrix = (transpose `svd-left`) × `svd-left` = `svd-right` × (transpose `svd-right`).
   Returns a map containing:
-      :S -- diagonal Clatrix S
-      :D -- Clatrix D
-      :VT -- transpose of Clatrix V
-      :rank -- rank."
-  [clatrix-m]
-  (if (empty-clatrix? clatrix-m)
-    {::S    (clatrix [[]])
-     ::D    (clatrix [[]])
-     ::VT   (clatrix [[]])
-     ::rank 0}
-    (let [r (clatrix/svd clatrix-m)]
-      {::S    (clatrix (mx/diagonal-matrix (vec (:values r))))
-       ::D    (:left r)
-       ::VT   (:right r)
-       ::rank (:rank r)})))
+  ::svd-left -- finite Clatrix of left singular vectors
+  ::singular-values -- diagonal Clatrix
+  ::svd-right -- transpose of finite Clatrix of right singular vectors
+  ::rank -- rank."
+  [clatrix-m-finite]
+  (if (empty-clatrix? clatrix-m-finite)
+    {::svd-left        (clatrix [[]])
+     ::singular-values (clatrix [[]])
+     ::svd-right       (clatrix [[]])
+     ::rank            0}
+    (try (let [r (clatrix/svd clatrix-m-finite)]
+           {::svd-left        (:left r)
+            ::singular-values (clatrix (mx/diagonal-matrix (vec (:values r))))
+            ::svd-right       (:right r)
+            ::rank            (:rank r)})
+         (catch Exception e (ex-info (.getMessage e) {:fn (var sv-decomposition)})))))
 
 (s/fdef sv-decomposition
-        :args (s/cat :clatrix-m ::clatrix)
-        :ret (s/keys :req [::S ::D ::VT ::rank]))
+        :args (s/cat :clatrix-m-finite ::clatrix-finite)
+        :ret (s/or :exception ::exception
+                   :res (s/keys :req [::svd-left ::singular-values ::svd-right ::rank])))
 
 (defn condition
-  "The `singular-values-clatrix` is the diagonal Clatrix of singular values, the `S`, from an SVD decomposition.
+  "The `singular-values-clatrix` is the diagonal matrix of ::singular-values from [[sv-decomposition]].
   Returns the norm2 condition number,
   which is the maximum element value from the `singular-values-clatrix` divided by the minimum element value."
   [singular-values-clatrix]
-  (let [vs (diagonal singular-values-clatrix)]
-    (if (empty? vs)
-      m/nan
+  (if (zero? (rows singular-values-clatrix))
+    m/nan
+    (let [vs (diagonal singular-values-clatrix)]
       (m/div (apply max vs) (apply min vs) m/nan))))
 
 (s/fdef condition
-        :args (s/cat :singular-values-clatrix ::diagonal-clatrix)
+        :args (s/cat :singular-values-clatrix ::singular-values)
         :ret ::number)
 
-(defn lu-decomposition
-  "Returns a map containing:
-      :L -- the lower triangular factor
-      :U -- the upper triangular factor
-      :P -- the permutation matrix."
-  [square-clatrix-m]
-  (if (empty-clatrix? square-clatrix-m)
-    {::L (clatrix [[]]), ::U (clatrix [[]]), ::P (clatrix [[]])}
-    (let [r (clatrix/lu square-clatrix-m)]
-      {::L (:l r), ::U (:u r), ::P (:p r)})))
-
-(s/fdef lu-decomposition
-        :args (s/cat :square-clatrix-m ::square-clatrix)
-        :ret (s/keys :req [::L ::U ::P]))
-
-(defn determinant
-  "Calculates the determinant of a square Clatrix."
-  [square-clatrix-m]
-  (if (empty-clatrix? square-clatrix-m)
-    m/nan
-    (clatrix/det square-clatrix-m)))
-
-(s/fdef determinant
-        :args (s/cat :square-clatrix-m ::square-clatrix)
-        :ret ::number)
-
+(s/def ::Q ::clatrix)
+(s/def ::R ::clatrix)
 (defn qr-decomposition
   "Computes the QR decomposition of a Clatrix.
   Returns a map containing Clatrices Q and R.
    Q -- orthogonal factors
-   R -- the upper triangular factors (not necessarily an upper triangular Clatrix)"
+   R -- the upper triangular factors (not necessarily an upper triangular Clatrix)."
   [clatrix-m]
   (if (empty-clatrix? clatrix-m)
     {::Q (clatrix [[]]), ::R (clatrix [[]])}

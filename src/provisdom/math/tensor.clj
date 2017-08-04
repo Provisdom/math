@@ -267,6 +267,17 @@
           :ret (s/nilable ::tensor)))
 
 ;;;TENSOR MATH
+(defn ===
+  "Tensor equality that works with NaN."
+  ([tensor] true)
+  ([tensor1 tensor2] (every? true? (flatten (emap (fn [i j] (m/=== i j)) tensor1 tensor2))))
+  ([tensor1 tensor2 & more] (and (=== tensor1 tensor2) (apply === tensor2 more))))
+
+(s/fdef ===
+        :args (s/or :one (s/cat :tensor ::tensor)
+                    :two+ (s/cat :tensor1 ::tensor :tensor2 ::tensor :more (s/* ::tensor)))
+        :ret boolean?)
+
 (defn add
   "Performs element-wise addition for one or more tensors."
   ([] 0.0)
@@ -316,6 +327,17 @@
         :args (s/or :zero (s/cat)
                     :one+ (s/cat :tensor ::tensor :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
+
+(defn average
+  "The average of the values of the elements."
+  [tensor]
+  (if (number? tensor)
+    tensor
+    (let [v (flatten tensor)] (m/div (apply + v) (count v) m/nan))))
+
+(s/fdef average
+        :args (s/cat :tensor ::tensor)
+        :ret ::number)
 
 (defn norm1
   "The sum of the absolute values of the elements."

@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.0-alpha11")
+(def version "1.0-alpha12")
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
@@ -8,6 +8,7 @@
                           [adzerk/boot-test "1.2.0" :scope "test"]
                           [midje "1.9.0-alpha6" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
+                          [boot-codox "0.10.3" :scope "test"]
 
                           [provisdom/boot-tasks "1.4" :scope "test"]
                           [provisdom/test "0.3.0" :scope "test"]
@@ -27,7 +28,8 @@
 
 (require
   '[adzerk.boot-test :refer [test]]
-  '[provisdom.boot-tasks.core :refer [build push-jar]])
+  '[provisdom.boot-tasks.core :refer [build push-jar]]
+  '[codox.boot :refer [codox]])
 
 (task-options!
   pom {:project     project
@@ -39,9 +41,14 @@
                      "http://www.eclipse.org/legal/epl-v10.html"}}
   ;; TODO: replace this when all namespaces are converted to clojure.test
   test {:namespaces '#{provisdom.math.t-apache
+                       provisdom.math.t-apache-matrix
                        provisdom.math.t-arrays
                        provisdom.math.t-calculus
+                       provisdom.math.t-clatrix
                        provisdom.math.t-core
                        provisdom.math.t-format
                        provisdom.math.t-matrix
-                       provisdom.math.t-random2}})
+                       provisdom.math.t-random2
+                       provisdom.math.t-special-functions
+                       provisdom.math.t-tensor
+                       provisdom.math.t-vector}})

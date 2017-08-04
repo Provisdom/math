@@ -453,7 +453,14 @@
 (defspec-test test-concat-rows `apache-mx/concat-rows)
 (defspec-test test-concat-columns `apache-mx/concat-columns)
 ;(defspec-test test-correlation-apache-matrix->covariance-apache-matrix `apache-mx/correlation-apache-matrix->covariance-apache-matrix) ;slow
-; (defspec-test test-covariance-apache-matrix->correlation-apache-matrix `apache-mx/covariance-apache-matrix->correlation-apache-matrix) ;slow
+;(defspec-test test-covariance-apache-matrix->correlation-apache-matrix `apache-mx/covariance-apache-matrix->correlation-apache-matrix) ;slow
+
+(deftest ===-test
+  (is (apache-mx/=== (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])
+                     (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])))
+  (is (apache-mx/=== (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])
+                     (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])
+                     (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]]))))
 
 (deftest mx*-test
   (is= (apache-mx/apache-matrix [[]])
@@ -498,10 +505,12 @@
                            (apache-mx/apache-matrix [[1.0 0.5]]))))
 
 (deftest math-tests
+  (===-test)
   (mx*-test)
   (add-test)
   (subtract-test))
 
+(defspec-test test-=== `apache-mx/===)
 (defspec-test test-mx* `apache-mx/mx*)
 (defspec-test test-add `apache-mx/add)
 (defspec-test test-subtract `apache-mx/subtract)

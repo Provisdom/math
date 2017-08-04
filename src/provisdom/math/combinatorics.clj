@@ -176,7 +176,7 @@ collected."
   "Combinations that use all of the items by grouping into the breakdown 
    pattern, where breakdown is a vector of longs that sum to the number of items."
   [items breakdown]
-  {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
+  {:pre [(have? (fn [[items breakdown]] (= (apply + breakdown) (count items))) [items breakdown])]}
   (if-not (next breakdown)
     (list (list items))
     (let [cwos (combinations-with-complements items (first breakdown))]

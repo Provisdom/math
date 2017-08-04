@@ -8,7 +8,9 @@
             [provisdom.math.core :as m]
             [provisdom.math.matrix :as mx]
             [provisdom.math.combinatorics :as mc]
-            [taoensso.truss :as truss :refer (have have! have?)]))
+            [taoensso.truss :as truss :refer (have have! have?)]
+            [provisdom.math.tensor :as tensor]
+            [provisdom.math.vector :as vector]))
 
 (set! *warn-on-reflection* true)
 
@@ -33,8 +35,9 @@
   (let [ranges (if (sequential? (first ranges)) ranges [ranges])
         nvars (count ranges)]
     ;;this can be sped for larger seqs (use ^doubles or even approximate)
-    (if (m/one? nvars) (let [[a b] ranges] (mx/esum (map f (range a b))))
-                       (throw (ex-info "Not implmented" (var integer-integrate)))))) ;;to do
+    (if (m/one? nvars)
+      (let [[a b] ranges] (apply + (map f (range a b))))
+      (throw (ex-info "Not implmented" (var integer-integrate)))))) ;;to do
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
@@ -269,23 +272,23 @@
         half-diff (* 0.5 (- b a))
         un (map (partial unnormalize half-sum half-diff) n)
         lh (into [] (map f un))
-        h (mx/multiply half-diff (mx/inner-product hw lh))
-        l (mx/multiply
+        h (tensor/multiply half-diff (mx/inner-product hw lh))
+        l (tensor/multiply
             half-diff
-            (mx/inner-product lw (mx/filter-kv (fn [idx _] (odd? idx)) lh)))
-        err (mx/eaverage (mx/abs (mx/subtract l h)))]
+            (mx/inner-product lw (vector/filter-kv (fn [idx _] (odd? idx)) lh)))
+        err (tensor/average (tensor/emap m/abs (tensor/subtract l h)))]
     [err h]))
 
 (defn- get-error-and-value-ndim
   "Returns a vector containing the error, the higher precision value, 
       a vector of the 1-dim errors for a single integration approximation, and the ranges (unchanged)"
   [f ranges [lw hw n]]
-  (let [half-sum (map mx/eaverage ranges)
+  (let [half-sum (map tensor/average ranges)
         half-diff (map #(* 0.5 (- (second %) (first %))) ranges)
         un (for [v (range (count ranges))]
              (map (partial unnormalize (nth half-sum v) (nth half-diff v)) n))
         lh (map f (apply mc/cartesian-product un))
-        mult (mx/eproduct half-diff)
+        mult (apply * half-diff)
         dim (count ranges)
         fl #(mx/inner-product lw (take-nth 2 (rest %)))
         fh #(mx/inner-product hw %)
@@ -293,12 +296,12 @@
         fallh (repeat dim fh)
         falll (repeat dim fl)
         partitioned-lh (co/partition-recursively lh (count hw))
-        reduce-f #(mx/multiply mult (reduce (fn [tot ef] (ef tot))
-                                            partitioned-lh %))
+        reduce-f #(tensor/multiply mult (reduce (fn [tot ef] (ef tot))
+                                                partitioned-lh %))
         h (reduce-f fallh)
         l (reduce-f falll)
         dim1 (map reduce-f f1dim)
-        err-f #(mx/eaverage (mx/abs (mx/subtract % h)))]
+        err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % h)))]
     [(err-f l) h (map err-f dim1) ranges]))
 
 (defn- adaptive-quadrature [implementation f [a b] accu min-iter max-iter wn]
@@ -306,9 +309,9 @@
         [err0 h0] (get-error-and-value f [a b] wn)
         ftot-val #(mx/coerce
                     implementation
-                    (apply mx/add (map (fn [e] (-> e second first)) %)))]
+                    (apply tensor/add (tensor/emap (fn [e] (-> e second first)) %)))]
     (loop [errs [[err0 [h0 a b]]], i 1]
-      (let [tot-err (mx/esum (map first errs))]
+      (let [tot-err (apply + (map first errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
           (ftot-val errs)
           (do (when (>= i max-iter)
@@ -348,9 +351,9 @@
         [err0 h0 errs1d0 _] (get-error-and-value-ndim f ranges wn),
         ftot-val #(mx/coerce
                     implementation
-                    (apply mx/add (map (fn [e] (-> e second second)) %)))]
+                    (apply tensor/add (map (fn [e] (-> e second second)) %)))]
     (loop [errs [[(sort-fn err0 errs1d0) [err0 h0 errs1d0 ranges]]], i 1]
-      (let [tot-err (mx/esum (map (fn [e] (-> e second first)) errs))]
+      (let [tot-err (apply + (map (fn [e] (-> e second first)) errs))]
         (if (and (>= i min-iter) (<= tot-err tol))
           (ftot-val errs)
           (do (when (>= i max-iter)
@@ -366,8 +369,7 @@
                                          (assoc tot d [an bn])) rn %)
                                     (apply mc/cartesian-product
                                            dims-with-new-ranges))
-                    new-fns (map (fn [r] #(get-error-and-value-ndim f r wn))
-                                 new-ranges)
+                    new-fns (map (fn [r] #(get-error-and-value-ndim f r wn)) new-ranges)
                     new-errs (map (fn [[e h errs1d r]]
                                     [(sort-fn e errs1d)
                                      [e h errs1d r]]) (as/thread :all new-fns))
@@ -391,7 +393,7 @@
   "Returns the new function and range as a tuple"
   [f [a b]]
   (let [[fm fv r] (change-of-variable [a b])]
-    [#(mx/multiply (fm %) (f (fv %))) r]))
+    [#(tensor/multiply (fm %) (f (fv %))) r]))
 
 (defn- change-of-var-ndim
   "Returns the new function and ranges.  
@@ -399,8 +401,8 @@
   [f ranges]
   (let [trips (map change-of-variable ranges), fms (map first trips),
         fvs (map second trips), newr (into [] (map #(nth % 2) trips))]
-    [#(mx/multiply (mx/eproduct (co/in-place-functional fms %))
-                   (f (co/in-place-functional fvs %))) newr]))
+    [#(tensor/multiply (apply * (co/in-place-functional fms %))
+                       (f (co/in-place-functional fvs %))) newr]))
 
 (defn integrate
   "Returns the integral of a function f over ranges from a to b using 
@@ -436,8 +438,8 @@
                    :else m/*dbl-close*)
         [newf newr] (if (m/one? n-vars) (change-of-var f (first ranges))
                                         (change-of-var-ndim f ranges))
-        implementation (newf (if (m/one? n-vars) (mx/eaverage newr)
-                                                 (map mx/eaverage newr)))]
+        implementation (newf (if (m/one? n-vars) (tensor/average newr)
+                                                 (map tensor/average newr)))]
     (if (m/one? n-vars)
       (adaptive-quadrature
         implementation newf newr accu min-iter max-iter
@@ -560,8 +562,7 @@
 (defn- ^:const convert-cc
   [v no-zero?] (let [r (map #(let [[e1 e2] %]
                                [(- e1) (if no-zero? (- e2) e2)]) v),
-                     extra (if no-zero? nil
-                                        [[0 (* -2.0 (mx/esum (map second v)))]])]
+                     extra (when-not no-zero? [[0 (* -2.0 (apply + (map second v)))]])]
                  (concat v extra r)))
 
 (defn- get-central-coeff
@@ -573,8 +574,7 @@
          (have? #(<= % 4) deriv)
          (have? pos? deriv)]}
   (let [a (/ accuracy 2),
-        v (condp = deriv 1 central-coeff1, 2 central-coeff2, 3 central-coeff3,
-                         4 central-coeff4)]
+        v (condp = deriv 1 central-coeff1, 2 central-coeff2, 3 central-coeff3, 4 central-coeff4)]
     (convert-cc (nth v (dec a)) (odd? deriv))))
 
 (def ^:const ^:private forward-coeff1
@@ -629,7 +629,7 @@
             3 forward-coeff3
             4 forward-coeff4)
         coeff (nth v (dec accuracy))]
-    (conj coeff [0 (- (mx/esum (map second coeff)))])))
+    (conj coeff [0 (- (apply + (map second coeff)))])))
 
 (defn- get-backward-coeff
   "backward is like forward except for odd derivatives the sign switches"
@@ -687,7 +687,7 @@
                        coeff (map #(let [[e1 e2] %] [(* dx e1) e2])
                                   (coeff-fn derivative accuracy))]
                    (fn [v]
-                     (* mult (mx/esum (map #(let [[e1 e2] %]
+                     (* mult (apply + (map #(let [[e1 e2] %]
                                               (* (f (+ v e1)) e2)) coeff)))))))))
 
 (s/def ::f (s/with-gen
@@ -733,9 +733,9 @@
     (fn [v]
       (map-indexed
         (fn [i e]
-          (* mult (mx/esum
-                    (map #(let [[e1 e2] %]
-                            (* (f (assoc v i (+ e e1))) e2)) coeff)))) v))))
+          (* mult (apply +
+                         (map #(let [[e1 e2] %]
+                                 (* (f (assoc v i (+ e e1))) e2)) coeff)))) v))))
 
 (defn jacobian-fn
   "Returns a numerical jacobian function.  
@@ -763,9 +763,9 @@
         (map-indexed
           (fn [i e]
             (apply
-              mx/add
+              tensor/add
               (map
-                #(let [[e1 e2] %] (mx/multiply e2 mult (f (assoc v i (+ e e1)))))
+                #(let [[e1 e2] %] (tensor/multiply e2 mult (f (assoc v i (+ e e1)))))
                 coeff)))
           v)))))
 
@@ -805,18 +805,17 @@
     (let [mult (/ h), dx (m/sqrt h),
           coeff (map #(let [[e1 e2] %]
                         [(* dx e1) e2]) (get-central-coeff 2 2))]
-      (fn [v] (mx/symmetric-matrix
-                implementation
+      (fn [v] (mx/compute-matrix
+                (count v)
+                (count v)
                 (fn [i j]
                   (if (== i j)
                     (* mult
-                       (mx/esum
-                         (map #(let [[e1 e2] %]
-                                 (* (f (assoc v i (+ (get v i) e1)))
-                                    e2))
-                              coeff)))
-                    (joint-central-derivative f v i j dx mult)))
-                (count v) true)))))
+                       (apply + (map #(let [[e1 e2] %]
+                                        (* (f (assoc v i (+ (get v i) e1)))
+                                           e2))
+                                     coeff)))
+                    (joint-central-derivative f v i j dx mult))))))))
 
 (defn partial-derivative-x-of-fxy
   [fxy & {:keys [^double h] :or {h m/*sgl-close*}}]

@@ -139,6 +139,10 @@
 ;(defspec-test test-emap `tensor/emap) ;fspec issues
 ;(defspec-test test-emap-kv `tensor/emap-kv) ;fspec issues
 
+(deftest ===-test
+  (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]]))
+  (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]])))
+
 (deftest add-test
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/add [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
   (is= [2.0 1.0] (tensor/add [1.0 0.5] [1.0 0.5]))
@@ -162,6 +166,11 @@
   (is= [[3.0 6.0]] (tensor/divide 3.0 [[1.0 0.5]]))
   (is= [1.0 2.0] (tensor/divide [1.0 0.5] [1.0 0.5] [1.0 0.5]))
   (is= [[1.0 2.0]] (tensor/divide [[1.0 0.5]])))
+
+(deftest average-test
+  (is= 1.875 (tensor/average [[1.0 0.5] [2.0 4.0]]))
+  (is= 0.75 (tensor/average [[1.0 0.5]]))
+  (is= 0.75 (tensor/average [1.0 0.5])))
 
 (deftest norm1-test
   (is= 7.5 (tensor/norm1 [[1.0 0.5] [2.0 4.0]]))
@@ -209,10 +218,12 @@
   (is= [0.6666666666666666 0.3333333333333333] (tensor/normalize-p [1.0 0.5] 1.0)))
 
 (deftest math-tests
+  (===-test)
   (add-test)
   (subtract-test)
   (multiply-test)
   (divide-test)
+  (average-test)
   (norm1-test)
   (norm-test)
   (norm-p-test)
@@ -220,10 +231,12 @@
   (normalize-test)
   (normalize-p-test))
 
+;(defspec-test test-=== `tensor/===) ;slow
 ;(defspec-test test-add `tensor/add) ;slow
 ;(defspec-test test-subtract `tensor/subtract) ;slow
 ;(defspec-test test-multiply `tensor/multiply) ;slow
 ;(defspec-test test-divide `tensor/divide) ;slow
+(defspec-test test-average 'tensor/average)
 (defspec-test test-norm1 `tensor/norm1)
 (defspec-test test-norm `tensor/norm)
 (defspec-test test-norm-p `tensor/norm-p)
