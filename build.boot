@@ -6,15 +6,15 @@
           :dependencies '[[org.clojure/tools.nrepl "0.2.13" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
                           [adzerk/boot-test "1.2.0" :scope "test"]
-                          [midje "1.9.0-alpha6" :exclusions [org.clojure/clojure] :scope "test"]
+                          [midje "1.9.0-alpha8" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
 
                           [provisdom/boot-tasks "1.4" :scope "test"]
-                          [provisdom/test "0.3.0" :scope "test"]
+                          [provisdom/test "0.3.1" :scope "test"]
                           ;;project deps
                           [org.clojure/clojure "1.9.0-alpha17" :scope "provided"]
                           [org.clojure/spec.alpha "0.1.123"]
-                          [orchestra "0.3.0"]
+                          [orchestra "2017.07.04-1"]
                           [org.clojure/core.async "0.3.443"]
                           [provisdom/utility-belt "0.1.2-alpha1"]
                           [com.taoensso/truss "1.5.0"]
