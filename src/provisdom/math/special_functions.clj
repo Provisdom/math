@@ -223,35 +223,69 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
         :ret ::m/nan-or-non-inf-)
 
 (defn log-gamma-derivative
-  "Returns the derivative of the log gamma of a."
-  [a] (ap/digamma a))
+  "Returns the derivative of the log gamma of a.
+  Spec'd for a > -3e8 because it becomes slow.
+  Taken from Apache.  Could use better algorithm."
+  [a]
+  (let [a (double a)]
+    (if (m/roughly-round-non+? a m/*sgl-close*)
+      m/inf-
+      (loop [x a, tot 0.0]
+        (let [inv-x (/ x)]
+          (if (or (m/nan? x) (m/inf? x))
+            x
+            (cond (and (pos? x) (<= x 1.0e-5)) (- tot 0.5772156649015329 inv-x)
+                  (>= x 49.0) (let [inv2-x (m/pow x -2.0)]
+                                (+ tot
+                                   (m/log x)
+                                   (* -0.5 inv-x)
+                                   (* (- inv2-x) (+ (/ 12.0) (* inv2-x (- (/ 120) (/ inv2-x 252.0)))))))
+                  :else (recur (inc x) (- tot inv-x)))))))))
 
 (s/fdef log-gamma-derivative
-        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -23674))))
+        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
         :ret ::m/number)
 
 (defn digamma
-  "Equivalent to log-gamma-derivative."
+  "Equivalent to log-gamma-derivative.
+  Spec'd for a > -3e8 because it becomes slow."
   [a] (log-gamma-derivative a))
 
 (s/fdef digamma
-        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -23674))))
+        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
         :ret (s/nilable ::m/number))
 
 (defn gamma-derivative
-  "Returns the derivative of the gamma of a."
+  "Returns the derivative of the gamma of a.
+  Spec'd for a > -3e8 because it becomes slow."
   [a] (* (gamma a) (log-gamma-derivative a)))
 
 (s/fdef gamma-derivative
-        :args (s/cat :a (s/and ::m/nan-or-non-long-able-non+ #(or (m/nan? %) (> % -23674))))
+        :args (s/cat :a (s/and ::m/nan-or-non-long-able-non+ #(or (m/nan? %) (> % -3e8))))
         :ret ::m/number)
 
 (defn trigamma
-  "Returns the trigamma (2nd derivative of log-gamma) of a."
-  [a] (ap/trigamma a))
+  "Returns the trigamma (2nd derivative of log-gamma) of a.
+  Approximated for a < -1e7 because it becomes slow.
+  Taken from Apache.  Could use better algorithm."
+  [a]
+  (let [a (double a)]
+    (if (m/roughly-round-non+? a m/*sgl-close*)
+      m/inf+
+      (loop [x a, tot 0.0]
+        (let [inv2-x (m/pow x -2.0)]
+          (cond (or (m/nan? x) (m/inf? x)) x
+                (< x -1e7) (let [r (m/round (+ x 9e6) :toward)] (recur (- x r) (+ tot 1.1263618e-5))) ;approx
+                :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
+                            (>= x 49.0) (let [inv-x (/ x)]
+                                          (+ tot
+                                             inv-x
+                                             (/ inv2-x 2.0)
+                                             (* inv2-x inv-x (- (/ 6.0) (* inv2-x (+ (/ 3) (/ inv2-x 42.0)))))))
+                            :else (recur (inc x) (+ tot inv2-x)))))))))
 
 (s/fdef trigamma
-        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -29602))))
+        :args (s/cat :a ::m/number)
         :ret (s/nilable ::m/number))
 
 (defn multivariate-gamma
