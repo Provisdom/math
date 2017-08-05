@@ -661,7 +661,7 @@
 (defn roughly-floor
   "Rounds down unless within `accu`, then rounds up.
   Returns a long if possible, otherwise a double."
-  [number accu] (floor (+ number accu)))
+  [number accu] (floor (+ number (double accu))))
 
 (s/fdef roughly-floor
         :args (s/cat :number ::number :accu ::accu)
@@ -670,7 +670,7 @@
 (defn roughly-ceil
   "Rounds up unless within `accu`, then rounds down.
   Returns a long if possible, otherwise a double."
-  [number accu] (ceil (- number accu)))
+  [number accu] (ceil (- number (double accu))))
 
 (s/fdef roughly-ceil
         :args (s/cat :number ::number :accu ::accu)
@@ -682,7 +682,7 @@
   (cond (or (nan? number1) (nan? number2)) false
         (inf+? accu) true
         (or (inf? number1) (inf? number2)) false
-        :else (<= (abs (- number1 number2)) accu)))
+        :else (<= (abs (- number1 (double number2))) accu)))
 
 (s/fdef roughly?
         :args (s/cat :number1 ::number :number2 ::number :accu ::accu)
@@ -694,7 +694,7 @@
   (cond (nan? number) false
         (inf+? accu) true
         (inf? number) false
-        :else (<= (abs (- (round number :up) number)) accu)))
+        :else (<= (abs (- (round number :up) (double number))) accu)))
 
 (s/fdef roughly-round?
         :args (s/cat :number ::number :accu ::accu)
@@ -750,7 +750,7 @@
 
 (defn roughly-prob?
   "Returns true if `number` is a prob or within `accu` of a prob."
-  [number accu] (and (>= number (- accu)) (<= number (inc accu))))
+  [number accu] (and (>= number (- accu)) (<= number (inc (double accu)))))
 
 (s/fdef roughly-prob?
         :args (s/cat :number ::number :accu ::accu)
@@ -758,7 +758,7 @@
 
 (defn roughly-corr?
   "Returns true if `number` is a corr or within `accu` of a corr."
-  [number accu] (and (>= number (dec (- accu))) (<= number (inc accu))))
+  [number accu] (and (>= number (dec (- (double accu)))) (<= number (inc (double accu)))))
 
 (s/fdef roughly-corr?
         :args (s/cat :number ::number :accu ::accu)
@@ -771,8 +771,8 @@
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ numerator divisor)]
-      (if (inf? d)
+    (let [d (div numerator divisor)]
+      (if (or (inf? d) (nan? d))
         d
         (maybe-long-range (quot numerator divisor))))))
 
@@ -789,8 +789,8 @@
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ numerator divisor)]
-      (if (inf? d)
+    (let [d (div numerator divisor)]
+      (if (or (inf? d) (nan? d))
         nan
         (maybe-long-able (mod numerator divisor))))))
 
@@ -806,8 +806,8 @@
   [numerator divisor]
   (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
     nan
-    (let [d (/ numerator divisor)]
-      (if (inf? d)
+    (let [d (div numerator divisor)]
+      (if (or (inf? d) (nan? d))
         nan
         (maybe-long-able (rem numerator divisor))))))
 
@@ -837,7 +837,7 @@
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
-        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m)))) (dec q) q)]
+        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m)))) (maybe-long-able (dec (double q))) q)]
     [q m]))
 
 (s/fdef quot-and-mod
