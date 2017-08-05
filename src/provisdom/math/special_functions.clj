@@ -236,7 +236,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (s/fdef digamma
         :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -23674))))
-        :ret ::m/number)
+        :ret (s/nilable ::m/number))
 
 (defn gamma-derivative
   "Returns the derivative of the gamma of a."
@@ -252,7 +252,7 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (s/fdef trigamma
         :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -29602))))
-        :ret ::m/number)
+        :ret (s/nilable ::m/number))
 
 (defn multivariate-gamma
   "Returns the multivariate gamma of a with dimension p."

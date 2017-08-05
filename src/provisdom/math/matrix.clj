@@ -613,9 +613,9 @@
   `ecount` is the number of independent symmetric or triangular matrix elements
   (the number of elements on the diagonal plus the number either above or below the diagonal)."
   [ecount]
-  (let [s (-> ecount (* 8) inc m/sqrt dec (* 0.5))]
+  (let [s (-> ecount (* 8.0) inc m/sqrt dec (* 0.5))]
     (if (m/roughly-round? s 1e-6)
-      (long s)
+      (m/maybe-long-able s)
       m/nan)))
 
 (s/fdef size-of-symmetric-or-triangular-matrix
@@ -627,7 +627,7 @@
   `ecount` is the number of elements above or below the diagonal."
   [ecount]
   (let [size (size-of-symmetric-or-triangular-matrix ecount)]
-    (if (m/nan? size) size (inc size))))
+    (if (m/nan? size) size (m/maybe-long-able (inc (double size))))))
 
 (s/fdef size-of-symmetric-or-triangular-matrix-without-diagonal
         :args (s/cat :ecount ::m/int-non-)
@@ -653,7 +653,7 @@
 
 (defn trace
   "Calculates the trace of a square matrix (sum of elements on main diagonal)."
-  [square-m] (if (empty-matrix? square-m) 0.0 (apply + (diagonal square-m))))
+  [square-m] (if (empty-matrix? square-m) 0.0 (apply + (map double (diagonal square-m)))))
 
 (s/fdef trace
         :args (s/cat :square-m ::square-matrix)

@@ -337,7 +337,7 @@
   [tensor]
   (if (number? tensor)
     tensor
-    (let [v (flatten tensor)] (m/div (apply + v) (count v) m/nan))))
+    (let [v (flatten tensor)] (m/div (apply + (map double v)) (count v) m/nan))))
 
 (s/fdef average
         :args (s/cat :tensor ::tensor)
