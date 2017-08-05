@@ -391,7 +391,7 @@
 
 (deftest trace-test
   (is= 0.0 (mx/trace [[]]))
-  (is= 1 (mx/trace [[1]]))
+  (is= 1.0 (mx/trace [[1]]))
   (is= 5.0 (mx/trace [[1.0 0.5] [2.0 4.0]])))
 
 (deftest get-slices-as-matrix-test

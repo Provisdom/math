@@ -16,7 +16,7 @@
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix? square-matrix?
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-of-symmetric-or-triangular-matrix size-of-symmetric-or-triangular-matrix-without-diagonal
-         compute-vector coerce to-vector ecount to-matrix symmetric-matrix-by-averaging
+         compute-vector coerce ecount to-matrix symmetric-matrix-by-averaging
          inner-product emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
          ecount-of-symmetric-or-triangular-matrix ecount-of-symmetric-or-triangular-matrix-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
