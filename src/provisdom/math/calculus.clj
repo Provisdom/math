@@ -7,16 +7,39 @@
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
             [provisdom.math.bounds :as bo]
-            [provisdom.math.matrix :as mx]
             [provisdom.math.combinatorics :as mc]
-            [taoensso.truss :as truss :refer (have have! have?)]
             [provisdom.math.tensor :as tensor]
-            [provisdom.math.vector :as vector]))
+            [provisdom.math.vector :as vector]
+            [provisdom.math.matrix :as mx]))
 
 (set! *warn-on-reflection* true)
 
 (s/def ::interval ::bo/interval)
 (s/def ::number ::m/number)
+(s/def ::vector ::vector/vector)
+(s/def ::matrix ::mx/matrix)
+(s/def ::number->number (s/with-gen
+                          (s/fspec :args (s/cat :number ::m/number) :ret ::m/number)
+                          #(gen/one-of (map gen/return (list m/sq m/cube m/cos)))))
+(s/def ::v->number (s/with-gen
+                     (s/fspec :args (s/cat :v ::vector) :ret ::m/number)
+                     #(gen/one-of (map gen/return (list vector/kahan-sum tensor/average tensor/norm1)))))
+(s/def ::v->v
+  (s/with-gen
+    (s/fspec :args (s/cat :v ::vector) :ret ::vector)
+    #(gen/one-of (map gen/return (list (fn [v] (mapv m/sq v)) (fn [v] (mapv m/cube v)))))))
+(s/def ::v->m (s/fspec :args (s/cat :v ::vector) :ret ::matrix))
+(s/def ::v->symmetric-m (s/fspec :args (s/cat :v ::vector) :ret ::mx/symmetric-matrix))
+(s/def ::fxy (s/with-gen
+               (s/fspec :args (s/cat :x ::number :y ::number) :ret ::number)
+               #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
+(s/def ::h (s/with-gen ::m/finite+ #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
+(s/def ::dx ::h)
+(s/def ::type #{:central :forward :backward})
+(s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
+(s/def ::coefficients (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
+(s/def ::row ::mx/row)
+(s/def ::column ::mx/column)
 
 ;;;;LOOK AT STIELTJES STUFF OR WHATEVER FOR DISCRETIZING A GAUSSIAN FOR MORE 
 ;;;;THAN 11 OUTCOMES -- KRONROD? vs. GAUSS? vs ...?
@@ -398,8 +421,8 @@
            ::converter-fn      identity
            ::interval          [a b]}))
 
-(s/def ::multiplicative-fn (s/fspec :args (s/cat :number ::number) :ret ::number))
-(s/def ::converter-fn (s/fspec :args (s/cat :number ::number) :ret ::number))
+(s/def ::multiplicative-fn ::number->number)
+(s/def ::converter-fn ::number->number)
 (s/fdef change-of-variable
         :args (s/cat :interval ::interval)
         :ret (s/keys :req [::multiplicative-fn ::converter-fn ::interval]))
@@ -556,6 +579,7 @@
 ;;;NUMERICAL DERIVATIVES
 ;;; references: Wiki http://en.wikipedia.org/wiki/Finite_difference 
 ;;;    and http://en.wikipedia.org/wiki/Finite_difference_coefficients
+
 (comment "The zero coefficient is left out below, but can be found because 
     the sum of coefficients equals zero")
 (def ^:const ^:private central-coefficient1
@@ -573,27 +597,6 @@
 (def ^:const ^:private central-coefficient4
   [[[2 1] [1 -4]] [[3 (/ -6)] [-2 2] [1 (/ -13 2)]]
    [[4 (/ 7 240)] [3 (/ -2 5)] [2 (/ 169 60)] [1 (/ -122 15)]]])
-
-(defn- ^:const convert-cc
-  [v no-zero?] (let [r (map #(let [[e1 e2] %]
-                               [(- e1) (if no-zero? (- e2) e2)]) v),
-                     extra (when-not no-zero? [[0 (* -2.0 (apply + (map second v)))]])]
-                 (concat v extra r)))
-
-(defn- get-central-coefficient
-  [^long deriv ^long accuracy]
-  {:pre [(have? #(>= % 2) accuracy)
-         (have? #(<= % 8) accuracy)
-         (have? even? accuracy)
-         (have? (fn [[accuracy deriv]] (or (<= accuracy 6) (<= deriv 2))) [accuracy deriv])
-         (have? #(<= % 4) deriv)
-         (have? pos? deriv)]}
-  (let [a (/ accuracy 2)
-        v (condp = deriv 1 central-coefficient1
-                         2 central-coefficient2
-                         3 central-coefficient3
-                         4 central-coefficient4)]
-    (convert-cc (nth v (dec a)) (odd? deriv))))
 
 (def ^:const ^:private forward-coefficient1
   [[[1 1]]
@@ -632,57 +635,83 @@
    [[8 (/ 967 240)] [7 (/ -536 15)] [6 (/ 2803 20)] [5 (/ -4772 15)]
     [4 (/ 10993 24)] [3 (/ -2144 5)] [2 (/ 15289 60)] [1 (/ -1316 15)]]])
 
-(defn- get-forward-coefficient
-  [^long deriv ^long accuracy]
-  {:pre [(have? (fn [[deriv accuracy]]
-                  (and (pos? deriv)
-                       (<= deriv 6)
-                       (<= accuracy 6)
-                       (pos? accuracy)
-                       (or (<= accuracy 5) (<= deriv 3))))
-                [deriv accuracy])]}
-  (let [v (condp = deriv
+(defn- convert-central-coefficients
+  [m no-zero?]
+  (let [r (map #(let [[e1 e2] %] [(- e1) (if no-zero? (- e2) e2)]) m)
+        extra (when-not no-zero? [[0 (* -2.0 (apply + (map second m)))]])]
+    (vec (concat m extra r))))
+
+(s/fdef convert-central-coefficients
+        :args (s/cat :m ::matrix :no-zero? boolean?)
+        :ret ::matrix)
+
+(defn- get-central-coefficients
+  [deriv accuracy]
+  (let [a (/ accuracy 2)
+        m (condp = deriv
+            1 central-coefficient1
+            2 central-coefficient2
+            3 central-coefficient3
+            4 central-coefficient4)]
+    (convert-central-coefficients (nth m (dec a)) (odd? deriv))))
+
+(s/fdef get-central-coefficients
+        :args (s/and (s/cat :deriv (s/int-in 1 5) :accuracy #{2 4 6 8})
+                     #(or (<= (:accuracy %) 6) (<= (:deriv %) 2)))
+        :ret ::coefficients)
+
+(defn- get-forward-coefficients
+  [deriv accuracy]
+  (let [m (condp = deriv
             1 forward-coefficient1
             2 forward-coefficient2
             3 forward-coefficient3
             4 forward-coefficient4)
-        coefficient (nth v (dec accuracy))]
+        coefficient (nth m (dec accuracy))]
     (conj coefficient [0 (- (apply + (map second coefficient)))])))
 
-(defn- get-backward-coefficient
-  "backward is like forward except for odd derivatives the sign switches"
-  [^long deriv ^long accuracy]
-  (let [coefficient (get-forward-coefficient deriv accuracy)]
-    (map #(let [[e1 e2] %] [(- e1) (if (odd? deriv) (- e2) e2)]) coefficient)))
+(s/fdef get-forward-coefficients
+        :args (s/and (s/cat :deriv (s/int-in 1 7) :accuracy (s/int-in 1 7))
+                     #(or (<= (:accuracy %) 5) (<= (:deriv %) 3)))
+        :ret ::coefficients)
+
+(defn- get-backward-coefficients
+  "backward is like forward, except for odd derivatives the sign switches."
+  [deriv accuracy]
+  (let [coefficient (get-forward-coefficients deriv accuracy)]
+    (mapv #(let [[e1 e2] %] [(- e1) (if (odd? deriv) (- e2) e2)]) coefficient)))
+
+(s/fdef get-backward-coefficients
+        :args (s/and (s/cat :deriv (s/int-in 1 7) :accuracy (s/int-in 1 7))
+                     #(or (<= (:accuracy %) 5) (<= (:deriv %) 3)))
+        :ret ::coefficients)
 
 (defn derivative-fn
   "Returns a numerical derivative function.  
-   Function f takes a number.
-   Note that derivative-fn will not be accurate when inputs or outputs are so large when
-   divided by ::h that they lose precision.
+   Function `number->number` takes and returns a number.
+   Note that [[derivative-fn]] will not be accurate when inputs or outputs are so large when
+   divided by `::h` that they lose precision.
    Options:
-      derivative can be 0 or 1 (default) to 8
-      h (default is m/*sgl-close* for 1st deriv, 10x less for others) 
-         is the denominator, which is equal to (dx ^ derivative), where dx  
-         is the small change (smaller h isn't usually better, changes to h can 
-         be important)
-      type can be :central (default), :forward, or :backward
-      accuracy can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv), 
+      `::derivative` -- can be 0 or 1 (default) to 8
+      `::h` -- (default is m/*sgl-close* for 1st deriv, 10x less for others) is the denominator,
+         which is equal to (dx ^ `::derivative`),
+         where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
+      `::type` -- can be `:central` (default), `:forward`, or `:backward`
+      `::accuracy` --can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
          and 1-6 for forward or backward (no 6 for 4th deriv).
-         (default accuracy is 2 for derivative <= 2, else 6.
-         Accuracy is ignored for derivative > 4 and default accuracies are used."
-  ([f] (derivative-fn f {}))
-  ([f {::keys [derivative h type accuracy]
-       :or    {derivative 1, type :central}}]
+         (default `::accuracy` is 2 for `::derivative` <= 2, else 6.
+         `::accuracy` is ignored for `::derivative` > 4 and default accuracies are used."
+  ([number->number] (derivative-fn number->number {}))
+  ([number->number {::keys [derivative h type accuracy] :or {derivative 1, type :central}}]
    (let [derivative (int derivative)
          accuracy (when accuracy (int accuracy))
          h (when h (double h))]
-     (cond (zero? derivative) f
+     (cond (zero? derivative) number->number
            (> derivative 4) (let [exc (- derivative 4)
                                   x (if h (/ h (/ m/*sgl-close* 10)) 1.0)]
                               (derivative-fn
                                 (derivative-fn
-                                  f
+                                  number->number
                                   {::derivative exc
                                    ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
                                    ::type       type})
@@ -697,24 +726,18 @@
                                       (and (== derivative 4) (not= type :central)) 5
                                       :else 6)
                        coefficient-fn (condp = type
-                                        :central get-central-coefficient
-                                        :forward get-forward-coefficient
-                                        :backward get-backward-coefficient)
+                                        :central get-central-coefficients
+                                        :forward get-forward-coefficients
+                                        :backward get-backward-coefficients)
                        multiplier (/ h)
                        dx (m/pow h (/ derivative))
                        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn derivative accuracy))]
-                   (fn [v] (* multiplier (apply + (map #(let [[e1 e2] %] (* (f (+ v e1)) e2)) coefficient)))))))))
+                   (fn [v] (* multiplier
+                              (apply + (map #(let [[e1 e2] %] (* (number->number (+ v e1)) e2)) coefficient)))))))))
 
-(s/def ::f (s/with-gen
-             (s/fspec :args (s/cat :a ::m/number) :ret ::m/number)
-             #(gen/one-of (map gen/return (list m/sq m/cube m/cos)))))
-(s/def ::h ::m/finite+)
 (s/def ::derivative (s/int-in 0 9))
-(s/def ::type #{:central :forward :backward})
-(s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
-
 (s/fdef derivative-fn
-        :args (s/cat :f ::f
+        :args (s/cat :number->number ::number->number
                      :opts (s/? (s/and
                                   (s/keys :opt [::derivative ::h ::type ::accuracy])
                                   (fn [v] (let [d (get v ::derivative 1)
@@ -723,211 +746,191 @@
                                                                           (and (== d 4) (not= t :central)) 5
                                                                           :else 6))]
                                             (if (= t :central)
-                                              (and (even? a) (or (<= d 2) (<= a 6)))
+                                              (and (even? a) (or (and (<= d 2) (<= a 8)) (<= a 6)))
                                               (and (<= a 6) (or (<= d 3) (<= a 5)))))))))
-        :ret ::f)
+        :ret ::number->number)
 
 (defn gradient-fn
   "Returns a numerical gradient function.  
-   Function f takes a sequence of numbers and returns a number.
-   The output function takes and returns a sequence.
+   Function `v->number` takes a vector and returns a number.
+   The output function takes and returns a vector.
    Options:
-      h (default m/*sgl-close*) is the denominator, which is equal to (dx ^ derivative),
-      where dx is the small change (smaller h isn't usually better, changes to h can be important)
-      type can be :central (default), :forward, or :backward
-      accuracy can be 2 (default), 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
-      and 1-6 for forward or backward (no 6 for 4th deriv)."
-  [f & {:keys [^double h type ^long accuracy]
-        :or   {h m/*sgl-close*, type :central, accuracy 2}}]
-  (let [coefficient-fn (condp = type :central get-central-coefficient
-                                     :forward get-forward-coefficient
-                                     :backward get-backward-coefficient)
-        multiplier (/ h)
-        dx h
-        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
-    (fn [v]
-      (map-indexed
-        (fn [i e]
-          (* multiplier (apply + (map #(let [[e1 e2] %] (* (f (assoc v i (+ e e1))) e2)) coefficient)))) v))))
+      `::h` (default m/*sgl-close*) is the denominator, which is equal to dx,
+         where dx is the small change (smaller h isn't usually better, changes to h can be important)
+      `::type` can be `:central` (default), `:forward`, or `:backward`
+      `::accuracy` can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for `:forward` or `:backward`."
+  ([v->number] (gradient-fn v->number {}))
+  ([v->number {::keys [h type accuracy] :or {h m/*sgl-close*, type :central, accuracy 2}}]
+   (let [coefficient-fn (condp = type :central get-central-coefficients
+                                      :forward get-forward-coefficients
+                                      :backward get-backward-coefficients)
+         multiplier (/ h)
+         dx (double h)
+         coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
+     (fn [v]
+       (vec
+         (map-indexed
+           (fn [i e]
+             (* multiplier
+                (apply + (map #(let [[e1 e2] %] (* (v->number (assoc v i (+ e e1))) e2)) coefficient))))
+           v))))))
+
+(s/fdef gradient-fn
+        :args (s/cat :v->number ::v->number
+                     :opts (s/? (s/and
+                                  (s/keys :opt [::h ::type ::accuracy])
+                                  (fn [v] (let [t (get v ::type :central)
+                                                a (get v ::accuracy 2)]
+                                            (if (= t :central)
+                                              (and (even? a) (<= a 8))
+                                              (<= a 6)))))))
+        :ret ::v->v)
 
 (defn jacobian-fn
   "Returns a numerical jacobian function.  
-   Function f takes a sequence of numbers and returns a sequence.
-   The output function takes a sequence and returns a double-layered sequence, 
-      where each row is the gradient of f's output.
+   Function `v->v` takes a vector and returns a vector.
+   The output function takes a vector and returns a matrix, where each row is the gradient of f's output.
    Options:
-   h (default m/*sgl-close*) is the denominator, which is equal 
-      to (dx ^ derivative), where dx is the small change (smaller h isn't 
-      usually better, changes to h can be important)
-   type can be :central (default), :forward, or :backward
-   accuracy can be 2 (default), 4, 6, or 8 for central (no 8 for 3rd or 
-      4th deriv), and 1-6 for forward or backward (no 6 for 4th deriv)."
-  [f & {:keys [^double h type ^long accuracy]
-        :or   {h m/*sgl-close*, type :central, accuracy 2}}]
-  (let [coefficient-fn (condp = type
-                         :central get-central-coefficient
-                         :forward get-forward-coefficient
-                         :backward get-backward-coefficient)
-        multiplier (/ h)
-        dx h
-        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
-    (fn [v]
-      (co/flip-dbl-layered
-        (map-indexed
-          (fn [i e] (apply tensor/add (map #(let [[e1 e2] %]
-                                              (tensor/multiply e2 multiplier (f (assoc v i (+ e e1))))) coefficient)))
-          v)))))
+   `::h` -- (default m/*sgl-close*) is the denominator, which is equal to dx,
+        where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
+   `::type` -- can be `:central` (default), `:forward`, or `:backward`
+   `::accuracy` -- can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for `:forward` or `:backward`."
+  ([v->v] (jacobian-fn v->v {}))
+  ([v->v {::keys [h type accuracy] :or {h m/*sgl-close*, type :central, accuracy 2}}]
+   (let [coefficient-fn (condp = type
+                          :central get-central-coefficients
+                          :forward get-forward-coefficients
+                          :backward get-backward-coefficients)
+         multiplier (/ h)
+         dx (double h)
+         coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn 1 accuracy))]
+     (fn [v]
+       (if (empty? v)
+         [[]]
+         (mx/transpose
+           (let [m (vec
+                     (map-indexed
+                       (fn [i e] (apply tensor/add (mapv #(let [[e1 e2] %]
+                                                            (tensor/multiply e2 multiplier (v->v (assoc v i (+ e e1)))))
+                                                         coefficient)))
+                       v))]
+             m)))))))
 
-(defn- joint-central-derivative [f v i j dx multiplier]
-  (let [i+ (assoc v i (+ (get v i) dx)),
-        i- (assoc v i (- (get v i) dx)),
-        e++ (assoc i+ j (+ (get v j) dx)),
-        e+- (assoc i+ j (- (get v j) dx)),
-        e-+ (assoc i- j (+ (get v j) dx)),
-        e-- (assoc i- j (- (get v j) dx))]
-    (* 0.25 multiplier (- (+ (f e++) (f e--)) (f e+-) (f e-+)))))
+(s/fdef jacobian-fn
+        :args (s/cat :v->v ::v->v
+                     :opts (s/? (s/and
+                                  (s/keys :opt [::h ::type ::accuracy])
+                                  (fn [v] (let [t (get v ::type :central)
+                                                a (get v ::accuracy 2)]
+                                            (if (= t :central)
+                                              (and (even? a) (<= a 8))
+                                              (<= a 6)))))))
+        :ret ::v->m)
+
+(defn- joint-central-derivative
+  [v->number v row column dx multiplier]
+  (let [i+ (assoc v row (+ (get v row) dx)),
+        i- (assoc v row (- (get v row) dx)),
+        e++ (assoc i+ column (+ (get v row) dx)),
+        e+- (assoc i+ column (- (get v row) dx)),
+        e-+ (assoc i- column (+ (get v row) dx)),
+        e-- (assoc i- column (- (get v row) dx))]
+    (* 0.25 multiplier (- (+ (v->number e++) (v->number e--)) (v->number e+-) (v->number e-+)))))
 
 (defn hessian-fn
-  "Returns a numerical Hessian function using central differences with an 
-      accuracy of 2.  
-   Function f takes a sequence of numbers and returns a number.
-   The output function takes a sequence and returns a symmetric matrix.
+  "Returns a numerical Hessian function.
+   Function `v->number` takes a vector and returns a number.
+   The output function takes a vector and returns a symmetric matrix.
    Options:
-      implementation can be :clatrix, :apache-commons, nil (default nested 
-         vectors), etc. or a matrix 
-      h (default m/*sgl-close* / 10) is the denominator, which is equal 
-         to (dx ^ derivative), where dx is the small change (smaller h 
-         isn't usually better, changes to h can be important)
-      type can be :joint-central (default), :central, :forward, or :backward
-      accuracy can be 2 (default, only choice for joint), 4, 6, or 8 for 
-         central (no 8 for 3rd or 4th deriv), and 1-6 for forward or 
-         backward (no 6 for 4th deriv)."
-  [f & {:keys [implementation ^double h type ^long accuracy]
-        :or   {h (/ m/*sgl-close* 10), type :joint-central, accuracy 2}}]
-  (if-not (= type :joint-central)
-    (fn [v]
-      (mx/coerce
-        implementation
-        ((jacobian-fn
-           (gradient-fn f :h (m/sqrt h), :type type, :accuracy accuracy)
-           :h (m/sqrt h), :type type, :accuracy accuracy)
-          v)))
-    (let [multiplier (/ h),
-          dx (m/sqrt h),
-          coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (get-central-coefficient 2 2))]
-      (fn [v] (mx/compute-matrix
-                (count v)
-                (count v)
-                (fn [i j]
-                  (if (== i j)
-                    (* multiplier
-                       (apply + (map #(let [[e1 e2] %]
-                                        (* (f (assoc v i (+ (get v i) e1)))
-                                           e2))
-                                     coefficient)))
-                    (joint-central-derivative f v i j dx multiplier))))))))
+      `::h` -- (default m/*sgl-close* / 10) is the denominator, which is equal to (dx * dx),
+          where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
+      `::type` can be `:joint-central` (default), `:central`, `:forward`, or `:backward`
+      `::accuracy` can be 2 (default, only choice for `:joint-central`); 2, 4, 6, or 8 for `:central`;
+          and 1-6 for `:forward` or `:backward`."
+  ([v->number] (hessian-fn v->number {}))
+  ([v->number {::keys [h type accuracy] :or {h (* m/*sgl-close* 0.1), type :joint-central, accuracy 2}}]
+   (if-not (= type :joint-central)
+     (fn [v] (mx/symmetric-matrix-by-averaging
+               ((jacobian-fn (gradient-fn v->number {::h (m/sqrt h), ::type type, :accuracy accuracy})) v)))
+     (let [multiplier (/ h),
+           dx (m/sqrt h),
+           coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (get-central-coefficients 2 2))]
+       (fn [v]
+         (if (empty? v)
+           [[]]
+           (let [cv (count v)]
+             (mx/symmetric-matrix-by-averaging
+               (mx/compute-matrix
+                 cv
+                 cv
+                 (fn [row column]
+                   (cond
+                     (or (>= row cv) (>= column cv)) m/nan
+
+                     (== row column)
+                     (* multiplier (apply + (map #(let [[e1 e2] %]
+                                                    (* (v->number (assoc v row (+ (get v row) e1))) e2))
+                                                 coefficient)))
+
+                     :else (joint-central-derivative v->number v row column dx multiplier))))))))))))
+
+(s/fdef hessian-fn
+        :args (s/cat :v->number ::v->number
+                     :opts (s/? (s/and
+                                  (s/keys :opt [::h ::type ::accuracy])
+                                  (fn [v] (let [t (get v ::type :joint-central)
+                                                a (get v ::accuracy 2)]
+                                            (cond (= t :joint-central) (== a 2)
+                                                  (= t :central) (and (even? a) (<= a 8))
+                                                  :else (<= a 6)))))))
+        :ret ::v->symmetric-m)
 
 (defn partial-derivative-x-of-fxy
-  [fxy & {:keys [^double h] :or {h m/*sgl-close*}}]
-  (fn [x y] ((derivative-fn #(fxy % y)) x)))
+  ([fxy] (partial-derivative-x-of-fxy fxy {}))
+  ([fxy {::keys [h] :or {h m/*sgl-close*}}]
+   (fn [x y] ((derivative-fn #(fxy % y) {::h h}) x))))
+
+(s/fdef partial-derivative-x-of-fxy
+        :args (s/cat :fxy ::fxy
+                     :opts (s/? (s/keys :opt [::h])))
+        :ret ::fxy)
 
 (defn partial-derivative-y-of-fxy
-  [fxy & {:keys [^double h] :or {h m/*sgl-close*}}]
-  (fn [x y] ((derivative-fn #(fxy x %)) y)))
+  ([fxy] (partial-derivative-y-of-fxy fxy {}))
+  ([fxy {:keys [h] :or {h m/*sgl-close*}}]
+   (fn [x y] ((derivative-fn #(fxy x %) {::h h}) y))))
+
+(s/fdef partial-derivative-y-of-fxy
+        :args (s/cat :fxy ::fxy
+                     :opts (s/? (s/keys :opt [::h])))
+        :ret ::fxy)
 
 (defn second-partial-derivative-xx-of-fxy
-  [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] ((derivative-fn #(fxy % y) {::derivative 2}) x)))
+  ([fxy] (second-partial-derivative-xx-of-fxy fxy {}))
+  ([fxy {:keys [h] :or {h (* m/*sgl-close* 0.1)}}]
+   (fn [x y] ((derivative-fn #(fxy % y) {::derivative 2 ::h h}) x))))
+
+(s/fdef second-partial-derivative-xx-of-fxy
+        :args (s/cat :fxy ::fxy
+                     :opts (s/? (s/keys :opt [::h])))
+        :ret ::fxy)
 
 (defn second-partial-derivative-yy-of-fxy
-  [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] ((derivative-fn #(fxy x %) {::derivative 2}) y)))
+  ([fxy] (second-partial-derivative-yy-of-fxy fxy {}))
+  ([fxy {:keys [h] :or {h (* m/*sgl-close* 0.1)}}]
+   (fn [x y] ((derivative-fn #(fxy x %) {::derivative 2 ::h h}) y))))
+
+(s/fdef second-partial-derivative-yy-of-fxy
+        :args (s/cat :fxy ::fxy
+                     :opts (s/? (s/keys :opt [::h])))
+        :ret ::fxy)
 
 (defn second-partial-derivative-xy-of-fxy
-  [fxy & {:keys [^double h] :or {h (/ m/*sgl-close* 10)}}]
-  (fn [x y] (joint-central-derivative #(fxy (first %) (second %)) [x y] 0 1 (m/sqrt h) (/ h))))
+  ([fxy] (second-partial-derivative-xy-of-fxy fxy {}))
+  ([fxy {:keys [h] :or {h (* m/*sgl-close* 0.1)}}]
+   (fn [x y] (joint-central-derivative #(fxy (first %) (second %)) [x y] 0 1 (m/sqrt h) (/ h)))))
 
-;;COMPARE AGAINST THE FOLLOWING
-; Implements the adaptive quadrature described on page 511 of Numerical Analysis Kinkade et al.
-; ## License
-; Copyright (C) 2014 Daniel Aaron Phelps
-; Distributed under the Eclipse Public License, the same as Clojure.
-
-(defn- simpsons-estimate
-  "Equation '8.5' page 509 - approximates the integral of f over [a b]."
-  ^double
-  [f ^double a ^double b ^double h]
-  (* (/ h 3.0) (+ (f a) (* 4 (f (+ a h))) (f b))))
-
-(defn- close-enough?
-  "Finds if |a - b| < |error|."
-  [^double a ^double b ^double error]
-  (< (Math/abs (- a b)) (Math/abs error)))
-
-(defn- insured-approximation
-  "Equation 7 page 509 in Kinkade et al."
-  ^double
-  [^double S* ^double S** ^double S]
-  (+ S* S** (* (/ 1.0 15.0) (+ S* S** (* -1.0 S)))))
-
-(defn- adapt-quad-internal
-  "Do not call this fn directly.  Start with adaptive-quadrature instead."
-  [f delta eps n k sigma a h fa fc fb S]
-  (let [delta (double delta)
-        eps (double eps)
-        n (long n)
-        k (long k)
-        sigma (double sigma)
-        a (double a)
-        h (double h)
-        fa (double fa)
-        fc (double fc)
-        fb (double fb)
-        S (double S)
-        b (+ a (* 2.0 h))
-        c (+ a h)
-        h (/ h 2.0)
-        S-left (simpsons-estimate f a c h)
-        S-right (simpsons-estimate f c b h)]
-    (cond
-      (close-enough? (+ S-left S-right) S (/ (* 60.0 eps h) delta))
-      (+ sigma (insured-approximation S-left S-right S))
-      (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
-      :else (+ (adapt-quad-internal f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left) ;From a to the midpoint
-               ;;From the midpoint to b
-               (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
-
-(defn- adaptive-quadrature-test
-  "Approximates the definite integral of f over [a b] with an error less
-  or equal than eps.  f is a real valued function of one real argument.
-  The parameter n specifies how many recursive calls are allowed.  An
-  exception is thrown before the n+1st recursive call."
-  [f a b eps n]
-  (let [a (double a)
-        b (double b)
-        eps (double eps)
-        n (long n)
-        delta (- b a)
-        sigma 0
-        h (/ delta 2.0)
-        c (/ (+ a b) 2.0)
-        k 1
-        fa (f a)
-        fb (f b)
-        fc (f c)
-        S (simpsons-estimate f a b h)]
-    (adapt-quad-internal f delta eps n k sigma a h fa fc fb S)))
-
-(defn- univariate-integration-test
-  "Univariate Integration using Romberg."
-  [f lower-bound upper-bound]
-  (let [max-eval 100]
-    (if (== lower-bound upper-bound)
-      0.0
-      (adaptive-quadrature-test f lower-bound upper-bound 1e-6 max-eval))))
-
-(s/fdef univariate-integration-test
-        :args (s/and
-                (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?) :lower-bound double? :upper-bound double?)
-                #(> (:upper-bound %) (:lower-bound %)))
-        :ret double?)
+(s/fdef second-partial-derivative-xy-of-fxy
+        :args (s/cat :fxy ::fxy
+                     :opts (s/? (s/keys :opt [::h])))
+        :ret ::fxy)

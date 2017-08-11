@@ -30,9 +30,9 @@
   (is= 1.839721326293382 (mf/erf-diff -2.1 1.0))
   (is= -1.8380230579686678 (mf/erf-diff 1.0 -2.0))
   (is= 0.0 (mf/erf-diff 1.0 1.0))
-  (is= 0.15262147206923762 (mf/erf-diff 1.0 2.0))
-  (is= 1.6854015858994302 (mf/erf-diff -1.0 1.0))
-  (is= 0.8427007929497151 (mf/erf-diff 0.0 1.0)))
+  (is= 0.1526214720692377 (mf/erf-diff 1.0 2.0))
+  (is= 1.68540158589943 (mf/erf-diff -1.0 1.0))
+  (is= 0.842700792949715 (mf/erf-diff 0.0 1.0)))
 
 (deftest erf-derivative-test
   (is= 0.0 (mf/erf-derivative m/inf-))

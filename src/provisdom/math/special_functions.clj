@@ -11,7 +11,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;DECLARATIONS
-(declare regularized-gamma-p)
+(declare regularized-gamma-p erfc)
 
 ;;;CONSTANTS
 (def ^:const euler-mascheroni-constant
@@ -58,7 +58,7 @@
   (cond (zero? x) 0.0
         (m/inf+? x) 1.0
         (m/inf-? x) -1.0
-        :else (* (m/sgn x) (->> (double x) m/sq (regularized-gamma-p m/half)))))
+        :else (* (m/sgn x) (->> x m/sq (regularized-gamma-p m/half)))))
 
 (s/fdef erf
         :args (s/cat :x ::m/number)
@@ -66,7 +66,16 @@
 
 (defn erf-diff
   "Returns the difference between erf(x1) and erf(x2)."
-  [x1 x2] (ap/erf x1 x2))
+  [x1 x2]
+  (if (> x1 x2)
+    (- (erf-diff x2 x1))
+    (if (< x1 -0.4769362762044697)
+      (if (neg? x2)
+        (- (erfc (- x2)) (erfc (- x1)))
+        (- (erf x2) (erf x1)))
+      (if (and (> x2 0.4769362762044697) (pos? x1))
+        (- (erfc x1) (erfc x2))
+        (- (erf x2) (erf x1))))))
 
 (s/fdef erf-diff
         :args (s/cat :x1 ::m/num :x2 ::m/num)
@@ -74,7 +83,7 @@
 
 (defn erf-derivative
   "Returns the derivative of the error function."
-  [x] (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq (double x))))))
+  [x] (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
 
 (s/fdef erf-derivative
         :args (s/cat :x ::m/num)
@@ -106,7 +115,7 @@
   (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+
         (m/roughly? x 2.0 m/*dbl-close*) m/inf-
         (m/one? x) 0.0
-        :else (ap/erfc-inv x)))
+        :else (inv-erf (m/one- x))))
 
 (s/fdef inv-erfc
         :args (s/cat :x (s/double-in :min 0.0 :max 2.0))

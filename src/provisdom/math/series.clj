@@ -17,7 +17,7 @@
 
 ;;;CONSTANTS
 (def ^:const ^:private chebyshev-poly-first-kind-fns
-  [(fn [x] 1.0), #(* 1 %), #(dec (* 2.0 (m/sq %))),
+  [(constantly 1.0), #(* 1 %), #(dec (* 2.0 (m/sq %))),
    #(+ (* 4 (m/cube %)) (* -3 %)), #(+ (* 8 (m/pow % 4)) (* -8 (m/sq %)) 1),
    #(+ (* 16 (m/pow % 5)) (* -20 (m/cube %)) (* 5 %)),
    #(+ (* 32 (m/pow % 6)) (* -48 (m/pow % 4)) (* 18 (m/sq %)) -1),
@@ -32,7 +32,7 @@
        (* -1232 (m/pow % 5)) (* 220 (m/cube %)) (* -11 %))])
 
 (def ^:const ^:private chebyshev-poly-second-kind-fns
-  [(fn [x] 1.0), #(* 2 %), #(dec (* 4.0 (m/sq %))),
+  [(constantly 1.0), #(* 2 %), #(dec (* 4.0 (m/sq %))),
    #(+ (* 8 (m/cube %)) (* -4 %)), #(+ (* 16 (m/pow % 4)) (* -12 (m/sq %)) 1),
    #(+ (* 32 (m/pow % 5)) (* -32 (m/cube %)) (* 6 %)),
    #(+ (* 64 (m/pow % 6)) (* -80 (m/pow % 4)) (* 24 (m/sq %)) -1),
@@ -44,24 +44,26 @@
 
 ;;;CHEBYSHEV POLYNOMIALS
 (defn chebyshev-polynomial-fn
-  "Returns a chebyshev polynomial function.  
-Can optionally use first kind (default) or second kind."
+  "Returns a chebyshev polynomial function.
+  Can optionally use first kind (default) or second kind."
   [n & second-kind?]
   {:pre [(have? m/long-able-non-? n)]}
-  (let [n (long n), g #(let [[x y] %, z (- (* 2 y) x)] [y z]),
-        c (if second-kind? chebyshev-poly-second-kind-fns
-                           chebyshev-poly-first-kind-fns),
+  (let [n (long n)
+        g #(let [[x y] %, z (- (* 2 y) x)] [y z])
+        c (if second-kind?
+            chebyshev-poly-second-kind-fns
+            chebyshev-poly-first-kind-fns)
         m (if second-kind? 9 11)]
-    (if (<= n m) (c n)
-                 #(second (last (take (inc (- n m))
-                                      (iterate g [((c (dec m)) %) ((c m) %)])))))))
+    (if (<= n m)
+      (c n)
+      #(second (last (take (inc (- n m)) (iterate g [((c (dec m)) %) ((c m) %)])))))))
 
 ;;http://en.wikipedia.org/wiki/Chebyshev_polynomials 
 ;;-- also solved for the deriv of second-kind at x = +-1
 (defn chebyshev-derivative-fn
-  "Returns a chebyshev-derivative function.  
-Can optionally use first kind (default) or second kind.
-Will use numerical derivative when necessary."
+  "Returns a chebyshev-derivative function.
+  Can optionally use first kind (default) or second kind.
+  Will use numerical derivative when necessary."
   [n deriv & second-kind?]
   {:pre [(have? m/long-able-non-? n) (have? m/long-able? deriv) (pos? deriv)]}
   (let [n (long n)]
@@ -83,24 +85,21 @@ Will use numerical derivative when necessary."
                                   {::ca/derivative deriv}))))
 
 (defn chebyshev-polynomial-factors-to-regular-polynomial-factors
-  "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...) 
-   from chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...)
-Can optionally use first kind (default) or second kind."
+  "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...)
+  from chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...).
+  Can optionally use first kind (default) or second kind."
   [chebyshev-factors & second-kind?]
   (let [n (count chebyshev-factors)]
     (map (fn [i]
            ((ca/derivative-fn
-              #(mx/inner-product
-                 chebyshev-factors
-                 ((polynomial-fn
-                    (dec n) :chebyshev-kind (if second-kind? 2 1)) %))
-              {::ca/derivative i}) 0.0))
+              #(mx/inner-product chebyshev-factors ((polynomial-fn (dec n) :chebyshev-kind (if second-kind? 2 1)) %))
+              {::ca/derivative i})
+             0.0))
          (range n))))
 
 ;;;SERIES
 (defn- polynomial-functions
-  "Cheybshev-kind can be 0 (default), 1, or 2, 
-   where 0 means a regular polynomial."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial."
   [chebyshev-kind]
   (condp = chebyshev-kind
     0 (fn [x] #(m/pow x %))
@@ -113,19 +112,16 @@ Can optionally use first kind (default) or second kind."
   (- (m/sqrt (+ 0.25 (* 2 count))) 1.5))
 
 (defn polynomial-fn
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular 
-   polynomial.
-   Returns a function that takes a number and returns a vector"
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
+  Returns a function that takes a number and returns a vector"
   [end-degree & {:keys [start-degree chebyshev-kind]
                  :or   {start-degree 0, chebyshev-kind 0}}]
   (fn [x] (map (fn [i] (((polynomial-functions chebyshev-kind) x) i))
                (range start-degree (inc end-degree)))))
 
 (defn polynomial-fns
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular 
-   polynomial.
-Returns a collection of functions that each take a number and return a 
-   number"
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
+  Returns a collection of functions that each take a number and return a number"
   [end-degree & {:keys [start-degree chebyshev-kind]
                  :or   {start-degree 0, chebyshev-kind 0}}]
   (map (fn [i] (fn [x] (((polynomial-functions chebyshev-kind) x) i)))
@@ -139,13 +135,10 @@ Returns a collection of functions that each take a number and return a
      (- (f d) (f start-degree)))))
 
 (defn polynomial-2D-fn
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular 
-   polynomial.
-Order retains x to the highest powers first, e.g., 
-   [1 x y x^2 xy y^2 x^3 (x^2 * y) (y^2 * x) y^3].
-If by-count? (default is false), then returns basis with basis of 
-   'end-degree' count.
-Returns a function that takes a tuple [x y] and returns a vector."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
+  Order retains x to the highest powers first, e.g., [1 x y x^2 xy y^2 x^3 (x^2 * y) (y^2 * x) y^3].
+  If by-count? (default is false), then returns basis with basis of 'end-degree' count.
+  Returns a function that takes a tuple [x y] and returns a vector."
   [end-degree & {:keys [by-count? start-degree chebyshev-kind]
                  :or   {by-count? false, start-degree 0, chebyshev-kind 0}}]
   (if by-count? (let [d (m/ceil (polynomial-2D-degrees end-degree))]
@@ -166,24 +159,23 @@ Returns a function that takes a tuple [x y] and returns a vector."
 (defn polynomial-ND-fn
   "Terms are sorted by order and then by dimension, e.g., 
    [1 x y z x^2 xy xz y^2 yz z^2 x^3 (x^2 * y) (x^2 * z) (x * y^2) 
-   (x * y * z) (x * z^2) y^3 (y^2 * z) (y * z^2) z^3]
-Returns a function that takes a vector of length ndim [x y z ...] and 
+   (x * y * z) (x * z^2) y^3 (y^2 * z) (y * z^2) z^3].
+   Returns a function that takes a vector of length n-dim [x y z ...] and
    returns a (usually much longer) vector."
-  [^long ndim ^long end-degree]
+  [^long n-dim ^long end-degree]
   (fn [v] (map (fn [p] (reduce (fn [tot e]
                                  (if (zero? e) tot
                                                (* tot (nth v (dec e)))))
                                1.0 p))
                (distinct
                  (cm/combinations
-                   (flatten (map #(repeat end-degree %) (range (inc ndim))))
+                   (flatten (map #(repeat end-degree %) (range (inc n-dim))))
                    end-degree)))))
 
 (defn polynomial-ND-fn-without-cross
-  "Terms are sorted by dimension, e.g., [1 x x^2 y y^2 z z^2]
-Returns a function that takes a vector of length ndim [x y z ...] and 
-   returns a vector."
-  [ndim end-degree & {:keys [chebyshev-kind] :or {chebyshev-kind 0}}]
+  "Terms are sorted by dimension, e.g., [1 x x^2 y y^2 z z^2].
+  Returns a function that takes a vector of length n-dim [x y z ...] and returns a vector."
+  [n-dim end-degree & {:keys [chebyshev-kind] :or {chebyshev-kind 0}}]
   #(cons 1.0 (mapcat (polynomial-fn 2 :start-degree 1
                                     :chebyshev-kind chebyshev-kind) %)))
 
@@ -210,7 +202,8 @@ Returns a function that takes a vector of length ndim [x y z ...] and
     (cons h
           (letfn [(f [[ch & ct :as c] kn2 kn1 m]
                     (if-let [an ch]
-                      (let [kn (+ kn2 (* an kn1)), v (/ m (* kn1 kn))]
+                      (let [kn (+ kn2 (* an kn1))
+                            v (/ m (* kn1 kn))]
                         (lazy-seq (cons v (f ct kn1 kn (- m)))))
                       c))]
             (f t 1 h -1)))))
@@ -232,9 +225,9 @@ Returns a function that takes a vector of length ndim [x y z ...] and
 
 ;;;SUMMATION 
 (defn sum-convergent-series
-  "Returns the sum of a convergent series.  
-Predicates take the sum value, an index, and the series value.
-Options:
+  "Returns the sum of a convergent series.
+  Predicates take the sum value, an index, and the series value.
+  Options:
    kahan? (default false) -- set to true for greater floating-point 
       summation accuracy, as a fast alternative to bigDecimal.
    converged-pred -- predicate indicating that series has converged 
@@ -259,8 +252,11 @@ Options:
   (if kahan?
     (first (co/reduce-kv-with-stop
              (fn [sum i val]
-               (let [[tot carry] sum, y (- val carry), new-tot (+ y tot),
-                     new-carry (- new-tot tot y)] [new-tot new-carry]))
+               (let [[tot carry] sum
+                     y (- val carry)
+                     new-tot (+ y tot)
+                     new-carry (- new-tot tot y)]
+                 [new-tot new-carry]))
              [0.0 0.0]
              coll
              (fn [sum i val] (converged-pred (first sum) i val))

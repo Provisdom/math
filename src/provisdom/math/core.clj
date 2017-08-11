@@ -186,8 +186,8 @@
   "Returns true if x is a single and finite."
   [x] (and (double? x) (sgl-range? x)))
 
-(s/def ::single-finite (s/spec single-finite?
-                               :gen #(gen/double* {:infinite? false :NaN? false :min min-sgl :max max-sgl})))
+(s/def ::single-finite
+  (s/spec single-finite? :gen #(gen/double* {:infinite? false :NaN? false :min min-sgl :max max-sgl})))
 
 (defn long?
   "Returns true if x is a long."
