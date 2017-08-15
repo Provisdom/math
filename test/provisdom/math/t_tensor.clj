@@ -106,6 +106,9 @@
   (is (tensor/every-kv? (fn [[n] v] (> n -1)) [1.0 0.5]))
   (is (tensor/every-kv? (fn [[n1 n2] v] (> n2 (- v 2.1))) [[1.0 0.5] [2.0 3.0]])))
 
+(deftest filter-kv-test
+  (is= [[3 4]] (tensor/filter-kv (fn [index tensor] (odd? index)) [[1 2] [3 4]])))
+
 (deftest info-tests
   (ecount-test)
   (dimensionality-test)
@@ -115,7 +118,8 @@
 (defspec-test test-ecount `tensor/ecount)
 (defspec-test test-dimensionality `tensor/dimensionality)
 (defspec-test test-shape `tensor/shape)
-(defspec-test test-every-kv? `tensor/every-kv?)             ;fspec issues
+;(defspec-test test-every-kv? `tensor/every-kv?)             ;fspec issues
+;(defspec-test test-filter-kv `tensor/filter-kv)             ;slow
 
 (deftest emap-test
   (is= [[6 6] [6 6]] (tensor/emap + 1 [2 2] [[3 3] [3 3]]))
@@ -217,6 +221,9 @@
   (is= [0.9049840786292169 0.45249203931460846] (tensor/normalize-p [1.0 0.5] 2.1))
   (is= [0.6666666666666666 0.3333333333333333] (tensor/normalize-p [1.0 0.5] 1.0)))
 
+(deftest inner-product-test
+  (is= [48.0 54.0 60.0] (tensor/inner-product [1 2 3] [[4 5 6] [7 8 9] [10 11 12]])))
+
 (deftest math-tests
   (===-test)
   (add-test)
@@ -229,7 +236,8 @@
   (norm-p-test)
   (normalize1-test)
   (normalize-test)
-  (normalize-p-test))
+  (normalize-p-test)
+  (inner-product-test))
 
 ;(defspec-test test-=== `tensor/===) ;slow
 ;(defspec-test test-add `tensor/add) ;slow
@@ -243,6 +251,7 @@
 ;(defspec-test test-normalize1 `tensor/normalize1) ;slow
 ;(defspec-test test-normalize `tensor/normalize) ;slow
 ;(defspec-test test-normalize-p `tensor/normalize-p) ;slow
+;(defspec-test test-inner-product `tensor/inner-product) ;slow
 
 (deftest roughly?-test
   (is (tensor/roughly? 1 1.01 0.05))

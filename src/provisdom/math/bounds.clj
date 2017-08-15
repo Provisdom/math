@@ -11,6 +11,10 @@
 (s/def ::interval (s/and (s/tuple ::m/number ::m/number) (fn [[x1 x2]] (or (and (m/nan? x1) (m/nan? x2)) (>= x2 x1)))))
 (s/def ::num-interval (s/and (s/tuple ::m/num ::m/num) (fn [[x1 x2]] (>= x2 x1))))
 (s/def ::finite-interval (s/and (s/tuple ::m/finite ::m/finite) (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::int+-interval (s/and (s/tuple ::m/int+ ::m/int+) (fn [[x1 x2]] (>= x2 x1))))
+(defn long-interval-gen
+  ([min max] (gen/tuple (gen/large-integer* {:min min :max max})
+                        (gen/large-integer* {:min min :max max}))))
 
 (defprotocol Range
   (out-of-range? [r v])

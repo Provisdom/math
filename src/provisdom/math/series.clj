@@ -231,20 +231,20 @@
    kahan? (default false) -- set to true for greater floating-point 
       summation accuracy, as a fast alternative to bigDecimal.
    converged-pred -- predicate indicating that series has converged 
-      (default is that index > m/*min-iter* AND the abs value 
+      (default is that index >= 10 AND the abs value
       is <= m/*quad-close* or the abs value is m/*quad-close* times 
       smaller than the abs sum)
    error-pred -- predicate indicating an error 
-      (default is that index is > m/*max-iter*)
+      (default is that index is > 10000)
    error-return-function -- function that throws exception upon error"
   [coll &
    {:keys [kahan? converged-pred err-pred err-ret-fn]
     :or   {kahan?         false,
            converged-pred (fn [sum i val]
-                            (and (>= i m/*min-iter*)
+                            (and (>= i 10)
                                  (or (<= (m/abs val) m/*quad-close*)
                                      (<= (m/abs (/ val sum)) m/*quad-close*))))
-           err-pred       (fn [sum i val] (> i m/*max-iter*)),
+           err-pred       (fn [sum i val] (> i 10000)),
            err-ret-fn     (fn [sum i val]
                             (throw (ex-info
                                      (str "Series evaluation failed to converge " sum)

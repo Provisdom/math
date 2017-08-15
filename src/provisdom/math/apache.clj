@@ -423,7 +423,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
     The work per iteration is very slightly less if shift = 0."
     ([symmetric-apache-m v] (matrix-solve-iterative symmetric-apache-m v {}))
     ([symmetric-apache-m v {::keys [iterative-solver apache-matrix-guess max-iter rel-accu check?]
-                            :or    {iterative-solver ::symm-lq, max-iter m/*max-iter*, rel-accu m/*dbl-close*, check? true}}]
+                            :or    {iterative-solver ::symm-lq, max-iter 10000, rel-accu m/*dbl-close*, check? true}}]
      (let [^RealMatrix a symmetric-apache-m
            ^RealVector b (apache-vector v)
            ^RealVector g apache-matrix-guess

@@ -14,32 +14,16 @@
 
 (set! *warn-on-reflection* true)
 
-(s/def ::interval ::bo/interval)
+(declare weights-and-nodes-gk)
+
 (s/def ::number ::m/number)
 (s/def ::vector ::vector/vector)
-(s/def ::matrix ::mx/matrix)
 (s/def ::number->number (s/with-gen
-                          (s/fspec :args (s/cat :number ::m/number) :ret ::m/number)
+                          (s/fspec :args (s/cat :number ::number) :ret ::number)
                           #(gen/one-of (map gen/return (list m/sq m/cube m/cos)))))
 (s/def ::v->number (s/with-gen
-                     (s/fspec :args (s/cat :v ::vector) :ret ::m/number)
+                     (s/fspec :args (s/cat :v ::vector) :ret ::number)
                      #(gen/one-of (map gen/return (list vector/kahan-sum tensor/average tensor/norm1)))))
-(s/def ::v->v
-  (s/with-gen
-    (s/fspec :args (s/cat :v ::vector) :ret ::vector)
-    #(gen/one-of (map gen/return (list (fn [v] (mapv m/sq v)) (fn [v] (mapv m/cube v)))))))
-(s/def ::v->m (s/fspec :args (s/cat :v ::vector) :ret ::matrix))
-(s/def ::v->symmetric-m (s/fspec :args (s/cat :v ::vector) :ret ::mx/symmetric-matrix))
-(s/def ::fxy (s/with-gen
-               (s/fspec :args (s/cat :x ::number :y ::number) :ret ::number)
-               #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
-(s/def ::h (s/with-gen ::m/finite+ #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
-(s/def ::dx ::h)
-(s/def ::type #{:central :forward :backward})
-(s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
-(s/def ::coefficients (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
-(s/def ::row ::mx/row)
-(s/def ::column ::mx/column)
 
 ;;;;LOOK AT STIELTJES STUFF OR WHATEVER FOR DISCRETIZING A GAUSSIAN FOR MORE 
 ;;;;THAN 11 OUTCOMES -- KRONROD? vs. GAUSS? vs ...?
@@ -47,24 +31,7 @@
 ;;;;    Write Clenshaw-Curtis and Fejer algos; see Wiki and 
 ;;;;see http://www.gnu.org/software/gsl/manual/html_node/ for more
 ;;;;    http://ab-initio.mit.edu/wiki/index.php/Cubature
-;;;;    extend to n-dim integration over functions that output vectors 
-;;;;       or matrices
-;;;;work on integer integration
-
-;;;INTEGER INTEGRATION
-;;is it sometimes better to approximate slow functions 
-;;  over large ranges with continuous integration?
-(defn integer-integrate
-  "Returns the integral of a function f over ranges from a to b.
-      Options:
-          ranges ([a1 b1] [a2 b2]...); default is nil"
-  [f ranges]
-  (let [ranges (if (sequential? (first ranges)) ranges [ranges])
-        n-vars (count ranges)]
-    ;;this can be sped for larger seqs (use ^doubles or even approximate)
-    (if (m/one? n-vars)
-      (let [[a b] ranges] (apply + (map f (range a b))))
-      (throw (ex-info "Not implemented" (var integer-integrate)))))) ;;to do
+;;;;    extend to n-dim integration over functions that output vectors or matrices
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
@@ -72,11 +39,52 @@
 ;;;http://www.advanpix.com/2011/11/07/gauss-kronrod-quadrature-nodes-weights/
 ;;;or more generally, can be calculated here: 
 ;;;http://keisan.casio.com/exec/system/1289382036
-(defn- ^:const convert-gk-wt
-  ([v] (convert-gk-wt v true))
-  ([v r?] (let [end (if r? (rest v) v)] (-> v rseq (concat end)))))
+(s/def ::interval ::bo/interval)
+(s/def ::intervals (s/coll-of ::interval))
+(s/def ::tensor ::tensor/tensor)
+(s/def ::accu ::mx/accu)
+(s/def ::iter-interval (s/with-gen ::bo/int+-interval #(bo/long-interval-gen 1 100)))
+(s/def ::number->tensor (s/with-gen (s/fspec :args (s/cat :number ::number) :ret ::tensor)
+                                    (gen/one-of (list (s/gen ::number->number)
+                                                      (gen/return (fn [number] [number 4.0]))
+                                                      (gen/return (fn [number] [[number 4.0] [3.0 (inc number)]]))))))
+(s/def ::number->interval
+  (s/with-gen
+    (s/fspec :args (s/cat :number ::number) :ret ::interval)
+    #(gen/one-of (map gen/return (list (fn [n] [(dec n) n]))))))
+(s/def ::number2->interval
+  (s/with-gen
+    (s/fspec :args (s/cat :number1 ::number :number2 ::number) :ret ::interval)
+    #(gen/one-of (map gen/return (list (fn [n1 n2] [(- (m/abs n1)) (+ 0.5 (m/abs n2))]))))))
+(s/def ::number3->interval
+  (s/with-gen
+    (s/fspec :args (s/cat :number1 ::number :number2 ::number :number3 ::number) :ret ::interval)
+    #(gen/one-of (map gen/return (list (fn [n1 n2 n3] [(- (m/abs (+ n1 n2))) (+ 0.5 (m/abs n3))]))))))
+(s/def ::points #{15, 21, 31, 41, 51, 61})
+(s/def ::weights-and-nodes
+  (s/with-gen (s/and (s/tuple ::vector ::vector ::vector)
+                     (fn [[a b c]] (and (= (count b) (count c)) (= (inc (* 2 (count a))) (count c)))))
+              #(gen/bind (s/gen ::points) (fn [points] (gen/return (weights-and-nodes-gk points))))))
+(s/def ::uni-dimensional-error ::tensor)
+(s/def ::high-precision-values ::tensor)
+(s/def ::multi-dimensional-error ::number)
+(s/def ::high-precision-value ::number)
+(s/def ::one-dimension-errors ::vector)
+(s/def ::exception (partial instance? Exception))
 
-(defn- ^:const convert-gk-n [v] (concat (->> v rseq (map -)) (rest v)))
+(defn- convert-gk-weights
+  ([number] (convert-gk-weights number true))
+  ([number skip?] (let [end (if skip? (rest number) number)] (-> number rseq (concat end) vec))))
+
+(s/fdef convert-gk-weights
+        :args (s/cat :number ::number :skip? (s/? boolean?))
+        :ret ::vector)
+
+(defn- convert-gk-nodes [number] (vec (concat (->> number rseq (map -)) (rest number))))
+
+(s/fdef convert-gk-nodes
+        :args (s/cat :number ::number)
+        :ret ::vector)
 
 (def ^:const ^:private gauss7-weights
   [0.4179591836734693877551020, 0.3818300505051189449503698,
@@ -95,8 +103,7 @@
    0.9914553711208126392068547])
 
 (def ^:const ^:private g7-k15
-  [(convert-gk-wt gauss7-weights) (convert-gk-wt kronrod15-weights)
-   (convert-gk-n kronrod15-nodes)])
+  [(convert-gk-weights gauss7-weights) (convert-gk-weights kronrod15-weights) (convert-gk-nodes kronrod15-nodes)])
 
 (def ^:const ^:private gauss10-weights
   [0.2955242247147528701738930, 0.2692667193099963550912269,
@@ -119,8 +126,7 @@
    0.9739065285171717200779640, 0.9956571630258080807355273])
 
 (def ^:const ^:private g10-k21
-  [(convert-gk-wt gauss10-weights false) (convert-gk-wt kronrod21-weights)
-   (convert-gk-n kronrod21-nodes)])
+  [(convert-gk-weights gauss10-weights false) (convert-gk-weights kronrod21-weights) (convert-gk-nodes kronrod21-nodes)])
 
 (def ^:const ^:private gauss15-weights
   [0.2025782419255612728806202, 0.1984314853271115764561183,
@@ -149,8 +155,7 @@
    0.9980022986933970602851728])
 
 (def ^:const ^:private g15-k31
-  [(convert-gk-wt gauss15-weights) (convert-gk-wt kronrod31-weights)
-   (convert-gk-n kronrod31-nodes)])
+  [(convert-gk-weights gauss15-weights) (convert-gk-weights kronrod31-weights) (convert-gk-nodes kronrod31-nodes)])
 
 (def ^:const ^:private gauss20-weights
   [0.1527533871307258506980843, 0.1491729864726037467878287,
@@ -185,8 +190,7 @@
    0.9931285991850949247861224, 0.9988590315882776638383156])
 
 (def ^:const ^:private g20-k41
-  [(convert-gk-wt gauss20-weights false) (convert-gk-wt kronrod41-weights)
-   (convert-gk-n kronrod41-nodes)])
+  [(convert-gk-weights gauss20-weights false) (convert-gk-weights kronrod41-weights) (convert-gk-nodes kronrod41-nodes)])
 
 (def ^:const ^:private gauss25-weights
   [0.1231760537267154512039029, 0.1222424429903100416889595,
@@ -228,8 +232,7 @@
    0.9992621049926098341934575])
 
 (def ^:const ^:private g25-k51
-  [(convert-gk-wt gauss25-weights) (convert-gk-wt kronrod51-weights)
-   (convert-gk-n kronrod51-nodes)])
+  [(convert-gk-weights gauss25-weights) (convert-gk-weights kronrod51-weights) (convert-gk-nodes kronrod51-nodes)])
 
 (def ^:const ^:private gauss30-weights
   [0.1028526528935588403412856, 0.1017623897484055045964290,
@@ -276,132 +279,210 @@
    0.9836681232797472099700326, 0.9916309968704045948586284,
    0.9968934840746495402716301, 0.9994844100504906375713259])
 
-(def ^:const ^:private g30-k61
-  [(convert-gk-wt gauss30-weights false) (convert-gk-wt kronrod61-weights) (convert-gk-n kronrod61-nodes)])
+(def ^:private g30-k61
+  [(convert-gk-weights gauss30-weights false)
+   (convert-gk-weights kronrod61-weights)
+   (convert-gk-nodes kronrod61-nodes)])
 
-(defn- adj-tol-gk ^double [^double tol] (-> tol (m/pow (/ 2.0 3.0)) (* 0.005)))
+(defn- adjust-accu-gk [accu] (-> accu (m/pow (/ 2.0 3.0)) (* 0.005)))
 
-(defn- weights-and-nodes-gk [^Number points]
-  (condp >= points 15 g7-k15, 21 g10-k21, 31 g15-k31, 41 g20-k41, 51 g25-k51, g30-k61))
+(s/fdef adjust-accu-gk
+        :args (s/cat :accu ::accu)
+        :ret ::number)
+
+(defn- weights-and-nodes-gk
+  [points] (condp = points 15 g7-k15, 21 g10-k21, 31 g15-k31, 41 g20-k41, 51 g25-k51, 61 g30-k61))
+
+(s/fdef weights-and-nodes-gk
+        :args (s/cat :points ::points)
+        :ret ::weights-and-nodes)
 
 ;ADAPTIVE INTEGRATION
 (defn- unnormalize
-  "Returns the unnormalized value for a range [a, b] with value v from normalized range [-1, 1]"
-  ^double [^double half-sum ^double half-diff ^double v]
-  (-> v (* half-diff) (+ half-sum)))
+  "Returns the unnormalized value for a range [a, b] with `value` from normalized range [-1, 1]."
+  [half-sum half-diff value] (-> value double (* half-diff) (+ half-sum)))
 
-(defn- get-error-and-value
-  "Returns a tuple containing the error and higher precision value for a single integration approximation"
-  [f [a b] [lw hw n]]
+(s/fdef unnormalize
+        :args (s/cat :half-sum ::number :half-diff ::number :value ::number)
+        :ret ::number)
+
+(defn- get-uni-dimensional-error-and-high-precision-values
+  "For a single integration approximation, returns a map containing:
+   `::univariate-error`
+   `::high-precision-values`."
+  [number->tensor [a b] [low-precision-weights high-precision-weights nodes]]
   (let [half-sum (* 0.5 (+ a b))
         half-diff (* 0.5 (- b a))
-        un (map (partial unnormalize half-sum half-diff) n)
-        lh (into [] (map f un))
-        h (tensor/multiply half-diff (mx/inner-product hw lh))
-        l (tensor/multiply
-            half-diff
-            (mx/inner-product lw (vector/filter-kv (fn [idx _] (odd? idx)) lh)))
-        err (tensor/average (tensor/emap m/abs (tensor/subtract l h)))]
-    [err h]))
+        unnormalized-nodes (map (partial unnormalize half-sum half-diff) nodes)
+        mapped-nodes (mapv number->tensor unnormalized-nodes)
+        high-precision-values (tensor/multiply half-diff (tensor/inner-product high-precision-weights mapped-nodes))
+        low-precision-nodes (tensor/filter-kv (fn [idx _] (odd? idx)) mapped-nodes)
+        low-precision-values (tensor/multiply half-diff
+                                              (tensor/inner-product low-precision-weights low-precision-nodes))
+        univariate-error (tensor/emap m/abs (tensor/subtract low-precision-values high-precision-values))]
+    {::uni-dimensional-error univariate-error ::high-precision-values high-precision-values}))
 
-(defn- get-error-and-value-n-dim
-  "Returns a vector containing the error, the higher precision value, 
-      a vector of the 1-dim errors for a single integration approximation, and the ranges (unchanged)"
-  [f ranges [lw hw n]]
-  (let [half-sum (map tensor/average ranges)
-        half-diff (map #(* 0.5 (- (second %) (first %))) ranges)
-        un (for [v (range (count ranges))]
-             (map (partial unnormalize (nth half-sum v) (nth half-diff v)) n))
-        lh (map f (apply mc/cartesian-product un))
+(s/fdef get-uni-dimensional-error-and-high-precision-values
+        :args (s/cat :number->tensor ::number->tensor
+                     :interval ::interval
+                     :weights-and-nodes ::weights-and-nodes)
+        :ret (s/keys :req [::uni-dimensional-error ::high-precision-values]))
+
+(defn- get-multi-dimensional-errors-and-high-precision-value
+  "For a single integration approximation, returns a map containing:
+   `::multivariate-error`
+   `::high-precision-value`
+   `::one-dimension-errors`."
+  [v->number intervals [low-precision-weights high-precision-weights nodes]]
+  (let [half-sum (mapv tensor/average intervals)
+        half-diff (mapv #(* 0.5 (- (second %) (first %))) intervals)
+        unnormalized-nodes (for [v (range (count intervals))]
+                             (mapv (partial unnormalize (nth half-sum v) (nth half-diff v)) nodes))
+        mapped-nodes (mapv v->number (apply mc/cartesian-product unnormalized-nodes))
         multiplier (apply * half-diff)
-        dim (count ranges)
-        fl #(mx/inner-product lw (take-nth 2 (rest %)))
-        fh #(mx/inner-product hw %)
-        f1dim (co/create-dbl-layered dim dim (fn [i j] (if (= i j) fl fh)))
-        f-all-h (repeat dim fh)
-        f-all-l (repeat dim fl)
-        partitioned-lh (co/partition-recursively lh (count hw))
-        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot))
-                                                      partitioned-lh %))
-        h (reduce-f f-all-h)
-        l (reduce-f f-all-l)
+        dimensions (count intervals)
+        f-low-precision #(tensor/inner-product low-precision-weights (take-nth 2 (rest %)))
+        f-high-precision #(tensor/inner-product high-precision-weights %)
+        f1dim (co/create-dbl-layered dimensions dimensions (fn [i j] (if (= i j) f-low-precision f-high-precision)))
+        partitioned-nodes (tensor/to-tensor (co/partition-recursively mapped-nodes (count high-precision-weights)))
+        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot)) partitioned-nodes %))
+        high-precision-value (reduce-f (repeat dimensions f-high-precision))
+        low-precision-value (reduce-f (repeat dimensions f-low-precision))
         dim1 (map reduce-f f1dim)
-        err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % h)))]
-    [(err-f l) h (map err-f dim1) ranges]))
+        err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % high-precision-value)))]
+    {::multi-dimensional-error (err-f low-precision-value)
+     ::high-precision-value    high-precision-value
+     ::one-dimension-errors    (mapv err-f dim1)}))
 
-(defn- adaptive-quadrature [implementation f [a b] accu min-iter max-iter wn]
-  (let [tol (adj-tol-gk accu)
-        [err0 h0] (get-error-and-value f [a b] wn)
-        f-tot-val #(mx/coerce
-                     implementation
-                     (apply tensor/add (tensor/emap (fn [e] (-> e second first)) %)))]
-    (loop [errs [[err0 [h0 a b]]], i 1]
-      (let [tot-err (apply + (map first errs))]
-        (if (and (>= i min-iter) (<= tot-err tol))
-          (f-tot-val errs)
-          (do (when (>= i max-iter)
-                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err
-                                     " Value: " (f-tot-val errs))
-                                {:fn (var adaptive-quadrature) :solver? true})))
-              (let [[e [h an bn]] (peek errs)
-                    mn (* 0.5 (+ an bn))
-                    [[err1 h1] [err2 h2]] (as/thread :all
-                                                     [#(get-error-and-value f [an mn] wn)
-                                                      #(get-error-and-value f [mn bn] wn)])
-                    errs (into
-                           []
-                           (sort-by
-                             first (concat
-                                     (pop errs)
-                                     [[err1 [h1 an mn]] [err2 [h2 mn bn]]])))]
-                (recur errs (inc i)))))))))
+(s/fdef get-multi-dimensional-errors-and-high-precision-value
+        :args (s/cat :v->number ::v->number
+                     :intervals ::intervals
+                     :weights-and-nodes ::weights-and-nodes)
+        :ret (s/keys :req [::multi-dimensional-error ::high-precision-value ::one-dimension-errors]))
 
-(defn- simple-sort-fn [err errs1d] (apply max errs1d))
+(defn- uni-dimensional-adaptive-quadrature
+  "Uni-dimensional Integration."
+  [number->tensor [a b] accu [min-iter max-iter] weights-and-nodes]
+  (let [tolerance (adjust-accu-gk accu)
 
-(defn- simple-select-dims-fn [errs1d i min-iter]
-  (let [m (apply max errs1d)
-        ps (map vector (range) errs1d)]
-    (if (< i min-iter)
+        {::keys [uni-dimensional-error high-precision-values]}
+        (get-uni-dimensional-error-and-high-precision-values number->tensor [a b] weights-and-nodes)]
+    (loop [iter 1, error-maps [{:uni-error uni-dimensional-error :high-values high-precision-values :interval [a b]}]]
+      (let [total-error (apply + (flatten (map :uni-error error-maps)))]
+        (if (and (>= iter min-iter) (<= total-error tolerance))
+          (apply tensor/add (map :high-values error-maps))
+          (if (>= iter max-iter)
+            (ex-info (str "Iteration limit reached.  Error: " total-error " Value: "
+                          (apply tensor/add (map :high-values error-maps)))
+                     {:fn (var uni-dimensional-adaptive-quadrature)})
+            (let [{[an bn] :interval} (peek error-maps)
+                  mn (* 0.5 (+ an bn))
+
+                  [{error1 ::uni-dimensional-error, high-precision-values1 ::high-precision-values}
+                   {error2 ::uni-dimensional-error, high-precision-values2 ::high-precision-values}]
+                  (as/thread :all
+                             [#(get-uni-dimensional-error-and-high-precision-values
+                                 number->tensor [an mn] weights-and-nodes)
+                              #(get-uni-dimensional-error-and-high-precision-values
+                                 number->tensor [mn bn] weights-and-nodes)])
+
+                  new-error-maps [{:uni-error error1 :high-values high-precision-values1 :interval [an mn]}
+                                  {:uni-error error2 :high-values high-precision-values2 :interval [mn bn]}]
+                  new-error-maps (into [] (sort-by :uni-error (concat (pop error-maps) new-error-maps)))]
+              (recur (inc iter) new-error-maps))))))))
+
+(s/fdef uni-dimensional-adaptive-quadrature
+        :args (s/cat :number->tensor ::number->tensor
+                     :interval ::interval
+                     :accu ::accu
+                     :iter-interval ::iter-interval
+                     :weights-and-nodes ::weights-and-nodes)
+        :ret (s/or :exception ::exception :tensor ::tensor))
+
+(s/def ::splitting-importance-fn
+  (s/fspec :args (s/cat :multi-dimensional-error ::multi-dimensional-error
+                        :one-dimension-errors ::one-dimension-errors)
+           :ret ::number))
+
+(defn- simple-splitting-importance-fn
+  [multi-dimensional-error one-dimension-errors]
+  (if (empty? one-dimension-errors) m/inf- (apply max one-dimension-errors)))
+
+(s/def simple-splitting-importance-fn ::splitting-importance-fn)
+
+(s/def ::select-dimensions-fn
+  (s/fspec :args (s/cat :one-dimension-errors ::one-dimension-errors :iter-below-min? boolean?) :ret ::vector))
+
+(defn- simple-select-dimensions-fn [one-dimension-errors iter-below-min?]
+  (let [m (if (empty? one-dimension-errors) m/inf- (apply max one-dimension-errors))
+        ps (map vector (range) one-dimension-errors)]
+    (if iter-below-min?
       [(ffirst (filter #(= (second %) m) ps))]
       (mapv first (filter #(>= (second %) (* m 0.1)) ps)))))
 
-(defn- adaptive-quadrature-n-dim
-  "sort-fn takes the error of the approx and the sequence of 1-dim errors, 
-      and should return a number representing it's importance in splitting.
-   select-dims-fn takes the sequence of 1-dim errors, and should return 
-      a vector of the dimensions to split."
-  [implementation f ranges accu min-iter max-iter wn sort-fn select-dims-fn]
-  (let [tol (adj-tol-gk accu),
-        [err0 h0 errs1d0 _] (get-error-and-value-n-dim f ranges wn),
-        f-tot-val #(mx/coerce
-                     implementation
-                     (apply tensor/add (map (fn [e] (-> e second second)) %)))]
-    (loop [errs [[(sort-fn err0 errs1d0) [err0 h0 errs1d0 ranges]]], i 1]
-      (let [tot-err (apply + (map (fn [e] (-> e second first)) errs))]
-        (if (and (>= i min-iter) (<= tot-err tol))
-          (f-tot-val errs)
-          (do (when (>= i max-iter)
-                (throw (ex-info (str "Iteration limit reached.  Error: " tot-err " Value: " (f-tot-val errs))
-                                {:fn (var adaptive-quadrature-n-dim)})))
-              (let [[_ [_ _ e1d rn]] (peek errs),
-                    dims (select-dims-fn e1d i min-iter),
-                    dims-with-new-ranges (map #(let [[an bn] (nth rn %),
-                                                     mn (* 0.5 (+ an bn))]
-                                                 [[% an mn] [% mn bn]]) dims)
-                    new-ranges (map #(reduce
-                                       (fn [tot [d an bn]]
-                                         (assoc tot d [an bn])) rn %)
-                                    (apply mc/cartesian-product
-                                           dims-with-new-ranges))
-                    new-fns (map (fn [r] #(get-error-and-value-n-dim f r wn)) new-ranges)
-                    new-errs (map (fn [[e h errs1d r]]
-                                    [(sort-fn e errs1d)
-                                     [e h errs1d r]]) (as/thread :all new-fns))
-                    errs (into [] (sort-by first (concat (pop errs) new-errs)))]
-                (recur errs (inc i)))))))))
+(s/def simple-select-dimensions-fn ::select-dimensions-fn)
+
+(defn- multi-dimensional-adaptive-quadrature
+  "`splitting-importance-fn` takes the multi-dimensional error and the one-dimension-errors,
+      and should return a number representing it's importance in splitting the integration.
+   `select-dimensions-fn` takes the sequence of 1-dim errors, and should return a vector of the dimensions to split."
+  [v->number intervals accu [min-iter max-iter] weights-and-nodes splitting-importance-fn select-dimensions-fn]
+  (let [tolerance (adjust-accu-gk accu)
+
+        {multi-dimensional-error ::multi-dimensional-error
+         high-precision-value    ::high-precision-value
+         one-dimension-errors    ::one-dimension-errors}
+        (get-multi-dimensional-errors-and-high-precision-value v->number intervals weights-and-nodes)]
+    (loop [iter 1,
+           error-maps [{:splitting-importance (splitting-importance-fn multi-dimensional-error one-dimension-errors)
+                        :multi-error          multi-dimensional-error
+                        :high-value           high-precision-value
+                        :one-dim-errors       one-dimension-errors
+                        :intervals            intervals}]]
+      (let [total-error (apply + (map :multi-error error-maps))]
+        (if (and (>= iter min-iter) (<= total-error tolerance))
+          (apply tensor/add (map :high-value error-maps))
+          (if (>= iter max-iter)
+            (ex-info (str "Iteration limit reached.  Error: " total-error " Value: "
+                          (apply tensor/add (map :high-value error-maps)))
+                     {:fn (var multi-dimensional-adaptive-quadrature)})
+            (let [{intervals-n :intervals one-dim-errors :one-dim-errors} (peek error-maps),
+                  dimensions (select-dimensions-fn one-dim-errors (< iter min-iter)),
+                  dims-with-new-intervals (map #(let [[an bn] (nth intervals-n %)
+                                                      mn (* 0.5 (+ an bn))]
+                                                  [[% an mn] [% mn bn]])
+                                               dimensions)
+                  new-intervals (map #(reduce (fn [tot [d an bn]] (assoc tot d [an bn])) intervals-n %)
+                                     (apply mc/cartesian-product dims-with-new-intervals))
+                  new-fns (map (fn [intervals-local] #(get-multi-dimensional-errors-and-high-precision-value
+                                                        v->number intervals-local weights-and-nodes))
+                               new-intervals)
+                  new-error-maps (mapv (fn [intervals
+                                            {multi-error    ::multi-dimensional-error
+                                             one-dim-errors ::one-dimension-errors
+                                             high-value     ::high-precision-value}]
+                                         {:splitting-importance (splitting-importance-fn multi-error one-dim-errors)
+                                          :multi-error          multi-error
+                                          :high-value           high-value
+                                          :one-dim-errors       one-dim-errors
+                                          :intervals            intervals})
+                                       new-intervals
+                                       (as/thread :all new-fns))
+                  new-error-maps (into [] (sort-by :splitting-importance (concat (pop error-maps) new-error-maps)))]
+              (recur (inc iter) new-error-maps))))))))
+
+(s/fdef multi-dimensional-adaptive-quadrature
+        :args (s/cat :v->number ::v->number
+                     :intervals ::intervals
+                     :accu ::accu
+                     :iter-interval ::iter-interval
+                     :weights-and-nodes ::weights-and-nodes
+                     :splitting-importance-fn ::splitting-importance-fn
+                     :select-dimensions-fn ::select-dimensions-fn)
+        :ret (s/or :exception ::exception :number ::number))
 
 (defn change-of-variable
-  "Takes the range and returns a map containing:
+  "Takes the interval and returns a map containing:
   ::multiplicative-fn
   ::converter-fn -- for within the function to integrate.
   ::interval."
@@ -410,13 +491,13 @@
     (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn (fn [number]
                                                          (let [s (m/sq number)] (m/div (inc s) (m/sq (m/one- s)))))
                                    ::converter-fn      (fn [number] (m/div number (m/one- (m/sq number))))
-                                   ::interval          [-1 1]}
+                                   ::interval          [-1.0 1.0]}
     (m/inf+? b) {::multiplicative-fn (fn [number] (m/div (m/sq number)))
                  ::converter-fn      (fn [number] (+ a (m/div (m/one- number) number)))
-                 ::interval          [0 1]}
+                 ::interval          [0.0 1.0]}
     (m/inf-? a) {::multiplicative-fn (fn [number] (m/div (m/sq number)))
                  ::converter-fn      (fn [number] (- b (m/div (m/one- number) number)))
-                 ::interval          [0 1]}
+                 ::interval          [0.0 1.0]}
     :else {::multiplicative-fn (constantly 1.0)
            ::converter-fn      identity
            ::interval          [a b]}))
@@ -427,158 +508,243 @@
         :args (s/cat :interval ::interval)
         :ret (s/keys :req [::multiplicative-fn ::converter-fn ::interval]))
 
-(defn- change-of-var
-  "Returns the new function and range as a tuple."
-  [f [a b]]
+(defn- change-of-variable-for-uni-dimensional-integration
+  "Returns the new function and new interval as a tuple."
+  [number->tensor [a b]]
   (let [{::keys [multiplicative-fn converter-fn interval]} (change-of-variable [a b])]
-    [#(tensor/multiply (multiplicative-fn %) (f (converter-fn %))) interval]))
+    [#(tensor/multiply (multiplicative-fn %) (number->tensor (converter-fn %))) interval]))
 
-(defn- change-of-var-n-dim
-  "Returns the new function and ranges.  
-   Function f takes a sequence and returns a number."
-  [f ranges]
-  (let [maps (map change-of-variable ranges)
+(s/fdef change-of-variable-for-uni-dimensional-integration
+        :args (s/cat :number->tensor ::number->tensor :interval ::interval)
+        :ret (s/tuple ::number->tensor ::interval))
+
+(defn- change-of-variable-for-multi-dimensional-integration
+  "Returns the new function and new intervals."
+  [v->number intervals]
+  (let [maps (map change-of-variable intervals)
         fms (map ::multiplicative-fn maps)
         fvs (map ::converter-fn maps)
-        new-ranges (into [] (map ::interval maps))]
-    [#(tensor/multiply (apply * (co/in-place-functional fms %))
-                       (f (co/in-place-functional fvs %))) new-ranges]))
+        new-intervals (mapv ::interval maps)]
+    [#(tensor/multiply (apply * (co/in-place-functional fms %)) (v->number (vec (co/in-place-functional fvs %))))
+     new-intervals]))
 
-(defn integrate
-  "Returns the integral of a function f over ranges from a to b using 
-      global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   f can also return a vector or matrix in 1D
-   ranges can be [a b] or ([a1 b1] [a2 b2]...)
+(s/fdef change-of-variable-for-multi-dimensional-integration
+        :args (s/cat :v->number ::v->number :intervals ::intervals)
+        :ret (s/tuple ::v->number ::intervals))
+
+(defn integration
+  "Returns the integral of a function `number->tensor` over the interval from a to b using
+  global adaptive integration of the Gauss-Kronrod Quadrature Formula.
    Options:
-       points 15, 21, 31, 41, 51, 61; default is 21 or 15 if any range      
-          is infinite or 2+ variables
-       accu default is m/*dbl-close* and (m/*sgl-close* for 4+ variables 
-          or for 3+ variables if any range infinite) 
-          (accuracy is adjusted for quadrature type)
-       max-iter default is (/ m/*max-iter* 10)
-       min-iter default is m/*min-iter*
+       `::points` -- 15, 21, 31, 41, 51, 61; default is 21 or 15 if interval is infinite
+       `::accu` -- default is m/*dbl-close* (accuracy is also adjusted for Gauss-Konrod quadrature type)
+       `::iter-interval` -- default is [10 1000].
+
    Known Limitations:
-       very large absolute ranges (not infinite) can cause approximation 
-           errors due to limited rounded accuracy of the 'double' type 
-           example: exp(-x^2) from -166 (or more negative) to inf returns 
-              zero instead of sqrt of pi with default min-iter 
-              and 51 points.
-           solution: use a change of variable or increase min-iter 
-              or increase points
-       with more than 4 dimensions, use Monte Carlo simulation instead 
-          for speed"
-  [f ranges & {:keys [points accu min-iter max-iter]
-               :or   {min-iter m/*min-iter*, max-iter (/ m/*max-iter* 10)}}]
-  (let [ranges (if (sequential? (first ranges)) ranges [ranges])
-        n-vars (count ranges)
-        cov (some m/inf? (flatten ranges))
-        points (cond points points, (or cov (> n-vars 1)) 15, :else 21)
-        accu (cond accu accu,
-                   (or (and cov (>= n-vars 3)) (>= n-vars 4)) m/*sgl-close*,
-                   :else m/*dbl-close*)
-        [new-fn new-ranges] (if (m/one? n-vars) (change-of-var f (first ranges))
-                                                (change-of-var-n-dim f ranges))
-        implementation (new-fn (if (m/one? n-vars) (tensor/average new-ranges)
-                                                   (map tensor/average new-ranges)))]
-    (if (m/one? n-vars)
-      (adaptive-quadrature
-        implementation new-fn new-ranges accu min-iter max-iter
-        (weights-and-nodes-gk points))
-      (adaptive-quadrature-n-dim
-        implementation new-fn new-ranges accu min-iter max-iter
-        (weights-and-nodes-gk points) simple-sort-fn simple-select-dims-fn))))
+       Very large absolute ranges (not infinite) can cause approximation errors due to limited rounded accuracy
+          of the 'double' type.
+       Example Problem: exp(-x^2) from -166 (or more negative) to inf+ returns
+          zero instead of sqrt of pi with default `::iter-interval` and 51 `::points`.
+       Solution: use a change of variable, or increase minimum of `::iter-interval`, or increase `::points`."
+  ([number->tensor [a b]] (integration number->tensor [a b] {}))
+  ([number->tensor [a b] {::keys [points accu iter-interval]
+                          :or    {accu m/*dbl-close*, iter-interval [10 1000]}}]
+   (let [points (cond points points, (some m/inf? [a b]) 15, :else 21)
+         [new-fn new-interval] (change-of-variable-for-uni-dimensional-integration number->tensor [a b])]
+     (uni-dimensional-adaptive-quadrature new-fn new-interval accu iter-interval (weights-and-nodes-gk points)))))
 
-(defn integrate-non-rectangular-2D
-  "Returns the integral of a function f over ranges from a to b using 
-      global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Use 'integrate' for rectangular integration because faster.
-   f should be a function of (outer, inner).
-   outer-range is [a b]
-   inner-range-fn takes a value and returns a range [c d]
-   Options:
-       points 15, 21, 31, 41, 51, 61; default is 15
-       accu default is m/*dbl-close* per dimension 
-          (accuracy is adjusted for quadrature type)
-       max-iter default per dimension is (/ m/*max-iter* 10)
-       min-iter default per dimension is m/*min-iter*"
-  [f outer-range inner-range-fn
-   & {:keys [points accu min-iter max-iter]
-      :or   {points   15, accu m/*dbl-close*, min-iter m/*min-iter*,
-             max-iter (/ m/*max-iter* 10)}}]
-  (integrate #(integrate (partial f %) (inner-range-fn %) :points points
-                         :accu accu :min-iter min-iter :max-iter max-iter)
-             outer-range :points points :accu accu :min-iter min-iter
-             :max-iter max-iter))
+(s/fdef integration
+        :args (s/cat :number->tensor ::number->tensor
+                     :interval ::interval
+                     :opts (s/? (s/keys :opt [::points ::accu ::iter-interval])))
+        :ret (s/or :exception ::exception :tensor ::tensor))
 
-(defn integrate-non-rectangular-3D
-  "Returns the integral of a function f over ranges from a to b using 
-      global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Use 'integrate' for rectangular integration because faster.
-   f should be a function of (outer, middle, inner).
-   outer-range is [a b]
-   middle-range-rn takes a value and returns a range [c d]
-   inner-range-fn takes a outer and middle value and returns a range [e f]
+(defn rectangular-integration
+  "Returns the integral of a function `v->number` over the rectangular `intervals` using global adaptive integration of
+  the Gauss-Kronrod Quadrature Formula.
+   `v->number` takes a vector with one element for each interval and returns a number.
    Options:
-       points 15, 21, 31, 41, 51, 61; default is 15
-       accu default is m/*sgl-close* per dimension 
-          (accuracy is adjusted for quadrature type)
-       max-iter default per dimension is (/ m/*max-iter* 30)        
-       min-iter default per dimension is 3"
-  [f outer-range middle-range-fn inner-range-fn
-   & {:keys [points accu min-iter max-iter]
-      :or   {points 15, accu m/*sgl-close*, min-iter 3, max-iter (/ m/*max-iter* 30)}}]
-  (integrate
-    (fn [outer]
-      (integrate
-        (fn [middle]
-          (integrate
-            (fn [inner] (f outer middle inner)) (inner-range-fn outer middle)
-            :points points :accu accu :min-iter min-iter :max-iter max-iter))
-        (middle-range-fn outer) :points points :accu accu :min-iter min-iter
-        :max-iter max-iter))
-    outer-range :points points :accu accu :min-iter min-iter
-    :max-iter max-iter))
+       `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+       `::accu` -- default is m/*dbl-close* and
+          (m/*sgl-close* for 4+ variables or for 3+ variables if any interval is infinite)
+          (accuracy is also adjusted for for Gauss-Konrod quadrature type)
+       `::iter-interval` -- default is [10 1000].
 
-(defn integrate-non-rectangular-4D
-  "Returns the integral of a function f over ranges from a to b using global 
-      adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Use 'integrate' for rectangular integration because faster.
-   f should be a function of (outer, outer-middle, inner-middle, inner).
-   outer-range is [a b]
-   outer-middle-range-rn takes a value and returns a range [c d]
-   inner-middle-range-rn takes a outer and outer-middle value and returns 
-      a range [e f]
-   inner-range-fn takes a outer, outer-middle, and inner-middle value and 
-      returns a range [g h]
+   Known Limitations:
+       With more than 4 dimensions, use Monte Carlo simulation instead for speed.
+       Very large absolute ranges (not infinite) can cause approximation errors due to limited rounded accuracy
+          of the 'double' type."
+  ([v->number intervals] (rectangular-integration v->number intervals {}))
+  ([v->number intervals {::keys [points accu iter-interval]
+                         :or    {points 15, iter-interval [10 1000]}}]
+   (let [dimensions (count intervals)
+         accu (cond accu accu
+                    (or (and (some m/inf? (flatten intervals)) (>= dimensions 3)) (>= dimensions 4)) m/*sgl-close*
+                    :else m/*dbl-close*)
+         [new-fn new-intervals] (change-of-variable-for-multi-dimensional-integration v->number intervals)
+         weights-and-nodes (weights-and-nodes-gk points)]
+     (multi-dimensional-adaptive-quadrature
+       new-fn new-intervals accu iter-interval weights-and-nodes simple-splitting-importance-fn
+       simple-select-dimensions-fn))))
+
+(s/fdef rectangular-integration
+        :args (s/cat :v->number ::v->number
+                     :intervals ::intervals
+                     :opts (s/? (s/keys :opt [::points ::accu ::iter-interval])))
+        :ret (s/or :exception ::exception :number ::number))
+
+
+(defn non-rectangular-2D-integration
+  "Returns the integral of a function `number2->tensor` over the outer and inner intervals using global adaptive
+  integration of the Gauss-Kronrod Quadrature Formula.
+  Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
+  `number2->tensor` should be a function of (outer, inner).
+  'outer-interval' is [a b]
+  'inner-interval-fn' takes the outer number and returns an interval [c d]
    Options:
-      points 15, 21, 31, 41, 51, 61; default is 15
-      accu default is m/*sgl-close* per dimension 
-         (accuracy is adjusted for quadrature type)
-      max-iter default per dimension is (/ m/*max-iter* 50)
-      min-iter default per dimension is 2"
-  [f outer-range outer-middle-range-fn inner-middle-range-fn inner-range-fn
-   & {:keys [points accu min-iter max-iter]
-      :or   {points 15, accu m/*sgl-close*, min-iter 2, max-iter (/ m/*max-iter* 50)}}]
-  (integrate
-    (fn [outer]
-      (integrate
-        (fn [outer-middle]
-          (integrate
-            (fn [inner-middle]
-              (integrate (fn [inner] (f outer outer-middle inner-middle inner))
-                         (inner-range-fn outer outer-middle inner-middle)
-                         :points points :accu accu :min-iter min-iter
-                         :max-iter max-iter))
-            (inner-middle-range-fn outer outer-middle) :points points
-            :accu accu :min-iter min-iter :max-iter max-iter))
-        (outer-middle-range-fn outer) :points points :accu accu
-        :min-iter min-iter :max-iter max-iter))
-    outer-range :points points :accu accu :min-iter min-iter
-    :max-iter max-iter))
+       `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+       `::accu` -- default is m/*dbl-close* per dimension (accuracy is adjusted for quadrature type)
+       `::iter-interval` -- default per dimension is [10 1000]."
+  ([number2->tensor outer-interval outer->inner-interval]
+   (non-rectangular-2D-integration number2->tensor outer-interval outer->inner-interval {}))
+  ([number2->tensor outer-interval outer->inner-interval
+    {::keys [points accu iter-interval]
+     :or    {points 15, accu m/*dbl-close*, iter-interval [10 1000]}
+     :as    props}]
+   (integration #(integration (partial number2->tensor %) (outer->inner-interval %) props) outer-interval props)))
+
+(s/def ::number2->tensor
+  (s/with-gen
+    (s/fspec :args (s/cat :outer ::number :inner ::number) :ret ::tensor)
+    #(gen/one-of (map gen/return (list (fn [outer inner] [[outer 0.0] [2.0 inner]]))))))
+
+(s/fdef non-rectangular-2D-integration
+        :args (s/cat :number2->tensor ::number2->tensor
+                     :outer-interval ::interval
+                     :outer->inner-interval ::number->interval
+                     :opts (s/? (s/keys :opt [::points ::accu ::iter-interval])))
+        :ret (s/or :exception ::exception :tensor ::tensor))
+
+(defn non-rectangular-3D-integration
+  "Returns the integral of a function `number3->tensor` over the outer, middle, and inner intervals using
+  global adaptive integration of the Gauss-Kronrod Quadrature Formula.
+   Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
+   `number3->tensor` should be a function of (outer, middle, inner).
+   `outer-interval` is [a b]
+   `outer->middle-interval` takes the outer number and returns an interval [c d]
+   `outer+middle->inner-interval` takes the outer and middle number and returns an interval [e f]
+   Options:
+   `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+   `::accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted for quadrature type)
+   `::iter-interval` -- default per dimension is [3 300]."
+  ([number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval]
+   (non-rectangular-3D-integration
+     number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval {}))
+  ([number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval
+    {::keys [points accu iter-interval]
+     :or    {points 15, accu m/*sgl-close*, iter-interval [3 300]}
+     :as    props}]
+   (integration
+     (fn [outer]
+       (integration
+         (fn [middle]
+           (integration (fn [inner] (number3->tensor outer middle inner))
+                        (outer+middle->inner-interval outer middle) props))
+         (outer->middle-interval outer)
+         props))
+     outer-interval
+     props)))
+
+(s/def ::number3->tensor
+  (s/with-gen
+    (s/fspec :args (s/cat :outer ::number :middle ::number :inner ::number) :ret ::tensor)
+    #(gen/one-of (map gen/return (list (fn [outer middle inner] [[outer middle] [2.0 inner]]))))))
+
+(s/fdef non-rectangular-3D-integration
+        :args (s/cat :number3->tensor ::number3->tensor
+                     :outer-interval ::interval
+                     :outer->middle-interval ::number->interval
+                     :outer+middle->inner-interval ::number2->interval
+                     :opts (s/? (s/keys :opt [::points ::accu ::iter-interval])))
+        :ret (s/or :exception ::exception :tensor ::tensor))
+
+(defn non-rectangular-4D-integration
+  "Returns the integral of a function `number4->tensor` over the outer, outer-middle, outer-inner, and inner intervals
+  using global adaptive integration of the Gauss-Kronrod Quadrature Formula.
+   Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
+   `number4->tensor` should be a function of (outer, outer-middle, inner-middle, inner).
+   `outer-interval` is [a b]
+   `outer->outer-middle-interval` takes the outer number and returns an interval [c d]
+   `outer+outer-middle->inner-middle-interval` takes the outer and outer-middle number and returns an interval [e f]
+   `outer+outer-middle+inner-middle->inner-interval` takes the outer, outer-middle,
+        and inner-middle numbers and returns and interval [g h]
+   Options:
+   `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+   `::accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted for quadrature type)
+   `::iter-interval` -- default per dimension is [2 200]."
+  ([number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+    outer+outer-middle+inner-middle->inner-interval]
+   (non-rectangular-4D-integration
+     number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+     outer+outer-middle+inner-middle->inner-interval {}))
+  ([number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+    outer+outer-middle+inner-middle->inner-interval
+    {::keys [points accu iter-interval]
+     :or    {points 15, accu m/*sgl-close*, iter-interval [2 200]}
+     :as    props}]
+   (integration
+     (fn [outer]
+       (integration
+         (fn [outer-middle]
+           (integration
+             (fn [inner-middle]
+               (integration (fn [inner] (number4->tensor outer outer-middle inner-middle inner))
+                            (outer+outer-middle+inner-middle->inner-interval outer outer-middle inner-middle)
+                            props))
+             (outer+outer-middle->inner-middle-interval outer outer-middle)
+             props))
+         (outer->outer-middle-interval outer)
+         props))
+     outer-interval
+     props)))
+
+(s/def ::number4->tensor
+  (s/with-gen
+    (s/fspec :args (s/cat :outer ::number :outer-middle ::number :inner-middle ::number :inner ::number) :ret ::tensor)
+    #(gen/one-of (map gen/return (list (fn [outer outer-middle inner-middle inner]
+                                         [[outer outer-middle] [inner-middle inner]]))))))
+
+(s/fdef non-rectangular-4D-integration
+        :args (s/cat :number4->tensor ::number4->tensor
+                     :outer-interval ::interval
+                     :outer->outer-middle-interval ::number->interval
+                     :outer+outer-middle->inner-middle-interval ::number2->interval
+                     :outer+outer-middle+inner-middle->inner-interval ::number3->interval
+                     :opts (s/? (s/keys :opt [::points ::accu ::iter-interval])))
+        :ret (s/or :exception ::exception :tensor ::tensor))
 
 ;;;NUMERICAL DERIVATIVES
 ;;; references: Wiki http://en.wikipedia.org/wiki/Finite_difference 
 ;;;    and http://en.wikipedia.org/wiki/Finite_difference_coefficients
+(s/def ::matrix ::mx/matrix)
+(s/def ::v->v
+  (s/with-gen
+    (s/fspec :args (s/cat :v ::vector) :ret ::vector)
+    #(gen/one-of (map gen/return (list (fn [v] (mapv m/sq v)) (fn [v] (mapv m/cube v)))))))
+(s/def ::v->m (s/fspec :args (s/cat :v ::vector) :ret ::matrix))
+(s/def ::v->symmetric-m (s/fspec :args (s/cat :v ::vector) :ret ::mx/symmetric-matrix))
+(s/def ::fxy (s/with-gen
+               (s/fspec :args (s/cat :x ::number :y ::number) :ret ::number)
+               #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
+(s/def ::h (s/with-gen ::m/finite+ #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
+(s/def ::dx ::h)
+(s/def ::multiplier ::h)
+(s/def ::type #{:central :forward :backward})
+(s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
+(s/def ::coefficients (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
+(s/def ::row ::mx/row)
+(s/def ::column ::mx/column)
+(s/def ::derivative (s/int-in 0 9))
 
 (comment "The zero coefficient is left out below, but can be found because 
     the sum of coefficients equals zero")
@@ -735,7 +901,6 @@
                    (fn [v] (* multiplier
                               (apply + (map #(let [[e1 e2] %] (* (number->number (+ v e1)) e2)) coefficient)))))))))
 
-(s/def ::derivative (s/int-in 0 9))
 (s/fdef derivative-fn
         :args (s/cat :number->number ::number->number
                      :opts (s/? (s/and
@@ -829,13 +994,19 @@
 
 (defn- joint-central-derivative
   [v->number v row column dx multiplier]
-  (let [i+ (assoc v row (+ (get v row) dx)),
-        i- (assoc v row (- (get v row) dx)),
-        e++ (assoc i+ column (+ (get v row) dx)),
-        e+- (assoc i+ column (- (get v row) dx)),
-        e-+ (assoc i- column (+ (get v row) dx)),
-        e-- (assoc i- column (- (get v row) dx))]
-    (* 0.25 multiplier (- (+ (v->number e++) (v->number e--)) (v->number e+-) (v->number e-+)))))
+  (if (or (>= row (count v)) (>= column (count v)))
+    m/nan
+    (let [i+ (assoc v row (+ (get v row) dx)),
+          i- (assoc v row (- (get v row) dx)),
+          e++ (assoc i+ column (+ (get v row) dx)),
+          e+- (assoc i+ column (- (get v row) dx)),
+          e-+ (assoc i- column (+ (get v row) dx)),
+          e-- (assoc i- column (- (get v row) dx))]
+      (* 0.25 multiplier (- (+ (v->number e++) (v->number e--)) (v->number e+-) (v->number e-+))))))
+
+(s/fdef joint-central-derivative
+        :args (s/cat :v->number ::v->number :v ::vector :row ::row :column ::column :dx ::dx :multiplier ::multiplier)
+        :ret ::number)
 
 (defn hessian-fn
   "Returns a numerical Hessian function.

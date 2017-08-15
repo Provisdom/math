@@ -18,8 +18,8 @@
 (def ^:dynamic *sgl-close* 1e-6)
 (def ^:dynamic *dbl-close* 1e-15)
 (def ^:dynamic *quad-close* 1e-33)
-(def ^:dynamic *min-iter* 10)
-(def ^:dynamic *max-iter* 10000)
+;(def ^:dynamic *min-iter* 10)
+;(def ^:dynamic *max-iter* 10000)
 
 ;;;MATH CONSTANTS
 (def ^:const half (/ 2))
@@ -38,8 +38,7 @@
 (def ^:const ^long min-long Long/MIN_VALUE)
 (def ^:const ^long max-int Integer/MAX_VALUE)
 (def ^:const ^long min-int Integer/MIN_VALUE)
-(def ^:const ^double log-half (Math/log 0.5))
-;;since marked as const, should use Math/log
+(def ^:const ^double log-half (Math/log 0.5)) ;;since marked as const, should use Math/log
 (def ^:const ^double log-two (Math/log 2))
 (def ^:const ^double log-ten (Math/log 10))
 (def ^:const ^double log-pi (Math/log PI))
@@ -98,7 +97,8 @@
   "Returns true if x is a number that is negative."
   [x] (and (number? x) (clojure.core/neg? x)))
 
-(s/def ::neg (s/spec neg? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :NaN? false}) (gen/large-integer* {:max -1})])))
+(s/def ::neg
+  (s/spec neg? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :NaN? false}) (gen/large-integer* {:max -1})])))
 (s/def ::nan-or-neg (s/spec #(or (nan? %) (neg? %))
                             :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl)}) (gen/large-integer* {:max -1})])))
 

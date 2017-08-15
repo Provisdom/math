@@ -108,7 +108,7 @@
 
 ;;;VECTOR INFO
 (defn filter-kv
-  "Returns a vector of the items in `v` for which (`pred` item) returns true.
+  "Returns a vector of the items in `v` for which (`pred` index number) returns true.
   `pred` must be free of side-effects."
   [pred v] (persistent! (reduce-kv #(if (pred %2 %3) (conj! %1 %3) %1) (transient []) v)))
 

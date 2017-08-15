@@ -95,6 +95,117 @@
           :ret double?))
 
 ;;;TESTS
+(comment "returned functions don't seem to equate..."
+         (deftest change-of-variable-test
+           (is= {::ca/multiplicative-fn (fn [number] (let [s (m/sq number)] (m/div (inc s) (m/sq (m/one- s)))))
+                 ::ca/converter-fn      (fn [number] (m/div number (m/one- (m/sq number))))
+                 ::ca/interval          [-1.0 1.0]}
+                (ca/change-of-variable [m/inf- m/inf+]))
+           (is= {::ca/multiplicative-fn (constantly 1.0), ::ca/converter-fn identity, ::ca/interval [3.0 4.0]}
+                (ca/change-of-variable [3.0 4.0]))
+           (is= {::ca/multiplicative-fn (fn [number] (m/div (m/sq number)))
+                 ::ca/converter-fn      (fn [number] (+ 3.0 (m/div (m/one- number) number)))
+                 ::ca/interval          [0.0 1.0]}
+                (ca/change-of-variable [3.0 m/inf+]))
+           (is= {::ca/multiplicative-fn (fn [number] (m/div (m/sq number)))
+                 ::ca/converter-fn      (fn [number] (- 4.0 (m/div (m/one- number) number)))
+                 ::ca/interval          [0.0 1.0]}
+                (ca/change-of-variable [m/inf- 4.0]))))
+
+(deftest integration-test
+  ;;ordinary
+  (is= 69.33333333333331 (ca/integration m/sq [2.0 6.0]))
+  (is= 2.886579864025407E-15 (ca/integration m/cos [m/PI (* 5 m/PI)]))
+  (is= -1.000000000000004 (ca/integration m/cos [m/PI (* 5.5 m/PI)]))
+  (is= 3.3306690738754696E-16 (ca/integration m/cos [m/PI (* 6 m/PI)]))
+  ;;change of variable
+  (is (instance? Exception (ca/integration m/cos [m/PI m/inf+])))
+  (is= 0.2 (ca/integration #(m/pow % -2.0) [5.0 m/inf+]))
+  (is= 0.2 (ca/integration #(m/pow % -2.0) [m/inf- -5.0]))
+  (is= 1.7724538509055163 (ca/integration #(m/exp (- (m/sq %))) [m/inf- m/inf+]))
+  ;;vector
+  (is= [15.999999999999998 69.33333333333333] (ca/integration #(vector % (m/sq %)) [2.0 6.0]))
+  ;   with change of var
+  (is= [1.7724538509055159 1.8128049541109545]
+       (ca/integration #(vector (m/exp (- (m/sq %))) (m/exp (- (m/pow % 4)))) [m/inf- m/inf+]))
+  ;;matrix
+  (is= [[16.0 69.33333333333333] [24.0 19.999999999999996]]
+       (ca/integration #(vector [% (m/sq %)] [(+ 2.0 %) 5.0]) [2.0 6.0]))
+  ;   with change of var
+  (is= [[6.4E-5 0.0026666666666666666] [0.2 0.2]]
+       (ca/integration #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)]) [m/inf- m/inf+])))
+
+(deftest rectangular-integration-test
+  (is= 1.0 (ca/rectangular-integration (fn [[a b]] (+ a b)) [[0.0 1.0] [0.0 1.0]]))
+  (is= 1.5 (ca/rectangular-integration (fn [[a b c]] (+ a b c)) [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
+  (is= 2.0 (ca/rectangular-integration (fn [[a b c d]] (+ a b c d)) [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
+  (is= 3.1415926535897944                                   ;3.141592653589793 PI
+       (ca/rectangular-integration (fn [[a b]] (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))) [[m/inf- m/inf+] [m/inf- m/inf+]]))
+  (is= 0.1 (ca/rectangular-integration (fn [[a b]] (* (/ (m/sq a)) (/ (m/sq b)))) [[5.0 m/inf+] [1.0 2.0]]))
+  (is= 0.016666666666666666 (ca/rectangular-integration (fn [[a b]] (* (/ (m/sq a)) (/ (m/sq b)))) [[3.0 4.0] [m/inf- -5.0]]))
+  ;;multivariate vector
+  (is= [32 64] (ca/rectangular-integration (fn [[a b]] [a (* a b)]) [[2.0 6.0] [1.0 3.0]]))
+  ;   with change of var
+  (is= [0.24705031697079533 0.24705031697079533]
+       (ca/rectangular-integration (fn [[a b]] [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))
+                                                (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))])
+                                   [[m/inf- m/inf+] [1.0 3.0]]))
+  ;;multivariate matrix
+  (is= [[32.0 64.0] [32.0 40.00000000000001]]
+       (ca/rectangular-integration (fn [[a b]] [[a (* a b)] [(+ 2.0 b) 5.0]]) [[2.0 6.0] [1.0 3.0]]))
+  ;   with change of var
+  (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
+       (ca/rectangular-integration (fn [[a b]] [[(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]
+                                                [(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]])
+                                   [[2.0 6.0] [m/inf- -5.0]])))
+
+(deftest non-rectangular-2D-integration-test                ;!!!remove *m/min-iter* and max-iter etc. from math.core
+  (is= 1.0 (ca/non-rectangular-2D-integration #(+ %1 %2) [0.0 1.0] (constantly [0.0 1.0])))
+  (is= 192.0 (ca/non-rectangular-2D-integration #(+ %1 %2) [2.0 6.0] (fn [e] [(+ e 2.0) (+ e 6.0)])))
+  (is= 3.141592653589793                                    ;3.141592653589793 PI
+       (ca/non-rectangular-2D-integration #(* (m/exp (- (m/sq %1))) (m/exp (- (m/sq %2))))
+                                          [m/inf- m/inf+]
+                                          (constantly [m/inf- m/inf+])))
+  (is= [32.0 64.0] (ca/non-rectangular-2D-integration #(vector % (* %1 %2)) [2.0 6.0] (constantly [1.0 3.0])))
+  (is= [0.24705031697079535 0.24705031697079535]
+       (ca/non-rectangular-2D-integration (fn [a b] [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))
+                                                     (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))])
+                                          [m/inf- m/inf+]
+                                          (constantly [1.0 3.0])))
+  (is= [[32.0 64.0] [32.0 40.00000000000001]]
+       (ca/non-rectangular-2D-integration #(vector [% (* % %2)] [(+ 2.0 %2) 5.0]) [2.0 6.0] (constantly [1.0 3.0])))
+  (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
+       (ca/non-rectangular-2D-integration (fn [a b]
+                                            [[(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]
+                                             [(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]])
+                                          [2.0 6.0]
+                                          (constantly [m/inf- -5.0]))))
+
+(deftest non-rectangular-3D-integration-test
+  (is= 1.5 (ca/non-rectangular-3D-integration #(+ % %2 %3) [0.0 1.0] (fn [_] [0.0 1.0]) (fn [_ _] [0.0 1.0]))))
+
+(deftest non-rectangular-4D-integration-test
+  (is= 2.0000000000000004
+       (ca/non-rectangular-4D-integration #(+ % %2 %3 %4)
+                                          [0.0 1.0]
+                                          (fn [_] [0.0 1.0])
+                                          (fn [_ _] [0.0 1.0])
+                                          (fn [_ _ _] [0.0 1.0]))))
+
+(deftest integration-tests
+  ;(change-of-variable-test)
+  (integration-test)
+  (rectangular-integration-test)
+  (non-rectangular-2D-integration-test)
+  (non-rectangular-3D-integration-test)
+  (non-rectangular-4D-integration-test))
+
+;(defspec-test test-change-of-variable `ca/change-of-variable) ;not tested
+;(defspec-test test-integration `ca/integration) ;way too slow
+;(defspec-test test-rectangular-integration `ca/rectangular-integration) ;way too slow
+;(defspec-test test-integration-non-rectangular-2D `ca/integration-non-rectangular-2D) ;way too slow
+;(defspec-test test-integration-non-rectangular-3D `ca/integration-non-rectangular-3D) ;way too slow
+;(defspec-test test-integration-non-rectangular-4D `ca/integration-non-rectangular-4D) ;way too slow
 
 (def der-f #(+ (m/exp %) (* 7 (m/pow % 6)) (* 3 (m/pow % 3)) %))
 
@@ -136,14 +247,14 @@
   (is= 148.4122348483652 ((ca/derivative-fn der-f {::ca/derivative 7}) 5.0))
   ;;eighth deriv: 148.413159103
   (is= 148.37917386236595 ((ca/derivative-fn der-f {::ca/derivative 8}) 5.0))
-  ;;example issues
+  ;;example issues requiring 'h'
   (is= 2.0E8 ((ca/derivative-fn m/sq) 1e8))                 ;good
   (is= 1.92E9 ((ca/derivative-fn m/sq) 1e9))                ;bad
   (is= 3.2768E10 ((ca/derivative-fn m/sq) 1e10))            ;ugly
   (is= 0.0 ((ca/derivative-fn m/sq) 1e11))                  ;crazy
-  (is= 2.0E11 ((ca/derivative-fn m/sq {::ca/h 1e8}) 1e11))  ;fixed
+  (is= 2.0E11 ((ca/derivative-fn m/sq {::ca/h 1e8}) 1e11))  ;fixed by setting h
   (is= 0.0 ((ca/derivative-fn m/sq) 1e110))                 ;crazy
-  (is= 1.999999999999999E110 ((ca/derivative-fn m/sq {::ca/h 1e108}) 1e110)) ;fixed
+  (is= 1.999999999999999E110 ((ca/derivative-fn m/sq {::ca/h 1e108}) 1e110)) ;fixed by setting h
   )
 
 (defn gf [[a b]] (if-not b m/nan (+ (* a b) (* 2 (m/sq a)) (m/pow b 3))))

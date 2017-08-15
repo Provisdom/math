@@ -193,6 +193,20 @@
                        :tensor ::tensor)
           :ret boolean?))
 
+(defn filter-kv
+  "Returns a vector of tensors of the tensors in `tensor-v` for which (`pred` index tensor) returns true.
+  `pred` must be free of side-effects."
+  [pred tensor-v]
+  (if (number? tensor-v)
+    (when (pred 0 tensor-v) tensor-v)
+    (persistent! (reduce-kv #(if (pred %2 %3) (conj! %1 %3) %1) (transient []) tensor-v))))
+
+(s/fdef filter-kv
+        :args (s/cat :pred (s/with-gen (s/fspec :args (s/cat :index ::index :tensor ::tensor) :ret boolean?)
+                                       #(gen/return (constantly true)))
+                     :tensor-v ::tensor)
+        :ret (s/nilable ::tensor))
+
 ;;;TENSOR MANIPULATION
 (defn- convertible-shape?
   "Tests whether a tensor with `shape` can be expanded into `expanded-shape`."
@@ -405,6 +419,30 @@
 (s/fdef normalize-p
         :args (s/cat :tensor ::tensor :p (s/and ::m/finite+ #(>= % 1.0)))
         :ret ::tensor)
+
+(defn inner-product
+  "The inner product is the generalization of the [[dot-product]].
+  It is the tensor sum of the tensor products of the corresponding entries of two tensors."
+  [tensor1 tensor2]
+  (if (number? tensor1)
+    (* (double tensor1) tensor2)
+    (let [mul (mapv (fn [a b] (multiply a b)) tensor1 tensor2)]
+      (when-not (some nil? mul) (apply add mul)))))
+
+(s/fdef inner-product
+        :args (s/and (s/cat :tensor1 ::tensor :tensor2 ::tensor)
+                     (fn [{:keys [tensor1 tensor2]}]
+                       (let [t1 (second tensor1)
+                             t1 (if (= :t3+ (first tensor1))
+                                  (second t1)
+                                  t1)
+                             t2 (second tensor2)
+                             t2 (if (= :t3+ (first tensor2))
+                                  (second t2)
+                                  t2)]
+                         (or (and (number? t1) (number? t2))
+                             (and (sequential? t1) (sequential? t2) (= (count t1) (count t2)))))))
+        :ret (s/nilable ::tensor))
 
 ;;;TENSOR NUMERICAL STABILITY
 (defn roughly?
