@@ -7,6 +7,8 @@
             [orchestra.spec.test :as ost]
             [provisdom.math.apache-matrix :as apache-mx]))
 
+(set! *warn-on-reflection* true)
+
 (ost/instrument)
 
 (def fgb0 {::ap/root-f identity ::ap/guess -5.0 ::ap/bounds [-100.0 100.0]})

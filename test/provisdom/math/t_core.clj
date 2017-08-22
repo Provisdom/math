@@ -1,12 +1,23 @@
 (ns provisdom.math.t-core
   (:refer-clojure :exclude [pos? neg? int?])
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.core :as m]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
+
+;;TYPE TESTS
+(deftest numbers?-test
+  (is-not (m/numbers? 1))
+  (is (m/numbers? '(1)))
+  (is (m/numbers? []))
+  (is (m/numbers? [2 3]))
+  (is-not (m/numbers? [[2]])))
 
 (deftest num?-test
   (is-not (m/num? "A"))
@@ -370,46 +381,7 @@
   (is (m/nan? (m/maybe-long-able m/nan)))
   (is (nil? (m/maybe-long-able nil))))
 
-(deftest type-tests-test
-  (num?-test)
-  (nan?-test)
-  (pos?-test)
-  (neg?-test)
-  (non-?-test)
-  (non+?-test)
-  (finite?-test)
-  (finite+?-test)
-  (finite-?-test)
-  (finite-non-?-test)
-  (finite-non+?-test)
-  (double-finite?-test)
-  (single?-test)
-  (single-finite?-test)
-  (long?-test)
-  (long+?-test)
-  (long-?-test)
-  (long-non-?-test)
-  (long-non+?-test)
-  (int?-test)
-  (int+?-test)
-  (int-?-test)
-  (int-non-?-test)
-  (int-non+?-test)
-  (long-able?-test)
-  (long-able+?-test)
-  (long-able-?-test)
-  (long-able-non+?-test)
-  (long-able-non-?-test)
-  (inf+?-test)
-  (inf-?-test)
-  (inf?-test)
-  (one?-test)
-  (prob?-test)
-  (open-prob?-test)
-  (corr?-test)
-  (open-corr?-test)
-  (maybe-long-able-test))
-
+;;BASIC MATH TESTS
 (deftest ===-test
   (is (m/=== m/nan))
   (is (m/=== m/nan m/nan))
@@ -449,8 +421,8 @@
 
 (deftest one--test
   (is= -2 (m/one- 3))
-  (is= 0 (m/one- 3 -2))
-  (is= -16 (m/one- 3 4 2 8))
+  (is= 0.0 (m/one- 3 -2))
+  (is= -16.0 (m/one- 3 4 2 8))
   (is= 4 (m/one- -3))
   (is (m/nan? (m/one- m/nan)))
   (is= m/inf- (m/one- m/inf+))
@@ -524,22 +496,7 @@
   (is= m/inf- (m/cbrt m/inf-))
   (is (m/nan? (m/cbrt m/nan))))
 
-(deftest basic-math-test
-  (===-test)
-  (next-up-test)
-  (next-down-test)
-  (div-test)
-  (one--test)
-  (sq'-test)
-  (cube'-test)
-  (sgn-test)
-  (log2-test)
-  (logn-test)
-  (abs'-test)
-  (cbrt-test))
-
-(defspec-test test-=' `m/=')
-(defspec-test test-==' `m/==')
+(defspec-test test-===' `m/===')
 (defspec-test test-next-up `m/next-up)
 (defspec-test test-next-down `m/next-down)
 (defspec-test test-div `m/div)
@@ -560,6 +517,7 @@
 (defspec-test test-sqrt `m/sqrt)
 (defspec-test test-cbrt `m/cbrt)
 
+;;TRIGONOMETRY
 (deftest asinh-test
   (is= 0.0 (m/asinh 0.0))
   (is= 0.48121182505960347 (m/asinh 0.5))
@@ -586,11 +544,6 @@
   (is (m/nan? (m/atanh -2.0)))
   (is (m/nan? (m/atanh m/nan))))
 
-(deftest trigonometry-test
-  (asinh-test)
-  (acosh-test)
-  (atanh-test))
-
 (defspec-test test-sin `m/sin)
 (defspec-test test-asin `m/asin)
 (defspec-test test-asinh `m/asinh)
@@ -603,16 +556,17 @@
 (defspec-test test-atanh `m/atanh)
 (defspec-test test-hypot `m/hypot)
 
+;;ROUNDING
 (deftest round-test
   (is= 1 (m/round 0.5 :up))
   (is= 2.342342342342342E22 (m/round 2.342342342342342E22 :up))
   (is (zero? (m/round -0.5 :up)))
   (is= -1 (m/round -0.5 :down))
-  (is= -1 (m/round -0.5 :away))
-  (is (zero? (m/round -0.5 :toward)))
+  (is= -1 (m/round -0.5 :away-from-zero))
+  (is (zero? (m/round -0.5 :toward-zero)))
   (is (zero? (m/round 0.5 :down)))
-  (is= 1 (m/round 0.5 :away))
-  (is (zero? (m/round 0.5 :toward)))
+  (is= 1 (m/round 0.5 :away-from-zero))
+  (is (zero? (m/round 0.5 :toward-zero)))
   (is= m/inf+ (m/round m/inf+ :up))
   (is= m/inf- (m/round m/inf- :up))
   (is (m/nan? (m/round m/nan :up)))
@@ -791,23 +745,6 @@
   (is-not (m/roughly-corr? m/nan 0.01))
   (is (thrown? Exception (m/roughly-corr? nil 0.02))))
 
-(deftest rounding-test
-  (round-test)
-  (floor-test)
-  (ceil-test)
-  (roughly-floor-test)
-  (roughly-ceil-test)
-  (roughly?-test)
-  (roughly-round?-test)
-  (roughly-round-non-?-test)
-  (roughly-round-non+?-test)
-  (roughly-round+?-test)
-  (roughly-round-?-test)
-  (roughly-non-?-test)
-  (roughly-non+?-test)
-  (roughly-prob?-test)
-  (roughly-corr?-test))
-
 (defspec-test test-round `m/round)
 (defspec-test test-floor `m/floor)
 (defspec-test test-ceil `m/ceil)
@@ -824,6 +761,7 @@
 (defspec-test test-roughly-prob? `m/roughly-prob?)
 (defspec-test test-roughly-corr? `m/roughly-corr?)
 
+;;;QUOTIENTS
 (deftest quot'-test
   (is= 1 (m/quot' 3 2))
   (is= -1 (m/quot' -3 2))
@@ -931,19 +869,13 @@
   (is (every? m/nan? (m/quot-and-mod 2 m/nan)))
   (is (thrown? Exception (m/quot-and-mod nil -2))))
 
-(deftest quotients-test
-  (quot'-test)
-  (mod'-test)
-  (rem'-test)
-  (quot-and-rem-test)
-  (quot-and-mod-test))
-
 (defspec-test test-quot' `m/quot')
 (defspec-test test-mod' `m/mod')
 (defspec-test test-rem' `m/rem')
 (defspec-test test-quot-and-rem `m/quot-and-rem)
 (defspec-test test-quot-and-mod `m/quot-and-mod)
 
+;;;ANGLES
 (deftest reduce-angle-test
   (is= 30.4 (m/reduce-angle 30.4))
   (is= 350.2 (m/reduce-angle -9.8))
@@ -985,12 +917,6 @@
   (is= m/inf+ (m/angle->radians m/inf+))
   (is= m/inf- (m/angle->radians m/inf-))
   (is (thrown? Exception (m/angle->radians nil))))
-
-(deftest angles-test
-  (reduce-angle-test)
-  (reduce-radians-test)
-  (radians->angle-test)
-  (angle->radians-test))
 
 (defspec-test test-reduce-angle `m/reduce-angle)
 (defspec-test test-reduce-radians `m/reduce-radians)

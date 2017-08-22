@@ -1,14 +1,19 @@
 (ns provisdom.math.t-apache-matrix
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.apache-matrix :as apache-mx]
-            [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.random2 :as random]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.apache-matrix :as apache-mx]
+    [provisdom.math.core :as m]
+    [provisdom.math.matrix :as mx]
+    [provisdom.math.random2 :as random]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
+;;;TYPES
 (deftest apache-matrix?-test
   (is (apache-mx/apache-matrix? (apache-mx/apache-matrix [[]])))
   (is (apache-mx/apache-matrix? (apache-mx/apache-matrix [[1]])))
@@ -74,73 +79,61 @@
   (is-not (apache-mx/symmetric-apache-matrix? (apache-mx/apache-matrix [[1 0] [1 1]]))))
 
 (deftest positive-semidefinite-apache-matrix?-test
-  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/*dbl-close*))
-  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[0.0]]) m/*dbl-close*))
-  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/*dbl-close*))
+  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/dbl-close))
+  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[0.0]]) m/dbl-close))
+  (is (apache-mx/positive-semidefinite-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/dbl-close))
   (is (apache-mx/positive-semidefinite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[0.0 0.0] [0.0 0.0]]) m/*dbl-close*))
+        (apache-mx/apache-matrix [[0.0 0.0] [0.0 0.0]]) m/dbl-close))
   (is-not (apache-mx/positive-semidefinite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/*dbl-close*))
+            (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/dbl-close))
   (is (apache-mx/positive-semidefinite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[1.0 0.5] [0.5 2.0]]) m/*dbl-close*))
+        (apache-mx/apache-matrix [[1.0 0.5] [0.5 2.0]]) m/dbl-close))
   (is-not (apache-mx/positive-semidefinite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/*dbl-close*))
+            (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/dbl-close))
   (is (apache-mx/positive-semidefinite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/*dbl-close*))
+        (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/dbl-close))
   (is (apache-mx/positive-semidefinite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[1.0 (m/next-down -1.0)] [(m/next-down -1.0) 1.0]]) m/*dbl-close*))
+        (apache-mx/apache-matrix [[1.0 (m/next-down -1.0)] [(m/next-down -1.0) 1.0]]) m/dbl-close))
   (is-not (apache-mx/positive-semidefinite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/*dbl-close*))
+            (apache-mx/apache-matrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/dbl-close))
   (is (apache-mx/positive-semidefinite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/*sgl-close*)))
+        (apache-mx/apache-matrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/sgl-close)))
 
 (deftest positive-definite-apache-matrix?-test
-  (is (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/*sgl-close*))
-  (is-not (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[0.0]]) m/*sgl-close*))
-  (is (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/*sgl-close*))
+  (is (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/sgl-close))
+  (is-not (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[0.0]]) m/sgl-close))
+  (is (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/sgl-close))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[0.0 0.0] [0.0 0.0]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[0.0 0.0] [0.0 0.0]]) m/sgl-close))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/sgl-close))
   (is (apache-mx/positive-definite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[1.0 0.5] [0.5 1.0]]) m/*sgl-close*))
+        (apache-mx/apache-matrix [[1.0 0.5] [0.5 1.0]]) m/sgl-close))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/sgl-close))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is (apache-mx/positive-definite-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) 1e-40))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/sgl-close))
   (is-not (apache-mx/positive-definite-apache-matrix-finite?
-            (apache-mx/apache-matrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/sgl-close))
   (is (apache-mx/positive-definite-apache-matrix-finite?
-        (apache-mx/apache-matrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/*dbl-close*)))
+        (apache-mx/apache-matrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/dbl-close)))
 
 (deftest correlation-apache-matrix?-test
-  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/*sgl-close*))
-  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/*sgl-close*))
-  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.2] [0.2 1.0]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[0.2]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.5] [0.5 2.0]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[]]) m/sgl-close))
+  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0]]) m/sgl-close))
+  (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.2] [0.2 1.0]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[0.2]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 0.5] [0.5 2.0]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.1] [-1.1 1.0]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is-not (apache-mx/correlation-apache-matrix-finite?
-            (apache-mx/apache-matrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/*sgl-close*))
-  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+            (apache-mx/apache-matrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/sgl-close))
+  (is-not (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is (apache-mx/correlation-apache-matrix-finite? (apache-mx/apache-matrix [[1.0 -1.0] [-1.0 1.0]]) 1e-40)))
-
-(deftest type-tests
-  (apache-matrix?-test)
-  (empty-apache-matrix?-test)
-  (square-apache-matrix?-test)
-  (diagonal-apache-matrix?-test)
-  (upper-triangular-apache-matrix?-test)
-  (lower-triangular-apache-matrix?-test)
-  (symmetric-apache-matrix?-test)
-  (positive-semidefinite-apache-matrix?-test)
-  (positive-definite-apache-matrix?-test)
-  (correlation-apache-matrix?-test))
 
 ;(defspec-test test-apache-matrix? `apache-mx/apache-matrix?) ;slow-ish
 ;(defspec-test test-empty-apache-matrix? `apache-mx/empty-apache-matrix?) ;slow-ish
@@ -153,6 +146,7 @@
 ;(defspec-test test-positive-definite-matrix? `apache-mx/positive-definite-apache-matrix?) ;slow-ish
 ;(defspec-test test-correlation-apache-matrix? `apache-mx/correlation-apache-matrix?) ;slow-ish
 
+;;;CONSTRUCTORS
 (deftest apache-matrix-&-apache-matrix->matrix-test
   (is= [[]] (apache-mx/apache-matrix->matrix (apache-mx/apache-matrix [[]])))
   (is= [[1.0]] (apache-mx/apache-matrix->matrix (apache-mx/apache-matrix [[1.0]])))
@@ -207,22 +201,15 @@
     (is= [[1.0 0.9185584128047] [0.9185584128047 1.0]]
          (apache-mx/apache-matrix->matrix (apache-mx/rnd-correlation-apache-matrix-finite! 2)))))
 
-(deftest constructor-tests
-  (apache-matrix-&-apache-matrix->matrix-test)
-  (positive-semidefinite-apache-matrix-by-squaring-test)
-  (positive-definite-apache-matrix-by-squaring-test)
-  (correlation-apache-matrix-by-squaring-test)
-  (rnd-positive-definite-apache-matrix!-test)
-  (rnd-correlation-apache-matrix!-test))
-
 (defspec-test test-apache-matrix `apache-mx/apache-matrix)
 (defspec-test test-apache-matrix->matrix `apache-mx/apache-matrix->matrix)
 ;(defspec-test test-positive-semidefinite-apache-matrix-by-squaring `apache-mx/positive-semidefinite-apache-matrix-finite-by-squaring) ;slow-ish
 ;(defspec-test test-positive-definite-apache-matrix-by-squaring `apache-mx/positive-definite-apache-matrix-finite-by-squaring) ;slow-ish
 ;(defspec-test test-correlation-apache-matrix-by-squaring `apache-mx/correlation-apache-matrix-finite-by-squaring) ;slow-ish
-(defspec-test test-rnd-positive-definite-apache-matrix! `apache-mx/rnd-positive-definite-apache-matrix-finite!)
-(defspec-test test-rnd-correlation-apache-matrix! `apache-mx/rnd-correlation-apache-matrix-finite!)
+;(defspec-test test-rnd-positive-definite-apache-matrix! `apache-mx/rnd-positive-definite-apache-matrix-finite!) ;slow-ish
+;(defspec-test test-rnd-correlation-apache-matrix! `apache-mx/rnd-correlation-apache-matrix-finite!) ;slow-ish
 
+;;;INFO
 (deftest rows-test
   (is= 0 (apache-mx/rows (apache-mx/apache-matrix [[]])))
   (is= 1 (apache-mx/rows (apache-mx/apache-matrix [[1.0]])))
@@ -267,72 +254,63 @@
 (deftest get-slices-as-matrix-test
   (is= (apache-mx/apache-matrix [[1.0 0.5]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/row-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/row-indices 0}))
   (is= (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/row-indices [0 1]}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/row-indices [0 1]}))
   (is= (apache-mx/apache-matrix [[2.0 4.0] [1.0 0.5]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/row-indices [1 0]}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/row-indices [1 0]}))
   (is= (apache-mx/apache-matrix [[1.0] [2.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/column-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/column-indices 0}))
   (is= (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/column-indices [0 1]}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/column-indices [0 1]}))
   (is= (apache-mx/apache-matrix [[0.5 1.0] [4.0 2.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/column-indices [1 0]}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/column-indices [1 0]}))
   (is= (apache-mx/apache-matrix [[2.0 4.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/exception-row-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/exception-row-indices 0}))
   (is= nil
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/exception-row-indices [0 1]}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/exception-row-indices [0 1]}))
   (is= (apache-mx/apache-matrix [[0.5] [4.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/exception-column-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/exception-column-indices 0}))
   (is= nil
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/exception-column-indices [0 1]}))
-  (is= nil
-       (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
-         {::apache-mx/row-indices 0 ::apache-mx/exception-row-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/exception-column-indices [0 1]}))
   (is= nil
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
-         {::apache-mx/row-indices [0] ::apache-mx/exception-row-indices 0}))
+         {::mx/row-indices 0 ::mx/exception-row-indices 0}))
   (is= nil
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
-         {::apache-mx/row-indices 0 ::apache-mx/exception-row-indices [0]}))
+         {::mx/row-indices [0] ::mx/exception-row-indices 0}))
+  (is= nil
+       (apache-mx/get-slices-as-matrix
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
+         {::mx/row-indices 0 ::mx/exception-row-indices [0]}))
   (is= (apache-mx/apache-matrix [[1.0]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
-         {::apache-mx/exception-row-indices 1 ::apache-mx/exception-column-indices 1}))
+         {::mx/exception-row-indices 1 ::mx/exception-column-indices 1}))
   (is= (apache-mx/apache-matrix [[1.0]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::apache-mx/row-indices 0 ::apache-mx/column-indices 0})))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/row-indices 0 ::mx/column-indices 0})))
 
 (deftest some-kv-test
   (is= 0.5
        (apache-mx/some-kv (fn [row column number] (> (+ row column) number))
                           (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])))
-  (is= 0.5
+  (is= 0.6
        (apache-mx/some-kv
          (fn [row column number] (> (+ row column) number))
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
-         {::apache-mx/by-row false})))
-
-(deftest info-tests
-  (rows-test)
-  (columns-test)
-  (get-entry-test)
-  (get-row-test)
-  (get-column-test)
-  (diagonal-test)
-  (some-kv-test))
+         (apache-mx/apache-matrix [[1.0 0.5] [0.6 4.0]])
+         {::mx/by-row? false})))
 
 (defspec-test test-rows `apache-mx/rows)
 (defspec-test test-columns `apache-mx/columns)
@@ -342,6 +320,7 @@
 (defspec-test test-diagonal `apache-mx/diagonal)
 (defspec-test test-some-kv `apache-mx/some-kv)
 
+;;;MANIPULATION
 (deftest transpose-test
   (is= (apache-mx/apache-matrix [[]]) (apache-mx/transpose (apache-mx/apache-matrix [[]])))
   (is= (apache-mx/apache-matrix [[1.0]]) (apache-mx/transpose (apache-mx/apache-matrix [[1.0]])))
@@ -351,29 +330,35 @@
        (apache-mx/transpose (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]))))
 
 (deftest assoc-entry!-test
-  (is= (apache-mx/apache-matrix [[1.0]]) (let [a (apache-mx/apache-matrix [[0.0]])]
-                                           (apache-mx/assoc-entry! a 0 0 1.0)
-                                           a))
-  (is= (apache-mx/apache-matrix [[1 2] [8 4]]) (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
-                                                 (apache-mx/assoc-entry! a 1 0 8)
-                                                 a)))
+  (is= (apache-mx/apache-matrix [[1.0]])
+       (let [a (apache-mx/apache-matrix [[0.0]])]
+         (apache-mx/assoc-entry! a 0 0 1.0)
+         a))
+  (is= (apache-mx/apache-matrix [[1 2] [8 4]])
+       (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
+         (apache-mx/assoc-entry! a 1 0 8)
+         a)))
 
 (deftest assoc-diagonal!-test
-  (is= (apache-mx/apache-matrix [[2.0]]) (let [a (apache-mx/apache-matrix [[0.0]])]
-                                           (apache-mx/assoc-diagonal! a [2.0])
-                                           a))
-  (is= (apache-mx/apache-matrix [[5 2] [3 6]]) (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
-                                                 (apache-mx/assoc-diagonal! a [5 6])
-                                                 a)))
+  (is= (apache-mx/apache-matrix [[2.0]])
+       (let [a (apache-mx/apache-matrix [[0.0]])]
+         (apache-mx/assoc-diagonal! a [2.0])
+         a))
+  (is= (apache-mx/apache-matrix [[5 2] [3 6]])
+       (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
+         (apache-mx/assoc-diagonal! a [5 6])
+         a)))
 
 (deftest symmetric-apache-matrix-by-averaging!-test
-  (is= (apache-mx/apache-matrix [[0.0]]) (let [a (apache-mx/apache-matrix [[0.0]])]
-                                           (apache-mx/symmetric-apache-matrix-by-averaging! a)
-                                           a))
+  (is= (apache-mx/apache-matrix [[0.0]])
+       (let [a (apache-mx/apache-matrix [[0.0]])]
+         (apache-mx/symmetric-apache-matrix-by-averaging! a)
+         a))
 
-  (is= (apache-mx/apache-matrix [[1.0 2.5] [2.5 4.0]]) (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
-                                                         (apache-mx/symmetric-apache-matrix-by-averaging! a)
-                                                         a)))
+  (is= (apache-mx/apache-matrix [[1.0 2.5] [2.5 4.0]])
+       (let [a (apache-mx/apache-matrix [[1 2] [3 4]])]
+         (apache-mx/symmetric-apache-matrix-by-averaging! a)
+         a)))
 
 (deftest concat-rows-test
   (is= (apache-mx/apache-matrix [[]])
@@ -438,15 +423,6 @@
          (apache-mx/covariance-apache-matrix->correlation-apache-matrix
            (apache-mx/apache-matrix [[3.0 0.9] [0.9 5.0]])))))
 
-(deftest manipulation-tests
-  (transpose-test)
-  (assoc-entry!-test)
-  (assoc-diagonal!-test)
-  (concat-rows-test)
-  (concat-columns-test)
-  (correlation-apache-matrix->covariance-apache-matrix-test)
-  (covariance-apache-matrix->correlation-apache-matrix-test))
-
 (defspec-test test-transpose `apache-mx/transpose)
 (defspec-test test-assoc-entry! `apache-mx/assoc-entry!)
 (defspec-test test-assoc-diagonal! `apache-mx/assoc-diagonal!)
@@ -455,6 +431,7 @@
 ;(defspec-test test-correlation-apache-matrix->covariance-apache-matrix `apache-mx/correlation-apache-matrix->covariance-apache-matrix) ;slow
 ;(defspec-test test-covariance-apache-matrix->correlation-apache-matrix `apache-mx/covariance-apache-matrix->correlation-apache-matrix) ;slow
 
+;;;MATH
 (deftest ===-test
   (is (apache-mx/=== (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])
                      (apache-mx/apache-matrix [[1.0 0.5] [2.0 m/nan]])))
@@ -504,17 +481,12 @@
                            (apache-mx/apache-matrix [[1.0 0.5]])
                            (apache-mx/apache-matrix [[1.0 0.5]]))))
 
-(deftest math-tests
-  (===-test)
-  (mx*-test)
-  (add-test)
-  (subtract-test))
-
 (defspec-test test-=== `apache-mx/===)
 (defspec-test test-mx* `apache-mx/mx*)
 (defspec-test test-add `apache-mx/add)
 (defspec-test test-subtract `apache-mx/subtract)
 
+;;;DECOMPOSITION
 (deftest inverse-test
   (is= (apache-mx/apache-matrix [[]]) (apache-mx/inverse (apache-mx/apache-matrix [[]])))
   (is= (apache-mx/apache-matrix [[2.0]]) (apache-mx/inverse (apache-mx/apache-matrix [[0.5]])))
@@ -752,27 +724,13 @@
         ::apache-mx/rank             1}
        (apache-mx/rank-revealing-qr-decomposition (apache-mx/apache-matrix [[1.0] [0.5]]) 1e-6)))
 
-(deftest decomposition-tests
-  (inverse-test)
-  (lu-decomposition-with-determinant-and-inverse-test)
-  (lu-decomposition-with-determinant-test)
-  (eigen-decomposition-test)
-  (cholesky-decomposition-test)
-  (rectangular-cholesky-decomposition-test)
-  (sv-decomposition-test)
-  (condition-test)
-  (qr-decomposition-with-linear-least-squares-and-error-matrix-test)
-  (qr-decomposition-with-linear-least-squares-test)
-  (qr-decomposition-test)
-  (rank-revealing-qr-decomposition-test))
-
 (defspec-test test-inverse `apache-mx/inverse)
 (defspec-test test-lu-decomposition-with-determinant-and-inverse
               `apache-mx/lu-decomposition-with-determinant-and-inverse)
 (defspec-test test-lu-decomposition-with-determinant `apache-mx/lu-decomposition-with-determinant)
 (defspec-test test-eigen-decomposition `apache-mx/eigen-decomposition)
 ;(defspec-test test-cholesky-decomposition `apache-mx/cholesky-decomposition) ;slow-ish
-(defspec-test test-rectangular-cholesky-decomposition `apache-mx/rectangular-cholesky-decomposition)
+;(defspec-test test-rectangular-cholesky-decomposition `apache-mx/rectangular-cholesky-decomposition) ;slow-ish
 (defspec-test test-sv-decomposition `apache-mx/sv-decomposition)
 (defspec-test test-condition `apache-mx/condition)
 (defspec-test test-qr-decomposition-with-linear-least-squares-and-error-matrix

@@ -137,13 +137,13 @@
 ;;;NUMERICAL DERIVATIVES AND INTEGRATION
 (defn derivative-fn'
   "Returns a numerical derivative function"
-  ([f] (derivative-fn' f m/*sgl-close*))
+  ([f] (derivative-fn' f m/sgl-close))
   ([f dx] #(/ (-' (f (+' % dx)) (f %)) dx)))
 
 (defn integrate'
   "Returns the integral of a function f over a range from a to b"
   ([f a b]
-   (integrate' f a b (pow' 10 m/*sgl-digits*)))
+   (integrate' f a b (pow' 10 m/sgl-digits)))
   ([f a b n]
    (let [dx (/ (-' b a) n)]
      (*' dx (reduce #(+' % (f (*' dx %2))) 0 (range (/ a dx) (/ b dx)))))))
@@ -153,7 +153,7 @@
   "Returns the gamma of x: integral[0, inf] (t^(x-1) * e^-t * dt)"
   [x]
   {:pre [(have? (complement zero?) x)]}
-  (if (m/roughly-round? x m/*dbl-close*)
+  (if (m/roughly-round? x m/dbl-close)
     (factorial' (int (dec x)))
     (mf/gamma x)))
 

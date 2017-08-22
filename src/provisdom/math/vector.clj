@@ -1,55 +1,69 @@
 (ns provisdom.math.vector
   (:refer-clojure :exclude [vector?])
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.core :as m]
-            [provisdom.math.random2 :as random]
-            [provisdom.math.tensor :as tensor]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m]
+    [provisdom.math.random2 :as random]
+    [provisdom.math.tensor :as tensor]))
 
 (declare)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
-(s/def ::number ::m/number)
-(s/def ::vector-2D (s/with-gen (s/coll-of ::number :kind clojure.core/vector? :into [] :min-count 2 :max-count 2)
-                               #(gen/vector (s/gen ::number) 2)))
-(s/def ::vector-3D (s/with-gen (s/coll-of ::number :kind clojure.core/vector? :into [] :min-count 3 :max-count 3)
-                               #(gen/vector (s/gen ::number) 3)))
-(s/def ::vector-num (s/with-gen (s/coll-of ::m/num :kind clojure.core/vector? :into [])
-                                #(gen/vector (s/gen ::m/num) 0 mdl)))
-(s/def ::vector-finite (s/with-gen (s/coll-of ::m/finite :kind clojure.core/vector? :into [])
-                                   #(gen/vector (s/gen ::m/finite) 0 mdl)))
-(s/def ::vector-finite+ (s/with-gen (s/coll-of ::m/pos :kind clojure.core/vector? :into [])
-                                    #(gen/vector (s/gen ::m/finite+) 0 mdl)))
+
+(s/def ::vector-2D
+  (s/with-gen
+    (s/coll-of ::m/number :kind clojure.core/vector? :into [] :min-count 2 :max-count 2)
+    #(gen/vector (s/gen ::m/number) 2)))
+
+(s/def ::vector-3D
+  (s/with-gen
+    (s/coll-of ::m/number :kind clojure.core/vector? :into [] :min-count 3 :max-count 3)
+    #(gen/vector (s/gen ::m/number) 3)))
+
+(s/def ::vector-num
+  (s/with-gen
+    (s/coll-of ::m/num :kind clojure.core/vector? :into [])
+    #(gen/vector (s/gen ::m/num) 0 mdl)))
+
+(s/def ::vector-finite
+  (s/with-gen
+    (s/coll-of ::m/finite :kind clojure.core/vector? :into [])
+    #(gen/vector (s/gen ::m/finite) 0 mdl)))
+
+(s/def ::vector-finite+
+  (s/with-gen
+    (s/coll-of ::m/pos :kind clojure.core/vector? :into [])
+    #(gen/vector (s/gen ::m/finite+) 0 mdl)))
+
 (s/def ::sparse-vector
-  (s/with-gen (s/coll-of (s/tuple ::m/int-non- ::number))
-              #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-                                    (gen/large-integer* {:min 0 :max mdl}))
-                         (fn [[i j]] (gen/vector
-                                       (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
-                                                  (s/gen ::number))
-                                       (min i j))))))
-(s/def ::index ::tensor/index)
+  (s/with-gen
+    (s/coll-of (s/tuple ::m/int-non- ::m/number))
+    #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
+                          (gen/large-integer* {:min 0 :max mdl}))
+               (fn [[i j]]
+                 (gen/vector
+                   (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
+                              (s/gen ::m/number))
+                   (min i j))))))
+
+(s/def ::index->number
+  (s/fspec :args (s/cat :index ::tensor/index)
+           :ret ::m/number))
+
+(s/def ::pred-index+number
+  (s/fspec :args (s/cat :index ::tensor/index :number ::m/number)
+           :ret boolean?))
 
 ;;;VECTOR TYPES
-(defn numbers?
-  "Returns true if the parameter is a collection of numbers (i.e., dimensionality is 1 and contains numbers only)."
-  [x] (and (sequential? x) (every? number? x)))
-
-(s/fdef numbers?
-        :args (s/cat :x any?)
-        :ret boolean?)
-
-(s/def ::numbers ::tensor/numbers)
-
 (defn vector?
   "Returns true if a vector (i.e., numbers only)."
-  [x] (and (numbers? x) (clojure.core/vector? x)))
+  [x]
+  (and (m/numbers? x) (clojure.core/vector? x)))
 
 (s/fdef vector?
         :args (s/cat :x any?)
@@ -72,18 +86,18 @@
         :ret (s/nilable ::vector))
 
 (defn compute-vector
-  "`f` takes an `index` and returns a number."
-  [size f] (mapv f (range 0 size)))
+  "Function `index->number` takes an `index` and returns a number."
+  [size index->number]
+  (mapv index->number (range 0 size)))
 
 (s/fdef compute-vector
-        :args (s/cat :size ::size
-                     :f (s/fspec :args (s/cat :index ::index)
-                                 :ret ::number))
+        :args (s/cat :size ::size :index->number ::index->number)
         :ret ::vector)
 
 (defn rnd-vector!
   "Returns vector `v` of `size` with random doubles."
-  [size] (vec (take size (random/rand-double-lazy!))))
+  [size]
+  (vec (take size (random/rand-double-lazy!))))
 
 (s/fdef rnd-vector!
         :args (s/cat :size ::size)
@@ -110,17 +124,24 @@
 (defn filter-kv
   "Returns a vector of the items in `v` for which (`pred` index number) returns true.
   `pred` must be free of side-effects."
-  [pred v] (persistent! (reduce-kv #(if (pred %2 %3) (conj! %1 %3) %1) (transient []) v)))
+  [pred v]
+  (persistent!
+    (reduce-kv (fn [tot index number]
+                 (if (pred index number)
+                   (conj! tot number)
+                   tot))
+               (transient [])
+               v)))
 
 (s/fdef filter-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :index ::index :number ::number) :ret boolean?)
-                     :v ::vector)
+        :args (s/cat :pred ::pred-index+number :v ::vector)
         :ret ::vector)
 
 (defn some-kv
   "Returns the first logical true value of (`pred` index number) for any number in `v`, else nil."
   [pred v]
-  (loop [i 0, s v]
+  (loop [i 0
+         s v]
     (when (sequential? s)
       (let [h (first s)]
         (when h
@@ -129,9 +150,8 @@
             (recur (inc i) (next s))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :index ::index :number ::number) :ret boolean?)
-                     :v ::vector)
-        :ret (s/nilable ::number))
+        :args (s/cat :pred ::pred-index+number :v ::vector)
+        :ret (s/nilable ::m/number))
 
 ;;;VECTOR MANIPULATION
 (defn insertv
@@ -143,7 +163,7 @@
       (vec (concat f [number] l)))))
 
 (s/fdef insertv
-        :args (s/cat :v ::vector :index ::index :number ::number)
+        :args (s/cat :v ::vector :index ::tensor/index :number ::m/number)
         :ret (s/nilable ::vector))
 
 (defn removev
@@ -156,7 +176,7 @@
     v))
 
 (s/fdef removev
-        :args (s/cat :v ::vector :index ::index)
+        :args (s/cat :v ::vector :index ::tensor/index)
         :ret ::vector)
 
 (defn replace-nan
@@ -169,18 +189,24 @@
                 (assoc v i replacement-number)
                 v))
             numbers (range (count numbers)))
-    (map #(if (m/nan? %) replacement-number %) numbers)))
+    (map (fn [number]
+           (if (m/nan? number)
+             replacement-number
+             number))
+         numbers)))
 
 (s/fdef replace-nan
-        :args (s/cat :replacement-number ::number :numbers ::numbers)
-        :ret ::numbers)
+        :args (s/cat :replacement-number ::m/number :numbers ::m/numbers)
+        :ret ::m/numbers)
 
 ;;;VECTOR MATH
 (defn kahan-sum
   "Kahan Summation algorithm -- for greater floating-point summation accuracy,
   as fast alternative to bigDecimal"
   [numbers]
-  (loop [[h & t] numbers, sum 0.0, carry 0.0]
+  (loop [[h & t] numbers
+         sum 0.0
+         carry 0.0]
     (if-not h
       sum
       (if (m/inf? h)
@@ -190,20 +216,22 @@
           (recur t new-sum (- new-sum sum y)))))))
 
 (s/fdef kahan-sum
-        :args (s/cat :numbers ::numbers)
-        :ret ::number)
+        :args (s/cat :numbers ::m/numbers)
+        :ret ::m/number)
 
 (defn dot-product
   "The dot product is the sum of the products of the corresponding entries of two vectors.
   Geometrically, the dot product is the product of the Euclidean magnitudes of the two vectors and the cosine of
   the angle between them.
   Also called [[inner-product]]."
-  [v1 v2] (apply + (map (fn [a b] (* (double a) b)) v1 v2)))
+  [v1 v2]
+  (apply + (map (fn [a b] (* (double a) b)) v1 v2)))
 
 (s/fdef dot-product
         :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-                     #(= (count (:v1 %)) (count (:v2 %))))
-        :ret ::number)
+                     (fn [{:keys [v1 v2]}]
+                       (= (count v1) (count v2))))
+        :ret ::m/number)
 
 (defn cross-product
   "Given two linearly independent 3D vectors v1 and v2, the cross product, v1 × v2,
@@ -227,11 +255,12 @@
 (s/fdef cross-product
         :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D :vector-3D ::vector-3D)
                             :v2 (s/or :vector-2D ::vector-2D :vector-3D ::vector-3D))
-                     #(or (and (= (first (:v1 %)) :vector-2D)
-                               (= (first (:v2 %)) :vector-2D))
-                          (and (= (first (:v1 %)) :vector-3D)
-                               (= (first (:v2 %)) :vector-3D))))
-        :ret (s/or :number ::number :v ::vector))
+                     (fn [{:keys [v1 v2]}]
+                       (let [v1-type (first v1)
+                             v2-type (first v2)]
+                         (or (and (= v1-type :vector-2D) (= v2-type :vector-2D))
+                             (and (= v1-type :vector-3D) (= v2-type :vector-3D))))))
+        :ret (s/or :number ::m/number :v ::vector))
 
 (defn projection
   "Returns vector of v1 projected onto v2."
@@ -241,5 +270,6 @@
 
 (s/fdef projection
         :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-                     #(= (count (:v1 %)) (count (:v2 %))))
+                     (fn [{:keys [v1 v2]}]
+                       (= (count v1) (count v2))))
         :ret ::vector)

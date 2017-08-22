@@ -1,21 +1,18 @@
 (ns provisdom.math.t-vector
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.vector :as vector]
-            [provisdom.math.random2 :as random]
-            [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.vector :as vector]
+    [provisdom.math.random2 :as random]
+    [provisdom.math.core :as m]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
-(deftest numbers?-test
-  (is-not (vector/numbers? 1))
-  (is (vector/numbers? '(1)))
-  (is (vector/numbers? []))
-  (is (vector/numbers? [2 3]))
-  (is-not (vector/numbers? [[2]])))
-
+;;;TYPES
 (deftest vector?-test
   (is-not (vector/vector? 1))
   (is-not (vector/vector? '(1)))
@@ -23,13 +20,9 @@
   (is (vector/vector? [2 3]))
   (is-not (vector/vector? [[2]])))
 
-(deftest type-tests
-  (numbers?-test)
-  (vector?-test))
-
-;(defspec-test test-numbers? `vector/numbers?) ;slow-ish
 ;(defspec-test test-vector? `vector/vector?) ;slow-ish
 
+;;;CONSTRUCTORS
 (deftest to-vector-test
   (is= [1] (vector/to-vector 1))
   (is= [1] (vector/to-vector '(1)))
@@ -57,17 +50,12 @@
   (is= [0.0 0.0] (vector/sparse->vector [] (vec (repeat 2 0.0))))
   (is= [1.0 1.0 2.0 1.0] (vector/sparse->vector [[2 2.0] [4 4.0]] (vec (repeat 4 1.0)))))
 
-(deftest constructor-tests
-  (to-vector-test)
-  (compute-vector-test)
-  (rnd-vector!-test)
-  (sparse->vector-test))
-
 (defspec-test test-to-vector `vector/to-vector)
 (defspec-test test-compute-vector `vector/compute-vector)
 (defspec-test test-rnd-vector! `vector/rnd-vector!)
 (defspec-test test-sparse->vector `vector/sparse->vector)
 
+;;;INFO
 (deftest filter-kv-test
   (is= [] (vector/filter-kv (fn [k v] (> v k)) []))
   (is= [] (vector/filter-kv (fn [k v] (> v k)) [0]))
@@ -78,13 +66,10 @@
   (is= nil (vector/some-kv (fn [k v] (> v k)) [0]))
   (is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6])))
 
-(deftest info-tests
-  (filter-kv-test)
-  (some-kv-test))
-
 (defspec-test test-filter-kv `vector/filter-kv)
 (defspec-test test-some-kv `vector/some-kv)
 
+;;;MANIPULATION
 (deftest insertv-test
   (is= [9 0 2 4 6] (vector/insertv [0 2 4 6] 0 9))
   (is= [0 9 2 4 6] (vector/insertv [0 2 4 6] 1 9))
@@ -105,15 +90,11 @@
   (is= [0 1 2 0] (vector/replace-nan 0 [m/nan 1 2 m/nan]))
   (is= '(0 1 2 0) (vector/replace-nan 0 (apply list [m/nan 1 2 m/nan]))))
 
-(deftest manipulation-tests
-  (insertv-test)
-  (removev-test)
-  (replace-nan-test))
-
 (defspec-test test-insertv `vector/insertv)
 (defspec-test test-removev `vector/removev)
 (defspec-test test-replace-nan `vector/replace-nan)
 
+;;;MATH
 (deftest kahan-sum-test
   (is= m/inf+ (vector/kahan-sum [m/inf+ m/inf+]))
   (is (m/nan? (vector/kahan-sum [m/inf+ m/inf-])))
@@ -143,13 +124,7 @@
   (is= [1.264367816091954 1.517241379310345 1.770114942528736 2.0229885057471266]
        (vector/projection [0 1 2 3] [5 6 7 8]))
   (is= [0.0 3.142857142857143 6.285714285714286 9.428571428571429]
-       (vector/projection [5 6 7 8] [0 1 2 3] )))
-
-(deftest math-tests
-  (kahan-sum-test)
-  (dot-product-test)
-  (cross-product-test)
-  (projection-test))
+       (vector/projection [5 6 7 8] [0 1 2 3])))
 
 (defspec-test test-kahan-sum `vector/kahan-sum)
 (defspec-test test-dot-product `vector/dot-product)

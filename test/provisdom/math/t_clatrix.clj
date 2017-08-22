@@ -1,14 +1,19 @@
 (ns provisdom.math.t-clatrix
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.clatrix :as clx]
-            [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.random2 :as random]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.clatrix :as clx]
+    [provisdom.math.core :as m]
+    [provisdom.math.matrix :as mx]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.random2 :as random]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
+;;;TYPES
 (deftest clatrix?-test
   (is (clx/clatrix? (clx/clatrix [[]])))
   (is (clx/clatrix? (clx/clatrix [[1]])))
@@ -83,66 +88,51 @@
   (is-not (clx/symmetric-clatrix? (clx/clatrix [[1 0] [1 1]]))))
 
 (deftest positive-semidefinite-clatrix-finite?-test
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[]]) m/*dbl-close*))
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[0.0]]) m/*dbl-close*))
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0]]) m/*dbl-close*))
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[0.0 0.0] [0.0 0.0]]) m/*dbl-close*))
-  (is-not (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/*dbl-close*))
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 2.0]]) m/*dbl-close*))
-  (is-not (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/*dbl-close*))
-  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/*dbl-close*))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[]]) m/dbl-close))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[0.0]]) m/dbl-close))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0]]) m/dbl-close))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[0.0 0.0] [0.0 0.0]]) m/dbl-close))
+  (is-not (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/dbl-close))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 2.0]]) m/dbl-close))
+  (is-not (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/dbl-close))
+  (is (clx/positive-semidefinite-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/dbl-close))
   (is (clx/positive-semidefinite-clatrix-finite?
-        (clx/clatrix [[1.0 (m/next-down -1.0)] [(m/next-down -1.0) 1.0]]) m/*dbl-close*))
+        (clx/clatrix [[1.0 (m/next-down -1.0)] [(m/next-down -1.0) 1.0]]) m/dbl-close))
   (is-not (clx/positive-semidefinite-clatrix-finite?
-            (clx/clatrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/*dbl-close*))
+            (clx/clatrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/dbl-close))
   (is (clx/positive-semidefinite-clatrix-finite?
-        (clx/clatrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/*sgl-close*)))
+        (clx/clatrix [[1.0 (+ -1.0 -1.0E-14)] [(+ -1.0 -1.0E-14) 1.0]]) m/sgl-close)))
 
 (deftest positive-definite-clatrix-finite?-test
-  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[]]) m/*sgl-close*))
-  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[0.0]]) m/*sgl-close*))
-  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0]]) m/*sgl-close*))
-  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[0.0 0.0] [0.0 0.0]]) m/*sgl-close*))
-  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/*sgl-close*))
-  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 1.0]]) m/*sgl-close*))
-  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/*sgl-close*))
-  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[]]) m/sgl-close))
+  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[0.0]]) m/sgl-close))
+  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0]]) m/sgl-close))
+  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[0.0 0.0] [0.0 0.0]]) m/sgl-close))
+  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/sgl-close))
+  (is (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 1.0]]) m/sgl-close))
+  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/sgl-close))
+  (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is-not (clx/positive-definite-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) 1e-40)) ;better than Apache here
   (is-not (clx/positive-definite-clatrix-finite?
-            (clx/clatrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/*sgl-close*))
+            (clx/clatrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/sgl-close))
   (is-not (clx/positive-definite-clatrix-finite?
-            (clx/clatrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/*sgl-close*))
+            (clx/clatrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/sgl-close))
   (is (clx/positive-definite-clatrix-finite?
-        (clx/clatrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/*dbl-close*)))
+        (clx/clatrix [[(inc 1.0E-14) -1.0] [-1.0 (inc 1.0E-14)]]) m/dbl-close)))
 
 (deftest correlation-clatrix-finite?-test
-  (is (clx/correlation-clatrix-finite? (clx/clatrix [[]]) m/*sgl-close*))
-  (is (clx/correlation-clatrix-finite? (clx/clatrix [[1.0]]) m/*sgl-close*))
-  (is (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.2] [0.2 1.0]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[0.2]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 2.0]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+  (is (clx/correlation-clatrix-finite? (clx/clatrix [[]]) m/sgl-close))
+  (is (clx/correlation-clatrix-finite? (clx/clatrix [[1.0]]) m/sgl-close))
+  (is (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.2] [0.2 1.0]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[0.2]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.5] [2.0 4.0]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 0.5] [0.5 2.0]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.1] [-1.1 1.0]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is-not (clx/correlation-clatrix-finite?
-            (clx/clatrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/*sgl-close*))
-  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/*sgl-close*))
+            (clx/clatrix [[(m/next-up 1.0) -1.0] [-1.0 (m/next-up 1.0)]]) m/sgl-close))
+  (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) m/sgl-close))
   (is-not (clx/correlation-clatrix-finite? (clx/clatrix [[1.0 -1.0] [-1.0 1.0]]) 1e-40))) ;better than Apache
-
-(deftest type-tests
-  (clatrix?-test)
-  (empty-clatrix?-test)
-  (clatrix-finite?-test)
-  (row-clatrix?-test)
-  (column-clatrix?-test)
-  (square-clatrix?-test)
-  (diagonal-clatrix?-test)
-  (upper-triangular-clatrix?-test)
-  (lower-triangular-clatrix?-test)
-  (symmetric-clatrix?-test)
-  (positive-semidefinite-clatrix-finite?-test)
-  (positive-definite-clatrix-finite?-test)
-  (correlation-clatrix-finite?-test))
 
 ;(defspec-test test-clatrix? `clx/clatrix?) ;slow-ish
 ;(defspec-test test-empty-clatrix? `clx/empty-clatrix?) ;slow-ish
@@ -158,6 +148,7 @@
 ;(defspec-test test-positive-definite-clatrix-finite? `clx/positive-definite-clatrix-finite?) ;slow-ish
 ;(defspec-test test-correlation-clatrix-finite? `clx/correlation-clatrix-finite?) ;slow-ish
 
+;;;CONSTRUCTORS
 (deftest clatrix-&-clatrix->matrix-test
   (is= [[]] (clx/clatrix->matrix (clx/clatrix [[]])))
   (is= [[1.0]] (clx/clatrix->matrix (clx/clatrix [[1.0]])))
@@ -202,14 +193,6 @@
   (random/bind-seed 0
     (is= [[1.0 0.9185584128047] [0.9185584128047 1.0]] (clx/clatrix->matrix (clx/rnd-correlation-clatrix-finite! 2)))))
 
-(deftest constructor-tests
-  (clatrix-&-clatrix->matrix-test)
-  (positive-semidefinite-clatrix-finite-by-squaring-test)
-  (positive-definite-clatrix-finite-by-squaring-test)
-  (correlation-clatrix-finite-by-squaring-test)
-  (rnd-positive-definite-clatrix-finite!-test)
-  (rnd-correlation-clatrix-finite!-test))
-
 (defspec-test test-clatrix `clx/clatrix)
 (defspec-test test-clatrix->matrix `clx/clatrix->matrix)
 ;(defspec-test test-positive-semidefinite-clatrix-finite-by-squaring `clx/positive-semidefinite-clatrix-finite-by-squaring) ;slow-ish
@@ -218,6 +201,7 @@
 (defspec-test test-rnd-positive-definite-clatrix-finite! `clx/rnd-positive-definite-clatrix-finite!)
 (defspec-test test-rnd-correlation-clatrix-finite! `clx/rnd-correlation-clatrix-finite!)
 
+;;;INFO
 (deftest rows-test
   (is= 0 (clx/rows (clx/clatrix [[]])))
   (is= 1 (clx/rows (clx/clatrix [[1.0]])))
@@ -255,21 +239,23 @@
   (is= [1.0 4.0] (clx/diagonal (clx/clatrix [[1.0 0.5] [2.0 4.0]]))))
 
 (deftest some-kv-test
-  (is= nil (clx/some-kv (fn [row column number] (> row (+ column number))) (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
-  (is= 1.0 (clx/some-kv (fn [row column number] (< row (+ column number))) (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
-  (is= 4.0 (clx/some-kv (fn [row column number] (> (dec row) (- column number))) (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
-  (is= 3.0 (clx/some-kv (fn [row column number] (> (dec row) (- column number)))
-                        (clx/clatrix [[1.0 4.0] [3.0 5.0]])
-                        {::clx/by-row? false})))
-
-(deftest info-tests
-  (rows-test)
-  (columns-test)
-  (get-entry-test)
-  (get-row-test)
-  (get-column-test)
-  (diagonal-test)
-  (some-kv-test))
+  (is= nil
+       (clx/some-kv (fn [row column number]
+                      (> row (+ column number)))
+                    (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
+  (is= 1.0
+       (clx/some-kv (fn [row column number]
+                      (< row (+ column number)))
+                    (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
+  (is= 4.0
+       (clx/some-kv (fn [row column number]
+                      (> (dec row) (- column number)))
+                    (clx/clatrix [[1.0 4.0] [3.0 5.0]])))
+  (is= 3.0
+       (clx/some-kv (fn [row column number]
+                      (> (dec row) (- column number)))
+                    (clx/clatrix [[1.0 4.0] [3.0 5.0]])
+                    {::mx/by-row? false})))
 
 (defspec-test test-rows `clx/rows)
 (defspec-test test-columns `clx/columns)
@@ -279,6 +265,7 @@
 (defspec-test test-diagonal `clx/diagonal)
 (defspec-test test-some-kv `clx/some-kv)
 
+;;;MANIPULATION
 (deftest transpose-test
   (is= (clx/clatrix [[]]) (clx/transpose (clx/clatrix [[]])))
   (is= (clx/clatrix [[1.0]]) (clx/transpose (clx/clatrix [[1.0]])))
@@ -308,19 +295,13 @@
   (is= [[1.0 0.232379000772445] [0.232379000772445 1.0]]
        (clx/clatrix->matrix (clx/covariance-clatrix->correlation-clatrix (clx/clatrix [[3.0 0.9] [0.9 5.0]])))))
 
-(deftest manipulation-tests
-  (transpose-test)
-  (assoc-diagonal-test)
-  (symmetric-clatrix-by-averaging-test)
-  (correlation-clatrix->covariance-clatrix-test)
-  (covariance-clatrix->correlation-clatrix-test))
-
 (defspec-test test-transpose `clx/transpose)
 (defspec-test test-assoc-diagonal `clx/assoc-diagonal)
 (defspec-test test-symmetric-clatrix-by-averaging `clx/symmetric-clatrix-by-averaging)
 ;(defspec-test test-correlation-clatrix->covariance-clatrix `clx/correlation-clatrix->covariance-clatrix) ;slow
 ;(defspec-test test-covariance-clatrix->correlation-clatrix `clx/covariance-clatrix->correlation-clatrix) ;slow
 
+;;;MATH
 (deftest ===-test
   (is (clx/=== (clx/clatrix [[1.0 0.5] [2.0 m/nan]]) (clx/clatrix [[1.0 0.5] [2.0 m/nan]])))
   (is (clx/=== (clx/clatrix [[1.0 0.5] [2.0 m/nan]]) (clx/clatrix [[1.0 0.5] [2.0 m/nan]])
@@ -353,17 +334,12 @@
   (is= (clx/clatrix [[-1.0 -0.5]])
        (clx/subtract (clx/clatrix [[1.0 0.5]]) (clx/clatrix [[1.0 0.5]]) (clx/clatrix [[1.0 0.5]]))))
 
-(deftest math-tests
-  (===-test)
-  (mx*-test)
-  (add-test)
-  (subtract-test))
-
 (defspec-test test-=== `clx/===)
 (defspec-test test-mx* `clx/mx*)
 (defspec-test test-add `clx/add)
 (defspec-test test-subtract `clx/subtract)
 
+;;;DECOMPOSITION
 (deftest inverse-test
   (is= (clx/clatrix [[]]) (clx/inverse (clx/clatrix [[]])))
   (is= (clx/clatrix [[0.5]]) (clx/inverse (clx/clatrix [[2.0]])))
@@ -493,16 +469,6 @@
   (is= {::clx/Q (clx/clatrix [[-0.8944271909999157 -0.4472135954999579] [-0.4472135954999579 0.8944271909999159]])
         ::clx/R (clx/clatrix [[-1.118033988749895] [0.0]])}
        (clx/qr-decomposition (clx/clatrix [[1.0] [0.5]]))))
-
-(deftest decomposition-tests
-  (inverse-test)
-  (determinant-test)
-  (lu-decomposition-test)
-  (eigen-decomposition-test)
-  (upper-cholesky-decomposition-test)
-  (sv-decomposition-test)
-  (condition-test)
-  (qr-decomposition-test))
 
 (defspec-test test-inverse `clx/inverse)
 (defspec-test test-determinant `clx/determinant)

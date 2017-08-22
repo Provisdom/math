@@ -1,13 +1,179 @@
 (ns provisdom.math.t-special-functions
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.core :as m]
-            [provisdom.math.special-functions :as mf]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.core :as m]
+    [provisdom.math.special-functions :as mf]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(def done-wods-8-21+
+  ["185-lb 20-rep Grace in 10-min; did it!"                        ;8/21
+   ])
+
+(def wods-up-to-8-21
+  [{:name               "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)",
+    :days-since-attempt 50}
+   {:name               "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#",
+    :days-since-attempt 50}
+   {:name               "3x1 minute 135# OH hold",
+    :days-since-attempt 50}
+   {:name               "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes",
+    :days-since-attempt 50}
+   {:name               "5xE3MOM Handstand holds for 40->60-sec"
+    :days-since-attempt 50}
+   {:name               "4xE2MOM Handstand holds for 40->60-sec"
+    :days-since-attempt 50}
+   {:name               "more kipping HSPUs, build to 21 in a row"
+    :days-since-attempt 50}
+   {:name               "Handstand walking 7x50' in 60-sec with 2-min rest"
+    :days-since-attempt 50}
+   {:name               "2 rounds of 15-sec 1-arm bar hangs"
+    :days-since-attempt 50}
+   {:name               "30 seconds of cherry pickers"
+    :days-since-attempt 50}
+   {:name               "21 unbroken kipping TTB"
+    :days-since-attempt 2}
+   {:name               "21 unbroken kipping C2B"
+    :days-since-attempt 50}
+   {:name               "more L-sits, build to Tabata and 3x30-sec"
+    :days-since-attempt 50}
+   {:name               "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
+    :days-since-attempt 50}
+   {:name               "30-sec each side of side plank with top leg up"
+    :days-since-attempt 50}
+   {:name               "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute (unbroken 3->5 sets or 10:58->9:00)"
+    :days-since-attempt 50}
+   {:name               "7x20-sec straight-arm hanging L-sits"
+    :days-since-attempt 50}
+   {:name               "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
+    :days-since-attempt 50}
+   {:name               "7 rounds of 45-sec hollow rock + 75-sec rest"
+    :days-since-attempt 50}
+   {:name               "2-min of sit-ups, 2-min of planks continuously cycling from elbows to hands, 2-min of hollow-ups"
+    :days-since-attempt 50}
+   {:name               "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
+    :days-since-attempt 50}
+   {:name               "7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault)"
+    :days-since-attempt 50}
+   {:name               "5x15 cal Assault bike in 50 sec with 70-sec rest (did non-Assault easily)"
+    :days-since-attempt 50}
+   {:name               "Back Squat 275x10,9,...,1"
+    :days-since-attempt 50}
+   {:name               "Back Squat 345x1"
+    :days-since-attempt 50}
+   {:name               "Front Squats 5x9@185 start every 2 minutes from floor"
+    :days-since-attempt 50}
+   {:name               "Squat Grace at 155 in 10 minutes"
+    :days-since-attempt 50}
+   {:name               "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
+    :days-since-attempt 50}
+   {:name               "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
+    :days-since-attempt 50}
+   {:name               "21 unbroken Thrusters @95"
+    :days-since-attempt 50}
+   {:name               "Full Snatch E2MOM: 6x6@135, 5x4@155, 4x3@185 w/ 1-min breaks"
+    :days-since-attempt 50}
+   {:name               "Fran in 6:20->6 minutes (also should work on Fran+1-mile run 16:43->14 minutes)"
+    :days-since-attempt 50}
+   {:name               "E2MOM5 thruster@95x15+TTBx15"
+    :days-since-attempt 50}
+   {:name               "Kalsu 105->135"
+    :days-since-attempt 50}
+   {:name               "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees in 11 min @105->135"
+    :days-since-attempt 50}
+   {:name               "Work on butterfly pull-ups"
+    :days-since-attempt 50}
+   {:name               "Work on butterfly c2b"
+    :days-since-attempt 50}
+   {:name               "Work on high-bar back squat with Oly Shoes"
+    :days-since-attempt 50}
+   {:name               "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
+    :days-since-attempt 50}
+   {:name               "Couch Stretch -> Bulgarian split squats"
+    :days-since-attempt 50}
+   {:name               "work on bottom of muscle-up"
+    :days-since-attempt 50}
+   {:name               "Work on pistols either on box (build up to 20 in a row per leg then lower box), with elevated heels, or with a counterbalance weight held out in front"
+    :days-since-attempt 50}
+   {:name               "Work on ski machine"
+    :days-since-attempt 50}
+   {:name               "Work on tying together natural-looking triple-unders"
+    :days-since-attempt 50}
+   {:name               "Work on Front squats, press, and thrusters at sets of 21 and down."
+    :days-since-attempt 50}
+   {:name               "Work on variations of Kalsu, like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters, just front squats or push press, less or more burpees or an alternative exercise, or with dumbbells"
+    :days-since-attempt 4}
+   {:name               "Build up lateral shoulder raises"
+    :days-since-attempt 50}
+   {:name               "Try to get to median score of games wods"
+    :days-since-attempt 50}
+   {:name               "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, PP, cal row, rest) 1 minute each"
+    :days-since-attempt 50}
+   {:name               "Work on chin-ups"
+    :days-since-attempt 50}])
+
+(defn update-wods
+  ""
+  [wods done-wods]
+  (let [total-days (count done-wods)
+        wods (mapv (fn [m]
+                     (update m :days-since-attempt (partial + total-days)))
+                   wods)
+        new-wods (reduce-kv (fn [outer-wods days name]
+                              (reduce-kv (fn [inner-wods wod-index wod]
+                                           (if (= (:name wod) name)
+                                             (assoc-in inner-wods [wod-index :days-since-attempt] (- total-days days))
+                                             inner-wods))
+                                         outer-wods
+                                         outer-wods))
+                            wods
+                            done-wods)]
+    new-wods))
+
+(defn add-wod-weights-and-probs
+  ""
+  [wods]
+  (let [n-wods (count wods)
+        adjustment (m/sqrt (dec n-wods))
+        wods (map (fn [m]
+                    (assoc m :weight (max 0.0 (- (:days-since-attempt m) adjustment))))
+                  wods)
+        total-weight (apply + (map :weight wods))
+        wods (map (fn [m]
+                    (assoc m :prob (/ (:weight m) total-weight)))
+                  wods)]
+    wods))
+
+(defn select-wod
+  ""
+  [wods]
+  (let [rnd (provisdom.math.random2/double$)
+        selected (reduce (fn [tot m]
+                           (let [tot (+ tot (:prob m))]
+                             (if (> tot rnd)
+                               (reduced m)
+                               tot)))
+                         0.0
+                         wods)]
+    selected))
+
+(defn get-today-wod
+  ""
+  []
+  (let [a wods-up-to-8-21
+        b done-wods-8-21+
+        c (update-wods a b)
+        d (add-wod-weights-and-probs c)
+        e (select-wod d)]
+    e))
+
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
+;;;ERF FUNCTIONS
 (deftest erf-test
   (is= -1.0 (mf/erf m/inf-))
   (is= 1.0 (mf/erf m/inf+))
@@ -97,16 +263,6 @@
   (is= 0.15729920705028516 (mf/cdf-standard-normal -1.0056199694085204))
   (is= 0.997020533343667 (mf/cdf-standard-normal 2.750032615602772)))
 
-(deftest erf-fns-test
-  (erf-test)
-  (erf-diff-test)
-  (erf-derivative-test)
-  (erfc-test)
-  (inv-erf-test)
-  (inv-erfc-test)
-  (inv-cdf-standard-normal-test)
-  (cdf-standard-normal-test))
-
 (defspec-test test-erf `mf/erf)
 (defspec-test test-erf-diff `mf/erf-diff)
 (defspec-test test-erf-derivative `mf/erf-derivative)
@@ -116,6 +272,7 @@
 (defspec-test test-inv-cdf-standard-normal `mf/inv-cdf-standard-normal)
 (defspec-test test-cdf-standard-normal `mf/cdf-standard-normal)
 
+;;;GAMMA
 (deftest gamma-test
   (is= 0.0 (mf/gamma m/inf-))
   (is= m/inf+ (mf/gamma m/inf+))
@@ -263,20 +420,6 @@
   (is= -0.049872441259839764 (mf/multivariate-log-gamma 1.1 1))
   (is= 0.9207263597340951 (mf/multivariate-log-gamma 1.1 2)))
 
-(deftest gamma-fns-test
-  (gamma-test)
-  (lower-gamma-test)
-  (upper-gamma-test)
-  (upper-gamma-derivative-x-test)
-  (regularized-gamma-p-test)
-  (regularized-gamma-q-test)
-  (log-gamma-test)
-  (log-gamma-derivative-test)
-  (gamma-derivative-test)
-  (trigamma-test)
-  (multivariate-gamma-test)
-  (multivariate-log-gamma-test))
-
 (defspec-test test-gamma `mf/gamma)
 (defspec-test test-lower-gamma `mf/lower-gamma)
 (defspec-test test-upper-gamma `mf/upper-gamma)
@@ -284,13 +427,14 @@
 (defspec-test test-regularized-gamma-p `mf/regularized-gamma-p)
 (defspec-test test-regularized-gamma-q `mf/regularized-gamma-q)
 (defspec-test test-log-gamma `mf/log-gamma)
-(defspec-test test-log-gamma-derivative `mf/log-gamma-derivative)
-(defspec-test test-digamma `mf/digamma)
-(defspec-test test-gamma-derivative `mf/gamma-derivative)
-(defspec-test test-trigamma `mf/trigamma)
+;(defspec-test test-log-gamma-derivative `mf/log-gamma-derivative)
+;(defspec-test test-digamma `mf/digamma)
+;(defspec-test test-gamma-derivative `mf/gamma-derivative)
+;(defspec-test test-trigamma `mf/trigamma)
 (defspec-test test-multivariate-gamma `mf/multivariate-gamma)
 (defspec-test test-multivariate-log-gamma `mf/multivariate-log-gamma)
 
+;;;BETA
 (deftest beta-test
   (is (m/nan? (mf/beta m/nan m/nan)))
   (is= 0.47619047619047616 (mf/beta 1.0 2.1))
@@ -340,12 +484,6 @@
   (is= 9.999999999999998 (mf/incomplete-beta 1 1 0.1))
   (is= 1.5707963267948968 (mf/incomplete-beta 0.5 0.5 0.5))
   (is= 0.0 (mf/incomplete-beta 0 1 1)))
-
-(deftest beta-fns-test
-  (beta-test)
-  (log-beta-test)
-  (regularized-beta-test)
-  (incomplete-beta-test))
 
 (defspec-test test-beta `mf/beta)
 (defspec-test test-log-beta `mf/log-beta)

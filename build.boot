@@ -10,7 +10,7 @@
                           [criterium "0.4.4" :scope "test"]
 
                           [provisdom/boot-tasks "1.4" :scope "test"]
-                          [provisdom/test "0.3.1" :scope "test"]
+                          [provisdom/test "0.3.2" :scope "test"]
                           ;;project deps
                           [org.clojure/clojure "1.9.0-alpha17" :scope "provided"]
                           [org.clojure/spec.alpha "0.1.123"]

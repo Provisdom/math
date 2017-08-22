@@ -1,14 +1,13 @@
 (ns provisdom.math.special-functions
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.core :as m]
-            [provisdom.math.matrix :as mx]
-            [provisdom.math.apache :as ap])
-  (:import [cern.jet.stat.tdouble Gamma]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m]
+    [provisdom.math.apache :as ap])
+  (:import
+    [cern.jet.stat.tdouble Gamma]))
 
 ;;;DECLARATIONS
 (declare regularized-gamma-p erfc)
@@ -18,13 +17,13 @@
   0.57721566490153286060651209008240243104215933593992M)
 
 (def ^:const lanczos-coefficients
-  "lanczos coefficients"
+  "Lanczos Coefficients."
   [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
    771.32342877765313, -176.61502916214059, 12.507343278686905,
    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7])
 
 (def ^:const exact-stirling-errors
-  "expansion error for values 0.0 through 15.0 by 0.5"
+  "Expansion error for values 0.0 through 15.0 by 0.5."
   [0.0, 0.1534264097200273452913848, 0.0810614667953272582196702,
    0.0548141210519176538961390, 0.0413406959554092940938221,
    0.03316287351993628748511048, 0.02767792568499833914878929,
@@ -83,7 +82,8 @@
 
 (defn erf-derivative
   "Returns the derivative of the error function."
-  [x] (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
+  [x]
+  (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
 
 (s/fdef erf-derivative
         :args (s/cat :x ::m/num)
@@ -91,7 +91,8 @@
 
 (defn erfc
   "Returns the complementary error function."
-  [x] (m/one- (erf x)))
+  [x]
+  (m/one- (erf x)))
 
 (s/fdef erfc
         :args (s/cat :x ::m/number)
@@ -100,8 +101,8 @@
 (defn inv-erf
   "Returns the inverse error function."
   [x]
-  (cond (m/roughly? 1.0 x m/*dbl-close*) m/inf+
-        (m/roughly? -1.0 x m/*dbl-close*) m/inf-
+  (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
+        (m/roughly? -1.0 x m/dbl-close) m/inf-
         (zero? x) 0.0
         :else (ap/erf-inv x)))
 
@@ -112,8 +113,8 @@
 (defn inv-erfc
   "Returns the inverse complementary error function."
   [x]
-  (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+
-        (m/roughly? x 2.0 m/*dbl-close*) m/inf-
+  (cond (m/roughly? x 0.0 m/dbl-close) m/inf+
+        (m/roughly? x 2.0 m/dbl-close) m/inf-
         (m/one? x) 0.0
         :else (inv-erf (m/one- x))))
 
@@ -148,7 +149,7 @@
 ;GAMMA FUNCTIONS
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t^(a-1) * e^-t * dt).
-Although gamma is defined for pos a, this function allows for all non-long-able-non+ a."
+  Although gamma is defined for pos a, this function allows for all non-long-able-non+ a."
   [a]
   (cond (m/nan? a) m/nan
         (> a 709.7) m/inf+
@@ -225,7 +226,10 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (defn log-gamma
   "Returns the log gamma of a."
-  [a] (if (m/inf+? a) m/inf+ (ap/log-gamma a)))
+  [a]
+  (if (m/inf+? a)
+    m/inf+
+    (ap/log-gamma a)))
 
 (s/fdef log-gamma
         :args (s/cat :a ::m/nan-or-pos)
@@ -237,9 +241,10 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   Taken from Apache.  Could use better algorithm."
   [a]
   (let [a (double a)]
-    (if (m/roughly-round-non+? a m/*sgl-close*)
+    (if (m/roughly-round-non+? a m/sgl-close)
       m/inf-
-      (loop [x a, tot 0.0]
+      (loop [x a
+             tot 0.0]
         (let [inv-x (/ x)]
           (if (or (m/nan? x) (m/inf? x))
             x
@@ -258,7 +263,8 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 (defn digamma
   "Equivalent to log-gamma-derivative.
   Spec'd for a > -3e8 because it becomes slow."
-  [a] (log-gamma-derivative a))
+  [a]
+  (log-gamma-derivative a))
 
 (s/fdef digamma
         :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
@@ -267,7 +273,8 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 (defn gamma-derivative
   "Returns the derivative of the gamma of a.
   Spec'd for a > -3e8 because it becomes slow."
-  [a] (* (gamma a) (log-gamma-derivative a)))
+  [a]
+  (* (gamma a) (log-gamma-derivative a)))
 
 (s/fdef gamma-derivative
         :args (s/cat :a (s/and ::m/nan-or-non-long-able-non+ #(or (m/nan? %) (> % -3e8))))
@@ -279,9 +286,10 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   Taken from Apache.  Could use better algorithm."
   [a]
   (let [a (double a)]
-    (if (m/roughly-round-non+? a m/*sgl-close*)
+    (if (m/roughly-round-non+? a m/sgl-close)
       m/inf+
-      (loop [x a, tot 0.0]
+      (loop [x a
+             tot 0.0]
         (let [inv2-x (m/pow x -2.0)]
           (cond (or (m/nan? x) (m/inf? x)) x
                 (< x -1e7) (let [r (m/round (+ x 9e6) :toward)] (recur (- x r) (+ tot 1.1263618e-5))) ;approx
@@ -303,14 +311,17 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   (if (m/nan? a)
     m/nan
     (* (m/pow m/PI (* 0.25 p (dec p)))
-       (apply * (map (fn [i] (gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p)))))))
+       (apply * (map (fn [i]
+                       (gamma (+ a (* 0.5 (m/one- i)))))
+                     (range 1 (inc p)))))))
 
 (s/fdef multivariate-gamma
         :args (s/and (s/cat :a ::m/number
                             :p (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max 20})))
-                     #(and (not (m/long-able-non+? (+ (:a %) (* 0.5 (m/one- (:p %))))))
-                           (or (zero? (:p %))
-                               (not (m/long-able-non+? (+ (:a %) (* 0.5 (m/one- (dec (:p %))))))))))
+                     (fn [{:keys [a p]}]
+                       (and (not (m/long-able-non+? (+ a (* 0.5 (m/one- p)))))
+                            (or (zero? p)
+                                (not (m/long-able-non+? (+ a (* 0.5 (m/one- (dec p))))))))))
         :ret ::m/nan-or-non-inf-)
 
 (defn multivariate-log-gamma
@@ -319,19 +330,23 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
   (if (m/nan? a)
     m/nan
     (+ (* m/log-pi 0.25 p (dec p))
-       (apply + (map (fn [i] (log-gamma (+ a (* 0.5 (m/one- i))))) (range 1 (inc p)))))))
+       (apply + (map (fn [i]
+                       (log-gamma (+ a (* 0.5 (m/one- i)))))
+                     (range 1 (inc p)))))))
 
 (s/fdef multivariate-log-gamma
         :args (s/and (s/cat :a ::m/nan-or-pos
                             :p (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max 20})))
-                     #(or (m/nan? (:a %)) (> (:a %) (* 0.5 (:p %)))))
+                     (fn [{:keys [a p]}]
+                       (or (m/nan? a) (> a (* 0.5 p)))))
         :ret ::m/nan-or-non-inf-)
 
 ;;;BETA FUNCTIONS
 (defn beta
   "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt.
   Although beta is defined for pos x and y, you can use this function at your own risk for all non-zero x and y."
-  [x y] (Gamma/beta x y))
+  [x y]
+  (Gamma/beta x y))
 
 (s/fdef beta
         :args (s/cat :x ::m/nan-or-pos :y ::m/nan-or-pos)
@@ -339,7 +354,8 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (defn log-beta
   "Returns the log-beta of x and y."
-  [x y] (ap/log-beta x y))
+  [x y]
+  (ap/log-beta x y))
 
 (s/fdef log-beta
         :args (s/cat :x ::m/nan-or-pos :y ::m/nan-or-pos)
@@ -348,7 +364,10 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 (defn regularized-beta
   "Returns the regularized beta.
   Equal to incomplete beta function divided by beta function."
-  [c x y] (if (zero? c) 0.0 (Gamma/incompleteBeta x y c)))  ;NOTE: cern misnamed this
+  [c x y]
+  (if (zero? c)
+    0.0
+    (Gamma/incompleteBeta x y c)))                          ;NOTE: cern misnamed this
 
 (s/fdef regularized-beta
         :args (s/cat :c ::m/prob
@@ -358,7 +377,10 @@ Although gamma is defined for pos a, this function allows for all non-long-able-
 
 (defn incomplete-beta
   "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt."
-  [c x y] (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) ;NOTE cern misnamed this
+  [c x y]
+  (if (zero? c)
+    0.0
+    (* (Gamma/incompleteBeta x y c) (Gamma/beta x y))))     ;NOTE cern misnamed this
 
 (s/fdef incomplete-beta
         :args (s/cat :c ::m/prob

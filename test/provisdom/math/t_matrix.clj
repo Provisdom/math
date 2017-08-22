@@ -1,15 +1,19 @@
 (ns provisdom.math.t-matrix
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.matrix :as mx]
-            [provisdom.math.core :as m]
-            [provisdom.math.random2 :as random]
-            [provisdom.math.tensor :as tensor]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.matrix :as mx]
+    [provisdom.math.core :as m]
+    [provisdom.math.random2 :as random]
+    [provisdom.math.tensor :as tensor]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
+;;;TYPES
 (deftest matrix?-test
   (is-not (mx/matrix? [0]))
   (is-not (mx/matrix? [[] []]))
@@ -119,20 +123,6 @@
   (is-not (mx/symmetric-matrix? [[1.0 0.5] [2.0 4.0]]))
   (is (mx/symmetric-matrix? [[1.0 0.5] [0.5 2.0]])))
 
-(deftest type-tests
-  (matrix?-test)
-  (matrix-num?-test)
-  (matrix-finite?-test)
-  (empty-matrix?-test)
-  (row-matrix?-test)
-  (column-matrix?-test)
-  (zero-matrix?-test)
-  (square-matrix?-test)
-  (diagonal-matrix?-test)
-  (upper-triangular-matrix?-test)
-  (lower-triangular-matrix?-test)
-  (symmetric-matrix?-test))
-
 ;(defspec-test test-matrix? `mx/matrix?) ;slowish
 ;(defspec-test test-matrix-num? `mx/matrix-num?) ;slowish
 ;(defspec-test test-matrix-finite? `mx/matrix-finite?) ;slowish
@@ -146,6 +136,7 @@
 ;(defspec-test test-lower-triangular-matrix? `mx/lower-triangular-matrix?) ;slowish
 ;(defspec-test test-symmetric-matrix? `mx/symmetric-matrix?) ;slowish
 
+;;;CONSTRUCTORS
 (deftest to-matrix-test
   (is= [[]] (mx/to-matrix [] 1))
   (is= [[]] (mx/to-matrix [1.0 0.5] 0))
@@ -279,25 +270,6 @@
   (is= [[4.0 5.0] [5.0 7.0]] (mx/sparse->symmetric-matrix [] [[4.0 5.0] [5.0 7.0]]))
   (is= [[3.0 2.0] [2.0 4.0]] (mx/sparse->symmetric-matrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [2.0 4.0]])))
 
-(deftest constructor-tests
-  (to-matrix-test)
-  (constant-matrix-test)
-  (compute-matrix-test)
-  (identity-matrix-test)
-  (row-matrix-test)
-  (column-matrix-test)
-  (diagonal-matrix-test)
-  (deserialize-upper-triangular-matrix-test)
-  (deserialize-lower-triangular-matrix-test)
-  (deserialize-symmetric-matrix-test)
-  (toeplitz-matrix-test)
-  (outer-product-test)
-  (rnd-matrix!-test)
-  (rnd-reflection-matrix!-test)
-  (rnd-spectral-matrix!-test)
-  (sparse->matrix-test)
-  (sparse->symmetric-matrix-test))
-
 (comment "about 30 seconds total for these"
          (defspec-test test-to-matrix `mx/to-matrix)
          (defspec-test test-constant-matrix `mx/constant-matrix)
@@ -318,6 +290,7 @@
          (defspec-test test-sparse->symmetric-matrix `mx/sparse->symmetric-matrix)
          )
 
+;;;INFO
 (deftest rows-test
   (is= 0 (mx/rows [[]]))
   (is= 1 (mx/rows [[1.0]]))
@@ -506,28 +479,6 @@
   (is= [[0 0 1.0] [0 1 0.5] [1 1 4.0]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]]))
   (is= [[0 0 1.0] [0 1 0.5]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]] #(< % 2.1))))
 
-(deftest info-tests
-  (rows-test)
-  (columns-test)
-  (get-row-test)
-  (get-column-test)
-  (diagonal-test)
-  (serialize-symmetric-or-triangular-matrix-test)
-  (size-of-symmetric-or-triangular-matrix-test)
-  (size-of-symmetric-or-triangular-matrix-without-diagonal-test)
-  (ecount-of-symmetric-or-triangular-matrix-test)
-  (ecount-of-symmetric-or-triangular-matrix-without-diagonal-test)
-  (trace-test)
-  (get-slices-as-matrix-test)
-  (filter-by-row-test)
-  (filter-by-column-test)
-  (filter-symmetric-matrix-test)
-  (matrix-partition-test)
-  (some-kv-test)
-  (ereduce-kv-test)
-  (matrix->sparse-test)
-  (symmetric-matrix->sparse-test))
-
 (defspec-test test-rows `mx/rows)
 (defspec-test test-columns `mx/columns)
 (defspec-test test-get-row `mx/get-row)
@@ -547,6 +498,7 @@
 (defspec-test test-matrix->sparse 'mx/matrix->sparse)
 (defspec-test test-symmetric-matrix->sparse 'mx/symmetric-matrix->sparse)
 
+;;;MANIPULATION
 (deftest transpose-test
   (is= [[]] (mx/transpose [[]]))
   (is= [[1]] (mx/transpose [[1]]))
@@ -670,22 +622,6 @@
   (is= [[3]] (mx/symmetric-matrix-by-averaging [[3]]))
   (is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]])))
 
-(deftest manipulation-tests
-  (transpose-test)
-  (assoc-row-test)
-  (assoc-column-test)
-  (assoc-diagonal-test)
-  (insert-row-test)
-  (insert-column-test)
-  (update-row-test)
-  (update-column-test)
-  (update-diagonal-test)
-  (concat-rows-test)
-  (concat-columns-test)
-  (merge-matrices-test)
-  (replace-submatrix-test)
-  (symmetric-matrix-by-averaging-test))
-
 (defspec-test test-transpose 'mx/transpose)
 (defspec-test test-assoc-row 'mx/assoc-row)
 (defspec-test test-assoc-column 'mx/assoc-column)
@@ -701,6 +637,7 @@
 (defspec-test test-replace-submatrix 'mx/replace-submatrix)
 (defspec-test test-symmetric-matrix-by-averaging `mx/symmetric-matrix-by-averaging)
 
+;;;MATH
 (deftest mx*-test
   (is= [[]] (mx/mx* [[]]))
   (is= [[1]] (mx/mx* [[1]]))
@@ -724,13 +661,10 @@
   (is= [[1.0 0.5 0.5 0.25]] (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]]))
   (is= [[1.0 0.5 0.5 0.25 0.5 0.25 0.25 0.125]] (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]])))
 
-(deftest math-tests
-  (mx*-test)
-  (kronecker-product-test))
-
 (defspec-test test-mx* 'mx/mx*)
 (defspec-test test-kronecker-product 'mx/kronecker-product)
 
+;;;ROUNDING
 (deftest round-roughly-zero-rows-test
   (is= [[]] (mx/round-roughly-zero-rows [[]] 1e-6))
   (is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-rows [[1.0 0.5] [2.0 4.0]] 1e-6))
@@ -740,10 +674,6 @@
   (is= [[]] (mx/round-roughly-zero-columns [[]] 1e-6))
   (is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-columns [[1.0 0.5] [2.0 4.0]] 1e-6))
   (is= [[1.0E-13 0.0] [1.0 0.0]] (mx/round-roughly-zero-columns [[1e-13 1e-8] [1.0 1e-17]] 1e-6)))
-
-(deftest rounding-tests
-  (round-roughly-zero-rows-test)
-  (round-roughly-zero-columns-test))
 
 (defspec-test test-round-roughly-zero-rows 'mx/round-roughly-zero-rows)
 (defspec-test test-round-roughly-zero-columns 'mx/round-roughly-zero-columns)

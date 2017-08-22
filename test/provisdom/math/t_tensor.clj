@@ -1,14 +1,18 @@
 (ns provisdom.math.t-tensor
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.core :as m]
-            [provisdom.math.tensor :as tensor]
-            [provisdom.math.random2 :as random]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.core :as m]
+    [provisdom.math.tensor :as tensor]
+    [provisdom.math.random2 :as random]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
 
 (ost/instrument)
 
+(set! *warn-on-reflection* true)
+
+;;TYPES
 (deftest tensor?-test
   (is (tensor/tensor? []))
   (is-not (tensor/tensor? "A"))
@@ -21,11 +25,9 @@
   (is-not (tensor/tensor? '()))
   (is (tensor/tensor? 1)))
 
-(deftest type-tests
-  (tensor?-test))
-
 ;(defspec-test test-tensor? `tensor/tensor?)                 ;slowish
 
+;;CONSTRUCTORS
 (deftest to-tensor-test
   (is= [] (tensor/to-tensor '()))
   (is= nil (tensor/to-tensor "A"))
@@ -72,19 +74,13 @@
           [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
          (tensor/rnd-tensor! [2 3]))))
 
-(deftest constructor-tests
-  (to-tensor-test)
-  (compute-tensor-test)
-  (repeat-tensor-test)
-  (fill-tensor-test)
-  (rnd-tensor!-test))
-
 ;(defspec-test test-to-tensor `tensor/to-tensor) ;slowish
 ;(defspec-test test-compute-tensor `tensor/compute-tensor) ;slowish
 ;(defspec-test test-repeat-tensor `tensor/repeat-tensor) ;slow
 (defspec-test test-fill-tensor `tensor/fill-tensor)
 (defspec-test test-rnd-tensor! `tensor/rnd-tensor!)
 
+;;INFO
 (deftest ecount-test
   (is= 1 (tensor/ecount 0))
   (is= 0 (tensor/ecount [[]]))
@@ -108,12 +104,6 @@
 
 (deftest filter-kv-test
   (is= [[3 4]] (tensor/filter-kv (fn [index tensor] (odd? index)) [[1 2] [3 4]])))
-
-(deftest info-tests
-  (ecount-test)
-  (dimensionality-test)
-  (shape-test)
-  (every-kv?-test))
 
 (defspec-test test-ecount `tensor/ecount)
 (defspec-test test-dimensionality `tensor/dimensionality)
@@ -143,6 +133,7 @@
 ;(defspec-test test-emap `tensor/emap) ;fspec issues
 ;(defspec-test test-emap-kv `tensor/emap-kv) ;fspec issues
 
+;;MATH
 (deftest ===-test
   (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]]))
   (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]])))
@@ -224,21 +215,6 @@
 (deftest inner-product-test
   (is= [48.0 54.0 60.0] (tensor/inner-product [1 2 3] [[4 5 6] [7 8 9] [10 11 12]])))
 
-(deftest math-tests
-  (===-test)
-  (add-test)
-  (subtract-test)
-  (multiply-test)
-  (divide-test)
-  (average-test)
-  (norm1-test)
-  (norm-test)
-  (norm-p-test)
-  (normalize1-test)
-  (normalize-test)
-  (normalize-p-test)
-  (inner-product-test))
-
 ;(defspec-test test-=== `tensor/===) ;slow
 ;(defspec-test test-add `tensor/add) ;slow
 ;(defspec-test test-subtract `tensor/subtract) ;slow
@@ -253,6 +229,7 @@
 ;(defspec-test test-normalize-p `tensor/normalize-p) ;slow
 ;(defspec-test test-inner-product `tensor/inner-product) ;slow
 
+;;ROUNDING
 (deftest roughly?-test
   (is (tensor/roughly? 1 1.01 0.05))
   (is-not (tensor/roughly? 1 1.01 0.005))
@@ -265,10 +242,6 @@
   (is= [1 1.01] (tensor/roughly-distinct [1 1.01 1.001] 0.005))
   (is= [[1 1] [1.01 1.01]] (tensor/roughly-distinct [[1 1] [1.01 1.01] [1.001 1.001]] 0.005))
   (is= [[1 1.01]] (tensor/roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]] 0.05)))
-
-(deftest rounding-tests
-  (roughly?-test)
-  (roughly-distinct-test))
 
 (defspec-test test-roughly? `tensor/roughly?)
 (defspec-test test-roughly-distinct `tensor/roughly-distinct)

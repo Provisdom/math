@@ -80,10 +80,10 @@
 (s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::rel-accu
   (s/with-gen ::m/finite+
-              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
+              #(s/gen (s/double-in :infinite? false :NaN? false :min m/dbl-close :max 1.0))))
 (s/def ::abs-accu
   (s/with-gen ::m/finite+
-              #(s/gen (s/double-in :infinite? false :NaN? false :min m/*dbl-close* :max 1.0))))
+              #(s/gen (s/double-in :infinite? false :NaN? false :min m/dbl-close :max 1.0))))
 
 ;;; name all internal ns differently somehow
 ;;;TODO:
@@ -423,7 +423,7 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
     The work per iteration is very slightly less if shift = 0."
     ([symmetric-apache-m v] (matrix-solve-iterative symmetric-apache-m v {}))
     ([symmetric-apache-m v {::keys [iterative-solver apache-matrix-guess max-iter rel-accu check?]
-                            :or    {iterative-solver ::symm-lq, max-iter 10000, rel-accu m/*dbl-close*, check? true}}]
+                            :or    {iterative-solver ::symm-lq, max-iter 10000, rel-accu m/dbl-close, check? true}}]
      (let [^RealMatrix a symmetric-apache-m
            ^RealVector b (apache-vector v)
            ^RealVector g apache-matrix-guess

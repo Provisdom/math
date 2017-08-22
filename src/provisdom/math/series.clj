@@ -242,8 +242,8 @@
     :or   {kahan?         false,
            converged-pred (fn [sum i val]
                             (and (>= i 10)
-                                 (or (<= (m/abs val) m/*quad-close*)
-                                     (<= (m/abs (/ val sum)) m/*quad-close*))))
+                                 (or (<= (m/abs val) m/quad-close)
+                                     (<= (m/abs (/ val sum)) m/quad-close))))
            err-pred       (fn [sum i val] (> i 10000)),
            err-ret-fn     (fn [sum i val]
                             (throw (ex-info

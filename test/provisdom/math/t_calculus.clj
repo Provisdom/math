@@ -1,10 +1,14 @@
 (ns provisdom.math.t-calculus
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.core :as m]
-            [provisdom.math.calculus :as ca]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.core :as m]
+    [provisdom.math.calculus :as ca]
+    [provisdom.math.bounds :as bo]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
+
+(set! *warn-on-reflection* true)
 
 (ost/instrument)
 
@@ -90,26 +94,30 @@
 (comment
   (s/fdef univariate-integration-test
           :args (s/and
-                  (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?) :lower-bound double? :upper-bound double?)
+                  (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?)
+                         :lower-bound double?
+                         :upper-bound double?)
                   #(> (:upper-bound %) (:lower-bound %)))
           :ret double?))
 
-;;;TESTS
+;;;INTEGRATION TESTS
 (comment "returned functions don't seem to equate..."
          (deftest change-of-variable-test
            (is= {::ca/multiplicative-fn (fn [number] (let [s (m/sq number)] (m/div (inc s) (m/sq (m/one- s)))))
                  ::ca/converter-fn      (fn [number] (m/div number (m/one- (m/sq number))))
-                 ::ca/interval          [-1.0 1.0]}
+                 ::bo/interval          [-1.0 1.0]}
                 (ca/change-of-variable [m/inf- m/inf+]))
-           (is= {::ca/multiplicative-fn (constantly 1.0), ::ca/converter-fn identity, ::ca/interval [3.0 4.0]}
+           (is= {::ca/multiplicative-fn (constantly 1.0)
+                 ::ca/converter-fn      identity
+                 ::bo/interval          [3.0 4.0]}
                 (ca/change-of-variable [3.0 4.0]))
            (is= {::ca/multiplicative-fn (fn [number] (m/div (m/sq number)))
                  ::ca/converter-fn      (fn [number] (+ 3.0 (m/div (m/one- number) number)))
-                 ::ca/interval          [0.0 1.0]}
+                 ::bo/interval          [0.0 1.0]}
                 (ca/change-of-variable [3.0 m/inf+]))
            (is= {::ca/multiplicative-fn (fn [number] (m/div (m/sq number)))
                  ::ca/converter-fn      (fn [number] (- 4.0 (m/div (m/one- number) number)))
-                 ::ca/interval          [0.0 1.0]}
+                 ::bo/interval          [0.0 1.0]}
                 (ca/change-of-variable [m/inf- 4.0]))))
 
 (deftest integration-test
@@ -119,95 +127,162 @@
   (is= -1.000000000000004 (ca/integration m/cos [m/PI (* 5.5 m/PI)]))
   (is= 3.3306690738754696E-16 (ca/integration m/cos [m/PI (* 6 m/PI)]))
   ;;change of variable
+  ;!!!!this is getting a NaN value, presumably something to do with error = NaN
+  ;!!!!need to stop the integration upon a NaN I think -- same as below -- why NaN?
   (is (instance? Exception (ca/integration m/cos [m/PI m/inf+])))
-  (is= 0.2 (ca/integration #(m/pow % -2.0) [5.0 m/inf+]))
-  (is= 0.2 (ca/integration #(m/pow % -2.0) [m/inf- -5.0]))
+  (is= 0.19999999999999996 (ca/integration #(m/pow % -2.0) [5.0 m/inf+]))
+  (is= 0.19999999999999996 (ca/integration #(m/pow % -2.0) [m/inf- -5.0]))
   (is= 1.7724538509055163 (ca/integration #(m/exp (- (m/sq %))) [m/inf- m/inf+]))
   ;;vector
-  (is= [15.999999999999998 69.33333333333333] (ca/integration #(vector % (m/sq %)) [2.0 6.0]))
+  (is= [15.999999999999998 69.33333333333333]
+       (ca/integration
+         #(vector % (m/sq %))
+         [2.0 6.0]))
   ;   with change of var
   (is= [1.7724538509055159 1.8128049541109545]
-       (ca/integration #(vector (m/exp (- (m/sq %))) (m/exp (- (m/pow % 4)))) [m/inf- m/inf+]))
+       (ca/integration
+         #(vector (m/exp (- (m/sq %))) (m/exp (- (m/pow % 4))))
+         [m/inf- m/inf+]))
   ;;matrix
   (is= [[16.0 69.33333333333333] [24.0 19.999999999999996]]
-       (ca/integration #(vector [% (m/sq %)] [(+ 2.0 %) 5.0]) [2.0 6.0]))
+       (ca/integration
+         #(vector [% (m/sq %)] [(+ 2.0 %) 5.0])
+         [2.0 6.0]))
   ;   with change of var
+  ;!!!!this is getting a NaN value, presumably something to do with error = NaN (maybe value = [[NaN NaN][Inf+ Inf+]])
+  ;!!!!need to stop the integration upon a NaN I think -- same as above -- also... why NaN?
   (is= [[6.4E-5 0.0026666666666666666] [0.2 0.2]]
-       (ca/integration #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)]) [m/inf- m/inf+])))
+       (ca/integration
+         #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)])
+         [m/inf- m/inf+])))
 
 (deftest rectangular-integration-test
-  (is= 1.0 (ca/rectangular-integration (fn [[a b]] (+ a b)) [[0.0 1.0] [0.0 1.0]]))
-  (is= 1.5 (ca/rectangular-integration (fn [[a b c]] (+ a b c)) [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
-  (is= 2.0 (ca/rectangular-integration (fn [[a b c d]] (+ a b c d)) [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
+  (is= 1.0
+       (ca/rectangular-integration
+         (fn [[a b]] (+ (double a) b))
+         [[0.0 1.0] [0.0 1.0]]))
+  (is= 1.5
+       (ca/rectangular-integration
+         (fn [[a b c]] (+ (double a) b c))
+         [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
+  (is= 2.0
+       (ca/rectangular-integration
+         (fn [[a b c d]] (+ (double a) b c d))
+         [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   (is= 3.1415926535897944                                   ;3.141592653589793 PI
-       (ca/rectangular-integration (fn [[a b]] (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))) [[m/inf- m/inf+] [m/inf- m/inf+]]))
-  (is= 0.1 (ca/rectangular-integration (fn [[a b]] (* (/ (m/sq a)) (/ (m/sq b)))) [[5.0 m/inf+] [1.0 2.0]]))
-  (is= 0.016666666666666666 (ca/rectangular-integration (fn [[a b]] (* (/ (m/sq a)) (/ (m/sq b)))) [[3.0 4.0] [m/inf- -5.0]]))
-  ;;multivariate vector
-  (is= [32 64] (ca/rectangular-integration (fn [[a b]] [a (* a b)]) [[2.0 6.0] [1.0 3.0]]))
+       (ca/rectangular-integration
+         (fn [[a b]] (m/exp (- (+ (m/sq a) (m/sq b)))))
+         [[m/inf- m/inf+] [m/inf- m/inf+]]))
+  (is= 0.1
+       (ca/rectangular-integration
+         (fn [[a b]] (m/pow (* (double a) b) -2.0))
+         [[5.0 m/inf+] [1.0 2.0]]))
+  (is= 0.016666666666666666
+       (ca/rectangular-integration
+         (fn [[a b]] (m/pow (* (double a) b) -2.0))
+         [[3.0 4.0] [m/inf- -5.0]]))
+  ;;vector
+  (is= [32 64]
+       (ca/rectangular-integration
+         (fn [[a b]] [a (* (double a) b)])
+         [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [0.24705031697079533 0.24705031697079533]
-       (ca/rectangular-integration (fn [[a b]] [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))
-                                                (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))])
-                                   [[m/inf- m/inf+] [1.0 3.0]]))
-  ;;multivariate matrix
+       (ca/rectangular-integration
+         (fn [[a b]] [(m/exp (- (+ (m/sq a) (m/sq b))))
+                      (m/exp (- (+ (m/sq a) (m/sq b))))])
+         [[m/inf- m/inf+] [1.0 3.0]]))
+  ;;matrix
   (is= [[32.0 64.0] [32.0 40.00000000000001]]
-       (ca/rectangular-integration (fn [[a b]] [[a (* a b)] [(+ 2.0 b) 5.0]]) [[2.0 6.0] [1.0 3.0]]))
+       (ca/rectangular-integration
+         (fn [[a b]] [[a (* (double a) b)] [(+ 2.0 b) 5.0]])
+         [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
-       (ca/rectangular-integration (fn [[a b]] [[(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]
-                                                [(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]])
-                                   [[2.0 6.0] [m/inf- -5.0]])))
+       (ca/rectangular-integration
+         (fn [[a b]] [[(m/pow (* (double a) b) -2.0) (m/pow (* (double a) b) -2.0)]
+                      [(m/pow (* (double a) b) -2.0) (m/pow (* (double a) b) -2.0)]])
+         [[2.0 6.0] [m/inf- -5.0]])))
 
-(deftest non-rectangular-2D-integration-test                ;!!!remove *m/min-iter* and max-iter etc. from math.core
-  (is= 1.0 (ca/non-rectangular-2D-integration #(+ %1 %2) [0.0 1.0] (constantly [0.0 1.0])))
-  (is= 192.0 (ca/non-rectangular-2D-integration #(+ %1 %2) [2.0 6.0] (fn [e] [(+ e 2.0) (+ e 6.0)])))
+(deftest non-rectangular-2D-integration-test
+  (is= 1.0
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           (+ outer (double inner)))
+         [0.0 1.0]
+         (fn [outer] [0.0 1.0])))
+  (is= 192.0
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           (+ outer inner))
+         [2.0 6.0]
+         (fn [outer] [(+ outer 2.0) (+ outer 6.0)])))
   (is= 3.141592653589793                                    ;3.141592653589793 PI
-       (ca/non-rectangular-2D-integration #(* (m/exp (- (m/sq %1))) (m/exp (- (m/sq %2))))
-                                          [m/inf- m/inf+]
-                                          (constantly [m/inf- m/inf+])))
-  (is= [32.0 64.0] (ca/non-rectangular-2D-integration #(vector % (* %1 %2)) [2.0 6.0] (constantly [1.0 3.0])))
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner)))))
+         [m/inf- m/inf+]
+         (fn [outer] [m/inf- m/inf+])))
+  (is= [32.0 64.0]
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           (vector outer (* outer (double inner))))
+         [2.0 6.0]
+         (fn [outer] [1.0 3.0])))
   (is= [0.24705031697079535 0.24705031697079535]
-       (ca/non-rectangular-2D-integration (fn [a b] [(* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))
-                                                     (* (m/exp (- (m/sq a))) (m/exp (- (m/sq b))))])
-                                          [m/inf- m/inf+]
-                                          (constantly [1.0 3.0])))
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           [(* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))
+            (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))])
+         [m/inf- m/inf+]
+         (fn [outer] [1.0 3.0])))
   (is= [[32.0 64.0] [32.0 40.00000000000001]]
-       (ca/non-rectangular-2D-integration #(vector [% (* % %2)] [(+ 2.0 %2) 5.0]) [2.0 6.0] (constantly [1.0 3.0])))
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           (vector [outer (* outer (double inner))] [(+ 2.0 inner) 5.0]))
+         [2.0 6.0]
+         (fn [outer] [1.0 3.0])))
   (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
-       (ca/non-rectangular-2D-integration (fn [a b]
-                                            [[(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]
-                                             [(m/pow (* a b) -2.0) (m/pow (* a b) -2.0)]])
-                                          [2.0 6.0]
-                                          (constantly [m/inf- -5.0]))))
+       (ca/non-rectangular-2D-integration
+         (fn [outer inner]
+           [[(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]
+            [(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]])
+         [2.0 6.0]
+         (fn [outer] [m/inf- -5.0]))))
 
 (deftest non-rectangular-3D-integration-test
-  (is= 1.5 (ca/non-rectangular-3D-integration #(+ % %2 %3) [0.0 1.0] (fn [_] [0.0 1.0]) (fn [_ _] [0.0 1.0]))))
+  (is= 1.5
+       (ca/non-rectangular-3D-integration
+         (fn [outer middle inner]
+           (+ (double outer) middle inner))
+         [0.0 1.0]
+         (fn [outer] [0.0 1.0])
+         (fn [outer middle] [0.0 1.0]))))
 
 (deftest non-rectangular-4D-integration-test
   (is= 2.0000000000000004
-       (ca/non-rectangular-4D-integration #(+ % %2 %3 %4)
-                                          [0.0 1.0]
-                                          (fn [_] [0.0 1.0])
-                                          (fn [_ _] [0.0 1.0])
-                                          (fn [_ _ _] [0.0 1.0]))))
+       (ca/non-rectangular-4D-integration
+         (fn [outer outer-middle inner-middle inner]
+           (+ (double outer) outer-middle inner-middle inner))
+         [0.0 1.0]
+         (fn [outer] [0.0 1.0])
+         (fn [outer outer-middle] [0.0 1.0])
+         (fn [outer outer-middle inner-middle] [0.0 1.0]))))
 
-(deftest integration-tests
-  ;(change-of-variable-test)
-  (integration-test)
-  (rectangular-integration-test)
-  (non-rectangular-2D-integration-test)
-  (non-rectangular-3D-integration-test)
-  (non-rectangular-4D-integration-test))
-
-;(defspec-test test-change-of-variable `ca/change-of-variable) ;not tested
+(defspec-test test-change-of-variable `ca/change-of-variable)
 ;(defspec-test test-integration `ca/integration) ;way too slow
 ;(defspec-test test-rectangular-integration `ca/rectangular-integration) ;way too slow
 ;(defspec-test test-integration-non-rectangular-2D `ca/integration-non-rectangular-2D) ;way too slow
 ;(defspec-test test-integration-non-rectangular-3D `ca/integration-non-rectangular-3D) ;way too slow
 ;(defspec-test test-integration-non-rectangular-4D `ca/integration-non-rectangular-4D) ;way too slow
 
-(def der-f #(+ (m/exp %) (* 7 (m/pow % 6)) (* 3 (m/pow % 3)) %))
+;;;DERIVATIVE TESTS
+(defn der-f
+  [number]
+  (+ (m/exp number)
+     (* 7 (m/pow number 6))
+     (* 3 (m/pow number 3))
+     number))
 
 (deftest derivative-fn-test
   (is= 28922.598150033144 ((ca/derivative-fn der-f {::ca/derivative 0}) 4.0))
@@ -257,40 +332,46 @@
   (is= 1.999999999999999E110 ((ca/derivative-fn m/sq {::ca/h 1e108}) 1e110)) ;fixed by setting h
   )
 
-(defn gf [[a b]] (if-not b m/nan (+ (* a b) (* 2 (m/sq a)) (m/pow b 3))))
+(defn gf
+  [[a b]]
+  (if-not b
+    m/nan
+    (+ (* (double a) b) (* 2 (m/sq a)) (m/cube b))))
 
 (deftest gradient-fn-test
-  (is= [16.000000002236447 51.0000000062405] ((ca/gradient-fn gf) [3.0 4.0]))) ;[16,51]
+  (is= [16.000000002236447 51.0000000062405]
+       ((ca/gradient-fn gf) [3.0 4.0])))                    ;[16,51]
 
 (deftest jacobian-fn-test
   (is= [[16.00000000745058 51.00000000745058] [96.00000001490116 72.0]] ;[[16,51][96,72]]
        ((ca/jacobian-fn
-          (fn [[a b]] (if-not b [m/nan m/nan] [(+ (* a b) (* 2 (m/sq a)) (m/cube b)) (+ (* (m/sq a) (m/sq b)))])))
+          (fn [[a b]]
+            (if-not b
+              [m/nan m/nan]
+              [(+ (* (double a) b) (* 2 (m/sq a)) (m/cube b))
+               (+ (* (m/sq a) (m/sq b)))])))
          [3.0 4.0])))
 
 (deftest hessian-fn-test
   ;;type 'joint-central' is the default
-  (is= [[4.00000004674439 1.0000000205678816] [1.0000000205678816 23.999999854140697]] ;[[4,1][1,24]]
+  (is= [[4.00000004674439 1.00000003833145] [1.00000003833145 23.999999854140697]] ;[[4,1][1,24]]
        ((ca/hessian-fn gf) [3.0 4.0]))
-  (is= [[4.0000021094456315 1.0000089528039098] [1.0000089528039098 24.000001423060894]] ;[[4,1][1,24]]
+  (is= [[4.0000021094456315 0.9999977191910148] [0.9999977191910148 24.000001423060894]] ;[[4,1][1,24]]
        ((ca/hessian-fn gf {::ca/type :central}) [3.0 4.0]))
-  (is= [[3.9999908739700913 1.0000201892107725] [1.0000201892107725 24.000035122036934]] ;[[4,1][1,24]]
+  (is= [[3.9999908739700913 0.9999977201223373] [0.9999977201223373 24.000035122036934]] ;[[4,1][1,24]]
        ((ca/hessian-fn gf {::ca/type :forward}) [3.0 4.0]))
-  (is= [[4.000035812146962 1.0000201873481274] [1.0000201873481274 23.999990183860064]] ;[[4,1][1,24]]
+  (is= [[4.000035812146962 0.9999977182596922] [0.9999977182596922 23.999990183860064]] ;[[4,1][1,24]]
        ((ca/hessian-fn gf {::ca/type :backward}) [3.0 4.0])))
-
-(deftest derivative-tests
-  (derivative-fn-test)
-  (gradient-fn-test)
-  (jacobian-fn-test)
-  (hessian-fn-test))
 
 (defspec-test test-derivative-fn `ca/derivative-fn)
 (defspec-test test-gradient-fn `ca/gradient-fn)
 ;(defspec-test test-jacobian-fn `ca/jacobian-fn) ;slow-ish
 ;(defspec-test test-hessian-fn `ca/hessian-fn) ;slow
 
-(defn fxy [x y] (+ (* x x) (* 2 y y) (* x y)))
+;;;PARTIAL DERIVATIVE TESTS
+(defn fxy
+  [x y]
+  (+ (* (double x) x) (* 2.0 y y) (* (double x) y)))
 
 (deftest partial-derivative-x-of-fxy-test
   (is= 8.999999998593466 ((ca/partial-derivative-x-of-fxy fxy) 3.0 3.0))) ;9
@@ -306,13 +387,6 @@
 
 (deftest second-partial-derivative-xy-of-fxy-test
   (is= 1.0000000294496658 ((ca/second-partial-derivative-xy-of-fxy fxy) 3.0 3.0))) ;1
-
-(deftest partial-derivative-tests
-  (partial-derivative-x-of-fxy-test)
-  (partial-derivative-y-of-fxy-test)
-  (second-partial-derivative-xx-of-fxy-test)
-  (second-partial-derivative-yy-of-fxy-test)
-  (second-partial-derivative-xy-of-fxy-test))
 
 ;(defspec-test test-partial-derivative-x-of-fxy `ca/partial-derivative-x-of-fxy) ;slow-ish
 ;(defspec-test test-partial-derivative-y-of-fxy `ca/partial-derivative-y-of-fxy) ;slow-ish
