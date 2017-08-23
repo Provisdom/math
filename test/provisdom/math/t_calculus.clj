@@ -139,69 +139,67 @@
          #(vector % (m/sq %))
          [2.0 6.0]))
   ;   with change of var
-  (is= [1.7724538509055159 1.8128049541109545]
+  (is= [1.7724538509055163 1.8128049541109543]
        (ca/integration
          #(vector (m/exp (- (m/sq %))) (m/exp (- (m/pow % 4))))
          [m/inf- m/inf+]))
   ;;matrix
-  (is= [[16.0 69.33333333333333] [24.0 19.999999999999996]]
+  (is= [[15.999999999999998 69.33333333333334] [24.0 19.999999999999996]]
        (ca/integration
          #(vector [% (m/sq %)] [(+ 2.0 %) 5.0])
          [2.0 6.0]))
   ;   with change of var
-  ;!!!!this is getting a NaN value, presumably something to do with error = NaN (maybe value = [[NaN NaN][Inf+ Inf+]])
-  ;!!!!need to stop the integration upon a NaN I think -- same as above -- also... why NaN?
-  (is= [[6.4E-5 0.0026666666666666666] [0.2 0.2]]
+  (is= [[6.400000000000001E-5 0.002666666666666666] [0.2 0.2]]
        (ca/integration
          #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)])
-         [m/inf- m/inf+])))
+         [5.0 m/inf+])))
 
 (deftest rectangular-integration-test
   (is= 1.0
        (ca/rectangular-integration
-         (fn [[a b]] (+ (double a) b))
+         (fn [[a b]] (+ (double (or a 0.0)) (or b 0.0)))
          [[0.0 1.0] [0.0 1.0]]))
   (is= 1.5
        (ca/rectangular-integration
-         (fn [[a b c]] (+ (double a) b c))
+         (fn [[a b c]] (+ (double (or a 0.0)) (or b 0.0) (or c 0.0)))
          [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   (is= 2.0
        (ca/rectangular-integration
-         (fn [[a b c d]] (+ (double a) b c d))
+         (fn [[a b c d]] (+ (double (or a 0.0)) (or b 0.0) (or c 0.0) (or d 0.0)))
          [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   (is= 3.1415926535897944                                   ;3.141592653589793 PI
        (ca/rectangular-integration
-         (fn [[a b]] (m/exp (- (+ (m/sq a) (m/sq b)))))
+         (fn [[a b]] (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0))))))
          [[m/inf- m/inf+] [m/inf- m/inf+]]))
   (is= 0.1
        (ca/rectangular-integration
-         (fn [[a b]] (m/pow (* (double a) b) -2.0))
+         (fn [[a b]] (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
          [[5.0 m/inf+] [1.0 2.0]]))
-  (is= 0.016666666666666666
+  (is= 0.01666666666666667
        (ca/rectangular-integration
-         (fn [[a b]] (m/pow (* (double a) b) -2.0))
+         (fn [[a b]] (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
          [[3.0 4.0] [m/inf- -5.0]]))
   ;;vector
-  (is= [32 64]
+  (is= [32.0 64.0]
        (ca/rectangular-integration
-         (fn [[a b]] [a (* (double a) b)])
+         (fn [[a b]] [(or a 0.0) (* (double (or a 0.0)) (or b 0.0))])
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [0.24705031697079533 0.24705031697079533]
        (ca/rectangular-integration
-         (fn [[a b]] [(m/exp (- (+ (m/sq a) (m/sq b))))
-                      (m/exp (- (+ (m/sq a) (m/sq b))))])
+         (fn [[a b]] [(m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))
+                      (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))])
          [[m/inf- m/inf+] [1.0 3.0]]))
   ;;matrix
   (is= [[32.0 64.0] [32.0 40.00000000000001]]
        (ca/rectangular-integration
-         (fn [[a b]] [[a (* (double a) b)] [(+ 2.0 b) 5.0]])
+         (fn [[a b]] [[(or a 0.0) (* (double (or a 0.0)) (or b 0.0))] [(+ 2.0 (or b 0.0)) 5.0]])
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
        (ca/rectangular-integration
-         (fn [[a b]] [[(m/pow (* (double a) b) -2.0) (m/pow (* (double a) b) -2.0)]
-                      [(m/pow (* (double a) b) -2.0) (m/pow (* (double a) b) -2.0)]])
+         (fn [[a b]] [[(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]
+                      [(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]])
          [[2.0 6.0] [m/inf- -5.0]])))
 
 (deftest non-rectangular-2D-integration-test
@@ -229,14 +227,14 @@
            (vector outer (* outer (double inner))))
          [2.0 6.0]
          (fn [outer] [1.0 3.0])))
-  (is= [0.24705031697079535 0.24705031697079535]
+  (is= [0.24705031697079533 0.24705031697079533]
        (ca/non-rectangular-2D-integration
          (fn [outer inner]
            [(* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))
             (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))])
          [m/inf- m/inf+]
          (fn [outer] [1.0 3.0])))
-  (is= [[32.0 64.0] [32.0 40.00000000000001]]
+  (is= [[32.0 64.0] [32.0 39.99999999999999]]
        (ca/non-rectangular-2D-integration
          (fn [outer inner]
            (vector [outer (* outer (double inner))] [(+ 2.0 inner) 5.0]))
@@ -250,7 +248,7 @@
          [2.0 6.0]
          (fn [outer] [m/inf- -5.0]))))
 
-(deftest non-rectangular-3D-integration-test
+#_(deftest non-rectangular-3D-integration-test              ;too slow
   (is= 1.5
        (ca/non-rectangular-3D-integration
          (fn [outer middle inner]
@@ -259,7 +257,7 @@
          (fn [outer] [0.0 1.0])
          (fn [outer middle] [0.0 1.0]))))
 
-(deftest non-rectangular-4D-integration-test
+#_(deftest non-rectangular-4D-integration-test              ;too slow
   (is= 2.0000000000000004
        (ca/non-rectangular-4D-integration
          (fn [outer outer-middle inner-middle inner]
@@ -270,9 +268,9 @@
          (fn [outer outer-middle inner-middle] [0.0 1.0]))))
 
 (defspec-test test-change-of-variable `ca/change-of-variable)
-;(defspec-test test-integration `ca/integration) ;way too slow
-;(defspec-test test-rectangular-integration `ca/rectangular-integration) ;way too slow
-;(defspec-test test-integration-non-rectangular-2D `ca/integration-non-rectangular-2D) ;way too slow
+;(defspec-test test-integration `ca/integration) ;slow
+;(defspec-test test-rectangular-integration `ca/rectangular-integration) slow
+;(defspec-test test-integration-non-rectangular-2D `ca/integration-non-rectangular-2D) ;too slow
 ;(defspec-test test-integration-non-rectangular-3D `ca/integration-non-rectangular-3D) ;way too slow
 ;(defspec-test test-integration-non-rectangular-4D `ca/integration-non-rectangular-4D) ;way too slow
 

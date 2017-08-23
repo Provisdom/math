@@ -8,7 +8,10 @@
     [orchestra.spec.test :as ost]))
 
 (def done-wods-8-21+
-  ["185-lb 20-rep Grace in 10-min; did it!"                        ;8/21
+  [#{"185-lb 20-rep Grace in 10-min; did it!"}             ;8/21
+   #{"4xE2MOM Handstand holds for 45->60-sec"
+     "5xE3MOM Handstand holds for 45->60-sec"
+     "Work on chin-ups; did it!"}                          ;8/22
    ])
 
 (def wods-up-to-8-21
@@ -20,9 +23,9 @@
     :days-since-attempt 50}
    {:name               "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes",
     :days-since-attempt 50}
-   {:name               "5xE3MOM Handstand holds for 40->60-sec"
+   {:name               "5xE3MOM Handstand holds for 45->60-sec"
     :days-since-attempt 50}
-   {:name               "4xE2MOM Handstand holds for 40->60-sec"
+   {:name               "4xE2MOM Handstand holds for 45->60-sec"
     :days-since-attempt 50}
    {:name               "more kipping HSPUs, build to 21 in a row"
     :days-since-attempt 50}
@@ -109,8 +112,6 @@
    {:name               "Try to get to median score of games wods"
     :days-since-attempt 50}
    {:name               "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, PP, cal row, rest) 1 minute each"
-    :days-since-attempt 50}
-   {:name               "Work on chin-ups"
     :days-since-attempt 50}])
 
 (defn update-wods
@@ -120,9 +121,9 @@
         wods (mapv (fn [m]
                      (update m :days-since-attempt (partial + total-days)))
                    wods)
-        new-wods (reduce-kv (fn [outer-wods days name]
+        new-wods (reduce-kv (fn [outer-wods days names-set]
                               (reduce-kv (fn [inner-wods wod-index wod]
-                                           (if (= (:name wod) name)
+                                           (if (contains? names-set (:name wod))
                                              (assoc-in inner-wods [wod-index :days-since-attempt] (- total-days days))
                                              inner-wods))
                                          outer-wods
