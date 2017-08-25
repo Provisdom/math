@@ -189,7 +189,7 @@
                false)))))
 
 (s/fdef positive-semidefinite-clatrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::positive-semidefinite-clatrix-finite
@@ -211,7 +211,7 @@
                false)))))
 
 (s/fdef positive-definite-clatrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::positive-definite-clatrix-finite
@@ -229,7 +229,7 @@
        (positive-definite-clatrix-finite? x accu)))
 
 (s/fdef correlation-clatrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::correlation-clatrix-finite

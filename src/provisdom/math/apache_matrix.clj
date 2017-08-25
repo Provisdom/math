@@ -169,7 +169,7 @@
                     (catch Exception _ nil)))))
 
 (s/fdef positive-semidefinite-apache-matrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::positive-semidefinite-apache-matrix-finite
@@ -191,7 +191,7 @@
                     (catch Exception _ nil)))))
 
 (s/fdef positive-definite-apache-matrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::positive-definite-apache-matrix-finite
@@ -210,7 +210,7 @@
        (every? m/one? (diagonal x))))
 
 (s/fdef correlation-apache-matrix-finite?
-        :args (s/cat :x any? :accu ::tensor/accu)
+        :args (s/cat :x any? :accu ::m/accu)
         :ret boolean?)
 
 (s/def ::correlation-apache-matrix-finite
@@ -903,7 +903,7 @@
    This is used for example to generate correlated random n-dimensions vectors in a p-dimension subspace (p < n).
    In other words, it allows generating random vectors from a covariance matrix that is only positive semidefinite,
    and not positive definite.
-   'accu' - Diagonal elements threshold under which columns are considered to be dependent on
+   `accu` - Diagonal elements threshold under which columns are considered to be dependent on
       previous ones and are discarded.
       Returns a map containing:
          ::rectangular-root -- rectangular root Apache Commons matrix
@@ -923,7 +923,7 @@
 
 (s/fdef rectangular-cholesky-decomposition
         :args (s/cat :positive-semidefinite-apache-m ::positive-semidefinite-apache-matrix-finite
-                     :accu ::tensor/accu)
+                     :accu ::m/accu)
         :ret (s/or :exception ::exception
                    :res (s/keys :req [::rectangular-root ::rank])))
 
@@ -1055,17 +1055,17 @@
 (s/def ::RRQR-permutation ::apache-matrix)
 (defn rank-revealing-qr-decomposition
   "Calculates the rank-revealing QR-decomposition of a matrix, with column pivoting.
-  The rank-revealing QR-decomposition of `apache-m` consists of three matrices `Q`, `R`, and `permutation`
+  The rank-revealing QR-decomposition of `apache-m` consists of three matrices `Q`, `R`, and `RRQR-permutation`
   such that `apache-m` × `permutation` = `Q` × `R`.
-  `Q` is orthogonal (`QT` × `Q` = I), and `R` is upper triangular.
-  If `apache-m` is m × n, `Q` is m × m, `R` is m × n, and `permutation` is n × n.
+  `Q` is orthogonal (QT × `Q` = I), and `R` is upper triangular.
+  If `apache-m` is m × n, `Q` is m × m, `R` is m × n, and `RRQR-permutation` is n × n.
   QR decomposition with column pivoting produces a rank-revealing QR decomposition.
   This class computes the decomposition using Householder reflectors.
   Returns a map containing:
-      ::Q -- orthogonal factors
-      ::R -- the upper triangular factors
-      ::RRQR-permutation -- Permutation Matrix
-      ::rank -- the rank."
+      `::Q` -- orthogonal factors
+      `::R` -- the upper triangular factors
+      `::RRQR-permutation` -- Permutation Matrix
+      `::rank` -- the rank."
   [apache-m accu]
   (if (zero? (rows apache-m))
     {::Q                apache-m
@@ -1079,5 +1079,5 @@
        ::rank             (.getRank d accu)})))
 
 (s/fdef rank-revealing-qr-decomposition
-        :args (s/cat :apache-m ::apache-matrix :accu ::tensor/accu)
+        :args (s/cat :apache-m ::apache-matrix :accu ::m/accu)
         :ret (s/keys :req [::Q ::R ::RRQR-permutation ::rank]))

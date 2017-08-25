@@ -1314,7 +1314,9 @@
 
 (s/fdef mx*
         :args (s/or :one (s/cat :m ::matrix)
-                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/* ::matrix)))
+                    :two+ (s/cat :m1 ::matrix
+                                 :m2 ::matrix
+                                 :ms (s/* ::matrix)))
         :ret (s/nilable ::matrix))
 
 (defn kronecker-product
@@ -1333,7 +1335,9 @@
 
 (s/fdef kronecker-product
         :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
-                    :two+ (s/cat :m1 ::matrix :m2 ::matrix :ms (s/* ::matrix)))
+                    :two+ (s/cat :m1 ::matrix
+                                 :m2 ::matrix
+                                 :ms (s/* ::matrix)))
         :ret ::matrix)
 
 ;;;MATRIX ROUNDING

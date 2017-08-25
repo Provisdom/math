@@ -90,7 +90,7 @@
   (is= 0 (tensor/ecount [[]]))
   (is= 4 (tensor/ecount [[1.0 0.5] [2.0 4.0]])))
 
-(deftest dimensionality-test
+(deftest rank-test
   (is= 2 (tensor/rank [[2] [1]]))
   (is= 1 (tensor/rank []))
   (is= 0 (tensor/rank 1)))
@@ -109,10 +109,13 @@
                         [[1.0 0.5] [2.0 3.0]])))
 
 (deftest filter-kv-test
-  (is= [[3 4]] (tensor/filter-kv (fn [index tensor] (odd? index)) [[1 2] [3 4]])))
+  (is= [[3 4]]
+       (tensor/filter-kv (fn [index tensor]
+                           (odd? index))
+                         [[1 2] [3 4]])))
 
 (defspec-test test-ecount `tensor/ecount)
-(defspec-test test-dimensionality `tensor/rank)
+(defspec-test test-rank `tensor/rank)
 (defspec-test test-shape `tensor/shape)
 ;(defspec-test test-every-kv? `tensor/every-kv?)             ;fspec issues
 ;(defspec-test test-filter-kv `tensor/filter-kv)             ;slow
