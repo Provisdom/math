@@ -6,58 +6,8 @@
             [provisdom.math [core :as m]]
             [provisdom.utility-belt.core :as co]))
 
-(facts "factorials"
-       (fact "factorial"
-             (factorial -0.1) => (throws)
-             (factorial 0) => 1
-             (factorial 0.1) => 0.9513507698668734
-             (factorial 0.5) => 0.8862269254527579
-             (factorial 0.9) => 0.9617658319073873
-             (factorial 1) => 1
-             (factorial 1.5) => 1.329340388179137
-             (factorial 2.0) => 2
-             (factorial 21) => 5.109094217170944E19
-             (factorial 22) => 1.1240007277776077E21
-             (factorial 23) => 2.585201673888498E22)
-       (fact "log factorial"
-             (log-factorial -0.1) => (throws)
-             (log-factorial 0) => 0.0
-             (log-factorial 0.1) => -0.049872441259839764
-             (log-factorial 0.5) => -0.1207822376352452
-             (log-factorial 0.9) => -0.03898427592308336
-             (log-factorial 1) => 0.0
-             (log-factorial 1.5) => 0.2846828704729192
-             (log-factorial 2.0) => 0.6931471805599453
-             (log-factorial 23) => 51.60667556776437)
-       (fact "subfactorial"
-             (subfactorial -0.1) => (throws)
-             (subfactorial 0) => 1
-             (subfactorial 0.1) => 0
-             (subfactorial 0.5) => 0
-             (subfactorial 0.9) => 0
-             (subfactorial 1) => 0
-             (subfactorial 1.5) => 0
-             (subfactorial 2.0) => 1
-             (subfactorial 20) => 895014631192902121
-             (subfactorial 21) => 18795307255050944540N
-             (subfactorial 22) => 4.134967596111208E20
-             (subfactorial 23) => 9.510425471055779E21))
-
 (facts "choose"
-       (fact "choose k from n"
-             (choose-k-from-n -1 1) => 0
-             (choose-k-from-n 0 1) => 1
-             (choose-k-from-n 0 0) => 1
-             (choose-k-from-n 0 -1) => 1
-             (choose-k-from-n 1 0.9) => 0.9
-             (choose-k-from-n 1 0) => 0
-             (choose-k-from-n 1 1) => 1
-             (choose-k-from-n 1.4 1) => (throws)
-             (choose-k-from-n 1 1.4) => 1.4
-             (choose-k-from-n 2 1.4) => 0.2799999999999999
-             (choose-k-from-n 1.0 4) => 4
-             (choose-k-from-n 2 5) => 10
-             (choose-k-from-n 12 545.0) => 1.2689769520640436E24)
+
        (fact "log choose k from n"
              (log-choose-k-from-n -1 1) => (throws)
              (log-choose-k-from-n 0 1) => 0.0

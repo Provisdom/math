@@ -7,7 +7,7 @@
             [provisdom.utility-belt.async :as as]
             [provisdom.math.core :as m]
             [provisdom.math.bounds :as bo]
-            [provisdom.math.combinatorics :as mc]
+            [provisdom.math.combinatorics :as combo]
             [provisdom.math.tensor :as tensor]
             [provisdom.math.vector :as vector]
             [provisdom.math.matrix :as mx]))
@@ -365,7 +365,7 @@
         half-diffs (mapv (fn [[a b]] (* 0.5 (- b a))) finite-intervals)
         unnormalized-nodes (for [v (range (count finite-intervals))]
                              (mapv (partial unnormalize (nth half-sums v) (nth half-diffs v)) nodes))
-        mapped-nodes (mapv v->tensor (tensor/to-tensor (apply mc/cartesian-product unnormalized-nodes)))
+        mapped-nodes (mapv v->tensor (tensor/to-tensor (apply combo/cartesian-product unnormalized-nodes)))
         multiplier (apply * half-diffs)
         dimensions (count finite-intervals)
         f-low-precision #(tensor/inner-product low-precision-weights (vec (take-nth 2 (rest %))))
@@ -516,7 +516,7 @@
                                                 (assoc tot d [an bn]))
                                               intervals-n
                                               %)
-                                     (apply mc/cartesian-product dims-with-new-intervals))
+                                     (apply combo/cartesian-product dims-with-new-intervals))
                   new-fns (map (fn [intervals-local]
                                  #(get-rectangular-errors-and-high-precision-value
                                     v->tensor intervals-local weights-and-nodes))

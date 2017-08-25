@@ -52,7 +52,7 @@
 
 ;;;ERROR FUNCTIONS
 (defn erf
-  "Returns the error function: 2 / (sqrt PI) * integral[0, x] (e^-(t*t) * dt)."
+  "Returns the error function: 2 / (sqrt PI) × integral[0, `x`] (e ^ - (t ^ 2) × dt)."
   [x]
   (cond (zero? x) 0.0
         (m/inf+? x) 1.0
@@ -64,7 +64,7 @@
         :ret ::m/nan-or-corr)
 
 (defn erf-diff
-  "Returns the difference between erf(x1) and erf(x2)."
+  "Returns the difference between [[erf]](`x1`) and [[erf]](`x2`)."
   [x1 x2]
   (if (> x1 x2)
     (- (erf-diff x2 x1))
@@ -148,8 +148,8 @@
 
 ;GAMMA FUNCTIONS
 (defn gamma
-  "Returns the gamma function: integral[0, inf] (t^(a-1) * e^-t * dt).
-  Although gamma is defined for pos a, this function allows for all non-long-able-non+ a."
+  "Returns the gamma function: integral[0, inf] (t ^ (`a`- 1) × e ^ -t × dt).
+  Although gamma is defined for positive `a`, this function allows for all non-long-able-non+ `a`."
   [a]
   (cond (m/nan? a) m/nan
         (> a 709.7) m/inf+
@@ -162,7 +162,7 @@
 
 (defn lower-gamma
   "Returns the lower incomplete gamma function: 
-   integral[0, x] (t^(a-1) * e^-t * dt)."
+   integral[0, `x`] (t ^ (`a` - 1) × e ^ -t × dt)."
   [a x]
   (cond (m/nan? a) m/nan
         (zero? x) 0.0
@@ -176,7 +176,7 @@
 
 (defn upper-gamma
   "Returns the upper incomplete gamma function: 
-   integral[x, inf] (t^(a-1) * e^-t * dt)."
+   integral[`x`, inf] (t ^ (`a` - 1) × e ^ -t × dt)."
   [a x]
   (cond (m/nan? a) m/nan
         (zero? x) (gamma a)
@@ -189,7 +189,7 @@
         :ret ::m/nan-or-non-)
 
 (defn upper-gamma-derivative-x
-  "Returns the upper gamma derivative x."
+  "Returns the upper gamma derivative `x`."
   [a x]
   (let [v (* (m/exp (- x)) (m/pow x (dec a)) (/ (gamma a)))]
     (if (m/inf-? v) m/inf+ v)))
@@ -199,8 +199,8 @@
         :ret ::m/nan-or-non-)
 
 (defn regularized-gamma-p
-  "Returns the regularized gamma function P(a, x) = 1 - Q(a, x).
-  Equal to lower incomplete gamma function (a, x) divided by gamma function (a)."
+  "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`).
+  Equal to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
   [a x]
   (cond (m/nan? a) m/nan
         (zero? x) 0.0
@@ -212,8 +212,8 @@
         :ret ::m/nan-or-prob)
 
 (defn regularized-gamma-q
-  "Returns the regularized gamma function Q(a, x) = 1 - P(a, x).
-  Equal to upper incomplete gamma function (a, x) divided by gamma function (a)."
+  "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`).
+  Equal to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
   [a x]
   (cond (or (m/nan? a) (m/nan? x)) m/nan
         (zero? x) 1.0
@@ -225,7 +225,7 @@
         :ret ::m/nan-or-prob)
 
 (defn log-gamma
-  "Returns the log gamma of a."
+  "Returns the log gamma of `a`."
   [a]
   (if (m/inf+? a)
     m/inf+
@@ -236,8 +236,8 @@
         :ret ::m/nan-or-non-inf-)
 
 (defn log-gamma-derivative
-  "Returns the derivative of the log gamma of a.
-  Spec'd for a > -3e8 because it becomes slow.
+  "Returns the derivative of the log gamma of `a`.
+  Spec'd for `a` > -3e8 because it becomes slow.
   Taken from Apache.  Could use better algorithm."
   [a]
   (let [a (double a)]
@@ -260,19 +260,11 @@
         :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
         :ret ::m/number)
 
-(defn digamma
-  "Equivalent to log-gamma-derivative.
-  Spec'd for a > -3e8 because it becomes slow."
-  [a]
-  (log-gamma-derivative a))
-
-(s/fdef digamma
-        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
-        :ret (s/nilable ::m/number))
+(def digamma log-gamma-derivative)
 
 (defn gamma-derivative
-  "Returns the derivative of the gamma of a.
-  Spec'd for a > -3e8 because it becomes slow."
+  "Returns the derivative of the gamma of `a`.
+  Spec'd for `a` > -3e8 because it becomes slow."
   [a]
   (* (gamma a) (log-gamma-derivative a)))
 
@@ -281,8 +273,8 @@
         :ret ::m/number)
 
 (defn trigamma
-  "Returns the trigamma (2nd derivative of log-gamma) of a.
-  Approximated for a < -1e7 because it becomes slow.
+  "Returns the trigamma (2nd derivative of log-gamma) of `a`.
+  Approximated for `a` < -1e7 because it becomes slow.
   Taken from Apache.  Could use better algorithm."
   [a]
   (let [a (double a)]
@@ -306,7 +298,7 @@
         :ret (s/nilable ::m/number))
 
 (defn multivariate-gamma
-  "Returns the multivariate gamma of a with dimension p."
+  "Returns the multivariate gamma of `a` with dimension `p`."
   [a p]
   (if (m/nan? a)
     m/nan
@@ -325,7 +317,7 @@
         :ret ::m/nan-or-non-inf-)
 
 (defn multivariate-log-gamma
-  "Returns the multivariate log gamma of a with dimension p."
+  "Returns the multivariate log gamma of `a` with dimension `p`."
   [a p]
   (if (m/nan? a)
     m/nan
@@ -343,8 +335,9 @@
 
 ;;;BETA FUNCTIONS
 (defn beta
-  "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt.
-  Although beta is defined for pos x and y, you can use this function at your own risk for all non-zero x and y."
+  "Returns the beta of `x` and `y`: integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt.
+  Although beta is defined for positive `x` and `y`, you can use this function at your own
+  risk for all non-zero `x` and `y`."
   [x y]
   (Gamma/beta x y))
 
@@ -353,7 +346,7 @@
         :ret ::m/nan-or-finite)
 
 (defn log-beta
-  "Returns the log-beta of x and y."
+  "Returns the log-beta of `x` and `y`."
   [x y]
   (ap/log-beta x y))
 
@@ -367,7 +360,7 @@
   [c x y]
   (if (zero? c)
     0.0
-    (Gamma/incompleteBeta x y c)))                          ;NOTE: cern misnamed this
+    (Gamma/incompleteBeta x y c)))                          ;NOTE that cern misnamed this
 
 (s/fdef regularized-beta
         :args (s/cat :c ::m/prob
@@ -376,11 +369,11 @@
         :ret ::m/number)
 
 (defn incomplete-beta
-  "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt."
+  "Returns the lower beta: integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt."
   [c x y]
   (if (zero? c)
     0.0
-    (* (Gamma/incompleteBeta x y c) (Gamma/beta x y))))     ;NOTE cern misnamed this
+    (* (Gamma/incompleteBeta x y c) (Gamma/beta x y))))     ;NOTE that cern misnamed this
 
 (s/fdef incomplete-beta
         :args (s/cat :c ::m/prob

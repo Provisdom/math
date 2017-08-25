@@ -8,10 +8,12 @@
     [orchestra.spec.test :as ost]))
 
 (def done-wods-8-21+
-  [#{"185-lb 20-rep Grace in 10-min; did it!"}             ;8/21
+  [#{"185-lb 20-rep Grace in 10-min; did it!"}              ;8/21
    #{"4xE2MOM Handstand holds for 45->60-sec"
      "5xE3MOM Handstand holds for 45->60-sec"
-     "Work on chin-ups; did it!"}                          ;8/22
+     "Work on chin-ups; did it!"}                           ;8/22
+   #{"10-min EMOM odd: 3->5 bar muscle-up, even: rest"
+     "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
    ])
 
 (def wods-up-to-8-21
@@ -77,9 +79,13 @@
     :days-since-attempt 50}
    {:name               "Full Snatch E2MOM: 6x6@135, 5x4@155, 4x3@185 w/ 1-min breaks"
     :days-since-attempt 50}
-   {:name               "Fran in 6:20->6 minutes (also should work on Fran+1-mile run 16:43->14 minutes)"
+   {:name               "Fran in 6:20->6 minutes"
+    :days-since-attempt 50}
+   {:name               "Fran+1-mile run 16:43->14 minutes"
     :days-since-attempt 50}
    {:name               "E2MOM5 thruster@95x15+TTBx15"
+    :days-since-attempt 50}
+   {:name               "E4MOM5 thruster@85->95x21+run200M"
     :days-since-attempt 50}
    {:name               "Kalsu 105->135"
     :days-since-attempt 50}
@@ -92,6 +98,8 @@
    {:name               "Work on high-bar back squat with Oly Shoes"
     :days-since-attempt 50}
    {:name               "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
+    :days-since-attempt 50}
+   {:name               "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
     :days-since-attempt 50}
    {:name               "Couch Stretch -> Bulgarian split squats"
     :days-since-attempt 50}
