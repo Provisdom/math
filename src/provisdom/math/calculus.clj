@@ -36,9 +36,21 @@
 ;;;http://www.advanpix.com/2011/11/07/gauss-kronrod-quadrature-nodes-weights/
 ;;;or more generally, can be calculated here: 
 ;;;http://keisan.casio.com/exec/system/1289382036
-(s/def ::num-intervals (s/with-gen (s/coll-of ::bo/num-interval) #(gen/vector (s/gen ::bo/num-interval) 2 2)))
-(s/def ::finite-intervals (s/with-gen (s/coll-of ::bo/finite-interval) #(gen/vector (s/gen ::bo/finite-interval) 2 2)))
-(s/def ::iter-interval (s/with-gen ::bo/int+-interval #(bo/long-interval-gen 1 20)))
+(s/def ::num-intervals
+  (s/with-gen
+    (s/coll-of ::bo/num-interval)
+    #(gen/vector (s/gen ::bo/num-interval) 2 2)))
+
+(s/def ::finite-intervals
+  (s/with-gen
+    (s/coll-of ::bo/finite-interval)
+    #(gen/vector (s/gen ::bo/finite-interval) 2 2)))
+
+(s/def ::iter-interval
+  (s/with-gen
+    ::bo/int+-interval
+    #(bo/long-interval-gen 1 20)))
+
 (s/def ::number->tensor
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number) :ret ::tensor/tensor)
@@ -68,7 +80,9 @@
                       (list (fn [n1 n2 n3]
                               [(- (m/abs (+ (double n1) n2)))
                                (+ 0.5 (m/abs n3))]))))))
+
 (s/def ::points #{15, 21, 31, 41, 51, 61})
+
 (s/def ::weights-and-nodes
   (s/with-gen (s/and (s/tuple ::vector/vector ::vector/vector ::vector/vector)
                      (fn [[a b c]]
@@ -848,9 +862,10 @@
 ;;;NUMERICAL DERIVATIVES
 ;;; references: Wiki http://en.wikipedia.org/wiki/Finite_difference 
 ;;;    and http://en.wikipedia.org/wiki/Finite_difference_coefficients
-(s/def ::v->number (s/with-gen
-                     (s/fspec :args (s/cat :v ::vector/vector) :ret ::m/number)
-                     #(gen/one-of (map gen/return (list vector/kahan-sum tensor/average tensor/norm1)))))
+(s/def ::v->number
+  (s/with-gen
+    (s/fspec :args (s/cat :v ::vector/vector) :ret ::m/number)
+    #(gen/one-of (map gen/return (list vector/kahan-sum tensor/average tensor/norm1)))))
 
 (s/def ::v->v
   (s/with-gen
@@ -858,17 +873,25 @@
     #(gen/one-of (map gen/return (list (fn [v] (mapv m/sq v))
                                        (fn [v] (mapv m/cube v)))))))
 
-(s/def ::v->m (s/fspec :args (s/cat :v ::vector/vector) :ret ::mx/matrix))
+(s/def ::v->m
+  (s/fspec :args (s/cat :v ::vector/vector)
+           :ret ::mx/matrix))
 
-(s/def ::v->symmetric-m (s/fspec :args (s/cat :v ::vector/vector)
-                                 :ret ::mx/symmetric-matrix))
+(s/def ::v->symmetric-m
+  (s/fspec :args (s/cat :v ::vector/vector)
+           :ret ::mx/symmetric-matrix))
 
-(s/def ::fxy (s/with-gen
-               (s/fspec :args (s/cat :x ::m/number :y ::m/number)
-                        :ret ::m/number)
-               #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
+(s/def ::fxy
+  (s/with-gen
+    (s/fspec :args (s/cat :x ::m/number :y ::m/number)
+             :ret ::m/number)
+    #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
 
-(s/def ::h (s/with-gen ::m/finite+ #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
+(s/def ::h
+  (s/with-gen
+    ::m/finite+
+    #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
+
 (s/def ::dx ::h)
 (s/def ::multiplier ::h)
 (s/def ::type #{:central :forward :backward})

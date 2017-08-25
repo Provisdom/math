@@ -284,7 +284,8 @@
              tot 0.0]
         (let [inv2-x (m/pow x -2.0)]
           (cond (or (m/nan? x) (m/inf? x)) x
-                (< x -1e7) (let [r (m/round (+ x 9e6) :toward)] (recur (- x r) (+ tot 1.1263618e-5))) ;approx
+                (< x -1e7) (let [r (m/round (+ x 9e6) :toward-zero)]
+                             (recur (- x r) (+ tot 1.1263618e-5))) ;approx
                 :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
                             (>= x 49.0) (let [inv-x (/ x)]
                                           (+ tot

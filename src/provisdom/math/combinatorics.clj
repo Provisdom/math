@@ -211,7 +211,7 @@
       (step c 1))))
 
 (defn combinations
-  "All the unique ways of taking n different elements from `items`,
+  "All the unique ways of taking `n` different elements from `items`,
   or all the unique ways of taking different elements from `items`."
   ([items]
    (mapcat (fn [n] (combinations items n))

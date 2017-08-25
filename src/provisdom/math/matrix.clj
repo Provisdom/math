@@ -143,7 +143,10 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
-(s/def ::row-matrix (s/with-gen row-matrix? #(gen/fmap row-matrix (s/gen ::vector/vector))))
+(s/def ::row-matrix
+  (s/with-gen
+    row-matrix?
+    #(gen/fmap row-matrix (s/gen ::vector/vector))))
 
 (defn column-matrix?
   "Returns true if a column-matrix (i.e., matrix with exactly one column)"
