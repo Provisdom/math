@@ -60,7 +60,7 @@
   (s/fspec :args (s/cat :row ::row)
            :ret ::m/number))
 
-(s/def ::pred-number
+(s/def ::number->bool
   (s/fspec :args (s/cat :number ::m/number)
            :ret boolean?))
 
@@ -189,6 +189,7 @@
     square-matrix?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i] (gen/vector (gen/vector (s/gen ::m/number) i) (max 1 i))))))
+
 (s/def ::square-matrix-finite
   (s/with-gen
     (s/and (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :min-count 1 :kind vector? :into [])
@@ -285,7 +286,7 @@
      [[]]
      (let [coll (if (number? tensor) [tensor] (vec (flatten tensor)))
            c (count coll)
-           [columns r] (m/quot-and-mod c rows)
+           [columns r] (m/quot-and-mod' c rows)
            [columns r] (if (zero? r)
                          [columns 0]
                          [(inc columns) (- rows r)])
@@ -315,21 +316,21 @@
         :ret ::matrix)
 
 (defn compute-matrix
-  "`f` takes a `row` and `column` and returns a number."
-  [rows columns f]
+  "Function `row+column->number` takes a `row` and `column` and returns a number."
+  [rows columns row+column->number]
   (if (zero? (* rows columns))
     [[]]
     (mapv (fn [row]
             (mapv (fn [column]
-                    (f row column))
+                    (row+column->number row column))
                   (range columns)))
           (range rows))))
 
 (s/fdef compute-matrix
         :args (s/cat :rows ::rows
                      :columns ::columns
-                     :f (s/fspec :args (s/cat :row ::row :column ::column)
-                                 :ret ::m/number))
+                     :row+column->number (s/fspec :args (s/cat :row ::row :column ::column)
+                                                  :ret ::m/number))
         :ret ::matrix)
 
 (defn identity-matrix
@@ -833,38 +834,40 @@
 
 (defn filter-by-row
   "Returns a matrix.
-  'pred' takes a row-vector."
-  [pred m]
-  (let [new-m (filter pred m)]
+  Function 'row-v->bool' takes a row-vector."
+  [row-v->bool m]
+  (let [new-m (filter row-v->bool m)]
     (if (empty? new-m)
       [[]]
       (vec new-m))))
 
 (s/fdef filter-by-row
-        :args (s/cat :pred (s/fspec :args (s/cat :row-vector ::vector/vector) :ret boolean?)
+        :args (s/cat :row-v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
+                                           :ret boolean?)
                      :m ::matrix)
         :ret ::matrix)
 
 (defn filter-by-column
   "Returns a matrix.
-  'pred' takes a column-vector."
-  [pred m]
-  (let [new-m (filter pred (transpose m))]
+  Function 'column-v->bool' takes a column-vector."
+  [column-v->bool m]
+  (let [new-m (filter column-v->bool (transpose m))]
     (if (empty? new-m)
       [[]]
       (transpose (vec new-m)))))
 
 (s/fdef filter-by-column
-        :args (s/cat :pred (s/fspec :args (s/cat :column-vector ::vector/vector) :ret boolean?)
+        :args (s/cat :column-v->bool (s/fspec :args (s/cat :column-vector ::vector/vector)
+                                              :ret boolean?)
                      :m ::matrix)
         :ret ::matrix)
 
 (defn filter-symmetric-matrix
   "Takes and returns a symmetric matrix.
-  'pred' takes a row-vector or column-vector."
-  [pred symmetric-m]
+  'v->bool' takes a row-vector or column-vector."
+  [v->bool symmetric-m]
   (let [keep-set (reduce-kv (fn [tot index row-vector]
-                              (if (pred row-vector)
+                              (if (v->bool row-vector)
                                 (conj tot index)
                                 tot))
                             #{}
@@ -872,7 +875,8 @@
     (get-slices-as-matrix symmetric-m {::row-indices keep-set, ::column-indices keep-set})))
 
 (s/fdef filter-symmetric-matrix
-        :args (s/cat :pred (s/fspec :args (s/cat :row-vector ::vector/vector) :ret boolean?)
+        :args (s/cat :v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
+                                       :ret boolean?)
                      :symmetric-m ::symmetric-matrix)
         :ret ::symmetric-matrix)
 
@@ -918,7 +922,9 @@
              (recur (inc row))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :r ::row :c ::column :e ::m/number)
+        :args (s/cat :pred (s/fspec :args (s/cat :r ::row
+                                                 :c ::column
+                                                 :e ::m/number)
                                     :ret boolean?)
                      :m ::matrix
                      :opts (s/? (s/keys :opt [::by-row?])))
@@ -1004,27 +1010,27 @@
 
 (defn matrix->sparse
   "Returns a sparse-matrix (i.e., a vector of tuples of [row column number]).
-  `pred` takes a number."
+  Function `number->bool` takes a number."
   ([m] (matrix->sparse m (complement zero?)))
-  ([m pred]
+  ([m number->bool]
    (ereduce-kv (fn [result row column number]
-                 (if (pred number)
+                 (if (number->bool number)
                    (conj result [row column number])
                    result))
                []
                m)))
 
 (s/fdef matrix->sparse
-        :args (s/cat :m ::matrix :pred (s/? ::pred-number))
+        :args (s/cat :m ::matrix :number->bool (s/? ::number->bool))
         :ret ::sparse-matrix)
 
 (defn symmetric-matrix->sparse
   "Returns a sparse-matrix (i.e., a vector of tuples of [row column number]).
-  `pred` takes a number and will be evaluated only for upper-right triangle of symmetric matrix `symmetric-m`."
+  `number->bool` takes a number and will be evaluated only for upper-right triangle of `symmetric-m`."
   ([symmetric-m] (symmetric-matrix->sparse symmetric-m (complement zero?)))
-  ([symmetric-m pred]
+  ([symmetric-m number->bool]
    (ereduce-kv (fn [result row column number]
-                 (if (and (<= row column) (pred number))
+                 (if (and (<= row column) (number->bool number))
                    (conj result [row column number])
                    result))
                []
@@ -1032,7 +1038,7 @@
 
 (s/fdef symmetric-matrix->sparse
         :args (s/cat :symmetric-m ::symmetric-matrix
-                     :pred (s/? ::pred-number))
+                     :number->bool (s/? ::number->bool))
         :ret ::sparse-matrix)
 
 ;;;MATRIX MANIPULATION
@@ -1145,50 +1151,50 @@
         :ret ::matrix)
 
 (defn update-row
-  "Updates a `row` of matrix `m`, using function `f`, which is a function of the `column` and `number`
-  and returns a number."
-  [m row f]
+  "Updates a `row` of matrix `m`, using function `column+number->number`,
+  which is a function of the `column` and `number` and returns a number."
+  [m row column+number->number]
   (when (< row (rows m))
     (update m row (fn [row-vector]
-                    (vec (map-indexed f row-vector))))))
+                    (vec (map-indexed column+number->number row-vector))))))
 
 (s/fdef update-row
         :args (s/and (s/cat :m ::matrix
                             :row ::row
-                            :f (s/fspec :args (s/cat :column ::column :number ::m/number)
-                                        :ret ::m/number)))
+                            :column+number->number (s/fspec :args (s/cat :column ::column :number ::m/number)
+                                                            :ret ::m/number)))
         :ret (s/nilable ::matrix))
 
 (defn update-column
-  "Updates a `column` of matrix `m`, using `f`,
+  "Updates a `column` of matrix `m`, using function `row+number->number`,
   which is a function the `row` and `number` and returns a number."
-  [m column f]
+  [m column row+number->number]
   (when (< column (columns m))
     (vec (map-indexed (fn [row row-vector]
-                        (update row-vector column #(f row %)))
+                        (update row-vector column #(row+number->number row %)))
                       m))))
 
 (s/fdef update-column
         :args (s/and (s/cat :m ::matrix
                             :column ::column
-                            :f (s/fspec :args (s/cat :row ::row :number ::m/number)
-                                        :ret ::m/number)))
+                            :row+number->number (s/fspec :args (s/cat :row ::row :number ::m/number)
+                                                         :ret ::m/number)))
         :ret (s/nilable ::matrix))
 
 (defn update-diagonal
-  "Updates the diagonal of matrix `m`, using `f`,
+  "Updates the diagonal of matrix `m`, using function `row+number->number`,
   which is a function of the `row` and `number` and returns a number."
-  [m f]
+  [m row+number->number]
   (vec (map-indexed (fn [row row-vector]
                       (if (< row (columns m))
-                        (update row-vector row #(f row %))
+                        (update row-vector row #(row+number->number row %))
                         row-vector))
                     m)))
 
 (s/fdef update-diagonal
         :args (s/and (s/cat :m ::matrix
-                            :f (s/fspec :args (s/cat :row ::row :number ::m/number)
-                                        :ret ::m/number)))
+                            :row+number->number (s/fspec :args (s/cat :row ::row :number ::m/number)
+                                                         :ret ::m/number)))
         :ret ::matrix)
 
 (defn concat-rows
@@ -1345,7 +1351,7 @@
         m))
 
 (s/fdef round-roughly-zero-rows
-        :args (s/cat :m ::matrix :accu ::tensor/accu)
+        :args (s/cat :m ::matrix :accu ::m/accu)
         :ret ::matrix)
 
 (defn round-roughly-zero-columns
@@ -1354,5 +1360,5 @@
   (transpose (round-roughly-zero-rows (transpose m) accu)))
 
 (s/fdef round-roughly-zero-columns
-        :args (s/cat :m ::matrix :accu ::tensor/accu)
+        :args (s/cat :m ::matrix :accu ::m/accu)
         :ret ::matrix)

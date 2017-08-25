@@ -415,7 +415,9 @@
 
 (s/fdef ===
         :args (s/or :one (s/cat :number ::number)
-                    :two+ (s/cat :number1 ::number :number2 ::number :more (s/* ::number)))
+                    :two+ (s/cat :number1 ::number
+                                 :number2 ::number
+                                 :more (s/* ::number)))
         :ret boolean?)
 
 (defn next-up
@@ -455,7 +457,9 @@
 
 (s/fdef div
         :args (s/or :one (s/cat :number2 ::number)
-                    :two-three (s/cat :number1 ::number :number2 ::number :zero-div-by-zero (s/? ::number)))
+                    :two-three (s/cat :number1 ::number
+                                      :number2 ::number
+                                      :zero-div-by-zero (s/? ::number)))
         :ret ::number)
 
 (defn one-
@@ -716,7 +720,7 @@
         :ret ::number)
 
 ;;;ROUNDING
-(s/def ::accu ::non-)
+(s/def ::accu (s/with-gen ::non- #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
 
 (defn round
   "Returns a long if possible.
@@ -735,37 +739,52 @@
                    :away-from-zero (* (sgn number) (Math/round ^double (abs number)))
                    :toward-zero (* -1 (sgn number) (Math/round ^double (- (abs number))))
                    (Math/round number))]
-      (long number))))
+      number)))
 
 (s/fdef round
         :args (s/cat :number ::number :t #{:up :down :away-from-zero :toward-zero})
         :ret ::number)
 
 (defn floor
-  "Rounds down.
-  Returns a long if possible, otherwise a double."
+  "Rounds down. Returns a double."
   [number]
-  (maybe-long-range
-    (Math/floor number)))
+  (Math/floor number))
 
 (s/fdef floor
         :args (s/cat :number ::number)
         :ret ::number)
 
-(defn ceil
-  "Rounds up.
-  Returns a long if possible, otherwise a double."
+(defn floor'
+  "Rounds down. Returns a long if possible, otherwise a double."
   [number]
-  (maybe-long-range
-    (Math/ceil number)))
+  (maybe-long-range (floor number)))
+
+(s/fdef floor'
+        :args (s/cat :number ::number)
+        :ret ::number)
+
+(defn ceil
+  "Rounds up. Returns a double."
+  [number]
+  (Math/ceil number))
 
 (s/fdef ceil
         :args (s/cat :number ::number)
         :ret ::number)
 
+(defn ceil'
+  "Rounds up. Returns a long if possible, otherwise a double."
+  [number]
+  (maybe-long-range
+    (ceil number)))
+
+(s/fdef ceil'
+        :args (s/cat :number ::number)
+        :ret ::number)
+
 (defn roughly-floor
   "Rounds down unless within `accu`, then rounds up.
-  Returns a long if possible, otherwise a double."
+  Returns a double."
   [number accu]
   (floor (+ number (double accu))))
 
@@ -773,13 +792,32 @@
         :args (s/cat :number ::number :accu ::accu)
         :ret ::number)
 
+(defn roughly-floor'
+  "Rounds down unless within `accu`, then rounds up.
+  Returns a long if possible, otherwise a double."
+  [number accu]
+  (floor' (+ number (double accu))))
+
+(s/fdef roughly-floor'
+        :args (s/cat :number ::number :accu ::accu)
+        :ret ::number)
+
 (defn roughly-ceil
-  "Rounds up unless within `accu`, then rounds down. Returns a long
-  if possible, otherwise a double."
+  "Rounds up unless within `accu`, then rounds down. Returns a double."
   [number accu]
   (ceil (- number (double accu))))
 
 (s/fdef roughly-ceil
+        :args (s/cat :number ::number :accu ::accu)
+        :ret ::number)
+
+(defn roughly-ceil'
+  "Rounds up unless within `accu`, then rounds down. Returns a long
+  if possible, otherwise a double."
+  [number accu]
+  (ceil' (- number (double accu))))
+
+(s/fdef roughly-ceil'
         :args (s/cat :number ::number :accu ::accu)
         :ret ::number)
 
@@ -793,7 +831,9 @@
         :else (<= (abs (- number1 (double number2))) accu)))
 
 (s/fdef roughly?
-        :args (s/cat :number1 ::number :number2 ::number :accu ::accu)
+        :args (s/cat :number1 ::number
+                     :number2 ::number
+                     :accu ::accu)
         :ret boolean?)
 
 (defn roughly-round?
@@ -949,7 +989,7 @@
         :args (s/cat :numerator ::number :divisor ::number)
         :ret ::number)
 
-(defn quot-and-rem
+(defn quot-and-rem'
   "Returns a tuple of longs if possible.
   Quotient of dividing `numerator` by `divisor`.
   Remainder of dividing `numerator` by `divisor`.
@@ -958,11 +998,11 @@
   [numerator divisor]
   [(quot' numerator divisor) (rem' numerator divisor)])
 
-(s/fdef quot-and-rem
+(s/fdef quot-and-rem'
         :args (s/cat :numerator ::number :divisor ::number)
         :ret (s/tuple ::number ::number))
 
-(defn quot-and-mod
+(defn quot-and-mod'
   "Returns a tuple of longs if possible.
   Quotient of dividing `numerator` by `divisor`.
   Modulus of `numerator` and `divisor`.
@@ -977,12 +1017,12 @@
             q)]
     [q m]))
 
-(s/fdef quot-and-mod
+(s/fdef quot-and-mod'
         :args (s/cat :numerator ::number :divisor ::number)
         :ret (s/tuple ::number ::number))
 
 ;;;ANGLES
-(defn reduce-angle
+(defn reduce-angle'
   "Returns an `angle` between 0 and 360.
   Returns a long if possible."
   [angle]
@@ -998,14 +1038,14 @@
           m2
           (mod' m2 360))))))
 
-(s/fdef reduce-angle
+(s/fdef reduce-angle'
         :args (s/cat :angle ::number)
         :ret (s/or :int (s/int-in 0 360)
                    :dbl (s/double-in :min 0.0 :max 360.0)
                    :nan ::nan
                    :inf ::inf))
 
-(defn reduce-radians
+(defn reduce-radians'
   "Returns `radians` between 0 and 2 × PI.
   Returns a long if possible."
   [radians]
@@ -1021,37 +1061,37 @@
           m2
           (mod' m2 two-pi))))))
 
-(s/fdef reduce-radians
+(s/fdef reduce-radians'
         :args (s/cat :radians ::number)
         :ret (s/or :int (s/int-in 0 7)
                    :dbl (s/double-in :min 0.0 :max two-pi)
                    :nan ::nan
                    :inf ::inf))
 
-(defn radians->angle
+(defn radians->angle'
   "Returns the reduced angle from `radians`, where angles = 180 × `radians` / PI.
   Returns a long if possible."
   [radians]
   (if (inf? radians)
     radians
-    (reduce-angle (Math/toDegrees radians))))
+    (reduce-angle' (Math/toDegrees radians))))
 
-(s/fdef radians->angle
+(s/fdef radians->angle'
         :args (s/cat :radians ::number)
         :ret (s/or :int (s/int-in 0 360)
                    :dbl (s/double-in :min 0.0 :max 360.0)
                    :nan ::nan
                    :inf ::inf))
 
-(defn angle->radians
+(defn angle->radians'
   "Returns the reduced radians from the `angle`, where radians = `angle` × PI / 180.
   Returns a long if possible."
   [angle]
   (if (inf? angle)
     angle
-    (maybe-long-able (Math/toRadians (reduce-angle angle)))))
+    (maybe-long-able (Math/toRadians (reduce-angle' angle)))))
 
-(s/fdef angle->radians
+(s/fdef angle->radians'
         :args (s/cat :angle ::number)
         :ret (s/or :int (s/int-in 0 7)
                    :dbl (s/double-in :min 0.0 :max two-pi)

@@ -55,7 +55,7 @@
   (s/fspec :args (s/cat :index ::tensor/index)
            :ret ::m/number))
 
-(s/def ::pred-index+number
+(s/def ::index+number->bool
   (s/fspec :args (s/cat :index ::tensor/index :number ::m/number)
            :ret boolean?))
 
@@ -77,7 +77,8 @@
   Otherwise, returns nil."
   [x]
   (let [ret (cond (number? x) [x]
-                  (sequential? x) (let [flat (flatten x)] (when (every? number? flat) (vec flat)))
+                  (sequential? x) (let [flat (flatten x)]
+                                    (when (every? number? flat) (vec flat)))
                   :else nil)]
     ret))
 
@@ -122,35 +123,35 @@
 
 ;;;VECTOR INFO
 (defn filter-kv
-  "Returns a vector of the items in `v` for which (`pred` index number) returns true.
-  `pred` must be free of side-effects."
-  [pred v]
+  "Returns a vector of the items in `v` for which function `index+number->bool` returns true.
+  `index+number->bool` must be free of side-effects."
+  [index+number->bool v]
   (persistent!
     (reduce-kv (fn [tot index number]
-                 (if (pred index number)
+                 (if (index+number->bool index number)
                    (conj! tot number)
                    tot))
                (transient [])
                v)))
 
 (s/fdef filter-kv
-        :args (s/cat :pred ::pred-index+number :v ::vector)
+        :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
         :ret ::vector)
 
 (defn some-kv
-  "Returns the first logical true value of (`pred` index number) for any number in `v`, else nil."
-  [pred v]
+  "Returns the first logical true value of function `index+number->bool` for any number in `v`, else nil."
+  [index+number->bool v]
   (loop [i 0
          s v]
     (when (sequential? s)
       (let [h (first s)]
         (when h
-          (if (pred i h)
+          (if (index+number->bool i h)
             h
             (recur (inc i) (next s))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred ::pred-index+number :v ::vector)
+        :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
         :ret (s/nilable ::m/number))
 
 ;;;VECTOR MANIPULATION
@@ -163,7 +164,9 @@
       (vec (concat f [number] l)))))
 
 (s/fdef insertv
-        :args (s/cat :v ::vector :index ::tensor/index :number ::m/number)
+        :args (s/cat :v ::vector
+                     :index ::tensor/index
+                     :number ::m/number)
         :ret (s/nilable ::vector))
 
 (defn removev
@@ -225,7 +228,9 @@
   the angle between them.
   Also called [[inner-product]]."
   [v1 v2]
-  (apply + (map (fn [a b] (* (double a) b)) v1 v2)))
+  (apply + (map (fn [a b] (* (double a) b))
+                v1
+                v2)))
 
 (s/fdef dot-product
         :args (s/and (s/cat :v1 ::vector :v2 ::vector)

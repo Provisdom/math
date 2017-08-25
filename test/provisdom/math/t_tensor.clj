@@ -42,7 +42,11 @@
   (is= [] (tensor/compute-tensor [0] (fn [[n]] (if n n -2))))
   (is= [[]] (tensor/compute-tensor [1 0] (fn [[_ n2]] (if n2 n2 -2))))
   (is= [0 1] (tensor/compute-tensor [2] (fn [[n]] (if n n -2))))
-  (is= [[0 1 2] [0 1 2]] (tensor/compute-tensor [2 3] (fn [[n1 n2]] (if n1 (if n2 n2 -1) -2)))))
+  (is= [[0 1 2] [0 1 2]]
+       (tensor/compute-tensor [2 3] (fn [[n1 n2]]
+                                      (if n1
+                                        (if n2 n2 -1)
+                                        -2)))))
 
 (deftest repeat-tensor-test
   (is= 0.0 (tensor/repeat-tensor []))
@@ -87,9 +91,9 @@
   (is= 4 (tensor/ecount [[1.0 0.5] [2.0 4.0]])))
 
 (deftest dimensionality-test
-  (is= 2 (tensor/dimensionality [[2] [1]]))
-  (is= 1 (tensor/dimensionality []))
-  (is= 0 (tensor/dimensionality 1)))
+  (is= 2 (tensor/rank [[2] [1]]))
+  (is= 1 (tensor/rank []))
+  (is= 0 (tensor/rank 1)))
 
 (deftest shape-test
   (is= [3] (tensor/shape [1 2 3]))
@@ -100,31 +104,55 @@
 (deftest every-kv?-test
   (is-not (tensor/every-kv? (fn [[n] v] (> n v)) [1.0 0.5]))
   (is (tensor/every-kv? (fn [[n] v] (> n -1)) [1.0 0.5]))
-  (is (tensor/every-kv? (fn [[n1 n2] v] (> n2 (- v 2.1))) [[1.0 0.5] [2.0 3.0]])))
+  (is (tensor/every-kv? (fn [[n1 n2] v]
+                          (> n2 (- v 2.1)))
+                        [[1.0 0.5] [2.0 3.0]])))
 
 (deftest filter-kv-test
   (is= [[3 4]] (tensor/filter-kv (fn [index tensor] (odd? index)) [[1 2] [3 4]])))
 
 (defspec-test test-ecount `tensor/ecount)
-(defspec-test test-dimensionality `tensor/dimensionality)
+(defspec-test test-dimensionality `tensor/rank)
 (defspec-test test-shape `tensor/shape)
 ;(defspec-test test-every-kv? `tensor/every-kv?)             ;fspec issues
 ;(defspec-test test-filter-kv `tensor/filter-kv)             ;slow
 
 (deftest emap-test
-  (is= [[6 6] [6 6]] (tensor/emap + 1 [2 2] [[3 3] [3 3]]))
+  (is= [[6 6] [6 6]]
+       (tensor/emap +
+                    1
+                    [2 2]
+                    [[3 3] [3 3]]))
   (is= 1.0 (tensor/emap m/sq 1.0))
   (is= [[1.0 0.25] [4.0 16.0]] (tensor/emap m/sq [[1.0 0.5] [2.0 4.0]]))
   (is= [1.0 0.25] (tensor/emap m/sq [1.0 0.5]))
   (is= [[1.0 0.25]] (tensor/emap m/sq [[1.0 0.5]]))
   (is= [[1.0] [0.25]] (tensor/emap m/sq [[1.0] [0.5]]))
-  (is= [[3.0 1.5] [5.0 8.5]] (tensor/emap #(+ % %2 %3) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [1.0 0.5]))
+  (is= [[3.0 1.5] [5.0 8.5]]
+       (tensor/emap (fn [n1 n2 n3]
+                      (+ n1 n2 n3))
+                    [[1.0 0.5] [2.0 4.0]]
+                    [[1.0 0.5] [2.0 4.0]]
+                    [1.0 0.5]))
   (is= [[4.0 2.0] [7.0 12.5]]
-       (tensor/emap #(+ % %2 %3 %4) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]] [1.0 0.5] [[1.0 0.5] [2.0 4.0]]))
-  (is= [[2.0 1.0] [4.0 8.0]] (tensor/emap #(+ % %2) [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]])))
+       (tensor/emap (fn [n1 n2 n3 n4]
+                      (+ n1 n2 n3 n4))
+                    [[1.0 0.5] [2.0 4.0]]
+                    [[1.0 0.5] [2.0 4.0]]
+                    [1.0 0.5]
+                    [[1.0 0.5] [2.0 4.0]]))
+  (is= [[2.0 1.0] [4.0 8.0]]
+       (tensor/emap (fn [n1 n2] (+ n1 n2))
+                    [[1.0 0.5] [2.0 4.0]]
+                    [[1.0 0.5] [2.0 4.0]])))
 
 (deftest emap-kv-test
-  (is= [[7 10] [10 13]] (tensor/emap-kv (fn [[n1 n2] v1 v2 v3] (+ n1 n2 v1 v2 v3)) 1 [2 3] [[4 5] [6 7]])))
+  (is= [[7 10] [10 13]]
+       (tensor/emap-kv (fn [[i1 i2] n1 n2 n3]
+                         (+ i1 i2 n1 n2 n3))
+                       1
+                       [2 3]
+                       [[4 5] [6 7]])))
 
 (deftest manipulation-tests
   (emap-test)
@@ -136,7 +164,9 @@
 ;;MATH
 (deftest ===-test
   (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]]))
-  (is (tensor/=== [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]] [[1.0 0.5] [2.0 m/nan]])))
+  (is (tensor/=== [[1.0 0.5] [2.0 m/nan]]
+                  [[1.0 0.5] [2.0 m/nan]]
+                  [[1.0 0.5] [2.0 m/nan]])))
 
 (deftest add-test
   (is= [[2.0 1.0] [4.0 8.0]] (tensor/add [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
@@ -188,8 +218,10 @@
   (is= [[0.13333333333333333 0.06666666666666667] [0.26666666666666666 0.5333333333333333]]
        (tensor/normalize1 [[1.0 0.5] [2.0 4.0]]))
   (is= 0.9999999999999998
-       (apply + (tensor/normalize1 [2.1242141025912059120591205912509510259021590125 1.2398578935713571650983759872398572983
-                                    2.1351365731650631856238056287035 3.235729375209357203975])))
+       (apply + (tensor/normalize1 [2.1242141025912059120591205912509510259021590125
+                                    1.2398578935713571650983759872398572983
+                                    2.1351365731650631856238056287035
+                                    3.235729375209357203975])))
   (is= [[0.13333333333333333 0.06666666666666667] [0.26666666666666666 0.5333333333333333]]
        (tensor/normalize1 [[1.0 0.5] [2.0 4.0]]))
   (is= [0.6666666666666666 0.3333333333333333] (tensor/normalize1 [1.0 0.5]))

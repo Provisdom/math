@@ -29,12 +29,20 @@
 
 ;;;FACTORIALS
 (defn factorial
-  "Returns the factorial of `x`.
-Returns long if possible."
+  "Returns the factorial of `x`."
   [x]
-  (m/maybe-long-able (mf/gamma (inc x))))
+  (mf/gamma (inc (double x))))
 
 (s/fdef factorial
+        :args (s/cat :x ::m/non-)
+        :ret ::m/num)
+
+(defn factorial'
+  "Returns the factorial of `x`. Returns long if possible."
+  [x]
+  (m/maybe-long-able (factorial x)))
+
+(s/fdef factorial'
         :args (s/cat :x ::m/non-)
         :ret ::m/num)
 
