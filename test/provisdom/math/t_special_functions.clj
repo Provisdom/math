@@ -14,6 +14,8 @@
      "Work on chin-ups; did it!"}                           ;8/22
    #{"10-min EMOM odd: 3->5 bar muscle-up, even: rest"
      "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
+   #{"7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault); did it!"
+     "Work on Front squats, press, and thrusters at sets of 21 and down."} ;8/24 - worked 95# thrusters at 30
    ])
 
 (def wods-up-to-8-21
@@ -29,7 +31,7 @@
     :days-since-attempt 50}
    {:name               "4xE2MOM Handstand holds for 45->60-sec"
     :days-since-attempt 50}
-   {:name               "more kipping HSPUs, build to 21 in a row"
+   {:name               "More kipping HSPUs, build to 21 in a row"
     :days-since-attempt 50}
    {:name               "Handstand walking 7x50' in 60-sec with 2-min rest"
     :days-since-attempt 50}
@@ -41,7 +43,7 @@
     :days-since-attempt 2}
    {:name               "21 unbroken kipping C2B"
     :days-since-attempt 50}
-   {:name               "more L-sits, build to Tabata and 3x30-sec"
+   {:name               "More L-sits, build to Tabata and 3x30-sec"
     :days-since-attempt 50}
    {:name               "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
     :days-since-attempt 50}
@@ -58,8 +60,6 @@
    {:name               "2-min of sit-ups, 2-min of planks continuously cycling from elbows to hands, 2-min of hollow-ups"
     :days-since-attempt 50}
    {:name               "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
-    :days-since-attempt 50}
-   {:name               "7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault)"
     :days-since-attempt 50}
    {:name               "5x15 cal Assault bike in 50 sec with 70-sec rest (did non-Assault easily)"
     :days-since-attempt 50}
@@ -103,7 +103,7 @@
     :days-since-attempt 50}
    {:name               "Couch Stretch -> Bulgarian split squats"
     :days-since-attempt 50}
-   {:name               "work on bottom of muscle-up"
+   {:name               "Work on bottom of muscle-up"
     :days-since-attempt 50}
    {:name               "Work on pistols either on box (build up to 20 in a row per leg then lower box), with elevated heels, or with a counterbalance weight held out in front"
     :days-since-attempt 50}

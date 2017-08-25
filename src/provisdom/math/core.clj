@@ -191,14 +191,19 @@
 (defn double-finite?
   "Returns true if x is a double and finite."
   [x]
-  (and (double? x) (== x x) (not (Double/isInfinite ^double x))))
+  (and (double? x)
+       (== x x)
+       (not (Double/isInfinite ^double x))))
 
 (s/def ::double-finite (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
 
 (defn single?
   "Returns true if x is a single."
   [x]
-  (and (double? x) (or (sgl-range? x) (not (== x x)) (Double/isInfinite ^double x))))
+  (and (double? x)
+       (or (sgl-range? x)
+           (not (== x x))
+           (Double/isInfinite ^double x))))
 
 (s/def ::single (s/spec single? :gen #(gen/double)))
 
@@ -283,7 +288,9 @@
 (defn long-able?
   "Returns true if x is a number that can be converted to a long."
   [x]
-  (and (number? x) (roughly-round? x 0.0) (long-range? x)))
+  (and (number? x)
+       (roughly-round? x 0.0)
+       (long-range? x)))
 
 (s/def ::long-able (s/spec long-able? :gen gen/large-integer))
 
@@ -322,7 +329,9 @@
 (defn inf+?
   "Returns true if x is inf+."
   [x]
-  (and (number? x) (Double/isInfinite ^double x) (pos? x)))
+  (and (number? x)
+       (Double/isInfinite ^double x)
+       (pos? x)))
 
 (s/def ::non-inf+ (s/spec #(and (num? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? false))))
 (s/def ::nan-or-non-inf+ (s/spec #(and (number? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? true))))
@@ -369,7 +378,9 @@
 (defn corr?
   "Returns true if x is between -1 and 1, inclusive."
   [x]
-  (and (number? x) (<= x 1) (>= x -1)))
+  (and (number? x)
+       (<= x 1)
+       (>= x -1)))
 
 (s/def ::corr (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
 (s/def ::nan-or-corr (s/spec #(or (nan? %) (corr? %)) :gen #(s/gen (s/double-in :min -1.0 :max 1.0))))
@@ -377,7 +388,9 @@
 (defn open-corr?
   "Returns true if x is between -1 and 1, exclusive."
   [x]
-  (and (number? x) (< x 1) (> x -1)))
+  (and (number? x)
+       (< x 1)
+       (> x -1)))
 
 (s/def ::open-corr
   (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0) :NaN? false))))
@@ -393,8 +406,12 @@
 (defn ===
   "Equality for numbers that works with NaN."
   ([number] true)
-  ([number1 number2] (or (and (nan? number1) (nan? number2)) (== number1 number2)))
-  ([number1 number2 & more] (and (=== number1 number2) (apply === number2 more))))
+  ([number1 number2]
+   (or (and (nan? number1) (nan? number2))
+       (== number1 number2)))
+  ([number1 number2 & more]
+   (and (=== number1 number2)
+        (apply === number2 more))))
 
 (s/fdef ===
         :args (s/or :one (s/cat :number ::number)
@@ -463,7 +480,8 @@
 (defn sq'
   "Returns square of `number` as a long if possible."
   [number]
-  (maybe-long-able (* (double number) number)))
+  (maybe-long-able
+    (* (double number) number)))
 
 (s/fdef sq'
         :args (s/cat :number ::number)
@@ -481,7 +499,8 @@
 (defn cube'
   "Returns cube of `number` as a long if possible."
   [number]
-  (maybe-long-able (* (double number) number number)))
+  (maybe-long-able
+    (* (double number) number number)))
 
 (s/fdef cube'
         :args (s/cat :number ::number)
@@ -490,7 +509,10 @@
 (defn sgn
   "Returns 1 if `number` positive, 0 if 0, -1 if negative."
   [number]
-  (cond (zero? number) 0, (neg? number) -1, (pos? number) 1, :else nan))
+  (cond (zero? number) 0
+        (neg? number) -1
+        (pos? number) 1
+        :else nan))
 
 (s/fdef sgn
         :args (s/cat :number ::number)
@@ -535,7 +557,8 @@
 (defn logn
   "Returns `base` log of `number`."
   [number base]
-  (div (Math/log (double number)) (Math/log (double base))))
+  (div (Math/log (double number))
+       (Math/log (double base))))
 
 (s/fdef logn
         :args (s/cat :number ::number :base ::number)
@@ -562,7 +585,8 @@
 (defn abs'
   "Returns absolute value of `number` as a long if possible."
   [number]
-  (maybe-long-able (Math/abs (double number))))
+  (maybe-long-able
+    (Math/abs (double number))))
 
 (s/fdef abs'
         :args (s/cat :number ::number)
@@ -635,7 +659,9 @@
 (defn acosh
   "Returns inverse hyperbolic cosine of `number`."
   [number]
-  (if-not (>= number 1) nan (-> (double number) sq dec sqrt (+ number) log)))
+  (if-not (>= number 1)
+    nan
+    (-> (double number) sq dec sqrt (+ number) log)))
 
 (s/fdef acosh
         :args (s/cat :number ::number)
@@ -719,7 +745,8 @@
   "Rounds down.
   Returns a long if possible, otherwise a double."
   [number]
-  (maybe-long-range (Math/floor number)))
+  (maybe-long-range
+    (Math/floor number)))
 
 (s/fdef floor
         :args (s/cat :number ::number)
@@ -729,7 +756,8 @@
   "Rounds up.
   Returns a long if possible, otherwise a double."
   [number]
-  (maybe-long-range (Math/ceil number)))
+  (maybe-long-range
+    (Math/ceil number)))
 
 (s/fdef ceil
         :args (s/cat :number ::number)
@@ -849,7 +877,8 @@
 (defn roughly-corr?
   "Returns true if `number` is a corr or within `accu` of a corr."
   [number accu]
-  (and (>= number (dec (- (double accu)))) (<= number (inc (double accu)))))
+  (and (>= number (dec (- (double accu))))
+       (<= number (inc (double accu)))))
 
 (s/fdef roughly-corr?
         :args (s/cat :number ::number :accu ::accu)
@@ -860,12 +889,17 @@
   "Quotient of dividing `numerator` by `divisor`.
   Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
+  (if (or (nan? divisor)
+          (nan? numerator)
+          (inf? numerator)
+          (inf? divisor)
+          (zero? divisor))
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
         d
-        (maybe-long-range (quot numerator divisor))))))
+        (maybe-long-range
+          (quot numerator divisor))))))
 
 (s/fdef quot'
         :args (s/cat :numerator ::number :divisor ::number)
@@ -878,12 +912,17 @@
   Will stay consistent with [[quot']].
   Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
+  (if (or (nan? divisor)
+          (nan? numerator)
+          (inf? numerator)
+          (inf? divisor)
+          (zero? divisor))
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
         nan
-        (maybe-long-able (mod numerator divisor))))))
+        (maybe-long-able
+          (mod numerator divisor))))))
 
 (s/fdef mod'
         :args (s/cat :numerator ::number :divisor ::number)
@@ -895,7 +934,11 @@
   Will stay consistent with [[quot']].
   Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor) (nan? numerator) (inf? numerator) (inf? divisor) (zero? divisor))
+  (if (or (nan? divisor)
+          (nan? numerator)
+          (inf? numerator)
+          (inf? divisor)
+          (zero? divisor))
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
@@ -929,7 +972,9 @@
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
-        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m)))) (maybe-long-able (dec (double q))) q)]
+        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m))))
+            (maybe-long-able (dec (double q)))
+            q)]
     [q m]))
 
 (s/fdef quot-and-mod
@@ -942,10 +987,14 @@
   Returns a long if possible."
   [angle]
   (let [m (mod' angle 360)]
-    (if (or (nan? m) (inf? m) (and (pos? m) (< m 360.0)))
+    (if (or (nan? m)
+            (inf? m)
+            (and (pos? m) (< m 360.0)))
       m
       (let [m2 (mod' m 360)]
-        (if (or (nan? m2) (inf? m2) (and (pos? m2) (< m2 360.0)))
+        (if (or (nan? m2)
+                (inf? m2)
+                (and (pos? m2) (< m2 360.0)))
           m2
           (mod' m2 360))))))
 
@@ -961,10 +1010,14 @@
   Returns a long if possible."
   [radians]
   (let [m (mod' radians two-pi)]
-    (if (or (nan? m) (inf? m) (and (pos? m) (< m two-pi)))
+    (if (or (nan? m)
+            (inf? m)
+            (and (pos? m) (< m two-pi)))
       m
       (let [m2 (mod' m two-pi)]
-        (if (or (nan? m2) (inf? m2) (and (pos? m2) (< m2 two-pi)))
+        (if (or (nan? m2)
+                (inf? m2)
+                (and (pos? m2) (< m2 two-pi)))
           m2
           (mod' m2 two-pi))))))
 
@@ -979,7 +1032,9 @@
   "Returns the reduced angle from `radians`, where angles = 180 × `radians` / PI.
   Returns a long if possible."
   [radians]
-  (if (inf? radians) radians (reduce-angle (Math/toDegrees radians))))
+  (if (inf? radians)
+    radians
+    (reduce-angle (Math/toDegrees radians))))
 
 (s/fdef radians->angle
         :args (s/cat :radians ::number)
@@ -992,7 +1047,9 @@
   "Returns the reduced radians from the `angle`, where radians = `angle` × PI / 180.
   Returns a long if possible."
   [angle]
-  (if (inf? angle) angle (maybe-long-able (Math/toRadians (reduce-angle angle)))))
+  (if (inf? angle)
+    angle
+    (maybe-long-able (Math/toRadians (reduce-angle angle)))))
 
 (s/fdef angle->radians
         :args (s/cat :angle ::number)
