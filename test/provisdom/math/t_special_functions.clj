@@ -16,6 +16,7 @@
      "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
    #{"7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault); did it!"
      "Work on Front squats, press, and thrusters at sets of 21 and down."} ;8/24 - worked 95# thrusters at 30
+   #{"Work on butterfly c2b"}                               ;8/25
    ])
 
 (def wods-up-to-8-21

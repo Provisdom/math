@@ -7,33 +7,6 @@
             [provisdom.utility-belt.core :as co]))
 
 (facts "choose"
-
-       (fact "log choose k from n"
-             (log-choose-k-from-n -1 1) => (throws)
-             (log-choose-k-from-n 0 1) => 0.0
-             (log-choose-k-from-n 0 0) => 0.0
-             (log-choose-k-from-n 0 -1) => (throws)
-             (log-choose-k-from-n 1 0.9) => (throws)
-             (log-choose-k-from-n 1 0) => (throws)
-             (log-choose-k-from-n 1 1) => 0.0
-             (log-choose-k-from-n 1.4 1) => (throws)
-             (log-choose-k-from-n 1 1.4) => 0.33647223662121284
-             (log-choose-k-from-n 2 1.4) => (throws)
-             (log-choose-k-from-n 1.0 4) => 1.3862943611198908
-             (log-choose-k-from-n 2 5) => 2.3025850929940455
-             (log-choose-k-from-n 12 545.0) => 55.50025325814249)
-       (fact "stirling number of the second kind"
-             (stirling-number-of-the-second-kind 1 -1) => (throws)
-             (stirling-number-of-the-second-kind 1 0) => 0
-             (stirling-number-of-the-second-kind 0 0) => 1
-             (stirling-number-of-the-second-kind -1 0) => (throws)
-             (stirling-number-of-the-second-kind 0.9 1) => (throws)
-             (stirling-number-of-the-second-kind 0 1) => 0
-             (stirling-number-of-the-second-kind 1 1) => 1
-             (stirling-number-of-the-second-kind 1 1.4) => (throws)
-             (stirling-number-of-the-second-kind 4.0 1) => 1
-             (stirling-number-of-the-second-kind 5 2.0) => 15
-             (stirling-number-of-the-second-kind 200.0 12) => 1.4318980615233435E207)
        (fact "bell number"
              (bell-number -1) => (throws)
              (bell-number 0) => 1

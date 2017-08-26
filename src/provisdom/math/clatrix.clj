@@ -4,10 +4,11 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
+    [clatrix.core :as clatrix]
+    [provisdom.utility-belt.core :as co]
     [provisdom.math.core :as m]
     [provisdom.math.vector :as vector]
     [provisdom.math.matrix :as mx]
-    [clatrix.core :as clatrix]
     [provisdom.math.random2 :as random]
     [provisdom.math.tensor :as tensor]))
 
@@ -16,7 +17,6 @@
          positive-definite-clatrix-finite-by-squaring symmetric-clatrix-by-averaging add
          covariance-clatrix->correlation-clatrix assoc-diagonal ===)
 
-(s/def ::exception (partial instance? Exception))
 (s/def ::rank ::m/int-non-)
 
 ;;;TYPES
@@ -697,12 +697,14 @@
   (if (empty-clatrix? positive-definite-clatrix-m-finite)
     (clatrix [[]])
     (try (clatrix/cholesky positive-definite-clatrix-m-finite)
-         (catch Exception e (ex-info (.getMessage e)
-                                     {:fn (var upper-cholesky-decomposition)})))))
+         (catch Exception e
+           {::co/message  (.getMessage e)
+            ::co/fn       (var upper-cholesky-decomposition)
+            ::co/category ::co/third-party}))))
 
 (s/fdef upper-cholesky-decomposition
         :args (s/cat :positive-definite-clatrix-m-finite ::positive-definite-clatrix-finite)
-        :ret (s/or :exception ::exception
+        :ret (s/or :anomaly ::co/anomaly
                    :upper-triangular-clatrix ::upper-triangular-clatrix))
 
 (s/def ::svd-left ::clatrix-finite)
@@ -734,11 +736,14 @@
             ::singular-values (clatrix (mx/diagonal-matrix (vec (:values r))))
             ::svd-right       (:right r)
             ::rank            (:rank r)})
-         (catch Exception e (ex-info (.getMessage e) {:fn (var sv-decomposition)})))))
+         (catch Exception e
+           {::co/message  (.getMessage e)
+            ::co/fn       (var sv-decomposition)
+            ::co/category ::co/third-party}))))
 
 (s/fdef sv-decomposition
         :args (s/cat :clatrix-m-finite ::clatrix-finite)
-        :ret (s/or :exception ::exception
+        :ret (s/or :anomaly ::co/anomaly
                    :res (s/keys :req [::svd-left ::singular-values ::svd-right ::rank])))
 
 (defn condition

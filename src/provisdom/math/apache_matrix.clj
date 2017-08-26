@@ -4,6 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
+    [provisdom.utility-belt.core :as co]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
     [provisdom.math.vector :as vector]
@@ -25,7 +26,6 @@
          correlation-apache-matrix-finite-by-squaring some-kv
          get-entry assoc-entry! symmetric-apache-matrix-by-averaging! assoc-diagonal!)
 
-(s/def ::exception (partial instance? Exception))
 (s/def ::rank ::m/int-non-)
 
 ;;;MATRIX TYPES
@@ -860,12 +860,14 @@
             ::eigenvalues-matrix (.getD r)
             ::eigenvalues        eigenvalues
             ::eigenvectors       (.getVT r)})
-         (catch Exception e (ex-info (.getMessage e)
-                                     {:fn (var eigen-decomposition)})))))
+         (catch Exception e
+           {::co/message (.getMessage e)
+            ::co/fn (var eigen-decomposition)
+            ::co/category ::co/third-party}))))
 
 (s/fdef eigen-decomposition
         :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
-        :ret (s/or :exception ::exception
+        :ret (s/or :anomaly ::co/anomaly
                    :eigen (s/keys :req [::eigenvectorsT ::eigenvalues-matrix ::eigenvalues ::eigenvectors])))
 
 (s/def ::cholesky-L ::lower-triangular-apache-matrix)
@@ -882,11 +884,14 @@
     (try (let [r (CholeskyDecomposition. ^Array2DRowRealMatrix positive-definite-apache-m)]
            {::cholesky-L  (.getL r)
             ::cholesky-LT (.getLT r)})
-         (catch Exception e (ex-info (.getMessage e) {:fn (var cholesky-decomposition)})))))
+         (catch Exception e
+           {::co/message (.getMessage e)
+            ::co/fn (var cholesky-decomposition)
+            ::co/category ::co/third-party}))))
 
 (s/fdef cholesky-decomposition
         :args (s/cat :positive-definite-apache-m ::positive-definite-apache-matrix-finite)
-        :ret (s/or :exception ::exception
+        :ret (s/or :anomaly ::co/anomaly
                    :res (s/keys :req [::cholesky-L ::cholesky-LT])))
 
 (s/def ::rectangular-root ::apache-matrix)
@@ -918,13 +923,15 @@
                    (double accu))]
            {::rectangular-root (.getRootMatrix r)
             ::rank             (.getRank r)})
-         (catch Exception e (ex-info (.getMessage e)
-                                     {:fn (var rectangular-cholesky-decomposition)})))))
+         (catch Exception e
+           {::co/message  (.getMessage e)
+            ::co/fn       (var rectangular-cholesky-decomposition)
+            ::co/category ::co/third-party}))))
 
 (s/fdef rectangular-cholesky-decomposition
         :args (s/cat :positive-semidefinite-apache-m ::positive-semidefinite-apache-matrix-finite
                      :accu ::m/accu)
-        :ret (s/or :exception ::exception
+        :ret (s/or :anomaly ::co/anomaly
                    :res (s/keys :req [::rectangular-root ::rank])))
 
 (s/def ::svd-left ::apache-matrix)
@@ -977,7 +984,7 @@
 
 (s/def ::Q ::apache-matrix)
 (s/def ::R ::apache-matrix)
-(s/def ::LLS-solution (s/or :apache-m ::apache-matrix :exception ::exception))
+(s/def ::LLS-solution (s/or :apache-m ::apache-matrix :anomaly ::co/anomaly))
 (s/def ::error (s/nilable ::symmetric-apache-matrix))
 (defn qr-decomposition-with-linear-least-squares-and-error-matrix
   "Returns a map containing:
@@ -993,9 +1000,11 @@
      ::error        apache-m1}
     (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
           ^DecompositionSolver s (.getSolver d)
-          ex-d {:fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)}
           solution (try (block-apache-matrix->apache-matrix (.solve s ^Array2DRowRealMatrix apache-m2))
-                        (catch Exception e (ex-info (.getMessage e) ex-d)))
+                        (catch Exception e
+                          {::co/message (.getMessage e)
+                           ::co/fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)
+                           ::co/category ::co/third-party}))
           r (.getR d)
           r-rows (rows r)
           r-columns (columns r)

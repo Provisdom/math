@@ -72,16 +72,26 @@
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!).
+  `k` must be able to be a long.
+  Otherwise use [[log-choose-k-from-n]]."
+  [k n]
+  (DoubleArithmetic/binomial (double n) (long k)))
+
+(s/fdef choose-k-from-n
+        :args (s/cat :k ::m/long-able :n ::m/number)
+        :ret ::m/number)
+
+(defn choose-k-from-n'
+  "Returns the number of ways to choose `k` items out of `n` items.
+  `n`! / (`k`! × (`n` - `k`)!).
   Returns long if possible.
   `k` must be able to be a long.
   Otherwise use [[log-choose-k-from-n]]."
   [k n]
-  (m/maybe-long-able
-    (DoubleArithmetic/binomial (double n) (long k))))
+  (m/maybe-long-able (choose-k-from-n k n)))
 
-(s/fdef choose-k-from-n
-        :args (s/cat :k ::m/long-able
-                     :n ::m/number)
+(s/fdef choose-k-from-n'
+        :args (s/cat :k ::m/long-able :n ::m/number)
         :ret ::m/number)
 
 (defn log-choose-k-from-n
@@ -94,29 +104,37 @@
      (log-factorial (- n k))))
 
 (s/fdef log-choose-k-from-n
-        :args (s/and (s/cat :k ::m/non-
-                            :n ::m/non-)
+        :args (s/and (s/cat :k ::m/non- :n ::m/non-)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/number)
+
+(defn stirling-number-of-the-second-kind
+  "Returns the number of ways to partition a set of `n` items into `k` subsets."
+  [k n]
+  (* (/ (factorial k))
+     (ccr/fold
+       + (fn [tot e]
+           (+ tot
+              (* (m/pow (- 1) e)
+                 (choose-k-from-n e k)
+                 (m/pow (- k e) n))))
+       (range (inc k)))))
+
+(s/fdef stirling-number-of-the-second-kind
+        :args (s/and (s/cat :k ::m/long-able :n ::m/long-able)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/num)
 
-(defn stirling-number-of-the-second-kind
+(defn stirling-number-of-the-second-kind'
   "Returns the number of ways to partition a set of `n` items into `k` subsets.
   Returns long if possible."
-  [n k]
-  (m/maybe-long-able
-    (* (/ (factorial k))
-       (ccr/fold
-         + (fn [tot e]
-             (+ tot
-                (* (m/pow (- 1) e)
-                   (choose-k-from-n e k)
-                   (m/pow (- k e) n))))
-         (range (inc k))))))
+  [k n]
+  (m/maybe-long-able (stirling-number-of-the-second-kind k n)))
 
-(s/fdef stirling-number-of-the-second-kind
-        :args (s/and (s/cat :k ::m/long-able
-                            :n ::m/long-able)
+(s/fdef stirling-number-of-the-second-kind'
+        :args (s/and (s/cat :k ::m/long-able :n ::m/long-able)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/num)
@@ -127,7 +145,7 @@
   (if (< n 27)
     (bell-numbers (long n))
     (ccr/fold + (fn [tot e]
-                  (+ tot (stirling-number-of-the-second-kind n e)))
+                  (+ tot (stirling-number-of-the-second-kind e n)))
               (range (inc n)))))
 
 (s/fdef stirling-number-of-the-second-kind

@@ -3,6 +3,7 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]
+            [provisdom.utility-belt.core :as co]
             [provisdom.math.core :as m]
             [provisdom.math.arrays :as ar]
             [provisdom.math.matrix :as mx]
@@ -76,7 +77,6 @@
 (s/def ::vector ::vector/vector)
 (s/def ::apache-matrix ::apache-mx/apache-matrix)
 (s/def ::symmetric-apache-matrix ::apache-mx/symmetric-apache-matrix)
-(s/def ::exception (partial instance? Exception))
 (s/def ::max-iter (s/with-gen ::m/int+ #(s/gen (s/int-in 100 1000))))
 (s/def ::rel-accu
   (s/with-gen ::m/finite+
@@ -320,12 +320,14 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
   ([{::keys [root-f guess bounds]}
     {::keys [max-iter root-solver rel-accu abs-accu]
      :or    {max-iter 1000, root-solver :brent, rel-accu 1e-14, abs-accu 1e-6}}]
-   (let [ex-d {:fn (var root-solver)}
-         [lower upper] bounds]
+   (let [[lower upper] bounds]
      (if (= root-solver :newton-raphson)
        (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
                     (univariate-differentiable-function root-f 2 0.25) lower upper)
-            (catch Exception e (ex-info (.getMessage e) ex-d)))
+            (catch Exception e
+              {::co/message (.getMessage e)
+               ::co/fn (var root-solver)
+               ::co/category ::co/third-party}))
        (let [^BaseUnivariateSolver s
              (case root-solver
                :bisection (BisectionSolver. rel-accu abs-accu)
@@ -341,12 +343,15 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
                nil)
              uni-fn (univariate-function root-f)]
          (when s (try (.solve s max-iter uni-fn lower upper guess)
-                      (catch Exception e (ex-info (.getMessage e) ex-d)))))))))
+                      (catch Exception e
+                        {::co/message (.getMessage e)
+                         ::co/fn (var root-solver)
+                         ::co/category ::co/third-party}))))))))
 
 (s/fdef root-solver
         :args (s/cat :root-f-with-guess-and-bounds ::root-f-with-guess-and-bounds
                      :opts (s/? (s/keys :opt [::max-iter ::root-solver ::rel-accu ::abs-accu])))
-        :ret (s/nilable (s/or :finite ::m/finite :exception ::exception)))
+        :ret (s/nilable (s/or :finite ::m/finite :anomaly ::co/anomaly)))
 
 ;;;UNIVARIATE OPTIMIZE
 (defn optimize-univariate
@@ -446,17 +451,16 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
 ;;;NONLINEAR LEAST SQUARES and SYSTEMS
 (defn nonlinear-least-squares
   "constraints-fn takes an array and returns a vector.
-jacobian-fn is the jacobian matrix function that takes an array and returns a double-layered vector.
-solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
-Each constraints-fn should return m/inf+ or m/inf- when out of range.
-Jacobian-fn should return m/nan when out of range.
-Returns map of ::point and ::errors."
+  jacobian-fn is the jacobian matrix function that takes an array and returns a double-layered vector.
+  Solver can be :lm Levenberg-Marquardt (default) or :gauss-newton.
+  Each constraints-fn should return m/inf+ or m/inf- when out of range.
+  Jacobian-fn should return m/nan when out of range.
+  Returns map of ::point and ::errors."
   ([args] (nonlinear-least-squares args {}))
   ([{::keys [constraints-fn n-cons jacobian-fn guesses]}
     {::keys [target max-eval max-iter nls-solver check-by-objective? rel-accu abs-accu weights]
      :or    {max-eval 1000, max-iter 1000, nls-solver :lm, rel-accu 1e-14, abs-accu 1e-6}}]
-   (let [ex-d {:fn (var nonlinear-least-squares)}
-         c (multivariate-vector-function constraints-fn)
+   (let [c (multivariate-vector-function constraints-fn)
          j (multivariate-matrix-function jacobian-fn)
          s (condp = nls-solver
              :lm (LevenbergMarquardtOptimizer.)
@@ -477,8 +481,13 @@ Returns map of ::point and ::errors."
                      e (.optimize s problem)]
                  (errors-vector-point e)))
        (catch TooManyEvaluationsException _
-         (ex-info (format "Max evals (%d) exceeded." max-eval) ex-d))
-       (catch Exception e (ex-info (.getMessage e) ex-d))))))
+         {::co/message  (format "Max evals (%d) exceeded." max-eval)
+          ::co/fn       (var nonlinear-least-squares)
+          ::co/category ::co/third-party})
+       (catch Exception e
+         {::co/message (.getMessage e)
+          ::co/fn (var nonlinear-least-squares)
+          ::co/category ::co/third-party})))))
 
 (s/def ::constraints-fn fn?)
 (s/def ::n-cons ::m/long+)
@@ -510,7 +519,7 @@ Returns map of ::point and ::errors."
         :args (s/cat :constraints-with-jacobian ::constraints-with-jacobian
                      :opts (s/? (s/keys :opt [::target ::max-eval ::max-iter ::nls-solver
                                               ::check-by-objective? ::rel-accu ::abs-accu ::weights])))
-        :ret (s/nilable (s/or :ret ::errors-vector-point :exception ::exception)))
+        :ret (s/nilable (s/or :ret ::errors-vector-point :anomaly ::co/anomaly)))
 
 ;;;OPTIMIZE WITH GRADIENT
 (defn optimize-with-gradient

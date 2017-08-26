@@ -34,16 +34,19 @@
 (defn number-array-gen
   ([] (gen/fmap avec (gen/vector (s/gen ::m/number))))
   ([count] (gen/fmap avec (gen/vector (s/gen ::m/number) count))))
+
 (s/def ::number-array (s/with-gen number-array? number-array-gen))
 
 (defn num-array-gen
   ([] (gen/fmap avec (gen/vector (s/gen ::m/num))))
   ([count] (gen/fmap avec (gen/vector (s/gen ::m/num) count))))
+
 (s/def ::num-array (s/with-gen num-array? num-array-gen))
 
 (defn finite-array-gen
   ([] (gen/fmap avec (gen/vector (s/gen ::m/finite))))
   ([count] (gen/fmap avec (gen/vector (s/gen ::m/finite) count))))
+
 (s/def ::finite-array (s/with-gen finite-array? finite-array-gen))
 
 (defn array->seq [x] (if (array? x) (map array->seq x) x))
@@ -74,7 +77,9 @@
       :char char"
   [type dim & dims]
   (let [type (type->obj type)]
-    (if-not dims (make-array type dim) (apply (partial make-array type dim) dims))))
+    (if dims
+      (apply (partial make-array type dim) dims)
+      (make-array type dim))))
 
 (defn jagged-2D-array
   "Create a typed jagged 2D array.

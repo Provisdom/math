@@ -55,19 +55,46 @@
 
 ;;;CHOOSING
 (deftest choose-k-from-n-test
-  (is= 0 (combo/choose-k-from-n -1 1))
-  (is= 1 (combo/choose-k-from-n 0 1))
-  (is= 1 (combo/choose-k-from-n 0 0))
-  (is= 1 (combo/choose-k-from-n 0 -1))
+  (is= 0.0 (combo/choose-k-from-n -1 1))
+  (is= 1.0 (combo/choose-k-from-n 0 1))
+  (is= 1.0 (combo/choose-k-from-n 0 0))
+  (is= 1.0 (combo/choose-k-from-n 0 -1))
   (is= 0.9 (combo/choose-k-from-n 1 0.9))
-  (is= 0 (combo/choose-k-from-n 1 0))
-  (is= 1 (combo/choose-k-from-n 1 1))
+  (is= 0.0 (combo/choose-k-from-n 1 0))
+  (is= 1.0 (combo/choose-k-from-n 1 1))
   (is= 1.4 (combo/choose-k-from-n 1 1.4))
   (is= 0.2799999999999999 (combo/choose-k-from-n 2 1.4))
-  (is= 4 (combo/choose-k-from-n 1.0 4))
-  (is= 10 (combo/choose-k-from-n 2 5))
+  (is= 4.0 (combo/choose-k-from-n 1.0 4))
+  (is= 10.0 (combo/choose-k-from-n 2 5))
   (is= 1.2689769520640436E24 (combo/choose-k-from-n 12 545.0)))
 
-(defspec-test test-choose-k-from-n `combo/choose-k-from-n)
+(deftest choose-k-from-n'-test
+  (is= 4 (combo/choose-k-from-n 1.0 4)))
+
+(deftest log-choose-k-from-n-test
+  (is= 0.0 (combo/log-choose-k-from-n 0 1))
+  (is= 0.0 (combo/log-choose-k-from-n 0 0))
+  (is= 0.0 (combo/log-choose-k-from-n 1 1))
+  (is= 0.33647223662121284 (combo/log-choose-k-from-n 1 1.4))
+  (is= 1.3862943611198908 (combo/log-choose-k-from-n 1.0 4))
+  (is= 2.3025850929940455 (combo/log-choose-k-from-n 2 5))
+  (is= 55.50025325814249 (combo/log-choose-k-from-n 12 545.0)))
+
+(deftest stirling-number-of-the-second-kind-test
+  (is= 0.0 (combo/stirling-number-of-the-second-kind 0 1))
+  (is= 1.0 (combo/stirling-number-of-the-second-kind 0 0))
+  (is= 1.0 (combo/stirling-number-of-the-second-kind 1 1))
+  (is= 1.0 (combo/stirling-number-of-the-second-kind 1 4.0))
+  (is= 15.0 (combo/stirling-number-of-the-second-kind 2.0 5))
+  (is= 1.4318980615233435E207 (combo/stirling-number-of-the-second-kind 12 200.0)))
+
+(deftest stirling-number-of-the-second-kind'-test
+  (is= 0 (combo/stirling-number-of-the-second-kind' 0 1)))
+
+;(defspec-test test-choose-k-from-n `combo/choose-k-from-n)  ;super slow when num-tests > 40
+;(defspec-test test-choose-k-from-n' `combo/choose-k-from-n') ;super slow when num-tests > 40
+(defspec-test test-log-choose-k-from-n `combo/log-choose-k-from-n)
+(defspec-test test-stirling-number-of-the-second-kind `combo/stirling-number-of-the-second-kind)
+(defspec-test test-stirling-number-of-the-second-kind' `combo/stirling-number-of-the-second-kind')
 
 #_(ost/unstrument)

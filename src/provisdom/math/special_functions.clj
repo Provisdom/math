@@ -57,7 +57,8 @@
   (cond (zero? x) 0.0
         (m/inf+? x) 1.0
         (m/inf-? x) -1.0
-        :else (* (m/sgn x) (->> x m/sq (regularized-gamma-p m/half)))))
+        :else (* (m/sgn x)
+                 (regularized-gamma-p m/half (m/sq x)))))
 
 (s/fdef erf
         :args (s/cat :x ::m/number)
@@ -168,7 +169,10 @@
         (zero? x) 0.0
         (m/one? a) (m/one- (m/exp (- x)))
         (> x 1.0e150) 1.0
-        :else (* (gamma a) (min 1.0 (max 0.0 (ap/regularized-gamma-p a x))))))
+        :else (* (gamma a)
+                 (min 1.0
+                      (max 0.0
+                           (ap/regularized-gamma-p a x))))))
 
 (s/fdef lower-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -182,7 +186,10 @@
         (zero? x) (gamma a)
         (m/one? a) (m/exp (- x))
         (> x 1.0e150) 0.0
-        :else (* (gamma a) (min 1.0 (max 0.0 (ap/regularized-gamma-q a x))))))
+        :else (* (gamma a)
+                 (min 1.0
+                      (max 0.0
+                           (ap/regularized-gamma-q a x))))))
 
 (s/fdef upper-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -191,7 +198,9 @@
 (defn upper-gamma-derivative-x
   "Returns the upper gamma derivative `x`."
   [a x]
-  (let [v (* (m/exp (- x)) (m/pow x (dec a)) (/ (gamma a)))]
+  (let [v (* (m/exp (- x))
+             (m/pow x (dec a))
+             (/ (gamma a)))]
     (if (m/inf-? v) m/inf+ v)))
 
 (s/fdef upper-gamma-derivative-x
@@ -238,7 +247,7 @@
 (defn log-gamma-derivative
   "Returns the derivative of the log gamma of `a`.
   Spec'd for `a` > -3e8 because it becomes slow.
-  Taken from Apache.  Could use better algorithm."
+  Taken from Apache.  Could use a better algorithm."
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -253,7 +262,10 @@
                                 (+ tot
                                    (m/log x)
                                    (* -0.5 inv-x)
-                                   (* (- inv2-x) (+ (/ 12.0) (* inv2-x (- (/ 120) (/ inv2-x 252.0)))))))
+                                   (* (- inv2-x)
+                                      (+ (/ 12.0)
+                                         (* inv2-x
+                                            (- (/ 120) (/ inv2-x 252.0)))))))
                   :else (recur (inc x) (- tot inv-x)))))))))
 
 (s/fdef log-gamma-derivative
@@ -275,7 +287,7 @@
 (defn trigamma
   "Returns the trigamma (2nd derivative of log-gamma) of `a`.
   Approximated for `a` < -1e7 because it becomes slow.
-  Taken from Apache.  Could use better algorithm."
+  Taken from Apache.  Could use a better algorithm."
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -291,7 +303,11 @@
                                           (+ tot
                                              inv-x
                                              (/ inv2-x 2.0)
-                                             (* inv2-x inv-x (- (/ 6.0) (* inv2-x (+ (/ 3) (/ inv2-x 42.0)))))))
+                                             (* inv2-x
+                                                inv-x
+                                                (- (/ 6.0)
+                                                   (* inv2-x
+                                                      (+ (/ 3) (/ inv2-x 42.0)))))))
                             :else (recur (inc x) (+ tot inv2-x)))))))))
 
 (s/fdef trigamma
@@ -312,9 +328,11 @@
         :args (s/and (s/cat :a ::m/number
                             :p (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max 20})))
                      (fn [{:keys [a p]}]
-                       (and (not (m/long-able-non+? (+ a (* 0.5 (m/one- p)))))
+                       (and (not (m/long-able-non+?
+                                   (+ a (* 0.5 (m/one- p)))))
                             (or (zero? p)
-                                (not (m/long-able-non+? (+ a (* 0.5 (m/one- (dec p))))))))))
+                                (not (m/long-able-non+?
+                                       (+ a (* 0.5 (m/one- (dec p))))))))))
         :ret ::m/nan-or-non-inf-)
 
 (defn multivariate-log-gamma

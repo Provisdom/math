@@ -313,9 +313,12 @@
   [x]
   (and (long-able? x) (non+? x)))
 
-(s/def ::long-able-non+ (s/spec long-able-non+? :gen #(s/gen (s/int-in min-long 1))))
+(s/def ::long-able-non+
+  (s/spec long-able-non+? :gen #(s/gen (s/int-in min-long 1))))
+
 (s/def ::non-long-able-non+
   (s/spec #(and (num? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? false))))
+
 (s/def ::nan-or-non-long-able-non+
   (s/spec #(and (number? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? true))))
 
