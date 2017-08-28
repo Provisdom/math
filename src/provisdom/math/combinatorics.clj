@@ -72,21 +72,20 @@
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!).
-  `k` must be able to be a long.
-  Otherwise use [[log-choose-k-from-n]]."
+  `k` must be able to be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
   [k n]
   (DoubleArithmetic/binomial (double n) (long k)))
 
 (s/fdef choose-k-from-n
-        :args (s/cat :k ::m/long-able :n ::m/number)
+        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
+                     :n ::m/number)
         :ret ::m/number)
 
 (defn choose-k-from-n'
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!).
   Returns long if possible.
-  `k` must be able to be a long.
-  Otherwise use [[log-choose-k-from-n]]."
+  `k` must be able to be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
@@ -112,20 +111,22 @@
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of `n` items into `k` subsets."
   [k n]
-  (* (/ (factorial k))
-     (ccr/fold
-       + (fn [tot e]
-           (+ tot
-              (* (m/pow (- 1) e)
-                 (choose-k-from-n e k)
-                 (m/pow (- k e) n))))
-       (range (inc k)))))
+  (if (> k 170)
+    m/nan
+    (* (/ (factorial k))
+       (ccr/fold
+         + (fn [tot e]
+             (+ tot
+                (* (m/pow (- 1) e)
+                   (choose-k-from-n e k)
+                   (m/pow (- k e) n))))
+         (range (inc k))))))
 
 (s/fdef stirling-number-of-the-second-kind
-        :args (s/and (s/cat :k ::m/long-able :n ::m/long-able)
+        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
                      (fn [{:keys [k n]}]
                        (>= n k)))
-        :ret ::m/num)
+        :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind'
   "Returns the number of ways to partition a set of `n` items into `k` subsets.
@@ -134,55 +135,57 @@
   (m/maybe-long-able (stirling-number-of-the-second-kind k n)))
 
 (s/fdef stirling-number-of-the-second-kind'
-        :args (s/and (s/cat :k ::m/long-able :n ::m/long-able)
+        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
                      (fn [{:keys [k n]}]
                        (>= n k)))
-        :ret ::m/num)
+        :ret ::m/number)
 
 (defn bell-number
   "Returns the number of partitions of a set of size `n`."
   [n]
-  (if (< n 27)
-    (bell-numbers (long n))
-    (ccr/fold + (fn [tot e]
-                  (+ tot (stirling-number-of-the-second-kind e n)))
-              (range (inc n)))))
+  (cond (> n 170) m/nan
+        (and (m/non-? n) (< n 27)) (bell-numbers (long n))
+        :else (ccr/fold + (fn [tot e]
+                            (+ tot (stirling-number-of-the-second-kind e n)))
+                        (range (inc n)))))
 
-(s/fdef stirling-number-of-the-second-kind
+(s/fdef bell-number
         :args (s/cat :n ::m/long-able)
-        :ret ::m/num)
+        :ret ::m/number)
 
 (defn binomial-probability
-  "Likelihood of seeing 'successes' out of 'trials' with success-prob.
-  Successes must be able to be a long, otherwise use 'log-binomial-probability'"
+  "Likelihood of seeing `successes` out of `trials` with `success-prob`.
+  `Successes` must be able to be a long and less than 1e8, otherwise use [[log-binomial-probability]]."
   [successes trials success-prob]
   (* (choose-k-from-n successes trials)
      (m/pow success-prob successes)
      (m/pow (m/one- success-prob) (- trials successes))))
 
 (s/fdef binomial-probability
-        :args (s/and (s/cat :successes ::m/long-able
+        :args (s/and (s/cat :successes (s/and ::m/long-able-non- #(< % 1e8))
                             :trials ::m/non-
                             :success-prob ::m/prob)
                      (fn [{:keys [trials successes]}]
                        (>= trials successes)))
-        :ret ::m/num)
+        :ret ::m/number)
 
 (defn log-binomial-probability
-  "Log-Likelihood of seeing 'successes' out of 'trials' with success-prob"
+  "Log-Likelihood of seeing `successes` out of `trials` with `success-prob`."
   [successes trials success-prob]
   (+ (log-choose-k-from-n successes trials)
      (* successes (m/log success-prob))
-     (* (- trials successes)
-        (m/log (m/one- success-prob)))))
+     (if (= trials successes)
+       0.0
+       (* (- trials successes)
+          (m/log (m/one- success-prob))))))
 
 (s/fdef log-binomial-probability
-        :args (s/and (s/cat :successes ::m/long-able
+        :args (s/and (s/cat :successes ::m/long-able-non-
                             :trials ::m/non-
                             :success-prob ::m/prob)
                      (fn [{:keys [trials successes]}]
                        (>= trials successes)))
-        :ret ::m/num)
+        :ret ::m/number)
 
 (comment
   ;;;HYPERGEOMETRIC FUNCTION

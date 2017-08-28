@@ -3,6 +3,7 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.combinatorics :as combo]
+    [provisdom.math.core :as m]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
@@ -69,7 +70,7 @@
   (is= 1.2689769520640436E24 (combo/choose-k-from-n 12 545.0)))
 
 (deftest choose-k-from-n'-test
-  (is= 4 (combo/choose-k-from-n 1.0 4)))
+  (is= 4 (combo/choose-k-from-n' 1.0 4)))
 
 (deftest log-choose-k-from-n-test
   (is= 0.0 (combo/log-choose-k-from-n 0 1))
@@ -91,10 +92,45 @@
 (deftest stirling-number-of-the-second-kind'-test
   (is= 0 (combo/stirling-number-of-the-second-kind' 0 1)))
 
-;(defspec-test test-choose-k-from-n `combo/choose-k-from-n)  ;super slow when num-tests > 40
-;(defspec-test test-choose-k-from-n' `combo/choose-k-from-n') ;super slow when num-tests > 40
+(deftest bell-number-test
+  (is= 1 (combo/bell-number 0))
+  (is= 1 (combo/bell-number 1))
+  (is= 2 (combo/bell-number 2.0))
+  (is= 52 (combo/bell-number 5))
+  (is= 49631246523618756274N (combo/bell-number 26))
+  (is= 5.4571704793605997E20 (combo/bell-number 27))
+  (is= 6.160539404599935E21 (combo/bell-number 28.0)))
+
+(deftest binomial-probability-test
+  (is= 1.0 (combo/binomial-probability 0 0 0.4))
+  (is= 0.4 (combo/binomial-probability 1 1 0.4))
+  (is= 0.45650814137931667 (combo/binomial-probability 1 1.4 0.4))
+  (is= 0.34559999999999996 (combo/binomial-probability 1.0 4 0.4))
+  (is= 0.3456 (combo/binomial-probability 2 5 0.4))
+  (is= 1.210013134840654E-99 (combo/binomial-probability 12 545.0 0.4))
+  (is= 0.0 (combo/binomial-probability 12 24 0.0))
+  (is= 0.0 (combo/binomial-probability 12 24 1.0)))
+
+(deftest log-binomial-probability-test
+  (is= 0.0 (combo/log-binomial-probability 0 0 0.4))
+  (is= -0.916290731874155 (combo/log-binomial-probability 1 1 0.4))
+  (is= -0.7841487447593384 (combo/log-binomial-probability 1 1.4 0.4))
+  (is= -1.0624732420522363 (combo/log-binomial-probability 1.0 4 0.4))
+  (is= -1.0624732420522367 (combo/log-binomial-probability 2 5 0.4))
+  (is= -227.7652929916204 (combo/log-binomial-probability 12 545.0 0.4))
+  (is= m/inf- (combo/log-binomial-probability 12 24 0.0))
+  (is= m/inf- (combo/log-binomial-probability 12 24 1.0)))
+
+;(defspec-test test-choose-k-from-n `combo/choose-k-from-n) ;slow-ish
+;(defspec-test test-choose-k-from-n' `combo/choose-k-from-n') ;slow-ish
 (defspec-test test-log-choose-k-from-n `combo/log-choose-k-from-n)
 (defspec-test test-stirling-number-of-the-second-kind `combo/stirling-number-of-the-second-kind)
 (defspec-test test-stirling-number-of-the-second-kind' `combo/stirling-number-of-the-second-kind')
+(defspec-test test-bell-number `combo/bell-number)
+;(defspec-test test-binomial-probability `combo/binomial-probability) ;slow-ish
+(defspec-test test-log-binomial-probability `combo/log-binomial-probability)
+
+;;;COMBINATIONS
+
 
 #_(ost/unstrument)

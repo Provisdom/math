@@ -6,46 +6,6 @@
             [provisdom.math [core :as m]]
             [provisdom.utility-belt.core :as co]))
 
-(facts "choose"
-       (fact "bell number"
-             (bell-number -1) => (throws)
-             (bell-number 0) => 1
-             (bell-number 0.5) => (throws)
-             (bell-number 1) => 1
-             (bell-number 2.0) => 2
-             (bell-number 5) => 52
-             (bell-number 26) => 49631246523618756274N
-             (bell-number 27) => 5.4571704793605997E20
-             (bell-number 28.0) => 6.160539404599935E21)
-       (fact "binomial probability"
-             (binomial-probability -1 1 0.5) => 0.0
-             (binomial-probability 0 0 0.4) => 1.0
-             (binomial-probability 1 1 0.4) => 0.4
-             (binomial-probability 1 1.4 0.4) => (test-roughly 0.45650814137931667 1e-14)
-             (binomial-probability 1.4 2 0.4) => (throws)
-             (binomial-probability 2 1.4 0.4) => (throws)
-             (binomial-probability 1.0 4 0.4) => 0.34559999999999996
-             (binomial-probability 2 5 0.4) => 0.3456
-             (binomial-probability 12 545.0 0.4) => 1.210013134840654E-99
-             (binomial-probability 12 24 -0.1) => (throws)
-             (binomial-probability 12 24 1.1) => (throws)
-             (binomial-probability 12 24 0.0) => 0.0
-             (binomial-probability 12 24 1.0) => 0.0)
-       (fact "log binomial probability"
-             (log-binomial-probability -1 1 0.5) => (throws)
-             (log-binomial-probability 0 0 0.4) => 0.0
-             (log-binomial-probability 1 1 0.4) => -0.916290731874155
-             (log-binomial-probability 1 1.4 0.4) => -0.7841487447593384
-             (log-binomial-probability 1.4 2 0.4) => (throws)
-             (log-binomial-probability 2 1.4 0.4) => (throws)
-             (log-binomial-probability 1.0 4 0.4) => -1.0624732420522363
-             (log-binomial-probability 2 5 0.4) => -1.0624732420522367
-             (log-binomial-probability 12 545.0 0.4) => -227.7652929916204
-             (log-binomial-probability 12 24 -0.1) => (throws)
-             (log-binomial-probability 12 24 1.1) => (throws)
-             (log-binomial-probability 12 24 0.0) => m/inf-
-             (log-binomial-probability 12 24 1.0) => m/inf-))
-
 (facts "combinations"
        (def items [1 2 3])
        (def itemsb '(1 2 3))

@@ -15,8 +15,12 @@
    #{"10-min EMOM odd: 3->5 bar muscle-up, even: rest"
      "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
    #{"7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault); did it!"
-     "Work on Front squats, press, and thrusters at sets of 21 and down."} ;8/24 - worked 95# thrusters at 30
+     "Work on Front squats, press, and thrusters at sets of 21 and down."} ;8/24
    #{"Work on butterfly c2b"}                               ;8/25
+   #{"3x30-sec L-sits"
+     "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
+     "2 rounds of 15-sec 1-arm bar hangs; did it!"}         ;8/26
+   #{"Stretch"}                                             ;8/27
    ])
 
 (def wods-up-to-8-21
@@ -36,15 +40,15 @@
     :days-since-attempt 50}
    {:name               "Handstand walking 7x50' in 60-sec with 2-min rest"
     :days-since-attempt 50}
-   {:name               "2 rounds of 15-sec 1-arm bar hangs"
-    :days-since-attempt 50}
    {:name               "30 seconds of cherry pickers"
     :days-since-attempt 50}
    {:name               "21 unbroken kipping TTB"
     :days-since-attempt 2}
    {:name               "21 unbroken kipping C2B"
     :days-since-attempt 50}
-   {:name               "More L-sits, build to Tabata and 3x30-sec"
+   {:name               "Tabata L-sits"
+    :days-since-attempt 50}
+   {:name               "3x30-sec L-sits"
     :days-since-attempt 50}
    {:name               "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
     :days-since-attempt 50}
