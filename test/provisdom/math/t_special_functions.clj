@@ -7,8 +7,15 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-(def done-wods-8-21+
-  [#{"185-lb 20-rep Grace in 10-min; did it!"}              ;8/21
+(def done-wods-8-17+
+  [#{(str "Work on variations of Kalsu,
+   like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
+   just front squats or push press, less or more burpees or an alternative exercise,
+   or with dumbbells")}                                     ;8/17
+   #{"something"}
+   #{"21 unbroken kipping C2B"}                             ;8/19
+   #{"something"}
+   #{"185-lb 20-rep Grace in 10-min; did it!"}              ;8/21
    #{"4xE2MOM Handstand holds for 45->60-sec"
      "5xE3MOM Handstand holds for 45->60-sec"
      "Work on chin-ups; did it!"}                           ;8/22
@@ -21,119 +28,80 @@
      "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
      "2 rounds of 15-sec 1-arm bar hangs; did it!"}         ;8/26
    #{"Stretch"}                                             ;8/27
+   #{"5x15 cal Assault bike in 50 sec with 70-sec rest; did it!"
+     (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
+     rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")}
    ])
 
-(def wods-up-to-8-21
-  [{:name               "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)",
-    :days-since-attempt 50}
-   {:name               "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#",
-    :days-since-attempt 50}
-   {:name               "3x1 minute 135# OH hold",
-    :days-since-attempt 50}
-   {:name               "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes",
-    :days-since-attempt 50}
-   {:name               "5xE3MOM Handstand holds for 45->60-sec"
-    :days-since-attempt 50}
-   {:name               "4xE2MOM Handstand holds for 45->60-sec"
-    :days-since-attempt 50}
-   {:name               "More kipping HSPUs, build to 21 in a row"
-    :days-since-attempt 50}
-   {:name               "Handstand walking 7x50' in 60-sec with 2-min rest"
-    :days-since-attempt 50}
-   {:name               "30 seconds of cherry pickers"
-    :days-since-attempt 50}
-   {:name               "21 unbroken kipping TTB"
-    :days-since-attempt 2}
-   {:name               "21 unbroken kipping C2B"
-    :days-since-attempt 50}
-   {:name               "Tabata L-sits"
-    :days-since-attempt 50}
-   {:name               "3x30-sec L-sits"
-    :days-since-attempt 50}
-   {:name               "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
-    :days-since-attempt 50}
-   {:name               "30-sec each side of side plank with top leg up"
-    :days-since-attempt 50}
-   {:name               "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute (unbroken 3->5 sets or 10:58->9:00)"
-    :days-since-attempt 50}
-   {:name               "7x20-sec straight-arm hanging L-sits"
-    :days-since-attempt 50}
-   {:name               "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
-    :days-since-attempt 50}
-   {:name               "7 rounds of 45-sec hollow rock + 75-sec rest"
-    :days-since-attempt 50}
-   {:name               "2-min of sit-ups, 2-min of planks continuously cycling from elbows to hands, 2-min of hollow-ups"
-    :days-since-attempt 50}
-   {:name               "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
-    :days-since-attempt 50}
-   {:name               "5x15 cal Assault bike in 50 sec with 70-sec rest (did non-Assault easily)"
-    :days-since-attempt 50}
-   {:name               "Back Squat 275x10,9,...,1"
-    :days-since-attempt 50}
-   {:name               "Back Squat 345x1"
-    :days-since-attempt 50}
-   {:name               "Front Squats 5x9@185 start every 2 minutes from floor"
-    :days-since-attempt 50}
-   {:name               "Squat Grace at 155 in 10 minutes"
-    :days-since-attempt 50}
-   {:name               "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
-    :days-since-attempt 50}
-   {:name               "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
-    :days-since-attempt 50}
-   {:name               "21 unbroken Thrusters @95"
-    :days-since-attempt 50}
-   {:name               "Full Snatch E2MOM: 6x6@135, 5x4@155, 4x3@185 w/ 1-min breaks"
-    :days-since-attempt 50}
-   {:name               "Fran in 6:20->6 minutes"
-    :days-since-attempt 50}
-   {:name               "Fran+1-mile run 16:43->14 minutes"
-    :days-since-attempt 50}
-   {:name               "E2MOM5 thruster@95x15+TTBx15"
-    :days-since-attempt 50}
-   {:name               "E4MOM5 thruster@85->95x21+run200M"
-    :days-since-attempt 50}
-   {:name               "Kalsu 105->135"
-    :days-since-attempt 50}
-   {:name               "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees in 11 min @105->135"
-    :days-since-attempt 50}
-   {:name               "Work on butterfly pull-ups"
-    :days-since-attempt 50}
-   {:name               "Work on butterfly c2b"
-    :days-since-attempt 50}
-   {:name               "Work on high-bar back squat with Oly Shoes"
-    :days-since-attempt 50}
-   {:name               "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
-    :days-since-attempt 50}
-   {:name               "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
-    :days-since-attempt 50}
-   {:name               "Couch Stretch -> Bulgarian split squats"
-    :days-since-attempt 50}
-   {:name               "Work on bottom of muscle-up"
-    :days-since-attempt 50}
-   {:name               "Work on pistols either on box (build up to 20 in a row per leg then lower box), with elevated heels, or with a counterbalance weight held out in front"
-    :days-since-attempt 50}
-   {:name               "Work on ski machine"
-    :days-since-attempt 50}
-   {:name               "Work on tying together natural-looking triple-unders"
-    :days-since-attempt 50}
-   {:name               "Work on Front squats, press, and thrusters at sets of 21 and down."
-    :days-since-attempt 50}
-   {:name               "Work on variations of Kalsu, like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters, just front squats or push press, less or more burpees or an alternative exercise, or with dumbbells"
-    :days-since-attempt 4}
-   {:name               "Build up lateral shoulder raises"
-    :days-since-attempt 50}
-   {:name               "Try to get to median score of games wods"
-    :days-since-attempt 50}
-   {:name               "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, PP, cal row, rest) 1 minute each"
-    :days-since-attempt 50}])
+(def current-wod-list
+  ["Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
+   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#"
+   "3x1 minute 135# OH hold"
+   "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes"
+   "5xE3MOM Handstand holds for 45->60-sec"
+   "4xE2MOM Handstand holds for 45->60-sec"
+   "More kipping HSPUs, build to 21 in a row"
+   "Handstand walking 7x50' in 60-sec with 2-min rest"
+   "30 seconds of cherry pickers"
+   "21 unbroken kipping TTB"
+   "21 unbroken kipping C2B"
+   "Tabata L-sits"
+   "3x30-sec L-sits"
+   "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
+   "30-sec each side of side plank with top leg up"
+   (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
+   rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
+   "7x20-sec straight-arm hanging L-sits"
+   "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
+   "7 rounds of 45-sec hollow rock + 75-sec rest"
+   (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows
+   to hands, 2-min of hollow-ups")
+   "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
+   "Back Squat 275x10,9,...,1"
+   "Back Squat 345x1"
+   "Front Squats 5x9@185 start every 2 minutes from floor"
+   "Squat Grace at 155 in 10 minutes"
+   "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
+   "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
+   "21 unbroken Thrusters @95"
+   "Full Snatch E2MOM: 6x6@135, 5x4@155, 4x3@185 w/ 1-min breaks"
+   "Fran in 6:20->6 minutes"
+   "Fran+1-mile run 16:43->14 minutes"
+   "E2MOM5 thruster@95x15+TTBx15"
+   "E4MOM5 thruster@85->95x21+run200M"
+   "Kalsu 105->135"
+   (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees
+   in 11 min @105->135")
+   "Work on butterfly pull-ups"
+   "Work on butterfly c2b"
+   "Work on high-bar back squat with Oly Shoes"
+   "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
+   "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
+   "Couch Stretch -> Bulgarian split squats"
+   "Work on bottom of muscle-up"
+   (str "Work on pistols either on box
+   (build up to 20 in a row per leg then lower box),
+   with elevated heels, or with a counterbalance weight held out in front")
+   "Work on ski machine"
+   "Work on tying together natural-looking triple-unders"
+   "Work on Front squats, press, and thrusters at sets of 21 and down."
+   (str "Work on variations of Kalsu,
+   like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
+   just front squats or push press, less or more burpees or an alternative exercise,
+   or with dumbbells")
+   "Build up lateral shoulder raises"
+   "Try to get to median score of games wods"
+   (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps,
+   PP, cal row, rest) 1 minute each")])
 
 (defn update-wods
   ""
-  [wods done-wods]
+  [wod-list done-wods start-days]
   (let [total-days (count done-wods)
-        wods (mapv (fn [m]
-                     (update m :days-since-attempt (partial + total-days)))
-                   wods)
+        wods (mapv (fn [name]
+                     {:name               name
+                      :days-since-attempt (+ total-days start-days)})
+                   wod-list)
         new-wods (reduce-kv (fn [outer-wods days names-set]
                               (reduce-kv (fn [inner-wods wod-index wod]
                                            (if (contains? names-set (:name wod))
@@ -172,12 +140,14 @@
                          wods)]
     selected))
 
+(def start-days 50)
+
 (defn get-today-wod
   ""
   []
-  (let [a wods-up-to-8-21
-        b done-wods-8-21+
-        c (update-wods a b)
+  (let [a current-wod-list
+        b done-wods-8-17+
+        c (update-wods a b start-days)
         d (add-wod-weights-and-probs c)
         e (select-wod d)]
     e))

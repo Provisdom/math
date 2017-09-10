@@ -43,10 +43,12 @@
                        provisdom.math.t-arrays
                        provisdom.math.t-calculus
                        provisdom.math.t-clatrix
+                       provisdom.math.t-combinatorics
                        provisdom.math.t-core
                        provisdom.math.t-format
                        provisdom.math.t-matrix
                        ;provisdom.math.t-random2
+                       provisdom.math.t-series
                        provisdom.math.t-special-functions
                        provisdom.math.t-tensor
                        provisdom.math.t-vector}})

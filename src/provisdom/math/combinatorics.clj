@@ -194,7 +194,24 @@
     [p q z]
     (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)}))))
 
-;;;COMBINATIONS
+;;;UNORDERED COMBINATIONS
+(def mdl 3)                                                 ;max-dim-length for generators
+
+(s/def ::items
+  (s/with-gen
+    (s/coll-of any?)
+    #(gen/vector (s/gen any?) 0 mdl)))
+
+(s/def ::groups-of-items
+  (s/with-gen
+    (s/coll-of ::items)
+    #(gen/vector (s/gen ::items) 0 mdl)))
+
+(s/def ::replacement-count
+  (s/with-gen
+    ::m/int-non-
+    #(gen/large-integer* {:min 0 :max mdl})))
+
 ;taken from an old version of clojure.math.combinatorics
 (defn- unchunk
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
@@ -248,26 +265,27 @@
                           (index-combinations n cnt))))))))
 
 (s/fdef combinations
-        :args (s/cat :items (s/coll-of any?)
+        :args (s/cat :items ::items
                      :n (s/? ::m/long-non-))
-        :ret (s/coll-of (s/coll-of any?)))
+        :ret (s/nilable ::groups-of-items))
 
 (defn combinations-with-complements
-  "All combinations of size 'n' with complements, or all combinations with complements"
+  "All combinations of size `n` with complements, or all combinations with complements."
   ([items]
    (let [s (combinations items)
          r (reverse s)]
      (partition 2 (interleave s r))))
   ([items n]
-   (let [s (combinations items n)
-         r (reverse
-             (combinations items (- (count items) n)))]
-     (partition 2 (interleave s r)))))
+   (when-let [s (combinations items n)]
+     (partition 2
+                (interleave s
+                            (reverse
+                              (combinations items (- (count items) n))))))))
 
 (s/fdef combinations-with-complements
-        :args (s/cat :items (s/coll-of any?)
+        :args (s/cat :items ::items
                      :n (s/? ::m/long-non-))
-        :ret (s/coll-of (s/coll-of any?)))
+        :ret (s/nilable ::groups-of-items))
 
 (defn combinations-using-all
   "Combinations that use all of the `items` by grouping into the `breakdown`
@@ -282,25 +300,26 @@
               combos))))
 
 (s/fdef combinations-using-all
-        :args (s/and (s/cat :items (s/coll-of any?)
-                            :breakdown (s/coll-of ::m/long+))
-                     (fn [{:keys [items breakdown]}]
-                       (= (apply + breakdown) (count items))))
-        :ret (s/coll-of (s/coll-of any?)))
+        :args (s/with-gen
+                (s/and (s/cat :items ::items
+                              :breakdown (s/coll-of ::m/long+))
+                       (fn [{:keys [items breakdown]}]
+                         (== (apply + 0.0 breakdown) (count items))))
+                #(gen/one-of (map gen/return (list [[1 2 3] [2 1]] [[] []] [[[] nil [12 34]] [1]]))))
+        :ret ::groups-of-items)
 
 (defn distinct-combinations-with-replacement
-  "All distinct combinations of the `items` with replacement of up to 'n' items."
-  [items ^long n]
+  "All distinct combinations of the `items` with replacement of up to `n` items."
+  [items n]
   (filter #(<= (count %) n)
-          (distinct (map sort
-                         (combinations (apply concat (repeat n items)))))))
+          (distinct (combinations (apply interleave (repeat n items))))))
 
 (s/fdef distinct-combinations-with-replacement
-        :args (s/cat :items (s/coll-of any?)
-                     :n ::m/non-)
-        :ret (s/coll-of (s/coll-of any?)))
+        :args (s/cat :items ::items
+                     :n ::replacement-count)
+        :ret ::groups-of-items)
 
-;;;WITH ORDERING
+;;;ORDERED COMBINATIONS
 (defn- permute
   "All the permutations of `items`."
   [items prefix]
@@ -321,13 +340,13 @@
       (map #(into '() %) p))))
 
 (s/fdef permutations
-        :args (s/cat :items (s/coll-of any?))
-        :ret (s/coll-of (s/coll-of any?)))
+        :args (s/cat :items ::items)
+        :ret ::groups-of-items)
 
 (defn cartesian-product
-  "All the ways to take one item from each sequence in `collections`."
-  [& collections]
-  (let [v (vec collections)]
+  "All the ways to take one item from each sequence in `sequences-of-items`."
+  [& sequences-of-items]
+  (let [v (vec sequences-of-items)]
     (if (empty? v)
       '(())
       (for [x (first v)
@@ -335,8 +354,8 @@
         (cons x more)))))
 
 (s/fdef cartesian-product
-        :args (s/cat :collections (s/coll-of (s/coll-of any?)))
-        :ret (s/coll-of (s/coll-of any?)))
+        :args (s/cat :sequences-of-items (s/* ::items))
+        :ret ::groups-of-items)
 
 (defn selections
   "All the ways of taking `n` (possibly the same) elements from the sequence of items."
@@ -345,7 +364,7 @@
          (take n (repeat items))))
 
 (s/fdef selections
-        :args (s/cat :items (s/coll-of any?)
-                     :n ::m/long-non-)
-        :ret (s/coll-of (s/coll-of any?)))
+        :args (s/cat :items ::items
+                     :n ::replacement-count)
+        :ret ::groups-of-items)
 

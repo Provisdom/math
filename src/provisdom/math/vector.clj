@@ -213,7 +213,7 @@
     (if-not h
       sum
       (if (m/inf? h)
-        (apply + numbers)
+        (apply + sum h t)
         (let [y (- h carry)
               new-sum (+ y sum)]
           (recur t new-sum (- new-sum sum y)))))))
