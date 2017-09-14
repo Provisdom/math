@@ -16,7 +16,7 @@
                           [org.clojure/spec.alpha "0.1.123"]
                           [orchestra "2017.07.04-1"]
                           [org.clojure/core.async "0.3.443"]
-                          [provisdom/utility-belt "0.1.2-alpha2"]
+                          [provisdom/utility-belt "0.1.2-alpha3"]
                           [com.taoensso/truss "1.5.0"]
                           [org.clojure/math.numeric-tower "0.0.4"]
                           [org.apache.commons/commons-math3 "3.6.1"]

@@ -10,8 +10,6 @@
   (:import
     [cern.jet.math.tdouble DoubleArithmetic]))
 
-(set! *warn-on-reflection* true)
-
 ;;;CONSTANTS
 (def ^:private ^:const subfactorials
   "also called 'recontres numbers' or 'derangements'"

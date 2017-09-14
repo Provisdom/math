@@ -1,76 +1,78 @@
 (ns provisdom.math.apache
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.utility-belt.core :as co]
-            [provisdom.math.core :as m]
-            [provisdom.math.arrays :as ar]
-            [provisdom.math.matrix :as mx]
-            [provisdom.math.bounds :as bo]
-            [provisdom.math.apache-matrix :as apache-mx]
-            [provisdom.math.vector :as vector])
-  (:import [java.util ArrayList]
-           [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
-           [org.apache.commons.math3.analysis UnivariateFunction
-                                              MultivariateFunction MultivariateVectorFunction
-                                              MultivariateMatrixFunction]
-           [org.apache.commons.math3.analysis.differentiation
-            UnivariateDifferentiableFunction FiniteDifferencesDifferentiator]
-           [org.apache.commons.math3.analysis.solvers
-            BaseUnivariateSolver BisectionSolver BracketingNthOrderBrentSolver
-            BrentSolver IllinoisSolver MullerSolver MullerSolver2 PegasusSolver
-            RegulaFalsiSolver RiddersSolver SecantSolver NewtonRaphsonSolver]
-           [org.apache.commons.math3.special Gamma Beta Erf]
-           [org.apache.commons.math3.random RandomDataGenerator MersenneTwister
-                                            ISAACRandom SobolSequenceGenerator]
-           [org.apache.commons.math3.distribution IntegerDistribution
-                                                  HypergeometricDistribution PascalDistribution PoissonDistribution
-                                                  GeometricDistribution, UniformIntegerDistribution ZipfDistribution
-                                                  KolmogorovSmirnovDistribution MixtureMultivariateNormalDistribution
-                                                  MultivariateNormalDistribution RealDistribution BetaDistribution
-                                                  BinomialDistribution CauchyDistribution ChiSquaredDistribution
-                                                  ExponentialDistribution FDistribution GammaDistribution
-                                                  LevyDistribution LogNormalDistribution NormalDistribution,
-                                                  TDistribution, TriangularDistribution, UniformRealDistribution,
-                                                  WeibullDistribution ParetoDistribution, GumbelDistribution,
-                                                  LaplaceDistribution, LogisticDistribution, NakagamiDistribution]
-           [org.apache.commons.math3.optim OptimizationData InitialGuess
-                                           SimpleBounds MaxEval MaxIter PointValuePair PointVectorValuePair
-                                           SimpleValueChecker SimplePointChecker SimpleVectorValueChecker]
-           [org.apache.commons.math3.optim.univariate BrentOptimizer
-                                                      SearchInterval UnivariateObjectiveFunction
-                                                      UnivariatePointValuePair]
-           [org.apache.commons.math3.optim.linear SimplexSolver
-                                                  LinearObjectiveFunction LinearConstraintSet LinearConstraint
-                                                  Relationship NonNegativeConstraint]
-           [org.apache.commons.math3.optim.nonlinear.scalar GoalType
-                                                            ObjectiveFunction MultivariateOptimizer ObjectiveFunctionGradient]
-           [org.apache.commons.math3.optim.nonlinear.scalar.noderiv
-            SimplexOptimizer MultiDirectionalSimplex NelderMeadSimplex
-            PowellOptimizer BOBYQAOptimizer CMAESOptimizer CMAESOptimizer$Sigma
-            CMAESOptimizer$PopulationSize]
-           [org.apache.commons.math3.optim.nonlinear.scalar.gradient
-            NonLinearConjugateGradientOptimizer
-            NonLinearConjugateGradientOptimizer$BracketingStep
-            NonLinearConjugateGradientOptimizer$Formula]
-           [org.apache.commons.math3.fitting.leastsquares
-            LevenbergMarquardtOptimizer GaussNewtonOptimizer
-            LeastSquaresFactory LeastSquaresProblem$Evaluation]
-           [org.apache.commons.math3.analysis.interpolation
-            BicubicInterpolator BicubicInterpolatingFunction
-            PiecewiseBicubicSplineInterpolator
-            PiecewiseBicubicSplineInterpolatingFunction
-            TricubicInterpolator TricubicInterpolatingFunction
-            DividedDifferenceInterpolator HermiteInterpolator
-            LinearInterpolator LoessInterpolator MicrosphereInterpolator
-            NevilleInterpolator SplineInterpolator AkimaSplineInterpolator
-            UnivariatePeriodicInterpolator UnivariateInterpolator]
-           [org.apache.commons.math3.analysis.polynomials
-            PolynomialFunctionNewtonForm PolynomialSplineFunction
-            PolynomialFunctionLagrangeForm]
-           [org.apache.commons.math3.linear ArrayRealVector RealMatrix RealVector ConjugateGradient SymmLQ
-                                            PreconditionedIterativeLinearSolver RealLinearOperator]))
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.utility-belt.core :as co]
+    [provisdom.math.core :as m]
+    [provisdom.math.arrays :as ar]
+    [provisdom.math.matrix :as mx]
+    [provisdom.math.intervals :as bo]
+    [provisdom.math.apache-matrix :as apache-mx]
+    [provisdom.math.vector :as vector])
+  (:import
+    [java.util ArrayList]
+    [org.apache.commons.math3.exception TooManyEvaluationsException TooManyIterationsException]
+    [org.apache.commons.math3.analysis UnivariateFunction
+                                       MultivariateFunction MultivariateVectorFunction
+                                       MultivariateMatrixFunction]
+    [org.apache.commons.math3.analysis.differentiation
+     UnivariateDifferentiableFunction FiniteDifferencesDifferentiator]
+    [org.apache.commons.math3.analysis.solvers
+     BaseUnivariateSolver BisectionSolver BracketingNthOrderBrentSolver
+     BrentSolver IllinoisSolver MullerSolver MullerSolver2 PegasusSolver
+     RegulaFalsiSolver RiddersSolver SecantSolver NewtonRaphsonSolver]
+    [org.apache.commons.math3.special Gamma Beta Erf]
+    [org.apache.commons.math3.random RandomDataGenerator MersenneTwister
+                                     ISAACRandom SobolSequenceGenerator]
+    [org.apache.commons.math3.distribution IntegerDistribution
+                                           HypergeometricDistribution PascalDistribution PoissonDistribution
+                                           GeometricDistribution, UniformIntegerDistribution ZipfDistribution
+                                           KolmogorovSmirnovDistribution MixtureMultivariateNormalDistribution
+                                           MultivariateNormalDistribution RealDistribution BetaDistribution
+                                           BinomialDistribution CauchyDistribution ChiSquaredDistribution
+                                           ExponentialDistribution FDistribution GammaDistribution
+                                           LevyDistribution LogNormalDistribution NormalDistribution,
+                                           TDistribution, TriangularDistribution, UniformRealDistribution,
+                                           WeibullDistribution ParetoDistribution, GumbelDistribution,
+                                           LaplaceDistribution, LogisticDistribution, NakagamiDistribution]
+    [org.apache.commons.math3.optim OptimizationData InitialGuess
+                                    SimpleBounds MaxEval MaxIter PointValuePair PointVectorValuePair
+                                    SimpleValueChecker SimplePointChecker SimpleVectorValueChecker]
+    [org.apache.commons.math3.optim.univariate BrentOptimizer
+                                               SearchInterval UnivariateObjectiveFunction
+                                               UnivariatePointValuePair]
+    [org.apache.commons.math3.optim.linear SimplexSolver
+                                           LinearObjectiveFunction LinearConstraintSet LinearConstraint
+                                           Relationship NonNegativeConstraint]
+    [org.apache.commons.math3.optim.nonlinear.scalar GoalType
+                                                     ObjectiveFunction MultivariateOptimizer ObjectiveFunctionGradient]
+    [org.apache.commons.math3.optim.nonlinear.scalar.noderiv
+     SimplexOptimizer MultiDirectionalSimplex NelderMeadSimplex
+     PowellOptimizer BOBYQAOptimizer CMAESOptimizer CMAESOptimizer$Sigma
+     CMAESOptimizer$PopulationSize]
+    [org.apache.commons.math3.optim.nonlinear.scalar.gradient
+     NonLinearConjugateGradientOptimizer
+     NonLinearConjugateGradientOptimizer$BracketingStep
+     NonLinearConjugateGradientOptimizer$Formula]
+    [org.apache.commons.math3.fitting.leastsquares
+     LevenbergMarquardtOptimizer GaussNewtonOptimizer
+     LeastSquaresFactory LeastSquaresProblem$Evaluation]
+    [org.apache.commons.math3.analysis.interpolation
+     BicubicInterpolator BicubicInterpolatingFunction
+     PiecewiseBicubicSplineInterpolator
+     PiecewiseBicubicSplineInterpolatingFunction
+     TricubicInterpolator TricubicInterpolatingFunction
+     DividedDifferenceInterpolator HermiteInterpolator
+     LinearInterpolator LoessInterpolator MicrosphereInterpolator
+     NevilleInterpolator SplineInterpolator AkimaSplineInterpolator
+     UnivariatePeriodicInterpolator UnivariateInterpolator]
+    [org.apache.commons.math3.analysis.polynomials
+     PolynomialFunctionNewtonForm PolynomialSplineFunction
+     PolynomialFunctionLagrangeForm]
+    [org.apache.commons.math3.linear ArrayRealVector RealMatrix RealVector ConjugateGradient SymmLQ
+                                     PreconditionedIterativeLinearSolver RealLinearOperator]))
 
 (declare apache-vector)
 
@@ -325,8 +327,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
        (try (.solve (NewtonRaphsonSolver. abs-accu) max-iter
                     (univariate-differentiable-function root-f 2 0.25) lower upper)
             (catch Exception e
-              {::co/message (.getMessage e)
-               ::co/fn (var root-solver)
+              {::co/message  (.getMessage e)
+               ::co/fn       (var root-solver)
                ::co/category ::co/third-party}))
        (let [^BaseUnivariateSolver s
              (case root-solver
@@ -344,8 +346,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
              uni-fn (univariate-function root-f)]
          (when s (try (.solve s max-iter uni-fn lower upper guess)
                       (catch Exception e
-                        {::co/message (.getMessage e)
-                         ::co/fn (var root-solver)
+                        {::co/message  (.getMessage e)
+                         ::co/fn       (var root-solver)
                          ::co/category ::co/third-party}))))))))
 
 (s/fdef root-solver
@@ -485,8 +487,8 @@ Returns a value function that accepts an 'x', 'y', and 'z' value"
           ::co/fn       (var nonlinear-least-squares)
           ::co/category ::co/third-party})
        (catch Exception e
-         {::co/message (.getMessage e)
-          ::co/fn (var nonlinear-least-squares)
+         {::co/message  (.getMessage e)
+          ::co/fn       (var nonlinear-least-squares)
           ::co/category ::co/third-party})))))
 
 (s/def ::constraints-fn fn?)

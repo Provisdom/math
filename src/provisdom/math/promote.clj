@@ -1,14 +1,13 @@
 (ns provisdom.math.promote
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.core :as m]
-            [provisdom.math.special-functions :as mf]
-            [clojure.math.numeric-tower :as nt]
-            [taoensso.truss :as truss :refer (have have! have?)]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m]
+    [provisdom.math.special-functions :as mf]
+    [clojure.math.numeric-tower :as nt]
+    [taoensso.truss :as truss :refer (have have! have?)]))
 
 ;;;for max precision, use rationals
 
@@ -42,7 +41,7 @@
   ^BigDecimal [p]
   (when (>= p 101) (throw (ex-info "You don't need more than 100 digits of PI!"
                                    {:fn (var accu-PI)})))
-  (round' big-PI p BigDecimal/ROUND_HALF_EVEN))
+  (.setScale big-PI ^int p BigDecimal/ROUND_HALF_EVEN))
 
 ;;;GENERAL VECTOR MATH
 (defn dot-product'
@@ -61,7 +60,8 @@
   {:pre [(have? m/non-? x)]}
   (cond
     (zero? x) 1
-    (integer? x) (loop [x x f 1]
+    (integer? x) (loop [x x
+                        f 1]
                    (if (m/one? x)
                      f
                      (recur (dec x) (long (*' f x)))))
@@ -92,21 +92,26 @@
   "Returns the power series of a value x using a constant value c and a 
    term series: (a_n * (x - c)^n)"
   [term-series c x]
-  (if (== x c) (first term-series) (map-indexed #(*' %2 (pow' (-' x c) %))
-                                                term-series)))
+  (if (== x c)
+    (first term-series)
+    (map-indexed #(*' %2 (pow' (-' x c) %))
+                 term-series)))
 
 (defn power-series-derivative'
   "Returns the derivative of a power series"
   [term-series c x]
-  (if (== x c) 0
-               (map-indexed #(*' %2 % (pow' (-' x c) (dec' %))) term-series)))
+  (if (== x c)
+    0
+    (map-indexed #(*' %2 % (pow' (-' x c) (dec' %)))
+                 term-series)))
 
 (defn power-series-integral'
   "Returns the integral of a power series"
   [term-series c x integral-constant]
-  (if (== x c) (+' integral-constant (*' (first term-series) x)
-                   (map-indexed #(*' %2 (m/div (inc' %)) (pow' (-' x c) (inc' %)))
-                                term-series))))
+  (if (== x c)
+    (+' integral-constant (*' (first term-series) x)
+        (map-indexed #(*' %2 (m/div (inc' %)) (pow' (-' x c) (inc' %)))
+                     term-series))))
 
 (defn continued-fraction'
   "Returns the continued-fraction series for a term series: 
@@ -161,5 +166,6 @@
   "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt"
   [x y]
   {:pre [(have? (complement zero?) x y)]}
-  (* (gamma' x) (/ (gamma' y) (gamma' (+ x y)))))
+  (* (gamma' x)
+     (/ (gamma' y) (gamma' (+ x y)))))
 

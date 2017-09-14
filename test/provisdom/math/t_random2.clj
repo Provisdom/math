@@ -1,4 +1,3 @@
-;; copied from https://github.com/clojure/test.check/blob/master/src/test/clojure/clojure/test/check/random_test.clj
 (ns provisdom.math.t-random2
   "Tests of the custom RNG. This is a little weird since the subject
   of the tests (the random number generator) is also the primary
@@ -9,6 +8,10 @@
             [clojure.test.check.random :as random]
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
+
+;; copied from https://github.com/clojure/test.check/blob/master/src/test/clojure/clojure/test/check/random_test.clj
+
+(set! *warn-on-reflection* true)
 
 (def gen-split-steps
   (gen/list (gen/elements [:left :right])))

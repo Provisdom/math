@@ -6,6 +6,8 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
+(set! *warn-on-reflection* true)
+
 (ost/instrument)
 
 (deftest array?-test

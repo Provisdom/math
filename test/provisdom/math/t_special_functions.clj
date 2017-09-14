@@ -12,9 +12,9 @@
    like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
    just front squats or push press, less or more burpees or an alternative exercise,
    or with dumbbells")}                                     ;8/17
-   #{"something"}
+   #{}
    #{"21 unbroken kipping C2B"}                             ;8/19
-   #{"something"}
+   #{}
    #{"185-lb 20-rep Grace in 10-min; did it!"}              ;8/21
    #{"4xE2MOM Handstand holds for 45->60-sec"
      "5xE3MOM Handstand holds for 45->60-sec"
@@ -22,15 +22,35 @@
    #{"10-min EMOM odd: 3->5 bar muscle-up, even: rest"
      "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
    #{"7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault); did it!"
-     "Work on Front squats, press, and thrusters at sets of 21 and down."} ;8/24
+     "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."} ;8/24
    #{"Work on butterfly c2b"}                               ;8/25
    #{"3x30-sec L-sits"
      "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
      "2 rounds of 15-sec 1-arm bar hangs; did it!"}         ;8/26
-   #{"Stretch"}                                             ;8/27
+   #{}                                                      ;8/27
    #{"5x15 cal Assault bike in 50 sec with 70-sec rest; did it!"
      (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
-     rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")}
+     rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")}   ;8/28
+   #{}                                                      ;8/29
+   #{}                                                      ;8/30
+   #{}                                                      ;8/31
+   #{}                                                      ;9/1
+   #{}                                                      ;9/2
+   #{}                                                      ;9/3
+   #{}                                                      ;9/4
+   #{}                                                      ;9/5
+   #{}                                                      ;9/6
+   #{}                                                      ;9/7
+   #{}                                                      ;9/8
+   #{}                                                      ;9/9
+   #{}                                                      ;9/10
+   #{}                                                      ;9/11
+   #{}                                                      ;9/12
+   #{"Work on bottom of muscle-up; did it!"
+     "Fran+1-mile run 14:47->14 minutes"
+     "5xE3MOM Handstand holds for 45->60-sec"}              ;9/13
+   #{"Side planks on elbow :45 on a side, :75 off; 5 rds alt each side; did it!"
+     "Back Squat 265->275x10,9,...,1 in 30 minutes"}                      ;9/14
    ])
 
 (def current-wod-list
@@ -47,7 +67,6 @@
    "21 unbroken kipping C2B"
    "Tabata L-sits"
    "3x30-sec L-sits"
-   "Side planks on elbow :45 on a side, :75 off; 5 rds alt each side"
    "30-sec each side of side plank with top leg up"
    (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
    rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
@@ -57,16 +76,16 @@
    (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows
    to hands, 2-min of hollow-ups")
    "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
-   "Back Squat 275x10,9,...,1"
+   "Back Squat 265->275x10,9,...,1 in 30 minutes"
    "Back Squat 345x1"
    "Front Squats 5x9@185 start every 2 minutes from floor"
    "Squat Grace at 155 in 10 minutes"
    "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
    "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
    "21 unbroken Thrusters @95"
-   "Full Snatch E2MOM: 6x6@135, 5x4@155, 4x3@185 w/ 1-min breaks"
+   "Full Snatch E2MOM: 6x6@125->135, 5x4@135->155, 4x3@145->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
-   "Fran+1-mile run 16:43->14 minutes"
+   "Fran+1-mile run 14:47->14 minutes"
    "E2MOM5 thruster@95x15+TTBx15"
    "E4MOM5 thruster@85->95x21+run200M"
    "Kalsu 105->135"
@@ -78,19 +97,17 @@
    "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
    "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
    "Couch Stretch -> Bulgarian split squats"
-   "Work on bottom of muscle-up"
    (str "Work on pistols either on box
    (build up to 20 in a row per leg then lower box),
    with elevated heels, or with a counterbalance weight held out in front")
    "Work on ski machine"
    "Work on tying together natural-looking triple-unders"
-   "Work on Front squats, press, and thrusters at sets of 21 and down."
+   "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."
    (str "Work on variations of Kalsu,
    like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
    just front squats or push press, less or more burpees or an alternative exercise,
    or with dumbbells")
    "Build up lateral shoulder raises"
-   "Try to get to median score of games wods"
    (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps,
    PP, cal row, rest) 1 minute each")])
 

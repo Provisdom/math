@@ -1,16 +1,17 @@
 (ns provisdom.math.calculus
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.utility-belt.core :as co]
-            [provisdom.utility-belt.async :as as]
-            [provisdom.math.core :as m]
-            [provisdom.math.bounds :as bo]
-            [provisdom.math.combinatorics :as combo]
-            [provisdom.math.tensor :as tensor]
-            [provisdom.math.vector :as vector]
-            [provisdom.math.matrix :as mx]))
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.utility-belt.core :as co]
+    [provisdom.utility-belt.async :as as]
+    [provisdom.math.core :as m]
+    [provisdom.math.intervals :as bo]
+    [provisdom.math.combinatorics :as combo]
+    [provisdom.math.tensor :as tensor]
+    [provisdom.math.vector :as vector]
+    [provisdom.math.matrix :as mx]))
 
 (declare weights-and-nodes-gk)
 

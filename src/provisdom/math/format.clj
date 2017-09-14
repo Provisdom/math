@@ -1,14 +1,13 @@
 (ns provisdom.math.format
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [clojure.string :as str]
-            [taoensso.truss :as truss :refer [have have! have?]]
-            [provisdom.utility-belt.format :as u]
-            [provisdom.math.core :as m]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [clojure.string :as str]
+    [taoensso.truss :as truss :refer [have have! have?]]
+    [provisdom.utility-belt.format :as u]
+    [provisdom.math.core :as m]))
 
 (defn trim-number
   "Trims number of any unnecessary characters e.g. -0.3 and 0.30"

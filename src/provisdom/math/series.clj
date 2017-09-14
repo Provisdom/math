@@ -1,15 +1,14 @@
 (ns provisdom.math.series
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.utility-belt.core :as co]
-            [provisdom.math.core :as m]
-            [provisdom.math.vector :as vector]
-            [provisdom.math.combinatorics :as cm]
-            [provisdom.math.calculus :as ca]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.utility-belt.core :as co]
+    [provisdom.math.core :as m]
+    [provisdom.math.vector :as vector]
+    [provisdom.math.combinatorics :as cm]
+    [provisdom.math.calculus :as ca]))
 
 ;;;DECLARATIONS
 (declare polynomial-fn)
@@ -297,16 +296,17 @@
    (let [p (polynomial-functions chebyshev-kind)]
      (fn [v]
        (let [fv (mapv p v)]
-         (mapv (fn [k]
-                 (reduce-kv (fn [tot ke e]
-                              (* tot ((nth fv ke) e)))
+         (mapv (fn [degrees]
+                 (reduce-kv (fn [tot index degree]
+                              (* tot ((nth fv index) degree)))
                             1.0
-                            (vec k)))
-               (sort-by (fn [k]
-                          (reduce-kv (fn [tot ke e]
-                                       (+ tot (* e (inc (- (m/pow 0.1 (+ 2 ke)))))))
-                                     0.0
-                                     (vec k)))
+                            (vec degrees)))
+               (sort-by (fn [degrees]
+                          (reduce-kv (fn [[tot1 tot2] index degree]
+                                       [(+ tot1 degree)
+                                        (+ tot2 (* degree (inc (- (m/pow 0.01 (+ 2 index))))))])
+                                     [0.0 0.0]
+                                     (vec degrees)))
                         (apply cm/cartesian-product
                                (repeat (count v) (range (inc end-degree)))))))))))
 

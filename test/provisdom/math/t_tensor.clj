@@ -8,9 +8,9 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-(ost/instrument)
-
 (set! *warn-on-reflection* true)
+
+(ost/instrument)
 
 ;;TYPES
 (deftest tensor?-test

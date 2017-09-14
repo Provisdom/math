@@ -4,7 +4,7 @@
     [provisdom.test.core :refer :all]
     [provisdom.math.core :as m]
     [provisdom.math.calculus :as ca]
-    [provisdom.math.bounds :as bo]
+    [provisdom.math.intervals :as bo]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 

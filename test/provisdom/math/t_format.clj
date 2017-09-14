@@ -6,6 +6,8 @@
             [clojure.spec.test.alpha :as st]
             [orchestra.spec.test :as ost]))
 
+(set! *warn-on-reflection* true)
+
 (ost/instrument)
 
 (deftest trim-number-test
@@ -16,7 +18,6 @@
   (is= "300" (format/trim-number "0000300")))
 
 (deftest format-float-test
-  (is (thrown? Exception (format/format-float 123.456 -1)))
   (is= "123" (format/format-float 123.456 0))
   (is= "123.4560" (format/format-float 123.456 4))
   (is= "0.0000" (format/format-float 1.23456E-5 4))
@@ -25,7 +26,6 @@
   (is= "323234893849384900000.000" (format/format-float 3.232348938493849E20 3)))
 
 (deftest format-exponential-test
-  (is (thrown? Exception (format/format-exponential 23432 0)))
   (is= "2E+0" (format/format-exponential 2.0 1))
   (is= "2.3432E+4" (format/format-exponential 23432))
   (is= "2E+4" (format/format-exponential 23432 1))
@@ -38,7 +38,6 @@
   (is= "3.2323489384938490000E+20" (format/format-exponential 3.232348938493849E20 20)))
 
 (deftest format-number-test
-  (is (thrown? Exception (format/format-number 23.33 -1)))
   (is= "23" (format/format-number 23.33 1))
   (is= "1.2E+6" (format/format-number 1234567 6))
   (is= "1234567" (format/format-number 1234567 8))
@@ -104,7 +103,6 @@
   (is= 2.3432343E16 (format/parse-shorthand "23432.343T"))
   (is= 2.3432343E13 (format/parse-shorthand "23432.343B"))
   (is= 2.3432343E10 (format/parse-shorthand "23432.343M"))
-  (is (thrown? Exception (format/parse-shorthand "23432.343BT")))
   (is (m/nan? (format/parse-shorthand "NaN")))
   (is= m/inf+ (format/parse-shorthand "Inf"))
   (is= m/inf- (format/parse-shorthand "-Inf"))

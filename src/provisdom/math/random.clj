@@ -1,15 +1,14 @@
 (ns provisdom.math.random
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]
-            [provisdom.math.core :as m]
-            [provisdom.math.special-functions :as mf]
-            [provisdom.math.apache :as ap]
-            [clojure.core.reducers :as ccr]
-            [taoensso.truss :refer (have have! have?)]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m]
+    [provisdom.math.special-functions :as mf]
+    [provisdom.math.apache :as ap]
+    [clojure.core.reducers :as ccr]
+    [taoensso.truss :refer (have have! have?)]))
 
 (defn quasi-random
   "Better coverage but more predictable lazy sequence of vectors.
@@ -98,15 +97,15 @@ Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
 
 (defn fold-random
   "Returns tuple of value and rnd-lazy.
-This fn is an extension of 'fold' in core.reducers for folding rnd-lazy or rnd.   
-Reduces a collection using a (potentially parallel) reduce-combine strategy.
-The collection is partitioned into groups of approximately chunk-size (default 512), each of which is reduced
-   with reducef (with a seed value obtained by calling (combinef) with no arguments).
-For rnd-lazy, the reducef should take the result and first part of the tuple from the samplef.
-The results of these reductions are then reduced with combinef (default reducef).
-combinef must be associative, and, when called with no arguments, (combinef) must produce its identity element.
-These operations may be performed in parallel, but the results will preserve order.
-Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
+  This fn is an extension of 'fold' in core.reducers for folding rnd-lazy or rnd.
+  Reduces a collection using a (potentially parallel) reduce-combine strategy.
+  The collection is partitioned into groups of approximately chunk-size (default 512), each of which is reduced
+  with reducef (with a seed value obtained by calling (combinef) with no arguments).
+  For rnd-lazy, the reducef should take the result and first part of the tuple from the samplef.
+  The results of these reductions are then reduced with combinef (default reducef).
+  combinef must be associative, and, when called with no arguments, (combinef) must produce its identity element.
+  These operations may be performed in parallel, but the results will preserve order.
+  Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
   ([^long min-runs reducef samplef rnd-lazy]
    (fold-random min-runs reducef reducef samplef rnd-lazy))
   ([min-runs combinef reducef samplef rnd-lazy]

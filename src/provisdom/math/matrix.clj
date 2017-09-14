@@ -702,9 +702,11 @@
    (let [nr (rows m)
          nc (columns m)]
      (vec (if by-row?
-            (for [r (range nr), c (range r nc)]
+            (for [r (range nr)
+                  c (range r nc)]
               (get-in m [r c]))
-            (for [c (range nc), r (range c nr)]
+            (for [c (range nc)
+                  r (range c nr)]
               (get-in m [r c])))))))
 
 (s/fdef serialize-symmetric-or-triangular-matrix
