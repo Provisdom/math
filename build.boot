@@ -3,6 +3,8 @@
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
+          :wagons '[[s3-wagon-private "1.2.0"]]
+          :repositories #(conj % ["private" {:url "s3p://provisdom-artifacts/releases"}])
           :dependencies '[[org.clojure/tools.nrepl "0.2.13" :scope "test"]
                           [org.clojure/test.check "0.9.0"]
                           [adzerk/boot-test "1.2.0" :scope "test"]
