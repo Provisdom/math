@@ -8,7 +8,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.vector :as vector]
-    [provisdom.math.random2 :as random]))
+    [provisdom.math.random :as random]))
 
 ;;;DECLARATIONS
 (declare column-matrix transpose diagonal deserialize-symmetric-matrix
@@ -549,7 +549,7 @@
   (let [t (* rows columns)]
     (if (zero? t)
       [[]]
-      (mapv vec (partition columns (take t (random/rand-double-lazy!)))))))
+      (mapv vec (partition columns (take t (random/rnd-lazy!)))))))
 
 (s/fdef rnd-matrix!
         :args (s/cat :rows ::rows :columns ::columns)
@@ -558,7 +558,7 @@
 (defn rnd-reflection-matrix!
   "Returns a random Householder reflection matrix of `size`."
   [size]
-  (let [v (column-matrix (tensor/normalize (vec (take size (random/rand-double-lazy!)))))]
+  (let [v (column-matrix (tensor/normalize (vec (take size (random/rnd-lazy!)))))]
     (tensor/subtract (identity-matrix size)
                      (tensor/multiply (mx* v (transpose v))
                                       2.0))))

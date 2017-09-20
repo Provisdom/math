@@ -4,10 +4,11 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.math.core :as m]
-    [provisdom.math.apache :as ap])
+    [provisdom.math.core :as m])
   (:import
-    [cern.jet.stat.tdouble Gamma]))
+    [cern.jet.stat.tdouble Gamma]
+    [org.apache.commons.math3.special.Gamma]
+    [org.apache.commons.math3.special Beta Erf]))
 
 ;;;DECLARATIONS
 (declare regularized-gamma-p erfc)
@@ -105,7 +106,7 @@
   (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
         (m/roughly? -1.0 x m/dbl-close) m/inf-
         (zero? x) 0.0
-        :else (ap/erf-inv x)))
+        :else (Erf/erfInv (double x))))
 
 (s/fdef inv-erf
         :args (s/cat :x ::m/corr)
@@ -172,7 +173,7 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (ap/regularized-gamma-p a x))))))
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaP (double a) (double x)))))))
 
 (s/fdef lower-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -189,7 +190,7 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (ap/regularized-gamma-q a x))))))
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaQ (double a) (double x)))))))
 
 (s/fdef upper-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -214,7 +215,7 @@
   (cond (m/nan? a) m/nan
         (zero? x) 0.0
         (> x 1.0e150) 1.0
-        :else (min 1.0 (max 0.0 (ap/regularized-gamma-p a x)))))
+        :else (min 1.0 (max 0.0 (org.apache.commons.math3.special.Gamma/regularizedGammaP (double a) (double x))))))
 
 (s/fdef regularized-gamma-p
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -227,7 +228,7 @@
   (cond (or (m/nan? a) (m/nan? x)) m/nan
         (zero? x) 1.0
         (> x 1.0e150) 0.0
-        :else (min 1.0 (max 0.0 (ap/regularized-gamma-q a x)))))
+        :else (min 1.0 (max 0.0 (org.apache.commons.math3.special.Gamma/regularizedGammaQ (double a) (double x))))))
 
 (s/fdef regularized-gamma-q
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -238,7 +239,7 @@
   [a]
   (if (m/inf+? a)
     m/inf+
-    (ap/log-gamma a)))
+    (org.apache.commons.math3.special.Gamma/logGamma (double a))))
 
 (s/fdef log-gamma
         :args (s/cat :a ::m/nan-or-pos)
@@ -367,7 +368,7 @@
 (defn log-beta
   "Returns the log-beta of `x` and `y`."
   [x y]
-  (ap/log-beta x y))
+  (Beta/logBeta (double x) (double y)))
 
 (s/fdef log-beta
         :args (s/cat :x ::m/nan-or-pos :y ::m/nan-or-pos)

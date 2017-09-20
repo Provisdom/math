@@ -4,7 +4,7 @@
     [provisdom.test.core :refer :all]
     [provisdom.math.core :as m]
     [provisdom.math.tensor :as tensor]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
@@ -68,15 +68,15 @@
 
 (deftest rnd-tensor!-test
   (random/bind-seed 0
-    (is= 0.8833108082136426 (tensor/rnd-tensor! [])))
+                    (is= 0.8833108082136426 (tensor/rnd-tensor! [])))
   (random/bind-seed 0
-    (is= [] (tensor/rnd-tensor! [0])))
+                    (is= [] (tensor/rnd-tensor! [0])))
   (random/bind-seed 0
-    (is= [[]] (tensor/rnd-tensor! [1 0])))
+                    (is= [[]] (tensor/rnd-tensor! [1 0])))
   (random/bind-seed 0
-    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
-          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
-         (tensor/rnd-tensor! [2 3]))))
+                    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
+                          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
+                         (tensor/rnd-tensor! [2 3]))))
 
 ;(defspec-test test-to-tensor `tensor/to-tensor) ;slowish
 ;(defspec-test test-compute-tensor `tensor/compute-tensor) ;slowish

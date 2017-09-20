@@ -24,7 +24,7 @@
    #{"7x15 cal Assault bike in 60 sec with 90-sec rest (did non-Assault); did it!"
      "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."} ;8/24
    #{"Work on butterfly c2b"}                               ;8/25
-   #{"3x30-sec L-sits"
+   #{"3x30-sec 1->2-leg L-sits"
      "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
      "2 rounds of 15-sec 1-arm bar hangs; did it!"}         ;8/26
    #{}                                                      ;8/27
@@ -46,27 +46,33 @@
    #{}                                                      ;9/10
    #{}                                                      ;9/11
    #{}                                                      ;9/12
-   #{"Work on bottom of muscle-up; did it!"
+   #{"5xE3MOM Handstand holds for 45->60-sec"
      "Fran+1-mile run 14:47->14 minutes"
-     "5xE3MOM Handstand holds for 45->60-sec"}              ;9/13
+     "Work on bottom of muscle-up; did it!"}                ;9/13
    #{"Side planks on elbow :45 on a side, :75 off; 5 rds alt each side; did it!"
-     "Back Squat 265->275x10,9,...,1 in 30 minutes"}                      ;9/14
+     "Back Squat 265->275x10,9,...,1 in 30 minutes"}        ;9/14
+   #{"3xE5MOM 55->60 second 135# OH hold"
+     "Handstand walking 7x50' in 60-sec with 2-min rest"}   ;9/15
+   #{}                                                      ;9/16
+   #{"30 seconds of handstand shoulder taps; did it!"
+     "Build up lateral shoulder raises; did it!"
+     "3x30-sec 1->2-leg L-sits"}                            ;9/17
+   #{}                                                      ;9/18
    ])
 
 (def current-wod-list
   ["Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
    "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#"
-   "3x1 minute 135# OH hold"
+   "3xE5MOM 55->60 second 135# OH hold"
    "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes"
    "5xE3MOM Handstand holds for 45->60-sec"
    "4xE2MOM Handstand holds for 45->60-sec"
    "More kipping HSPUs, build to 21 in a row"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
-   "30 seconds of cherry pickers"
    "21 unbroken kipping TTB"
    "21 unbroken kipping C2B"
-   "Tabata L-sits"
-   "3x30-sec L-sits"
+   "Tabata 1->2-leg L-sits"
+   "3x30-sec 1->2-leg L-sits"
    "30-sec each side of side plank with top leg up"
    (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
    rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
@@ -107,7 +113,6 @@
    like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
    just front squats or push press, less or more burpees or an alternative exercise,
    or with dumbbells")
-   "Build up lateral shoulder raises"
    (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps,
    PP, cal row, rest) 1 minute each")])
 
@@ -147,7 +152,7 @@
 (defn select-wod
   ""
   [wods]
-  (let [rnd (provisdom.math.random2/double$)
+  (let [rnd (provisdom.math.random/double$)
         selected (reduce (fn [tot m]
                            (let [tot (+ tot (:prob m))]
                              (if (> tot rnd)

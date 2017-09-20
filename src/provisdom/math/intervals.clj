@@ -5,8 +5,11 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
-    [provisdom.math.vector :as vector]
     [provisdom.utility-belt.core :as co]))
+
+(def mdl 6)
+
+(s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::interval
   (s/and (s/tuple ::m/number ::m/number)
@@ -24,6 +27,10 @@
 
 (s/def ::int+-interval
   (s/and (s/tuple ::m/int+ ::m/int+)
+         (fn [[x1 x2]] (>= x2 x1))))
+
+(s/def ::long-interval
+  (s/and (s/tuple ::m/long ::m/long)
          (fn [[x1 x2]] (>= x2 x1))))
 
 (defn long-interval-gen
@@ -105,7 +112,7 @@
   ([size bounds] (into [] (repeat size bounds))))
 
 (s/fdef vector-bounds
-        :args (s/cat :size ::vector/size :bounds (s/? ::bounds))
+        :args (s/cat :size ::size :bounds (s/? ::bounds))
         :ret ::vector-bounds)
 
 (defn positive-definite-matrix-bounds
@@ -121,7 +128,7 @@
            (get-in m [r c])))))
 
 (s/fdef positive-definite-matrix-bounds
-        :args (s/cat :size ::vector/size)
+        :args (s/cat :size ::size)
         :ret ::vector-bounds)
 
 ;;;BOUNDS MANIPULATION

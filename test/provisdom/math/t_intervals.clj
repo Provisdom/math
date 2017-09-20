@@ -1,10 +1,11 @@
 (ns provisdom.math.t-intervals
-  (:require [clojure.test :refer :all]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.intervals :as intervals]
-            [provisdom.math.core :as m]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.intervals :as intervals]
+    [provisdom.math.core :as m]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
 
 (set! *warn-on-reflection* true)
 

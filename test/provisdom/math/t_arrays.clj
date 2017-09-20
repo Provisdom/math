@@ -1,10 +1,11 @@
 (ns provisdom.math.t-arrays
-  (:require [clojure.test :refer :all]
-            [criterium.core :as perf]
-            [provisdom.test.core :refer :all]
-            [provisdom.math.arrays :as a]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test :refer :all]
+    [criterium.core :as perf]
+    [provisdom.test.core :refer :all]
+    [provisdom.math.arrays :as a]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
 
 (set! *warn-on-reflection* true)
 

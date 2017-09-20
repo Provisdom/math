@@ -5,7 +5,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [provisdom.utility-belt.core :as co]))
 
 (declare transpose rank tensor?)
@@ -162,7 +162,7 @@
 (defn rnd-tensor!
   "Creates a new tensor with a given `shape` with random doubles."
   [shape]
-  (fill-tensor shape (take (apply * shape) (random/rand-double-lazy!))))
+  (fill-tensor shape (take (apply * shape) (random/rnd-lazy!))))
 
 (s/fdef rnd-tensor!
         :args (s/cat :shape ::shape)

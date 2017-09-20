@@ -2,7 +2,7 @@
   (:require [midje.sweet :refer :all]
             [criterium.core :refer :all]
             [provisdom.test.core :refer :all]
-            [provisdom.math.apache :refer :all]
+            [provisdom.math.apache_solvers :refer :all]
             [provisdom.math [core :as m]
              [matrix :as mx]]))
 

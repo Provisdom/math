@@ -10,7 +10,7 @@
     [provisdom.math.vector :as vector]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.arrays :as ar]
-    [provisdom.math.random2 :as random])
+    [provisdom.math.random :as random])
   (:import
     [org.apache.commons.math3.linear Array2DRowRealMatrix RealMatrix
                                      QRDecomposition LUDecomposition CholeskyDecomposition
@@ -340,7 +340,7 @@
       (if (< i 100)
         (let [m (apache-matrix
                   (mx/rnd-spectral-matrix!
-                    (vec (take size (random/rand-double-lazy!)))))]
+                    (vec (take size (random/rnd-lazy!)))))]
           (if (positive-definite-apache-matrix-finite? m m/sgl-close)
             m
             (recur (inc i))))))))

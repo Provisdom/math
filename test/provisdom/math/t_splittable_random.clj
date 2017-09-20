@@ -1,13 +1,14 @@
-(ns provisdom.math.t-random2
+(ns provisdom.math.t-splittable-random
   "Tests of the custom RNG. This is a little weird since the subject
   of the tests (the random number generator) is also the primary
   internal driver of the tests, but hopefully it will still be meaningful."
-  (:require [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]
-            [clojure.test.check.random :as random]
-            [clojure.spec.test.alpha :as st]
-            [orchestra.spec.test :as ost]))
+  (:require
+    [clojure.test.check.clojure-test :refer [defspec]]
+    [clojure.test.check.generators :as gen]
+    [clojure.test.check.properties :as prop]
+    [clojure.test.check.random :as test-random]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]))
 
 ;; copied from https://github.com/clojure/test.check/blob/master/src/test/clojure/clojure/test/check/random_test.clj
 
@@ -19,7 +20,7 @@
 (defn apply-split-steps
   [rng steps]
   (reduce (fn [rng step]
-            (let [[rng1 rng2] (random/split rng)]
+            (let [[rng1 rng2] (test-random/split rng)]
               (case step :left rng1 :right rng2)))
           rng
           steps))
@@ -33,15 +34,15 @@
 (defspec determinism-spec
          (prop/for-all [seed gen-seed
                         steps gen-split-steps]
-                       (let [r1 (random/make-random seed)
-                             r2 (random/make-random seed)]
-                         (= (-> r1 (apply-split-steps steps) (random/rand-long))
-                            (-> r2 (apply-split-steps steps) (random/rand-long))))))
+                       (let [r1 (test-random/make-random seed)
+                             r2 (test-random/make-random seed)]
+                         (= (-> r1 (apply-split-steps steps) (test-random/rand-long))
+                            (-> r2 (apply-split-steps steps) (test-random/rand-long))))))
 
 (defn get-256-longs
   [rng]
-  (map random/rand-long
-       (nth (iterate #(mapcat random/split %) [rng]) 8)))
+  (map test-random/rand-long
+       (nth (iterate #(mapcat test-random/split %) [rng]) 8)))
 
 ;; this spec is only statistically certain to pass, not logically
 ;; certain. The probability of a false failure (1/2^16384 or so) is
@@ -51,9 +52,9 @@
                         pre-steps gen-split-steps
                         post-steps-1 gen-split-steps
                         post-steps-2 gen-split-steps]
-                       (let [r (random/make-random seed)
+                       (let [r (test-random/make-random seed)
                              r' (apply-split-steps r pre-steps)
-                             [r1 r2] (random/split r')
+                             [r1 r2] (test-random/split r')
                              r1' (apply-split-steps r1 post-steps-1)
                              r2' (apply-split-steps r2 post-steps-2)]
                          ;; r1' and r2' should not somehow be in the same state
@@ -69,7 +70,7 @@
               (prop/for-all [seed gen-seed
                              steps gen-split-steps]
                             (let [immutable-rng (apply-split-steps
-                                                  (random/make-java-util-splittable-random seed)
+                                                  (test-random/make-java-util-splittable-random seed)
                                                   steps)
                                   mutable-rng
                                   ^java.util.SplittableRandom
@@ -78,7 +79,7 @@
                                               (case step :left rng :right rng2)))
                                           (java.util.SplittableRandom. seed)
                                           steps)]
-                              (= (random/rand-long immutable-rng)
+                              (= (test-random/rand-long immutable-rng)
                                  (.nextLong mutable-rng))))))
 
   ;; same test but for rand-double
@@ -87,7 +88,7 @@
               (prop/for-all [seed gen-seed
                              steps gen-split-steps]
                             (let [immutable-rng (apply-split-steps
-                                                  (random/make-java-util-splittable-random seed)
+                                                  (test-random/make-java-util-splittable-random seed)
                                                   steps)
                                   mutable-rng
                                   ^java.util.SplittableRandom
@@ -96,21 +97,21 @@
                                               (case step :left rng :right rng2)))
                                           (java.util.SplittableRandom. seed)
                                           steps)]
-                              (= (random/rand-double immutable-rng)
+                              (= (test-random/rand-double immutable-rng)
                                  (.nextDouble mutable-rng)))))))
 
 (defspec split-n-spec 40
          (prop/for-all [seed gen-seed
                         n gen/nat]
-                       (let [rng (random/make-random seed)]
+                       (let [rng (test-random/make-random seed)]
                          ;; checking that split-n returns the same generators that we
                          ;; would get by doing a particular series of splits manually
-                         (= (map random/rand-long (random/split-n rng n))
-                            (map random/rand-long
+                         (= (map test-random/rand-long (test-random/split-n rng n))
+                            (map test-random/rand-long
                                  (if (zero? n)
                                    []
                                    (loop [v [], rng rng]
                                      (if (= (dec n) (count v))
                                        (conj v rng)
-                                       (let [[rng1 rng2] (random/split rng)]
+                                       (let [[rng1 rng2] (test-random/split rng)]
                                          (recur (conj v rng2) rng1))))))))))

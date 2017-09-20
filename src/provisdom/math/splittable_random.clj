@@ -11,7 +11,7 @@
 
 (ns ^{:author "Gary Fredericks"
       :doc    "Purely functional and splittable pseudo-random number generators."}
-provisdom.math.random2
+provisdom.math.splittable-random
   (:refer-clojure :exclude [unsigned-bit-shift-right]))
 
 (defprotocol IRandom
@@ -167,7 +167,7 @@ provisdom.math.random2
 
 ;; some global state to make sure that seedless calls to make-random
 ;; return independent results
-(def ^:private next-rng
+(def next-rng
   "Returns a random-number generator. Successive calls should return
   independent results."
   (let [a (atom (make-java-util-splittable-random (System/currentTimeMillis)))
@@ -181,81 +181,3 @@ provisdom.math.random2
             [rng1 rng2] (split rng)]
         (.set thread-local rng2)
         rng1))))
-
-(def ^:dynamic *rng-gen* nil)
-
-(defn make-random
-  "Given an optional Long seed, returns an object that satisfies the
-  IRandom protocol."
-  ([] (if *rng-gen* (*rng-gen*) (next-rng)))
-  ([seed] (make-java-util-splittable-random seed)))
-
-(defn double$
-  "Makes a new RNG and returns a random double"
-  []
-  (-> (make-random) rand-double))
-
-(defn long$
-  "Makes a new RNG and returns a random long."
-  []
-  (-> (make-random) rand-long))
-
-(defn rng-lazy
-  "Returns a lazy sequence of RNG where each iteration is split from the previous."
-  ([] (rng-lazy (make-random)))
-  ([rng]
-   (iterate (comp first split) rng)))
-
-(defn rand-lazy*
-  ([f] (rand-lazy* f (make-random)))
-  ([f rng]
-   (map f (rng-lazy rng))))
-
-(defn rand-double-lazy!
-  "Returns a lazy seq of random doubles"
-  ([] (rand-double-lazy! (make-random)))
-  ([rng]
-   (rand-lazy* rand-double rng)))
-
-(defn rand-long-lazy
-  "Returns a lazy seq of random longs"
-  ([] (rand-long-lazy (make-random)))
-  ([rng]
-   (rand-lazy* rand-long rng)))
-
-(defn rng-gen
-  "Returns a function that will generate random numbers from a static RNG."
-  ([] (rng-gen (make-random)))
-  ([rng]
-   (let [gens (atom (rng-lazy rng))]
-     (fn [] volatile!
-       (let [rng (first @gens)]
-         (swap! gens rest)
-         rng)))))
-
-(defn set-seed!
-  "Sets the RNG generator to `seed`. If seed is not provided then the current clock time is used."
-  ([] (set-seed! (System/currentTimeMillis)))
-  ([seed]
-   (alter-var-root (var *rng-gen*) (constantly (rng-gen (make-random seed))))))
-
-(defmacro bind-seed
-  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a lazy sequence,
-  ensure the seq is realized within the scope of the binding otherwise you will get inconsistent
-  results."
-  [seed & body]
-  `(binding [*rng-gen* (rng-gen (make-random ~seed))]
-     ~@body))
-
-(defmacro do-set-seed!
-  "Runs [[set-seed!]] with `seed` and then executes `body`."
-  [seed & body]
-  `(do
-     (set-seed! ~seed)
-     ~@body))
-
-;; TODO: Is there a better way to set the default value for *rng-gen*?
-;; This is needed due to a circular dependency on functions when initially compiled.
-;; You will get an "Attempting to call unbound fn" error if you try to directly set
-;; *rng-gen* to `(rng-gen)`.
-(set-seed!)

@@ -6,7 +6,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
 (declare)
@@ -98,7 +98,7 @@
 (defn rnd-vector!
   "Returns vector `v` of `size` with random doubles."
   [size]
-  (vec (take size (random/rand-double-lazy!))))
+  (vec (take size (random/rnd-lazy!))))
 
 (s/fdef rnd-vector!
         :args (s/cat :size ::size)
