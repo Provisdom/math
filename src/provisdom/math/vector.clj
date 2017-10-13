@@ -156,7 +156,7 @@
 
 ;;;VECTOR MANIPULATION
 (defn insertv
-  "Returns a vector with the new value inserted into index."
+  "Returns a vector with the new `number` inserted into `index`."
   [v index number]
   (when (<= index (count v))
     (let [f (subvec v 0 index)
@@ -239,8 +239,8 @@
         :ret ::m/number)
 
 (defn cross-product
-  "Given two linearly independent 3D vectors v1 and v2, the cross product, v1 × v2,
-  is a vector that is perpendicular to both v1 and v2.
+  "Given two linearly independent 3D vectors `v1` and `v2`, the cross product, `v1` × `v2`,
+  is a vector that is perpendicular to both `v1` and `v2`.
   For 2D vectors, the cross product has an analog result, which is a number.
   Only defined for 2D and 3D vectors."
   [v1 v2]
@@ -268,7 +268,7 @@
         :ret (s/or :number ::m/number :v ::vector))
 
 (defn projection
-  "Returns vector of v1 projected onto v2."
+  "Returns vector of `v1` projected onto `v2`."
   [v1 v2]
   (let [s (m/div (dot-product v1 v2) (apply + (map m/sq v2)))]
     (mapv #(* s %) v2)))

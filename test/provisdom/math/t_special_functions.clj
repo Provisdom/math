@@ -29,8 +29,8 @@
      "2 rounds of 15-sec 1-arm bar hangs; did it!"}         ;8/26
    #{}                                                      ;8/27
    #{"5x15 cal Assault bike in 50 sec with 70-sec rest; did it!"
-     (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
-     rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")}   ;8/28
+     (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, "
+          "rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")} ;8/28
    #{}                                                      ;8/29
    #{}                                                      ;8/30
    #{}                                                      ;8/31
@@ -58,6 +58,39 @@
      "Build up lateral shoulder raises; did it!"
      "3x30-sec 1->2-leg L-sits"}                            ;9/17
    #{}                                                      ;9/18
+   #{}                                                      ;9/19
+   #{"E2MOM5 of 5 strict HSPUs"}                            ;9/20
+   #{}                                                      ;9/21
+   #{}                                                      ;9/22
+   #{}                                                      ;9/23
+   #{}                                                      ;9/24
+   #{"3 rounds of 20 pistols w/ 90-sec rest between in 10 minutes"} ;9/25
+   #{}                                                      ;9/26
+   #{}                                                      ;9/27
+   #{}                                                      ;9/28
+   #{}                                                      ;9/29
+   #{}                                                      ;9/30
+   #{}                                                      ;10/1
+   #{}                                                      ;10/2
+   #{}                                                      ;10/3
+   #{}                                                      ;10/4
+   #{"Squat Grace at 155 in 10 minutes; did it!"
+     "EMOM4 6x c2b + EMOM8 2x bar muscle-up; did it!"}      ;10/5
+   #{(str "Work on pistols either on box
+   (build up to 20 in a row per leg then lower box),
+   with elevated heels, or with a counterbalance weight held out in front")} ;10/6
+   #{}                                                      ;10/7
+   #{}                                                      ;10/8
+   #{"Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"} ;10/9                                                      ;10/9
+   #{}                                                      ;10/10
+   #{}                                                      ;10/11
+   #{}                                                      ;10/12
+   #{"7 rounds of 45-sec hollow rock + 75-sec rest"
+     "Tabata 1->2-leg L-sits"
+     (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, "
+          "rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
+     "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#"
+     }                                                      ;10/13
    ])
 
 (def current-wod-list
@@ -68,44 +101,44 @@
    "5xE3MOM Handstand holds for 45->60-sec"
    "4xE2MOM Handstand holds for 45->60-sec"
    "More kipping HSPUs, build to 21 in a row"
+   "E2MOM5 of 5 strict HSPUs"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
    "21 unbroken kipping TTB"
    "21 unbroken kipping C2B"
    "Tabata 1->2-leg L-sits"
    "3x30-sec 1->2-leg L-sits"
    "30-sec each side of side plank with top leg up"
-   (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold,
-   rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
-   "7x20-sec straight-arm hanging L-sits"
+   (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, "
+        "rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
+   "7x20-sec straight-arm hanging 1->2-leg L-sits"
    "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
    "7 rounds of 45-sec hollow rock + 75-sec rest"
-   (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows
-   to hands, 2-min of hollow-ups")
+   (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows "
+        "to hands, 2-min of hollow-ups")
    "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
    "Back Squat 265->275x10,9,...,1 in 30 minutes"
    "Back Squat 345x1"
    "Front Squats 5x9@185 start every 2 minutes from floor"
-   "Squat Grace at 155 in 10 minutes"
    "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
    "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
    "21 unbroken Thrusters @95"
-   "Full Snatch E2MOM: 6x6@125->135, 5x4@135->155, 4x3@145->185 w/ 1-min extra break between groups"
+   "Full Snatch E2MOM: 6x6@115->135, 5x4@135->155, 4x3@155->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
    "Fran+1-mile run 14:47->14 minutes"
    "E2MOM5 thruster@95x15+TTBx15"
    "E4MOM5 thruster@85->95x21+run200M"
    "Kalsu 105->135"
-   (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees
-   in 11 min @105->135")
+   (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees "
+        "in 11 min @105->135")
    "Work on butterfly pull-ups"
    "Work on butterfly c2b"
    "Work on high-bar back squat with Oly Shoes"
-   "EMOM4 6x c2b + EMOM8 2x bar muscle-up"
    "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
    "Couch Stretch -> Bulgarian split squats"
    (str "Work on pistols either on box
    (build up to 20 in a row per leg then lower box),
    with elevated heels, or with a counterbalance weight held out in front")
+   "3 rounds of 20 pistols w/ 90-sec rest between in 10 minutes"
    "Work on ski machine"
    "Work on tying together natural-looking triple-unders"
    "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."
@@ -149,10 +182,12 @@
                   wods)]
     wods))
 
+(require 'provisdom.math.random)
+
 (defn select-wod
   ""
   [wods]
-  (let [rnd (provisdom.math.random/double$)
+  (let [rnd (provisdom.math.random/rnd!)
         selected (reduce (fn [tot m]
                            (let [tot (+ tot (:prob m))]
                              (if (> tot rnd)

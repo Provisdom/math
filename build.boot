@@ -10,22 +10,20 @@
                           [adzerk/boot-test "1.2.0" :scope "test"]
                           [midje "1.9.0-alpha10" :exclusions [org.clojure/clojure] :scope "test"]
                           [criterium "0.4.4" :scope "test"]
-
                           [provisdom/boot-tasks "1.4" :scope "test"]
                           [provisdom/test "0.3.3-alpha1" :scope "test"]
                           ;;project deps
-                          [org.clojure/clojure "1.9.0-alpha20" :scope "provided"]
+                          [org.clojure/clojure "1.9.0-beta1" :scope "provided"]
                           [org.clojure/spec.alpha "0.1.123"]
                           [orchestra "2017.08.13"]
-                          [org.clojure/core.async "0.3.443"]
+                          ;[org.clojure/core.async "0.3.443"]
                           [provisdom/utility-belt "0.1.2-alpha3"]
-                          [com.taoensso/truss "1.5.0"]      ;using this?
-                          [org.clojure/math.numeric-tower "0.0.4"]
+                          ;[org.clojure/math.numeric-tower "0.0.4"]
                           [org.apache.commons/commons-math3 "3.6.1"]
                           [apache-commons-matrix "0.4.1"]
                           [clatrix "0.5.0"]
-                          [net.mikera/core.matrix "0.61.0"] ;using this?
-                          [net.sourceforge.parallelcolt/parallelcolt "0.10.1"]])
+                          ;[net.sourceforge.parallelcolt/parallelcolt "0.10.1"]
+                          ])
 
 (require
   '[adzerk.boot-test :refer [test]]
@@ -41,9 +39,9 @@
                      "http://www.eclipse.org/legal/epl-v10.html"}}
   ;; TODO: replace this when all namespaces are converted to clojure.test
   test {:namespaces '#{
+                       provisdom.math.t-apache-matrix
+                       provisdom.math.t-apache-vector
                        (comment
-                         provisdom.math.t-apache
-                         provisdom.math.t-apache-matrix
                          provisdom.math.t-arrays
                          provisdom.math.t-calculus
                          provisdom.math.t-clatrix
@@ -52,6 +50,7 @@
                          provisdom.math.t-format
                          provisdom.math.t-intervals
                          provisdom.math.t-matrix
+                         provisdom.math.t-random
                          provisdom.math.t-series
                          provisdom.math.t-special-functions
                          ;provisdom.math.t-splittable-random

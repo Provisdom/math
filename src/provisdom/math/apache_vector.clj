@@ -29,7 +29,7 @@
 (defn apache-vector
   "Returns a Apache Commons vector from a vector."
   [v]
-  (ArrayRealVector. ^"[D" (arrays/avec v)))
+  (ArrayRealVector. ^"[D" (arrays/double-array v)))
 
 (s/fdef apache-vector
         :args (s/cat :v ::vector/vector)

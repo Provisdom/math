@@ -63,6 +63,7 @@ provisdom.math.splittable-random
 ;; backwards compatibility for clojure 1.5
 (def ^:private old-clojure?
   (not (resolve 'clojure.core/unsigned-bit-shift-right)))
+
 (defmacro ^:private unsigned-bit-shift-right
   [x n]
   {:pre [(<= 1 n 63)]}
