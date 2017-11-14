@@ -4,8 +4,8 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.utility-belt.core :as co]
-    [provisdom.utility-belt.async :as as]
+    [provisdom.utility-belt.anomalies :as anomalies]
+    [provisdom.utility-belt.async :as async]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as bo]
     [provisdom.math.combinatorics :as combo]
@@ -393,12 +393,12 @@
         dimensions (count finite-intervals)
         f-low-precision #(tensor/inner-product low-precision-weights (vec (take-nth 2 (rest %))))
         f-high-precision #(tensor/inner-product high-precision-weights %)
-        f1dim (co/create-dbl-layered dimensions dimensions (fn [i j] (if (= i j) f-low-precision f-high-precision)))
-        partitioned-nodes (tensor/to-tensor (co/partition-recursively mapped-nodes (count high-precision-weights)))
+        f1dim (mx/compute-matrix dimensions dimensions (fn [r c] (if (= r c) f-low-precision f-high-precision)))
+        partitioned-nodes (tensor/to-tensor (vector/partition-recursively (count high-precision-weights) mapped-nodes))
         reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot)) partitioned-nodes %))
         high-precision-values (reduce-f (repeat dimensions f-high-precision))
         low-precision-values (reduce-f (repeat dimensions f-low-precision))
-        dim1 (map reduce-f f1dim)
+        dim1 (mapv reduce-f f1dim)
         err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % high-precision-values)))]
     {::rectangular-error     (err-f low-precision-values)
      ::high-precision-values high-precision-values
@@ -425,15 +425,15 @@
         (if (and (>= iter min-iter) (not (> total-error tolerance))) ;using 'not' captures NaN
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
-            {::co/message  (str "Error contains NaN. Value: "
+            {::anomalies/message  (str "Error contains NaN. Value: "
                                 (apply tensor/add (map :high-values error-maps)))
-             ::co/fn       (var adaptive-quadrature)
-             ::co/category ::co/no-solve})
+             ::anomalies/fn       (var adaptive-quadrature)
+             ::anomalies/category ::anomalies/no-solve})
           (if (>= iter max-iter)
-            {::co/message  (str "Iteration limit reached. Error: " total-error ". Value: "
+            {::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
                                 (apply tensor/add (map :high-values error-maps)))
-             ::co/fn       (var adaptive-quadrature)
-             ::co/category ::co/no-solve}
+             ::anomalies/fn       (var adaptive-quadrature)
+             ::anomalies/category ::anomalies/no-solve}
             (let [{[an bn] :finite-interval} (peek error-maps)
                   mn (* 0.5 (+ an bn))
 
@@ -441,8 +441,8 @@
                     high-precision-values1 ::high-precision-values}
                    {error2                 ::error
                     high-precision-values2 ::high-precision-values}]
-                  (as/thread :all
-                             [#(get-error-and-high-precision-values number->tensor [an mn] weights-and-nodes)
+                  (async/thread :all
+                                [#(get-error-and-high-precision-values number->tensor [an mn] weights-and-nodes)
                               #(get-error-and-high-precision-values number->tensor [mn bn] weights-and-nodes)])
 
                   new-error-maps [{:uni-error       error1
@@ -464,7 +464,7 @@
                      :accu ::m/accu
                      :iter-interval ::iter-interval
                      :weights-and-nodes ::weights-and-nodes)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn- simple-splitting-importance-fn
@@ -521,15 +521,15 @@
         (if (and (>= iter min-iter) (not (> total-error tolerance))) ;using 'not' captures NaN
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
-            {::co/message  (str "Error contains NaN. Value: "
+            {::anomalies/message  (str "Error contains NaN. Value: "
                                 (apply tensor/add (map :high-values error-maps)))
-             ::co/fn       (var rectangular-adaptive-quadrature)
-             ::co/category ::co/no-solve})
+             ::anomalies/fn       (var rectangular-adaptive-quadrature)
+             ::anomalies/category ::anomalies/no-solve})
           (if (>= iter max-iter)
-            {::co/message  (str "Iteration limit reached.  Error: " total-error " Value: "
+            {::anomalies/message  (str "Iteration limit reached.  Error: " total-error " Value: "
                                 (apply tensor/add (map :high-values error-maps)))
-             ::co/fn       (var rectangular-adaptive-quadrature)
-             ::co/category ::co/no-solve}
+             ::anomalies/fn       (var rectangular-adaptive-quadrature)
+             ::anomalies/category ::anomalies/no-solve}
             (let [{intervals-n    :finite-intervals
                    one-dim-errors :one-dim-errors} (peek error-maps)
                   dimensions (select-dimensions-fn one-dim-errors (< iter min-iter))
@@ -556,7 +556,7 @@
                                           :one-dim-errors       one-dim-errors
                                           :finite-intervals     finite-intervals})
                                        new-intervals
-                                       (as/thread :all new-fns))
+                                       (async/thread :all new-fns))
                   new-error-maps (into [] (sort-by (fn [m]
                                                      (if (m/nan? (:splitting-importance m))
                                                        m/inf+
@@ -572,7 +572,7 @@
                      :weights-and-nodes ::weights-and-nodes
                      :splitting-importance-fn ::splitting-importance-fn
                      :select-dimensions-fn ::select-dimensions-fn)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn change-of-variable
@@ -627,8 +627,8 @@
         fms (map ::multiplicative-fn maps)
         fvs (map ::converter-fn maps)
         new-intervals (mapv ::bo/finite-interval maps)]
-    [#(tensor/multiply (apply * (co/in-place-functional fms %))
-                       (v->tensor (vec (co/in-place-functional fvs %))))
+    [#(tensor/multiply (apply * (map (fn [f a] (f a)) fms %))
+                       (v->tensor (mapv (fn [f a] (f a)) fvs %)))
      new-intervals]))
 
 (s/fdef change-of-variable-for-rectangular-integration
@@ -662,7 +662,7 @@
         :args (s/cat :number->tensor ::number->tensor
                      :num-interval ::bo/num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn rectangular-integration
@@ -698,7 +698,7 @@
         :args (s/cat :v->tensor ::v->tensor
                      :num-intervals ::num-intervals
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-2D-integration
@@ -742,7 +742,7 @@
                      :outer-interval ::bo/num-interval
                      :outer->inner-interval ::number->num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-3D-integration
@@ -797,7 +797,7 @@
                      :outer->middle-interval ::number->num-interval
                      :outer+middle->inner-interval ::number2->num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-4D-integration
@@ -867,7 +867,7 @@
                      :outer+outer-middle->inner-middle-interval ::number2->num-interval
                      :outer+outer-middle+inner-middle->inner-interval ::number3->num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
 
 ;;;NUMERICAL DERIVATIVES

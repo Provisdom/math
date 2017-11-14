@@ -4,8 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.math.core :as m]
-    [provisdom.utility-belt.core :as co]))
+    [provisdom.math.core :as m]))
 
 (def mdl 6)
 
@@ -118,11 +117,13 @@
 (defn positive-definite-matrix-bounds
   "Returns a vector of bounds flattened for a symmetric positive matrix."
   [size]
-  (let [m (co/create-dbl-layered
-            size
-            size
-            (fn [row column]
-              (if (== row column) bounds+ (bounds))))]
+  (let [m (if (zero? size)
+            [[]]
+            (mapv (fn [row]
+                    (mapv (fn [column]
+                            (if (== row column) bounds+ (bounds)))
+                          (range size)))
+                  (range size)))]
     (vec (for [r (range size)
                c (range r size)]
            (get-in m [r c])))))

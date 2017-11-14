@@ -4,7 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.utility-belt.core :as co]
+    [provisdom.utility-belt.extensions :as extensions]
     [provisdom.math.core :as m]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.vector :as vector]
@@ -961,7 +961,7 @@
          (if (>= r nr)
            val
            (recur (inc r)
-                  (co/reduce-kv-ext g val (first s1) (first s2))
+                  (extensions/reduce-kv-ext g val (first s1) (first s2))
                   (rest s1)
                   (rest s2)))))))
   ([f init m1 m2 m3]
@@ -976,7 +976,7 @@
          (if (>= r nr)
            val
            (recur (inc r)
-                  (co/reduce-kv-ext g val (first s1) (first s2) (first s3))
+                  (extensions/reduce-kv-ext g val (first s1) (first s2) (first s3))
                   (rest s1)
                   (rest s2)
                   (rest s3))))))))

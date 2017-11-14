@@ -85,6 +85,12 @@
 (defspec-test test-rnd-tensor! `tensor/rnd-tensor!)
 
 ;;INFO
+(deftest first-number-test
+  (is= 2 (tensor/first-number 2))
+  (is= nil (tensor/first-number []))
+  (is= 2 (tensor/first-number [2]))
+  (is= 2 (tensor/first-number [[2]])))
+
 (deftest ecount-test
   (is= 1 (tensor/ecount 0))
   (is= 0 (tensor/ecount [[]]))
@@ -114,6 +120,7 @@
                            (odd? index))
                          [[1 2] [3 4]])))
 
+(defspec-test test-first-number `tensor/first-number)
 (defspec-test test-ecount `tensor/ecount)
 (defspec-test test-rank `tensor/rank)
 (defspec-test test-shape `tensor/shape)

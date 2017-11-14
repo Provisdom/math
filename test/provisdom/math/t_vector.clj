@@ -3,7 +3,7 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.vector :as vector]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [provisdom.math.core :as m]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
@@ -37,6 +37,12 @@
   (is= [0 3 6] (vector/compute-vector 3 (partial * 3)))
   (is= [2.0 3.0 4.0] (vector/compute-vector 3 #(+ 2.0 %))))
 
+(deftest compute-coll-test
+  (is= '(0) (vector/compute-coll 1 identity))
+  (is= '(0 1) (vector/compute-coll 2 identity))
+  (is= '(0 3 6) (vector/compute-coll 3 (partial * 3)))
+  (is= '(2.0 3.0 4.0) (vector/compute-coll 3 #(+ 2.0 %))))
+
 (deftest rnd-vector!-test
   (random/bind-seed 0
     (is= [] (vector/rnd-vector! 0)))
@@ -52,10 +58,16 @@
 
 (defspec-test test-to-vector `vector/to-vector)
 (defspec-test test-compute-vector `vector/compute-vector)
+(defspec-test test-compute-coll `vector/compute-coll)
 (defspec-test test-rnd-vector! `vector/rnd-vector!)
 (defspec-test test-sparse->vector `vector/sparse->vector)
 
 ;;;INFO
+(deftest indexes-of-test
+  (is= [] (vector/indexes-of 3.0 [1.0]))
+  (is= [2] (vector/indexes-of 3.0 [1.0 2.0 3.0]))
+  (is= [1 4] (vector/indexes-of 3.0 [1.0 3.0 4.0 4.0 3.0])))
+
 (deftest filter-kv-test
   (is= [] (vector/filter-kv (fn [k v] (> v k)) []))
   (is= [] (vector/filter-kv (fn [k v] (> v k)) [0]))
@@ -66,6 +78,7 @@
   (is= nil (vector/some-kv (fn [k v] (> v k)) [0]))
   (is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6])))
 
+(defspec-test test-indexes-of `vector/indexes-of)
 (defspec-test test-filter-kv `vector/filter-kv)
 (defspec-test test-some-kv `vector/some-kv)
 
@@ -85,6 +98,23 @@
   (is= [0 2 4] (vector/removev [0 2 4 6] 3))
   (is= [0 4 6] (vector/removev [0 2 4 6] 1)))
 
+(deftest partition-recursively-test
+  (is= nil (vector/partition-recursively 3 []))
+  (is= [1 2] (vector/partition-recursively 2 [1 2]))
+  (is= [1 2 3] (vector/partition-recursively 3 [1 2 3]))
+  (is= [[1 2 3] [4]] (vector/partition-recursively 3 [1 2 3 4]))
+  (is= [[1 2 3] [4 5 6]] (vector/partition-recursively 3 [1 2 3 4 5 6]))
+  (is= [[[1 2 3] [4 5 6] [7 8 9]]
+        [10]]
+       (vector/partition-recursively [1 2 3 4 5 6 7 8 9 10] 3)))
+
+(deftest concat-by-index-test
+  (is= [] (vector/concat-by-index [] [] 0))
+  (is= [] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -4))
+  (is= [4.0 5.0 6.0 nil nil 1.0 2.0 3.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -5))
+  (is= [1.0 2.0 3.0 nil nil 4.0 5.0 6.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 5))
+  (is= [4.0 5.0 6.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 0)))
+
 (deftest replace-nan-test
   (is= [] (vector/replace-nan 0 []))
   (is= [0 1 2 0] (vector/replace-nan 0 [m/nan 1 2 m/nan]))
@@ -92,6 +122,8 @@
 
 (defspec-test test-insertv `vector/insertv)
 (defspec-test test-removev `vector/removev)
+(defspec-test test-partition-recursively `vector/partition-recursively)
+(defspec-test test-concat-by-index `vector/concat-by-index)
 (defspec-test test-replace-nan `vector/replace-nan)
 
 ;;;MATH

@@ -5,7 +5,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [clatrix.core :as clatrix]
-    [provisdom.utility-belt.core :as co]
+    [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]
     [provisdom.math.vector :as vector]
     [provisdom.math.matrix :as mx]
@@ -698,13 +698,13 @@
     (clatrix [[]])
     (try (clatrix/cholesky positive-definite-clatrix-m-finite)
          (catch Exception e
-           {::co/message  (.getMessage e)
-            ::co/fn       (var upper-cholesky-decomposition)
-            ::co/category ::co/third-party}))))
+           {::anomalies/message  (.getMessage e)
+            ::anomalies/fn       (var upper-cholesky-decomposition)
+            ::anomalies/category ::anomalies/third-party}))))
 
 (s/fdef upper-cholesky-decomposition
         :args (s/cat :positive-definite-clatrix-m-finite ::positive-definite-clatrix-finite)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :upper-triangular-clatrix ::upper-triangular-clatrix))
 
 (s/def ::svd-left ::clatrix-finite)
@@ -737,13 +737,13 @@
             ::svd-right       (:right r)
             ::rank            (:rank r)})
          (catch Exception e
-           {::co/message  (.getMessage e)
-            ::co/fn       (var sv-decomposition)
-            ::co/category ::co/third-party}))))
+           {::anomalies/message  (.getMessage e)
+            ::anomalies/fn       (var sv-decomposition)
+            ::anomalies/category ::anomalies/third-party}))))
 
 (s/fdef sv-decomposition
         :args (s/cat :clatrix-m-finite ::clatrix-finite)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :res (s/keys :req [::svd-left ::singular-values ::svd-right ::rank])))
 
 (defn condition

@@ -4,7 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.utility-belt.core :as co]
+    [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
     [provisdom.math.vector :as vector]
@@ -861,13 +861,13 @@
             ::eigenvalues        eigenvalues
             ::eigenvectors       (.getVT r)})
          (catch Exception e
-           {::co/message (.getMessage e)
-            ::co/fn (var eigen-decomposition)
-            ::co/category ::co/third-party}))))
+           {::anomalies/message (.getMessage e)
+            ::anomalies/fn (var eigen-decomposition)
+            ::anomalies/category ::anomalies/third-party}))))
 
 (s/fdef eigen-decomposition
         :args (s/cat :square-apache-m-finite ::square-apache-matrix-finite)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :eigen (s/keys :req [::eigenvectorsT ::eigenvalues-matrix ::eigenvalues ::eigenvectors])))
 
 (s/def ::cholesky-L ::lower-triangular-apache-matrix)
@@ -885,13 +885,13 @@
            {::cholesky-L  (.getL r)
             ::cholesky-LT (.getLT r)})
          (catch Exception e
-           {::co/message (.getMessage e)
-            ::co/fn (var cholesky-decomposition)
-            ::co/category ::co/third-party}))))
+           {::anomalies/message (.getMessage e)
+            ::anomalies/fn (var cholesky-decomposition)
+            ::anomalies/category ::anomalies/third-party}))))
 
 (s/fdef cholesky-decomposition
         :args (s/cat :positive-definite-apache-m ::positive-definite-apache-matrix-finite)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :res (s/keys :req [::cholesky-L ::cholesky-LT])))
 
 (s/def ::rectangular-root ::apache-matrix)
@@ -924,14 +924,14 @@
            {::rectangular-root (.getRootMatrix r)
             ::rank             (.getRank r)})
          (catch Exception e
-           {::co/message  (.getMessage e)
-            ::co/fn       (var rectangular-cholesky-decomposition)
-            ::co/category ::co/third-party}))))
+           {::anomalies/message  (.getMessage e)
+            ::anomalies/fn       (var rectangular-cholesky-decomposition)
+            ::anomalies/category ::anomalies/third-party}))))
 
 (s/fdef rectangular-cholesky-decomposition
         :args (s/cat :positive-semidefinite-apache-m ::positive-semidefinite-apache-matrix-finite
                      :accu ::m/accu)
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :res (s/keys :req [::rectangular-root ::rank])))
 
 (s/def ::svd-left ::apache-matrix)
@@ -984,7 +984,7 @@
 
 (s/def ::Q ::apache-matrix)
 (s/def ::R ::apache-matrix)
-(s/def ::LLS-solution (s/or :apache-m ::apache-matrix :anomaly ::co/anomaly))
+(s/def ::LLS-solution (s/or :apache-m ::apache-matrix :anomaly ::anomalies/anomaly))
 (s/def ::error (s/nilable ::symmetric-apache-matrix))
 (defn qr-decomposition-with-linear-least-squares-and-error-matrix
   "Returns a map containing:
@@ -1002,9 +1002,9 @@
           ^DecompositionSolver s (.getSolver d)
           solution (try (block-apache-matrix->apache-matrix (.solve s ^Array2DRowRealMatrix apache-m2))
                         (catch Exception e
-                          {::co/message (.getMessage e)
-                           ::co/fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)
-                           ::co/category ::co/third-party}))
+                          {::anomalies/message (.getMessage e)
+                           ::anomalies/fn (var qr-decomposition-with-linear-least-squares-and-error-matrix)
+                           ::anomalies/category ::anomalies/third-party}))
           r (.getR d)
           r-rows (rows r)
           r-columns (columns r)

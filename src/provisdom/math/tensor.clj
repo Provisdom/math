@@ -6,7 +6,7 @@
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
-    [provisdom.utility-belt.core :as co]))
+    [provisdom.utility-belt.arities :as arities]))
 
 (declare transpose rank tensor?)
 
@@ -169,6 +169,17 @@
         :ret ::tensor)
 
 ;;;TENSOR INFO
+(defn first-number
+  "Returns the first number in the tensor."
+  [tensor]
+  (if (number? tensor)
+    tensor
+    (first-number (first tensor))))
+
+(s/fdef first-number
+        :args (s/cat :tensor ::tensor)
+        :ret (s/nilable ::m/number))
+
 (defn ecount
   "Returns the total count of elements."
   [tensor]
@@ -203,7 +214,9 @@
          remain tensor]
     (if (sequential? remain)
       (let [r (first remain)]
-        (recur (inc dim) (conj sh (count remain)) r))
+        (recur (inc dim)
+               (conj sh (count remain))
+               r))
       sh)))
 
 (s/fdef shape
@@ -300,7 +313,7 @@
                        (fn [{:keys [more f]}]
                          (some (fn [a]
                                  (or (= (inc (count more)) a) (= a :rest)))
-                               (co/arities f))))
+                               (arities/arities f))))
           :ret (s/nilable ::tensor)))
 
 (defn- recursive-emap-kv
@@ -343,7 +356,7 @@
                             :tensor ::tensor
                             :more (s/* ::tensor))
                      (fn [{:keys [f more]}] (some (fn [a] (or (= (+ 2 (count more)) a) (= a :rest)))
-                                                  (co/arities f))))
+                                                  (arities/arities f))))
           :ret (s/nilable ::tensor)))
 
 ;;;TENSOR MATH

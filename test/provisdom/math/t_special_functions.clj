@@ -8,16 +8,15 @@
     [orchestra.spec.test :as ost]))
 
 (def done-wods-8-17+
-  [#{(str "Work on variations of Kalsu,
-   like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
-   just front squats or push press, less or more burpees or an alternative exercise,
-   or with dumbbells")}                                     ;8/17
+  [#{(str "Work on variations of Kalsu, like EMOM20 of 5 burpees + 5 thrusters @75, "
+          "behind neck thrusters, just front squats or push press, "
+          "less or more burpees or an alternative exercise, or with dumbbells")} ;8/17
    #{}
    #{"21 unbroken kipping C2B"}                             ;8/19
    #{}
    #{"185-lb 20-rep Grace in 10-min; did it!"}              ;8/21
-   #{"4xE2MOM Handstand holds for 45->60-sec"
-     "5xE3MOM Handstand holds for 45->60-sec"
+   #{"E2MOM4 Handstand holds for 45->60-sec"
+     "E3MOM5 Handstand holds for 45->60-sec"
      "Work on chin-ups; did it!"}                           ;8/22
    #{"10-min EMOM odd: 3->5 bar muscle-up, even: rest"
      "E4MOM5 thruster@85->95x21+run200M"}                   ;8/23
@@ -46,12 +45,12 @@
    #{}                                                      ;9/10
    #{}                                                      ;9/11
    #{}                                                      ;9/12
-   #{"5xE3MOM Handstand holds for 45->60-sec"
+   #{"E3MOM5 Handstand holds for 45->60-sec"
      "Fran+1-mile run 14:47->14 minutes"
      "Work on bottom of muscle-up; did it!"}                ;9/13
    #{"Side planks on elbow :45 on a side, :75 off; 5 rds alt each side; did it!"
-     "Back Squat 265->275x10,9,...,1 in 30 minutes"}        ;9/14
-   #{"3xE5MOM 55->60 second 135# OH hold"
+     "Back Squat 265->275x10 to 1 in 30 minutes"}           ;9/14
+   #{"E5MOM3 55->60 second 135# OH hold"
      "Handstand walking 7x50' in 60-sec with 2-min rest"}   ;9/15
    #{}                                                      ;9/16
    #{"30 seconds of handstand shoulder taps; did it!"
@@ -76,52 +75,107 @@
    #{}                                                      ;10/4
    #{"Squat Grace at 155 in 10 minutes; did it!"
      "EMOM4 6x c2b + EMOM8 2x bar muscle-up; did it!"}      ;10/5
-   #{(str "Work on pistols either on box
-   (build up to 20 in a row per leg then lower box),
-   with elevated heels, or with a counterbalance weight held out in front")} ;10/6
+   #{(str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
+          "with elevated heels, or with a counterbalance weight held out in front")} ;10/6
    #{}                                                      ;10/7
    #{}                                                      ;10/8
    #{"Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"} ;10/9                                                      ;10/9
    #{}                                                      ;10/10
    #{}                                                      ;10/11
    #{}                                                      ;10/12
-   #{"7 rounds of 45-sec hollow rock + 75-sec rest"
-     "Tabata 1->2-leg L-sits"
-     (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, "
-          "rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
-     "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#"
-     }                                                      ;10/13
+   #{"16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 45#->53#"} ;10/13
+   #{}                                                      ;10/14
+   #{"50 cal Assault bike in 2.5 min (~70 RPM)"
+     "7 rounds of 35->45-sec hollow rock + 75-sec rest"
+     "Tabata (15->20sec) 1->2-leg L-sits"}                  ;10/15
+   #{"7x10->20-sec straight-arm hanging 1->2-leg L-sits"
+     "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"
+     "Work on tying together natural-looking triple-unders"} ;10/16
+   #{"Work on butterfly c2b"
+     "Work on high-bar back squat with Oly Shoes; did it!"} ;10/17
+   #{(str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees "
+          "in 12:35->11-min @105->135")
+     "15->21 unbroken Thrusters @95"}                       ;10/18
+   #{"Work on ski machine; did it!"
+     "12->21 kipping HSPUs in a row"
+     "Work on butterfly pull-ups"
+     "3->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"} ;10/19
+   #{}                                                      ;10/20
+   #{"20->30-sec each side of side plank with top leg up"
+     "3x25->30-sec 1->2-leg L-sits"
+     "E2MOM4 Handstand holds for 48->60-sec"}               ;10/21
+   #{"EMOM15 of PCx3, FSx3, PJx3 @135->185 (watch low back)"
+     "14->21 unbroken kipping C2B"}                         ;10/22
+   #{}                                                      ;10/23
+   #{"EMOM20 of odd: bike 8-cal, even: FSx7@75# + burpee over barbell x5"} ;10/24
+   #{"5 Rounds of 200M run + 70# KBS x12 in 12 minutes"}    ;10/25
+   #{}                                                      ;10/26
+   #{}                                                      ;10/27
+   #{}                                                      ;10/28
+   #{}                                                      ;10/29
+   #{"5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"} ;10/30
+   #{}                                                      ;10/31
+   #{}                                                      ;11/1
+   #{}                                                      ;11/2
+   #{}                                                      ;11/3
+   #{}                                                      ;11/4
+   #{"Handstand walking 7x50' in 60-sec with 2-min rest"
+     "Couch Stretch -> Bulgarian split squats; did it!"
+     "3x20->30-sec straight-arm hanging 1->2-leg L-sits"}   ;11/5
+   #{"E5MOM3 55->60 second 135# OH hold"
+     "Tabata (14->20sec) 1->2-leg L-sits"}                  ;11/6
+   #{}                                                      ;11/7
+   #{}                                                      ;11/8
+   #{"12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"} ;11/9
+   #{"10-min EMOM odd: 4->5 bar muscle-up, even: rest"
+     "10->21 continuous-kipping TTB"}                       ;11/10
+   #{"5 rds of 9->10 kipping HSPU in 1-min, rest 2-min"
+     (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows "
+          "to hands, 2-min of hollow-ups; did it!")}        ;11/11
+   #{"E3MOM5 Handstand holds for 45->60-sec"
+     (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
+          "with elevated heels, or with a counterbalance weight held out in front")
+     "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"} ;11/12
+   #{"9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"} ;11/13
    ])
 
+(comment
+  #{
+
+    })
+
 (def current-wod-list
-  ["Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
-   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 40#->53#"
-   "3xE5MOM 55->60 second 135# OH hold"
-   "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 50x 185# S2OH, 5 MUs in 15 minutes"
-   "5xE3MOM Handstand holds for 45->60-sec"
-   "4xE2MOM Handstand holds for 45->60-sec"
-   "More kipping HSPUs, build to 21 in a row"
+  ["5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
+   "5 Rounds of 200M run + 70# KBS x12 in 12 minutes"
+   "12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"
+   "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
+   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 45#->53#"
+   "E5MOM3 55->60 second 135# OH hold"
+   "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"
+   "E3MOM5 Handstand holds for 45->60-sec"
+   "E2MOM4 Handstand holds for 48->60-sec"
+   "12->21 kipping HSPUs in a row"
+   "5 rds of 9->10 kipping HSPU in 1-min, rest 2-min"
    "E2MOM5 of 5 strict HSPUs"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
-   "21 unbroken kipping TTB"
-   "21 unbroken kipping C2B"
-   "Tabata 1->2-leg L-sits"
-   "3x30-sec 1->2-leg L-sits"
-   "30-sec each side of side plank with top leg up"
-   (str "5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, "
-        "rest 1 minute (unbroken 3->5 sets or 10:58->9:00)")
-   "7x20-sec straight-arm hanging 1->2-leg L-sits"
+   "10->21 continuous-kipping TTB"
+   "14->21 unbroken kipping C2B"
+   "Tabata (14->20sec) 1->2-leg L-sits"
+   "3x25->30-sec 1->2-leg L-sits"
+   "7x10->20-sec straight-arm hanging 1->2-leg L-sits"
+   "3x20->30-sec straight-arm hanging 1->2-leg L-sits"
+   "20->30-sec each side of side plank with top leg up"
+   "3->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
    "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
-   "7 rounds of 45-sec hollow rock + 75-sec rest"
-   (str "2-min of sit-ups, 2-min of planks continuously cycling from elbows "
-        "to hands, 2-min of hollow-ups")
-   "50 cal Assault bike in 2.5 min (did 51.2-cal on non-Assault)"
-   "Back Squat 265->275x10,9,...,1 in 30 minutes"
+   "7 rounds of 35->45-sec hollow rock + 75-sec rest"
+   "50 cal Assault bike in 2.5 min (~70 RPM)"
+   "EMOM20 of odd: bike 8-cal, even: FSx7@75# + burpee over barbell x5"
+   "Back Squat 265->275x10 to 1 in 30 minutes"
    "Back Squat 345x1"
    "Front Squats 5x9@185 start every 2 minutes from floor"
-   "EMOM15 of PCx3, FSx3, PJx3 @125->185 (watch low back)"
-   "10->1 of 165# Power Cleans and Front Squats in 15 minutes"
-   "21 unbroken Thrusters @95"
+   "EMOM15 of PCx3, FSx3, PJx3 @135->185 (watch low back)"
+   "9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"
+   "15->21 unbroken Thrusters @95"
    "Full Snatch E2MOM: 6x6@115->135, 5x4@135->155, 4x3@155->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
    "Fran+1-mile run 14:47->14 minutes"
@@ -129,25 +183,20 @@
    "E4MOM5 thruster@85->95x21+run200M"
    "Kalsu 105->135"
    (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees "
-        "in 11 min @105->135")
+        "in 12:35->11-min @105->135")
    "Work on butterfly pull-ups"
    "Work on butterfly c2b"
-   "Work on high-bar back squat with Oly Shoes"
-   "10-min EMOM odd: 3->5 bar muscle-up, even: rest"
-   "Couch Stretch -> Bulgarian split squats"
-   (str "Work on pistols either on box
-   (build up to 20 in a row per leg then lower box),
-   with elevated heels, or with a counterbalance weight held out in front")
+   "10-min EMOM odd: 4->5 bar muscle-up, even: rest"
+   (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
+        "with elevated heels, or with a counterbalance weight held out in front")
    "3 rounds of 20 pistols w/ 90-sec rest between in 10 minutes"
-   "Work on ski machine"
    "Work on tying together natural-looking triple-unders"
    "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."
-   (str "Work on variations of Kalsu,
-   like EMOM20 of 5 burpees + 5 thrusters @75, behind neck thrusters,
-   just front squats or push press, less or more burpees or an alternative exercise,
-   or with dumbbells")
-   (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps,
-   PP, cal row, rest) 1 minute each")])
+   (str "Work on variations of Kalsu, like EMOM20 of 5 burpees + 5 thrusters @75, "
+        "behind neck thrusters, just front squats or push press, "
+        "less or more burpees or an alternative exercise, or with dumbbells")
+   (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, "
+        "PP, cal row, rest) 1 minute each")])
 
 (defn update-wods
   ""
@@ -171,8 +220,7 @@
 (defn add-wod-weights-and-probs
   ""
   [wods]
-  (let [n-wods (count wods)
-        adjustment (m/sqrt (dec n-wods))
+  (let [adjustment (m/sqrt (dec (count wods)))
         wods (map (fn [m]
                     (assoc m :weight (max 0.0 (- (:days-since-attempt m) adjustment))))
                   wods)

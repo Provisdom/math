@@ -15,6 +15,8 @@
 
 (s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
+(s/def ::vector ::tensor/tensor1D)
+
 (s/def ::vector-2D
   (s/with-gen
     (s/coll-of ::m/number :kind clojure.core/vector? :into [] :min-count 2 :max-count 2)
@@ -69,8 +71,6 @@
         :args (s/cat :x any?)
         :ret boolean?)
 
-(s/def ::vector ::tensor/tensor1D)
-
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
   "Creates a vector representing the flattened numbers of `x` if possible.
@@ -94,6 +94,17 @@
 (s/fdef compute-vector
         :args (s/cat :size ::size :index->number ::index->number)
         :ret ::vector)
+
+(defn compute-coll
+  "Function `index->any` takes an `index`."
+  [size index->any]
+  (map index->any (range 0 size)))
+
+(s/fdef compute-coll
+        :args (s/cat :size ::size
+                     :index->any (s/fspec :args (s/cat :index ::tensor/index)
+                                          :ret any?))
+        :ret coll?)
 
 (defn rnd-vector!
   "Returns vector `v` of `size` with random doubles."
@@ -122,6 +133,17 @@
         :ret ::vector)
 
 ;;;VECTOR INFO
+(defn indexes-of
+  "Returns a vector of the indexes in `v` that contain 'number'."
+  [number v]
+  (vec (keep-indexed (fn [i n]
+                       (when (= n number) i))
+                     v)))
+
+(s/fdef indexes-of
+        :args (s/cat :number ::m/number :v ::vector)
+        :ret ::vector)
+
 (defn filter-kv
   "Returns a vector of the items in `v` for which function `index+number->bool` returns true.
   `index+number->bool` must be free of side-effects."
@@ -181,6 +203,38 @@
 (s/fdef removev
         :args (s/cat :v ::vector :index ::tensor/index)
         :ret ::vector)
+
+(defn- partition-recursively
+  "Partitions recursively in sets of 'size'.
+  For example, a 1000-element vector could be partitioned into 10's."
+  [size v]
+  (last (take (m/round (m/div (m/log (count v)) (m/log size)) :up)
+              (iterate #(tensor/to-tensor (partition size %)) v))))
+
+(s/fdef partition-recursively
+        :args (s/cat :size (s/and ::size #(> % 1))
+                     :v ::vector)
+        :ret (s/nilable ::tensor/tensor))
+
+(defn concat-by-index
+  "Returns a lazy sequence constructed by concatenating two collections, `coll1` and `coll2` with
+   `coll2` beginning at index `i`.
+   Preference goes to `coll2` and empty spaces are filled with nil."
+  [coll1 coll2 i]
+  (lazy-seq
+    (cond
+      (and (empty? coll1) (empty? coll2)) coll2
+      (zero? i) (if (empty? coll2)
+                  (cons (first coll1) (concat-by-index (rest coll1) '() 0))
+                  (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
+      (neg? i) (cons (first coll2) (concat-by-index coll1 (rest coll2) (inc i)))
+      (pos? i) (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
+
+(s/fdef concat-by-index
+        :args (s/cat :coll1 (s/coll-of any?)
+                     :coll2 (s/coll-of any?)
+                     :i (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
+        :ret coll?)
 
 (defn replace-nan
   "Takes a collection of `numbers` and returns the collection with any NaN replaced with `replacement-number`.

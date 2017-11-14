@@ -4,7 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.utility-belt.core :as co]
+    [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]
     [provisdom.math.vector :as vector]
     [provisdom.math.combinatorics :as cm]
@@ -440,12 +440,12 @@
        (or (not val) (converged-pred sum i val)) sum
 
        (and error-pred (error-pred sum i val))
-       {::co/message  (str "Error predicate true.
+       {::extensions/message  (str "Error predicate true.
                             Iteration: " i
                            " Sum: " sum
                            " Next value: " val)
-        ::co/fn       (var sum-convergent-series)
-        ::co/category ::co/no-solve}
+        ::extensions/fn       (var sum-convergent-series)
+        ::extensions/category ::extensions/no-solve}
 
        :else (if kahan?
                (let [y (- val carry)
@@ -457,5 +457,5 @@
 (s/fdef sum-convergent-series
         :args (s/cat :term-series ::term-series
                      :opts (s/? (s/keys :opt [::kahan? ::converged-pred ::error-pred])))
-        :ret (s/or :anomaly ::co/anomaly
+        :ret (s/or :anomaly ::extensions/anomaly
                    :number ::m/number))
