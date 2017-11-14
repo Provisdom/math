@@ -4,7 +4,7 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.utility-belt.format :as string-format]
+    [provisdom.utility-belt.strings :as strings]
     [provisdom.math.core :as m]))
 
 (s/def ::digits (s/with-gen ::m/long+ #(gen/large-integer* {:min 1 :max 35})))
@@ -23,10 +23,10 @@
 (defn trim-number-as-string
   "Trims number of any unnecessary characters e.g. -0.3 and 0.30."
   [s]
-  (let [s (cond (string-format/starts-with? s "-0") (trim-number-as-string (str "-" (string-format/trim-start s "-0")))
-                (string-format/substring? "." s) (string-format/trim-end s "0")
+  (let [s (cond (strings/starts-with? s "-0") (trim-number-as-string (str "-" (strings/trim-start s "-0")))
+                (strings/substring? "." s) (strings/trim-end s "0")
                 :else s)]
-    (string-format/trim-start s "0")))
+    (strings/trim-start s "0")))
 
 (s/fdef trim-number-as-string
         :args (s/cat :s string?)
@@ -46,24 +46,24 @@
   ([finite] (format-as-exponential finite {}))
   ([finite {::keys [digits]}]
    (if digits
-     (string-format/replace-string
-       (string-format/replace-string
+     (strings/replace-string
+       (strings/replace-string
          (format (str "%." (long (dec digits)) "E")
                  (double finite))
          "E+0"
          "E+")
        "E-0"
        "E-")
-     (let [s (string-format/replace-string
-               (string-format/replace-string
+     (let [s (strings/replace-string
+               (strings/replace-string
                  (format (str "%." 15 "E") (double finite))
                  "E+0"
                  "E+")
                "E-0"
                "E-")]
        (loop [s1 s]
-         (if (string-format/substring? "0E" s1)
-           (recur (string-format/replace-string s1 "0E" "E"))
+         (if (strings/substring? "0E" s1)
+           (recur (strings/replace-string s1 "0E" "E"))
            s1))))))
 
 (s/fdef format-as-exponential
@@ -126,9 +126,9 @@
                      f (fn [x letter]
                          (let [adjusted-number (str (format-number (/ x (by-letter letter))
                                                                    (max 1 (dec max-length))))
-                               without-ending (if (string-format/ends-with? adjusted-number ".0")
-                                                (string-format/butlast-string
-                                                  (string-format/butlast-string adjusted-number))
+                               without-ending (if (strings/ends-with? adjusted-number ".0")
+                                                (strings/butlast-string
+                                                  (strings/butlast-string adjusted-number))
                                                 adjusted-number)]
                            (str without-ending letter)))
                      s (cond (>= absolute-value 1e15) (format-number shortened-number max-length)
@@ -139,7 +139,7 @@
                              :else (format-number shortened-number max-length))]
                  (if money?
                    (if (neg? shortened-number)
-                     (str "-$" (string-format/rest-string s))
+                     (str "-$" (strings/rest-string s))
                      (str "$" s))
                    s)))))
 
@@ -153,21 +153,21 @@
   "Converts a shorthand string, `s`, into a number if possible.
   Otherwise returns nil."
   [s]
-  (let [removed-money (cond (string-format/starts-with? s "$") (string-format/rest-string s)
-                            (string-format/starts-with? s "-$") (str "-" (string-format/trim-start s "-$"))
+  (let [removed-money (cond (strings/starts-with? s "$") (strings/rest-string s)
+                            (strings/starts-with? s "-$") (str "-" (strings/trim-start s "-$"))
                             :else s)]
     (case removed-money
       "NaN" m/nan
       "Inf" m/inf+
       "-Inf" m/inf-
       (let [f (fn [x letter]
-                (let [n (read-string (string-format/butlast-string x))]
+                (let [n (read-string (strings/butlast-string x))]
                   (when (number? n)
                     (* (by-letter letter) n))))]
-        (try (cond (string-format/ends-with? removed-money "T") (f removed-money "T")
-                   (string-format/ends-with? removed-money "B") (f removed-money "B")
-                   (string-format/ends-with? removed-money "M") (f removed-money "M")
-                   (string-format/ends-with? removed-money "K") (f removed-money "K")
+        (try (cond (strings/ends-with? removed-money "T") (f removed-money "T")
+                   (strings/ends-with? removed-money "B") (f removed-money "B")
+                   (strings/ends-with? removed-money "M") (f removed-money "M")
+                   (strings/ends-with? removed-money "K") (f removed-money "K")
                    :else (let [n (read-string removed-money)]
                            (when (number? n)
                              n)))
