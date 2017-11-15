@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.1.0-alpha2")
+(def version "1.1.0-alpha3")
 
 (set-env!
   :resource-paths #{"src"}
@@ -34,22 +34,20 @@
        :scm         {:url "https://github.com/Provisdom/math"}
        :license     {"Provisdom" "(c) 2015-2017 Provisdom Corporation"}}
   ;; TODO: replace this when all namespaces are converted to clojure.test
-  test {:namespaces '#{
-                       (comment
-                         provisdom.math.t-apache-matrix
-                         provisdom.math.t-apache-vector
-                         provisdom.math.t-arrays
-                         provisdom.math.t-calculus
-                         provisdom.math.t-clatrix
-                         provisdom.math.t-combinatorics
-                         provisdom.math.t-core
-                         provisdom.math.t-format
-                         provisdom.math.t-intervals
-                         provisdom.math.t-matrix
-                         provisdom.math.t-random
-                         provisdom.math.t-series
-                         provisdom.math.t-special-functions
-                         ;provisdom.math.t-splittable-random
-                         provisdom.math.t-tensor
-                         provisdom.math.t-vector)
+  test {:namespaces '#{provisdom.math.t-apache-matrix
+                       provisdom.math.t-apache-vector
+                       provisdom.math.t-arrays
+                       provisdom.math.t-calculus
+                       provisdom.math.t-clatrix
+                       provisdom.math.t-combinatorics
+                       provisdom.math.t-core
+                       provisdom.math.t-format
+                       provisdom.math.t-intervals
+                       provisdom.math.t-matrix
+                       provisdom.math.t-random
+                       provisdom.math.t-series
+                       provisdom.math.t-special-functions
+                       ;provisdom.math.t-splittable-random
+                       provisdom.math.t-tensor
+                       provisdom.math.t-vector
                        }})

@@ -172,12 +172,12 @@
 (defn first-number
   "Returns the first number in the tensor."
   [tensor]
-  (if (number? tensor)
-    tensor
-    (first-number (first tensor))))
+  (cond (number? tensor) tensor
+        (nil? tensor) tensor
+        :else (first-number (first tensor))))
 
 (s/fdef first-number
-        :args (s/cat :tensor ::tensor)
+        :args (s/cat :tensor (s/nilable ::tensor))
         :ret (s/nilable ::m/number))
 
 (defn ecount
@@ -358,6 +358,19 @@
                      (fn [{:keys [f more]}] (some (fn [a] (or (= (+ 2 (count more)) a) (= a :rest)))
                                                   (arities/arities f))))
           :ret (s/nilable ::tensor)))
+
+(defn partition-recursively
+  "Partitions recursively in sets of 'n' elements.
+  There may be unused elements.
+  For example, a 1000-element tensor could be partitioned into 10x10x10."
+  [n tensor]
+  (let [t (m/ceil' (m/div (m/log (count tensor)) (m/log n)))]
+    (last (take t (iterate #(to-tensor (partition n %)) tensor)))))
+
+(s/fdef partition-recursively
+        :args (s/cat :n (s/with-gen (s/int-in 2 m/max-int) #(gen/large-integer* {:min 2 :max mdl}))
+                     :tensor ::tensor)
+        :ret (s/nilable ::tensor))
 
 ;;;TENSOR MATH
 (defn ===

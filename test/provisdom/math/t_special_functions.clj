@@ -137,6 +137,7 @@
           "with elevated heels, or with a counterbalance weight held out in front")
      "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"} ;11/12
    #{"9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"} ;11/13
+   #{}                                                      ;11/14
    ])
 
 (comment
@@ -257,6 +258,7 @@
         e (select-wod d)]
     e))
 
+;;2 SECONDS
 
 (set! *warn-on-reflection* true)
 

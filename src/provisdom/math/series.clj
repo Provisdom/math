@@ -22,7 +22,7 @@
 (s/def ::start-degree ::degree)
 (s/def ::end-degree ::degree)
 (s/def ::basis-count ::degree)
-(s/def ::term-series ::m/numbers)
+(s/def ::term-series (s/every ::m/number))
 (s/def ::kahan? boolean?)
 (s/def ::chebyshev-kind (s/int-in 0 3))
 
@@ -126,15 +126,16 @@
                                           (* % ((chebyshev-polynomial-fn degree {::second-kind? true}) %)))
                                        (dec (m/sq %)))))
                                #(* degree ((chebyshev-polynomial-fn (dec degree) {::second-kind? true}) %)))
-         (and (= 2 derivative) (not second-kind?)) #(if (m/one? (m/abs %))
-                                                      (* (/ 3)
-                                                         (m/pow (m/sgn %) degree)
-                                                         (- (m/pow degree 4) (m/sq degree)))
-                                                      (let [first-kind ((chebyshev-polynomial-fn degree) %)
-                                                            second-kind ((chebyshev-polynomial-fn degree {::second-kind? true}) %)]
-                                                        (* degree
-                                                           (- (* (inc degree) first-kind) second-kind)
-                                                           (/ (dec (m/sq %))))))
+         (and (= 2 derivative)
+              (not second-kind?)) #(if (m/one? (m/abs %))
+                                     (* (/ 3)
+                                        (m/pow (m/sgn %) degree)
+                                        (- (m/pow degree 4) (m/sq degree)))
+                                     (let [first-kind ((chebyshev-polynomial-fn degree) %)
+                                           second-kind ((chebyshev-polynomial-fn degree {::second-kind? true}) %)]
+                                       (* degree
+                                          (- (* (inc degree) first-kind) second-kind)
+                                          (/ (dec (m/sq %))))))
          :else (ca/derivative-fn (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
                                  {::ca/derivative derivative}))))
 
@@ -174,11 +175,11 @@
     1 (fn [x] #((chebyshev-polynomial-fn %) x))
     2 (fn [x] #((chebyshev-polynomial-fn % {::second-kind? true}) x))))
 
-(s/fdef polynomial-functions
-        :args (s/cat :chebyshev-kind ::chebyshev-kind)
-        :ret (s/fspec :args (s/cat :number ::m/number)
-                      :ret (s/fspec :args (s/cat :degree ::degree)
-                                    :ret ::m/number)))
+#_(s/fdef polynomial-functions                              ;seems to slow things down under instrumentation
+          :args (s/cat :chebyshev-kind ::chebyshev-kind)
+          :ret (s/fspec :args (s/cat :number ::m/number)
+                        :ret (s/fspec :args (s/cat :degree ::degree)
+                                      :ret ::m/number)))
 
 (defn polynomial-fn
   "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
@@ -437,15 +438,16 @@
           sum 0.0
           carry 0.0]
      (cond
-       (or (not val) (converged-pred sum i val)) sum
+       (not val) sum
+       (converged-pred sum i val) (+ sum val)
 
-       (and error-pred (error-pred sum i val))
-       {::extensions/message  (str "Error predicate true.
-                            Iteration: " i
-                           " Sum: " sum
-                           " Next value: " val)
-        ::extensions/fn       (var sum-convergent-series)
-        ::extensions/category ::extensions/no-solve}
+       (error-pred sum i val)
+       {::anomalies/message  (str "Error predicate true. "
+                                  " Iteration: " i
+                                  " Sum: " sum
+                                  " Next value: " val)
+        ::anomalies/fn       (var sum-convergent-series)
+        ::anomalies/category ::anomalies/no-solve}
 
        :else (if kahan?
                (let [y (- val carry)
@@ -457,5 +459,5 @@
 (s/fdef sum-convergent-series
         :args (s/cat :term-series ::term-series
                      :opts (s/? (s/keys :opt [::kahan? ::converged-pred ::error-pred])))
-        :ret (s/or :anomaly ::extensions/anomaly
+        :ret (s/or :anomaly ::anomalies/anomaly
                    :number ::m/number))

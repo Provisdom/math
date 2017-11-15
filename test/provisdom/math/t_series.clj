@@ -8,6 +8,8 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
+;;13 SECONDS
+
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -93,11 +95,15 @@
   (is= [3.0 4.999999999810711]
        (series/chebyshev-polynomial-factors-to-regular-polynomial-factors [3.0 5.0]))
   (is= [3.0 10.000000000065512]
-       (series/chebyshev-polynomial-factors-to-regular-polynomial-factors [3.0 5.0] {::series/second-kind? true}))
+       (series/chebyshev-polynomial-factors-to-regular-polynomial-factors
+         [3.0 5.0]
+         {::series/second-kind? true}))
   (is= [-1.0 -13.00000000020729 15.999999999349868 143.99999999969992]
        (series/chebyshev-polynomial-factors-to-regular-polynomial-factors [3.0 5.0 4.0 6.0]))
   (is= [-1.0 -13.999999999902979 31.99999999980996 287.99999999939985]
-       (series/chebyshev-polynomial-factors-to-regular-polynomial-factors [3.0 5.0 4.0 6.0] {::series/second-kind? true})))
+       (series/chebyshev-polynomial-factors-to-regular-polynomial-factors
+         [3.0 5.0 4.0 6.0]
+         {::series/second-kind? true})))
 
 (defspec-test test-chebyshev-polynomial-fn `series/chebyshev-polynomial-fn)
 ;(defspec-test test-chebyshev-derivative-fn `series/chebyshev-derivative-fn) ;slow-ish
@@ -161,11 +167,11 @@
   (is= [1.0 0.6666666666666667 -0.09523809523809534 0.003284072249589487]
        (series/generalized-continued-fraction [1.0 3.0 6.0 8.0] [2.0 3.0 2.0 6.0])))
 
-(defspec-test test-polynomial-fn `series/polynomial-fn)
-(defspec-test test-polynomial-fns `series/polynomial-fns)
+;(defspec-test test-polynomial-fn `series/polynomial-fn) ;slow w/ instrumentation
+;(defspec-test test-polynomial-fns `series/polynomial-fns) ;slow w/ instrumentation
 (defspec-test test-polynomial-2D-count `series/polynomial-2D-count)
-(defspec-test test-polynomial-2D-fn-by-degree `series/polynomial-2D-fn-by-degree)
-(defspec-test test-polynomial-2D-fn-by-basis-count `series/polynomial-2D-fn-by-basis-count)
+;(defspec-test test-polynomial-2D-fn-by-degree `series/polynomial-2D-fn-by-degree) ;slow w/ instrumentation
+;(defspec-test test-polynomial-2D-fn-by-basis-count `series/polynomial-2D-fn-by-basis-count) ;slow w/ instrumentation
 ;(defspec-test test-polynomial-ND-fn `series/polynomial-ND-fn) ;spec issues
 ;(defspec-test test-polynomial-ND-fn-without-cross-terms `series/polynomial-ND-fn-without-cross-terms) ;spec issues
 (defspec-test test-power-series-fn `series/power-series-fn)
@@ -187,13 +193,13 @@
   (is= 11.12
        (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? true}))
   (is= 11.0 (series/sum-convergent-series [1 3 7]))
-  (is= -1.4288601243858605E-15 (series/sum-convergent-series (sin-series m/PI)))
-  (is= -1.0000000000000047 (series/sum-convergent-series (sin-series (* 1.5 m/PI))))
-  (is= -6.011088767600521E-15 (series/sum-convergent-series (sin-series (* 2 m/PI))))
-  (is= 0.9999999999998882 (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
-  (is= 0.9999999999998882 (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
-  (is= 0.9999999999998882 (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
-  (is= 0.9999999999998883
+  (is= 3.59639673467086E-16 (series/sum-convergent-series (sin-series m/PI)))
+  (is= -1.0000000000000007 (series/sum-convergent-series (sin-series (* 1.5 m/PI))))
+  (is= 1.5291315517394673E-14 (series/sum-convergent-series (sin-series (* 2 m/PI))))
+  (is= 0.9999999999999877 (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
+  (is= 1.0007413181275937E-13 (series/sum-convergent-series (sin-series (* 3.0 m/PI))))
+  (is= -1.000000000000508 (series/sum-convergent-series (sin-series (* 3.5 m/PI))))
+  (is= 0.9999999999999878
        (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? true})))
 
 (defspec-test test-sum-convergent-series `series/sum-convergent-series)

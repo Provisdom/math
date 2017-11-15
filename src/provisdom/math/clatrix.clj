@@ -9,7 +9,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.vector :as vector]
     [provisdom.math.matrix :as mx]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
 (declare clatrix rows columns diagonal some-kv transpose eigen-decomposition mx*
@@ -350,7 +350,7 @@
       (if (< i 100)
         (let [m (clatrix
                   (mx/rnd-spectral-matrix!
-                    (vec (take size (random/rand-double-lazy!)))))]
+                    (vec (take size (random/rnd-lazy!)))))]
           (if (positive-definite-clatrix-finite? m m/sgl-close)
             m
             (recur (inc i))))))))

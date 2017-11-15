@@ -234,7 +234,7 @@
   [m]
   (if (mx/empty-matrix? m)
     (Array2DRowRealMatrix.)
-    (Array2DRowRealMatrix. ^"[[D" (ar/jagged-2D-array :d m))))
+    (Array2DRowRealMatrix. ^"[[D" (ar/array2D :double m))))
 
 (s/fdef apache-matrix
         :args (s/cat :m ::mx/matrix)

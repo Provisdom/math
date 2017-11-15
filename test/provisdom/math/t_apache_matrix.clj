@@ -5,9 +5,11 @@
     [provisdom.math.apache-matrix :as apache-mx]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
+
+;;;80 seconds
 
 (set! *warn-on-reflection* true)
 

@@ -127,7 +127,8 @@
 (defn double-finite-array-gen
   ([] (gen/fmap double-array (gen/vector (s/gen ::m/double-finite))))
   ([count] (gen/fmap double-array (gen/vector (s/gen ::m/double-finite) count)))
-  ([min-count max-count] (gen/fmap double-array (gen/vector (s/gen ::m/double-finite) min-count max-count))))
+  ([min-count max-count]
+   (gen/fmap double-array (gen/vector (s/gen ::m/double-finite) min-count max-count))))
 
 (s/def ::double-finite-array (s/with-gen double-finite-array? double-finite-array-gen))
 
@@ -220,12 +221,25 @@
   are considered equal if both arrays contain the same number of elements, and all corresponding
   pairs of elements in the two arrays are equal. In other words, two arrays are equal if they
   contain the same elements in the same order. Also, two array references are considered equal if
-  both are null."
-  (Arrays/equals (doubles dbl-array1) (doubles dbl-array2)))
+  both are nil."
+  (Arrays/equals (double-array dbl-array1) (double-array dbl-array2)))
 
 (s/fdef double-array=
-        :args (s/cat :dbl-array1 ::double-array
-                     :dbl-array2 ::double-array)
+        :args (s/cat :dbl-array1 (s/nilable ::double-array)
+                     :dbl-array2 (s/nilable ::double-array))
+        :ret boolean?)
+
+(defn double-array2D=
+  [dbl-array2D-1 dbl-array2D-2]
+  "Checks whether two 2D double arrays are equal or not.
+  Two array references are considered deeply equal if both are nil,
+  or if they refer to arrays that contain the same number of elements
+  and all corresponding pairs of elements in the two arrays are deeply equal."
+  (Arrays/deepEquals ^"[[D" dbl-array2D-1 ^"[[D" dbl-array2D-2))
+
+(s/fdef double-array2D=
+        :args (s/cat :dbl-array2D-1 (s/nilable ::double-array2D)
+                     :dbl-array2D-2 (s/nilable ::double-array2D))
         :ret boolean?)
 
 (defn double-array-reduce-kv

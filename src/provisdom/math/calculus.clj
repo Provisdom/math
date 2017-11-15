@@ -7,7 +7,7 @@
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.utility-belt.async :as async]
     [provisdom.math.core :as m]
-    [provisdom.math.intervals :as bo]
+    [provisdom.math.intervals :as intervals]
     [provisdom.math.combinatorics :as combo]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.vector :as vector]
@@ -43,18 +43,18 @@
 ;;;http://keisan.casio.com/exec/system/1289382036
 (s/def ::num-intervals
   (s/with-gen
-    (s/coll-of ::bo/num-interval)
-    #(gen/vector (s/gen ::bo/num-interval) 2 2)))
+    (s/coll-of ::intervals/num-interval)
+    #(gen/vector (s/gen ::intervals/num-interval) 2 2)))
 
 (s/def ::finite-intervals
   (s/with-gen
-    (s/coll-of ::bo/finite-interval)
-    #(gen/vector (s/gen ::bo/finite-interval) 2 2)))
+    (s/coll-of ::intervals/finite-interval)
+    #(gen/vector (s/gen ::intervals/finite-interval) 2 2)))
 
 (s/def ::iter-interval
   (s/with-gen
-    ::bo/int+-interval
-    #(bo/long-interval-gen 1 20)))
+    ::intervals/int+-interval
+    #(intervals/long-interval-gen 1 20)))
 
 (s/def ::number->tensor
   (s/with-gen
@@ -69,14 +69,14 @@
 (s/def ::number->num-interval
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number)
-             :ret ::bo/num-interval)
+             :ret ::intervals/num-interval)
     #(gen/one-of (map gen/return (list (fn [n]
                                          [(dec (double n)) n]))))))
 
 (s/def ::number2->num-interval
   (s/with-gen
     (s/fspec :args (s/cat :number1 ::m/number :number2 ::m/number)
-             :ret ::bo/num-interval)
+             :ret ::intervals/num-interval)
     #(gen/one-of (map gen/return (list (fn [n1 n2]
                                          [(- (m/abs n1)) (+ 0.5 (m/abs n2))]))))))
 
@@ -85,7 +85,7 @@
     (s/fspec :args (s/cat :number1 ::m/number
                           :number2 ::m/number
                           :number3 ::m/number)
-             :ret ::bo/num-interval)
+             :ret ::intervals/num-interval)
     #(gen/one-of (map gen/return
                       (list (fn [n1 n2 n3]
                               [(- (m/abs (+ (double n1) n2)))
@@ -374,7 +374,7 @@
 
 (s/fdef get-error-and-high-precision-values
         :args (s/cat :number->tensor ::number->tensor
-                     :finite-interval ::bo/finite-interval
+                     :finite-interval ::intervals/finite-interval
                      :weights-and-nodes ::weights-and-nodes)
         :ret (s/keys :req [::error ::high-precision-values]))
 
@@ -393,8 +393,14 @@
         dimensions (count finite-intervals)
         f-low-precision #(tensor/inner-product low-precision-weights (vec (take-nth 2 (rest %))))
         f-high-precision #(tensor/inner-product high-precision-weights %)
-        f1dim (mx/compute-matrix dimensions dimensions (fn [r c] (if (= r c) f-low-precision f-high-precision)))
-        partitioned-nodes (tensor/to-tensor (vector/partition-recursively (count high-precision-weights) mapped-nodes))
+        f1dim (if (zero? dimensions)
+                [[]]
+                (mapv (fn [row]
+                        (mapv (fn [column]
+                                (if (= row column) f-low-precision f-high-precision))
+                              (range dimensions)))
+                      (range dimensions)))
+        partitioned-nodes (tensor/partition-recursively (count high-precision-weights) mapped-nodes)
         reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot)) partitioned-nodes %))
         high-precision-values (reduce-f (repeat dimensions f-high-precision))
         low-precision-values (reduce-f (repeat dimensions f-low-precision))
@@ -460,7 +466,7 @@
 
 (s/fdef adaptive-quadrature
         :args (s/cat :number->tensor ::number->tensor
-                     :finite-interval ::bo/finite-interval
+                     :finite-interval ::intervals/finite-interval
                      :accu ::m/accu
                      :iter-interval ::iter-interval
                      :weights-and-nodes ::weights-and-nodes)
@@ -582,43 +588,44 @@
   ::bo/finite-interval."
   [[a b]]
   (cond
-    (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn  (fn [number]
+    (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn         (fn [number]
                                                           (let [s (m/sq number)]
                                                             (m/div (inc s) (m/sq (m/one- s)))))
-                                   ::converter-fn       (fn [number]
+                                   ::converter-fn              (fn [number]
                                                           (m/div number (m/one- (m/sq number))))
-                                   ::bo/finite-interval [-1.0 1.0]}
-    (m/inf+? b) {::multiplicative-fn  (fn [number]
+                                   ::intervals/finite-interval [-1.0 1.0]}
+    (m/inf+? b) {::multiplicative-fn         (fn [number]
                                         (m/div (m/sq number)))
-                 ::converter-fn       (fn [number]
+                 ::converter-fn              (fn [number]
                                         (+ a (m/div (m/one- number) number)))
-                 ::bo/finite-interval [0.0 1.0]}
-    (m/inf-? a) {::multiplicative-fn  (fn [number]
+                 ::intervals/finite-interval [0.0 1.0]}
+    (m/inf-? a) {::multiplicative-fn         (fn [number]
                                         (m/div (m/sq number)))
-                 ::converter-fn       (fn [number]
+                 ::converter-fn              (fn [number]
                                         (- b (m/div (m/one- number) number)))
-                 ::bo/finite-interval [0.0 1.0]}
-    :else {::multiplicative-fn  (constantly 1.0)
-           ::converter-fn       identity
-           ::bo/finite-interval [a b]}))
+                 ::intervals/finite-interval [0.0 1.0]}
+    :else {::multiplicative-fn         (constantly 1.0)
+           ::converter-fn              identity
+           ::intervals/finite-interval [a b]}))
 
 (s/def ::multiplicative-fn ::number->number)
 (s/def ::converter-fn ::number->number)
 
 (s/fdef change-of-variable
-        :args (s/cat :num-interval ::bo/num-interval)
-        :ret (s/keys :req [::multiplicative-fn ::converter-fn ::bo/finite-interval]))
+        :args (s/cat :num-interval ::intervals/num-interval)
+        :ret (s/keys :req [::multiplicative-fn ::converter-fn ::intervals/finite-interval]))
 
 (defn- change-of-variable-for-integration
   "Returns the new function and new finite-interval as a tuple."
   [number->tensor [a b]]
-  (let [{:keys [::multiplicative-fn ::converter-fn ::bo/finite-interval]} (change-of-variable [a b])]
+  (let [{:keys [::multiplicative-fn ::converter-fn ::intervals/finite-interval]} (change-of-variable [a b])]
     [#(tensor/multiply (multiplicative-fn %) (number->tensor (converter-fn %)))
      finite-interval]))
 
 (s/fdef change-of-variable-for-integration
-        :args (s/cat :number->tensor ::number->tensor :num-interval ::bo/num-interval)
-        :ret (s/tuple ::number->tensor ::bo/finite-interval))
+        :args (s/cat :number->tensor ::number->tensor
+                     :num-interval ::intervals/num-interval)
+        :ret (s/tuple ::number->tensor ::intervals/finite-interval))
 
 (defn- change-of-variable-for-rectangular-integration
   "Returns the new function and new finite-intervals."
@@ -626,13 +633,14 @@
   (let [maps (map change-of-variable num-intervals)
         fms (map ::multiplicative-fn maps)
         fvs (map ::converter-fn maps)
-        new-intervals (mapv ::bo/finite-interval maps)]
+        new-intervals (mapv ::intervals/finite-interval maps)]
     [#(tensor/multiply (apply * (map (fn [f a] (f a)) fms %))
                        (v->tensor (mapv (fn [f a] (f a)) fvs %)))
      new-intervals]))
 
 (s/fdef change-of-variable-for-rectangular-integration
-        :args (s/cat :v->tensor ::v->tensor :num-intervals ::num-intervals)
+        :args (s/cat :v->tensor ::v->tensor
+                     :num-intervals ::num-intervals)
         :ret (s/tuple ::v->tensor ::finite-intervals))
 
 (defn integration
@@ -660,7 +668,7 @@
 
 (s/fdef integration
         :args (s/cat :number->tensor ::number->tensor
-                     :num-interval ::bo/num-interval
+                     :num-interval ::intervals/num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
         :ret (s/or :anomaly ::anomalies/anomaly
                    :tensor ::tensor/tensor))
@@ -739,7 +747,7 @@
 
 (s/fdef non-rectangular-2D-integration
         :args (s/cat :number2->tensor ::number2->tensor
-                     :outer-interval ::bo/num-interval
+                     :outer-interval ::intervals/num-interval
                      :outer->inner-interval ::number->num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
         :ret (s/or :anomaly ::anomalies/anomaly
@@ -793,7 +801,7 @@
 
 (s/fdef non-rectangular-3D-integration
         :args (s/cat :number3->tensor ::number3->tensor
-                     :outer-interval ::bo/num-interval
+                     :outer-interval ::intervals/num-interval
                      :outer->middle-interval ::number->num-interval
                      :outer+middle->inner-interval ::number2->num-interval
                      :opts (s/? (s/keys :opt [::points ::m/accu ::iter-interval])))
@@ -862,7 +870,7 @@
 
 (s/fdef non-rectangular-4D-integration
         :args (s/cat :number4->tensor ::number4->tensor
-                     :outer-interval ::bo/num-interval
+                     :outer-interval ::intervals/num-interval
                      :outer->outer-middle-interval ::number->num-interval
                      :outer+outer-middle->inner-middle-interval ::number2->num-interval
                      :outer+outer-middle+inner-middle->inner-interval ::number3->num-interval

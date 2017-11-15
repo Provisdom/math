@@ -8,6 +8,8 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
+;;5 seconds
+
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -46,7 +48,7 @@
   (is= -1.2083811575795258 (random/rnd-normal (random/rng 3))))
 
 (deftest rng-lazy-test
-  (is= '(3.0 4.0 5.0)
+  (is= '(0.11345034205715454 0.6129746825466243 0.21643910878148487)
        (take 3 (map random/rnd (random/rng-lazy (random/rng 3))))))
 
 (deftest rnd-lazy-test

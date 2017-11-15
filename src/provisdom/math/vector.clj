@@ -204,18 +204,6 @@
         :args (s/cat :v ::vector :index ::tensor/index)
         :ret ::vector)
 
-(defn- partition-recursively
-  "Partitions recursively in sets of 'size'.
-  For example, a 1000-element vector could be partitioned into 10's."
-  [size v]
-  (last (take (m/round (m/div (m/log (count v)) (m/log size)) :up)
-              (iterate #(tensor/to-tensor (partition size %)) v))))
-
-(s/fdef partition-recursively
-        :args (s/cat :size (s/and ::size #(> % 1))
-                     :v ::vector)
-        :ret (s/nilable ::tensor/tensor))
-
 (defn concat-by-index
   "Returns a lazy sequence constructed by concatenating two collections, `coll1` and `coll2` with
    `coll2` beginning at index `i`.

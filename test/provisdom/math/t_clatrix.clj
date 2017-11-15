@@ -7,7 +7,9 @@
     [provisdom.math.matrix :as mx]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.math.random2 :as random]))
+    [provisdom.math.random :as random]))
+
+;;98 seconds
 
 (set! *warn-on-reflection* true)
 

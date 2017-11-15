@@ -8,6 +8,8 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
+;;30 seconds
+
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -164,12 +166,20 @@
                        [2 3]
                        [[4 5] [6 7]])))
 
-(deftest manipulation-tests
-  (emap-test)
-  (emap-kv-test))
+(deftest partition-recursively-test
+  (is= nil (tensor/partition-recursively 3 []))
+  (is= [1 2] (tensor/partition-recursively 2 [1 2]))
+  (is= [1 2 3] (tensor/partition-recursively 3 [1 2 3]))
+  (is= [[1 2 3]] (tensor/partition-recursively 3 [1 2 3 4]))
+  (is= [[1 2 3] [4 5 6]] (tensor/partition-recursively 3 [1 2 3 4 5 6]))
+  (is= [[[1 2 3] [4 5 6] [7 8 9]]]
+       (tensor/partition-recursively 3 [1 2 3 4 5 6 7 8 9 10]))
+  (is= [[[1 2 3] [4 5 6]] [[7 8 9] [10 11 12]]]
+       (tensor/partition-recursively 2 [[1 2 3] [4 5 6] [7 8 9] [10 11 12]])))
 
 ;(defspec-test test-emap `tensor/emap) ;fspec issues
 ;(defspec-test test-emap-kv `tensor/emap-kv) ;fspec issues
+(defspec-test test-partition-recursively `vector/partition-recursively)
 
 ;;MATH
 (deftest ===-test

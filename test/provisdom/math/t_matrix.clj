@@ -4,10 +4,12 @@
     [provisdom.test.core :refer :all]
     [provisdom.math.matrix :as mx]
     [provisdom.math.core :as m]
-    [provisdom.math.random2 :as random]
+    [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
+
+;;10 seconds
 
 (set! *warn-on-reflection* true)
 

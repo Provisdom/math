@@ -289,7 +289,8 @@
   a lazy sequence of vectors of size `dimensions`.
   Because of predictability, can be better for a single use simulation."
   [dimensions]
-  (repeatedly #(vec (.nextVector ^SobolSequenceGenerator (quasi-rng dimensions)))))
+  (let [qr (quasi-rng dimensions)]
+    (repeatedly #(vec (.nextVector ^SobolSequenceGenerator qr)))))
 
 (s/fdef quasi-rnd-vector-lazy
         :args (s/cat :dimensions (s/int-in 1 1000))

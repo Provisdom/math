@@ -8,6 +8,8 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
+;;20 SECONDS
+
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -98,22 +100,12 @@
   (is= [0 2 4] (vector/removev [0 2 4 6] 3))
   (is= [0 4 6] (vector/removev [0 2 4 6] 1)))
 
-(deftest partition-recursively-test
-  (is= nil (vector/partition-recursively 3 []))
-  (is= [1 2] (vector/partition-recursively 2 [1 2]))
-  (is= [1 2 3] (vector/partition-recursively 3 [1 2 3]))
-  (is= [[1 2 3] [4]] (vector/partition-recursively 3 [1 2 3 4]))
-  (is= [[1 2 3] [4 5 6]] (vector/partition-recursively 3 [1 2 3 4 5 6]))
-  (is= [[[1 2 3] [4 5 6] [7 8 9]]
-        [10]]
-       (vector/partition-recursively [1 2 3 4 5 6 7 8 9 10] 3)))
-
 (deftest concat-by-index-test
-  (is= [] (vector/concat-by-index [] [] 0))
-  (is= [] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -4))
-  (is= [4.0 5.0 6.0 nil nil 1.0 2.0 3.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -5))
-  (is= [1.0 2.0 3.0 nil nil 4.0 5.0 6.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 5))
-  (is= [4.0 5.0 6.0] (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 0)))
+  (is= '() (vector/concat-by-index [] [] 0))
+  (is= '(4.0 5.0 6.0 nil 1.0 2.0 3.0) (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -4))
+  (is= '(4.0 5.0 6.0 nil nil 1.0 2.0 3.0) (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] -5))
+  (is= '(1.0 2.0 3.0 nil nil 4.0 5.0 6.0) (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 5))
+  (is= '(4.0 5.0 6.0) (vector/concat-by-index [1.0 2.0 3.0] [4.0 5.0 6.0] 0)))
 
 (deftest replace-nan-test
   (is= [] (vector/replace-nan 0 []))
@@ -122,7 +114,6 @@
 
 (defspec-test test-insertv `vector/insertv)
 (defspec-test test-removev `vector/removev)
-(defspec-test test-partition-recursively `vector/partition-recursively)
 (defspec-test test-concat-by-index `vector/concat-by-index)
 (defspec-test test-replace-nan `vector/replace-nan)
 
