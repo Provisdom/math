@@ -16,7 +16,7 @@
          symmetric-matrix? diagonal-matrix? diagonal-matrix row-matrix
          rows columns size-of-symmetric-or-triangular-matrix size-of-symmetric-or-triangular-matrix-without-diagonal
          compute-vector coerce ecount to-matrix symmetric-matrix-by-averaging
-         inner-product emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
+         emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
          ecount-of-symmetric-or-triangular-matrix ecount-of-symmetric-or-triangular-matrix-without-diagonal
          upper-triangular-matrix lower-triangular-matrix? upper-triangular-matrix? lower-triangular-matrix)
 
@@ -1296,7 +1296,8 @@
 ;;;MATRIX MATH
 (defn mx*
   "Matrix multiplication.
-  Number of columns of the first matrix must match the number of rows of the second matrix."
+  Number of columns of the first matrix must match the number of rows of the second matrix.
+  Use [tensor/multiply] for more general multiplication."
   ([m] m)
   ([m1 m2]
    (when (= (columns m1) (rows m2))

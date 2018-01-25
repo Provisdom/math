@@ -138,64 +138,163 @@
      "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"} ;11/12
    #{"9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"} ;11/13
    #{}                                                      ;11/14
+   #{}                                                      ;11/15
+   #{}                                                      ;11/16
+   #{}                                                      ;11/17
+   #{}                                                      ;11/18
+   #{}                                                      ;11/19
+   #{}                                                      ;11/20
+   #{}                                                      ;11/21
+   #{}                                                      ;11/22
+   #{}                                                      ;11/23
+   #{"E2MOM7 of 35->45-sec hollow rock"
+     "3 rounds of 20 pistols w/ 90-sec rest"}               ;11/24
+   #{}                                                      ;11/25
+   #{}                                                      ;11/26
+   #{}                                                      ;11/27
+   #{"Tabata (14->20sec) 1->2-leg L-sits"
+     "20->30-sec each side of side plank with top leg up"
+     "4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"} ;11/28
+   #{}                                                      ;11/29
+   #{"E2MOM4 Handstand holds for 48->60-sec"}               ;11/30
+   #{}                                                      ;12/1
+   #{"3x25->30-sec 1->2-leg L-sits in 10 minutes"
+     "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 50#->53#"} ;12/2
+   #{}
+   #{"E2MOM5 of 5 strict HSPUs"
+     "Work on tying together natural-looking triple-unders"} ;12/4
+   #{}                                                      ;12/5
+   #{}                                                      ;12/6
+   #{}                                                      ;12/7
+   #{"Dumbbell Kalsu 35->45"}                               ;12/8
+   #{}                                                      ;12/9
+   #{"E2MOM7 of 35->45-sec hollow rock"
+     "E2MOM7 of 10->20-sec straight-arm hanging 1->2-leg L-sits"} ;12/10
+   #{(str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, "
+          "PP, cal row, rest) 1 minute each")}              ;12/11
+   #{}                                                      ;12/12
+   #{}                                                      ;12/13
+   #{}                                                      ;12/14
+   #{"Back Squat 265->275x10 to 1 in 30 minutes"}           ;12/15
+   #{}                                                      ;12/16
+   #{}                                                      ;12/17
+   #{"5 rds of 10 kipping HSPU in 1-min, rest 2-min"
+     "3 rounds of 20 pistols w/ 90-sec rest"
+     "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"} ;12/18
+   #{"E3MOM5 Handstand holds for 46->60-sec"
+     "Tabata (14->20sec) 1->2-leg L-sits"
+     "E2MOM7 of 35->45-sec hollow rock"}                    ;12/19
+   #{}                                                      ;12/20
+   #{"12->21 kipping HSPUs in a row"
+     (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
+          "with elevated heels, or with a counterbalance weight held out in front")
+     "Handstand walking 7x50' in 60-sec with 2-min rest"}   ;12/21
+   #{"Work on Front squats and press at (15,15,5), then thrusters, then down."
+     "10->21 continuous-kipping TTB"}                       ;12/22
+   #{"E2MOM7 of 11->20-sec straight-arm hanging 1->2-leg L-sits"
+     "E2MOM4 Handstand holds for 48->60-sec"
+     "3x20->30-sec straight-arm hanging 1->2-leg L-sits"}   ;12/23
+   #{"3x25->30-sec 1->2-leg L-sits in 10 minutes"
+     "20->30-sec each side of side plank with top leg up"}  ;12/24
+   #{}                                                      ;12/25
+   #{"Kalsu from floor 105->115 in 30 minutes"}             ;12/26
+   #{"E2MOM5 of 5 strict HSPUs"}                            ;12/27
+   #{}                                                      ;12/28
+   #{"Back Squat 345x1"}                                    ;12/29
+   #{}                                                      ;12/30
+   #{}                                                      ;12/31
+   #{"4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"} ;1/1
+   #{"5 rds of 10 kipping HSPU in 1-min, rest 2-min"}       ;1/2
+   #{}                                                      ;1/3
+   #{}                                                      ;1/4
+   #{"Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
+     "E3MOM5 Handstand holds for 46->60-sec"}               ;1/5
+   #{}                                                      ;1/6
+   #{}                                                      ;1/7
+   #{"Fran in 6:20->6 minutes"}                             ;1/8
+   #{}                                                      ;1/9
+   #{}                                                      ;1/10
+   #{"15->21 kipping HSPUs in a row"
+     "E2MOM7 of 36->45-sec hollow rock"}                    ;1/11
+   #{"Work on butterfly pull-ups"
+     "E2MOM5 of 11->15 each of thruster@95+TTB"}            ;1/12
+   #{"3x25->30-sec 1->2-leg L-sits in 10 minutes"
+     "21->30-sec each side of side plank with top leg up"}  ;1/13
+   #{}                                                      ;1/14
+   #{"18->21 unbroken Thrusters @95"}                       ;1/15
+   #{}                                                      ;1/16
+   #{}                                                      ;1/17
+   #{"Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"} ;1/18
+   #{}                                                      ;1/19
+   #{}                                                      ;1/20
+   #{}                                                      ;1/21
+   #{"5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
+     "5 Rounds of 200M run + 70# KBS x12 in 12 minutes; did it!"} ;1/22
+   #{"41->50 cal Assault bike in 2.5 min (~63->70 RPM)"}    ;1/23
+   #{}                                                      ;1/24
    ])
 
 (comment
-  #{
-
+  #{"14->21 unbroken kipping C2B"
+    "Fran+1-mile run 14:47->14 minutes"
+    "15-cal bike, 155# S2OH x15, double-unders x50"
     })
 
 (def current-wod-list
-  ["5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
-   "5 Rounds of 200M run + 70# KBS x12 in 12 minutes"
+  ["5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
+   "EMOM30 alternating 5 strict TTB with 1-sec pause at top, 6x PP@155, and 15-cal row"
+   "5 rds of 10 burpee pull-ups + 5x 185# PC in 10 min"
+   "10-min EMOM odd: 12x DB snatches #65, even: 25 Wall ball"
+   "5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
    "12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"
    "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
-   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 45#->53#"
+   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 50#->53#"
    "E5MOM3 55->60 second 135# OH hold"
    "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"
-   "E3MOM5 Handstand holds for 45->60-sec"
+   "E3MOM5 Handstand holds for 46->60-sec"
    "E2MOM4 Handstand holds for 48->60-sec"
-   "12->21 kipping HSPUs in a row"
-   "5 rds of 9->10 kipping HSPU in 1-min, rest 2-min"
+   "15->21 kipping HSPUs in a row"
+   "5 rds of 10 kipping HSPU in 1-min, rest 2-min"
    "E2MOM5 of 5 strict HSPUs"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
    "10->21 continuous-kipping TTB"
    "14->21 unbroken kipping C2B"
    "Tabata (14->20sec) 1->2-leg L-sits"
-   "3x25->30-sec 1->2-leg L-sits"
-   "7x10->20-sec straight-arm hanging 1->2-leg L-sits"
+   "3x25->30-sec 1->2-leg L-sits in 10 minutes"
+   "E2MOM7 of 11->20-sec straight-arm hanging 1->2-leg L-sits"
    "3x20->30-sec straight-arm hanging 1->2-leg L-sits"
-   "20->30-sec each side of side plank with top leg up"
-   "3->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
+   "21->30-sec each side of side plank with top leg up"
+   "4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
    "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
-   "7 rounds of 35->45-sec hollow rock + 75-sec rest"
-   "50 cal Assault bike in 2.5 min (~70 RPM)"
+   "E2MOM7 of 36->45-sec hollow rock"
+   "41->50 cal Assault bike in 2.5 min (~63->70 RPM)"
    "EMOM20 of odd: bike 8-cal, even: FSx7@75# + burpee over barbell x5"
    "Back Squat 265->275x10 to 1 in 30 minutes"
    "Back Squat 345x1"
    "Front Squats 5x9@185 start every 2 minutes from floor"
    "EMOM15 of PCx3, FSx3, PJx3 @135->185 (watch low back)"
    "9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"
-   "15->21 unbroken Thrusters @95"
+   "18->21 unbroken Thrusters @95"
    "Full Snatch E2MOM: 6x6@115->135, 5x4@135->155, 4x3@155->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
    "Fran+1-mile run 14:47->14 minutes"
-   "E2MOM5 thruster@95x15+TTBx15"
+   "E2MOM5 of 11->15 each of thruster@95+TTB"
    "E4MOM5 thruster@85->95x21+run200M"
-   "Kalsu 105->135"
    (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees "
         "in 12:35->11-min @105->135")
    "Work on butterfly pull-ups"
    "Work on butterfly c2b"
    "10-min EMOM odd: 4->5 bar muscle-up, even: rest"
+   "8 strict muscle-ups in 20 minutes"
    (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
         "with elevated heels, or with a counterbalance weight held out in front")
-   "3 rounds of 20 pistols w/ 90-sec rest between in 10 minutes"
+   "3 rounds of 20 pistols w/ 90-sec rest"
    "Work on tying together natural-looking triple-unders"
-   "Work on thrusters at 2x21+1, then Front squats and press at 15, then down."
-   (str "Work on variations of Kalsu, like EMOM20 of 5 burpees + 5 thrusters @75, "
-        "behind neck thrusters, just front squats or push press, "
-        "less or more burpees or an alternative exercise, or with dumbbells")
+   "Work on Front squats and press at (15,15,5), then thrusters, then down."
+   "Kalsu from floor 105->115 in 30 minutes"
+   "Dumbbell Kalsu 35->45"
+   "EMOM30 of 2->3 each of burpees + 135# thrusters from rack"
+   "EMOM25 3->4x 135# thrusters from rack"
    (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, "
         "PP, cal row, rest) 1 minute each")])
 

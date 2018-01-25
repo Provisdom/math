@@ -1,4 +1,4 @@
-(ns provisdom.math.t-splittable-random
+(ns provisdom.math.t-internal-splittable-random
   "Tests of the custom RNG. This is a little weird since the subject
   of the tests (the random number generator) is also the primary
   internal driver of the tests, but hopefully it will still be meaningful."

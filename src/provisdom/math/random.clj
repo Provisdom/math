@@ -7,7 +7,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
     [provisdom.math.special-functions :as mf]
-    [provisdom.math.splittable-random :as split]
+    [provisdom.math.internal-splittable-random :as split]
     [clojure.core.reducers :as reducers])
   (:import
     [org.apache.commons.math3.random MersenneTwister

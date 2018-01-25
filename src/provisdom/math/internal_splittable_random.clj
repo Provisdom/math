@@ -11,7 +11,7 @@
 
 (ns ^{:author "Gary Fredericks"
       :doc    "Purely functional and splittable pseudo-random number generators."}
-provisdom.math.splittable-random
+provisdom.math.internal-splittable-random
   (:refer-clojure :exclude [unsigned-bit-shift-right]))
 
 (defprotocol IRandom
