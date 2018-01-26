@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.1.0-alpha4")
+(def version "1.1.0-alpha5")
 
 (set-env!
   :resource-paths #{"src"}
@@ -14,10 +14,10 @@
                   [provisdom/boot-tasks "1.4" :scope "test"]
                   [provisdom/test "0.3.3-alpha1" :scope "test"]
                   ;;project deps
-                  [org.clojure/clojure "1.9.0" :scope "provided"]
+                  [org.clojure/clojure "1.10.0-alpha2" :scope "provided"]
                   [org.clojure/spec.alpha "0.1.143"]
                   [orchestra "2017.11.12-1"]
-                  [provisdom/utility-belt "0.2.0-alpha3"]
+                  [provisdom/utility-belt "0.2.0-alpha4"]
                   [org.apache.commons/commons-math3 "3.6.1"]
                   [apache-commons-matrix "0.4.1"]
                   [clatrix "0.5.0"]])
@@ -32,22 +32,23 @@
        :description "Provisdom math"
        :url         "https://gitlab.com/provisdom/math"
        :scm         {:url "https://github.com/Provisdom/math"}
-       :license     {"Provisdom" "(c) 2015-2017 Provisdom Corporation"}}
+       :license     {"Provisdom" "(c) 2015-2018 Provisdom Corporation"}}
   ;; TODO: replace this when all namespaces are converted to clojure.test
   test {:namespaces '#{provisdom.math.t-apache-matrix
                        provisdom.math.t-apache-vector
                        provisdom.math.t-arrays
-                       provisdom.math.t-calculus
                        provisdom.math.t-clatrix
                        provisdom.math.t-combinatorics
                        provisdom.math.t-core
+                       provisdom.math.t-derivatives
                        provisdom.math.t-format
+                       provisdom.math.t-integrals
+                       ;provisdom.math.t-internal-splittable-random
                        provisdom.math.t-intervals
                        provisdom.math.t-matrix
                        provisdom.math.t-random
                        provisdom.math.t-series
                        provisdom.math.t-special-functions
-                       ;provisdom.math.t-splittable-random
                        provisdom.math.t-tensor
                        provisdom.math.t-vector
                        }})

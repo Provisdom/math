@@ -7,8 +7,8 @@
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]
     [provisdom.math.vector :as vector]
-    [provisdom.math.combinatorics :as cm]
-    [provisdom.math.calculus :as ca]))
+    [provisdom.math.combinatorics :as combinatorics]
+    [provisdom.math.derivatives :as derivatives]))
 
 ;;;DECLARATIONS
 (declare polynomial-fn)
@@ -136,12 +136,12 @@
                                        (* degree
                                           (- (* (inc degree) first-kind) second-kind)
                                           (/ (dec (m/sq %))))))
-         :else (ca/derivative-fn (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
-                                 {::ca/derivative derivative}))))
+         :else (derivatives/derivative-fn (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
+                                          {::derivatives/derivative derivative}))))
 
 (s/fdef chebyshev-derivative-fn
         :args (s/cat :degree ::degree
-                     :derivative ::ca/derivative
+                     :derivative ::derivatives/derivative
                      :opts (s/? (s/keys :opt [::second-kind?])))
         :ret ::number->number)
 
@@ -154,10 +154,10 @@
   ([chebyshev-factors {::keys [second-kind?] :or {second-kind? false}}]
    (let [n (count chebyshev-factors)]
      (map (fn [i]
-            ((ca/derivative-fn
+            ((derivatives/derivative-fn
                #(vector/dot-product (vec chebyshev-factors)
                                     (vec ((polynomial-fn (dec n) {::chebyshev-kind (if second-kind? 2 1)}) %)))
-               {::ca/derivative i})
+               {::derivatives/derivative i})
               0.0))
           (range n)))))
 
@@ -187,7 +187,8 @@
   ([end-degree] (polynomial-fn end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
-   (fn [x] (mapv (fn [degree] (((polynomial-functions chebyshev-kind) x) degree))
+   (fn [x] (mapv (fn [degree]
+                   (((polynomial-functions chebyshev-kind) x) degree))
                  (range start-degree (inc end-degree))))))
 
 (s/fdef polynomial-fn
@@ -204,7 +205,9 @@
   ([end-degree] (polynomial-fns end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
-   (map (fn [degree] (fn [x] (((polynomial-functions chebyshev-kind) x) degree)))
+   (map (fn [degree]
+          (fn [x]
+            (((polynomial-functions chebyshev-kind) x) degree)))
         (range start-degree (inc end-degree)))))
 
 (s/fdef polynomial-fns
@@ -308,7 +311,7 @@
                                         (+ tot2 (* degree (inc (- (m/pow 0.01 (+ 2 index))))))])
                                      [0.0 0.0]
                                      (vec degrees)))
-                        (apply cm/cartesian-product
+                        (apply combinatorics/cartesian-product
                                (repeat (count v) (range (inc end-degree)))))))))))
 
 (comment "return fn causes spec issues"
@@ -365,7 +368,9 @@
   using a `term-series`: (a_n × x^n)."
   [term-series]
   (fn [x] (map-indexed (fn [n an]
-                         (* an (/ (inc n)) (m/pow x (inc n))))
+                         (* an
+                            (/ (inc n))
+                            (m/pow x (inc n))))
                        term-series)))
 
 (s/fdef power-series-integral-fn

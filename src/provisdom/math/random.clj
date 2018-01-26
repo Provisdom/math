@@ -6,7 +6,7 @@
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
-    [provisdom.math.special-functions :as mf]
+    [provisdom.math.special-functions :as special-fns]
     [provisdom.math.internal-splittable-random :as split]
     [clojure.core.reducers :as reducers])
   (:import
@@ -58,7 +58,7 @@
 (defn random-normal
   "Returns a value drawn from a standard Normal distribution."
   [rnd]
-  (mf/inv-cdf-standard-normal rnd))
+  (special-fns/inv-cdf-standard-normal rnd))
 
 (s/fdef random-normal
         :args (s/cat :rnd ::rnd)
@@ -356,7 +356,8 @@
            (if-not (= :rnd (:r (meta samplef)))
              (let [s (take ntake (iterate #(samplef (second %)) (samplef rnd-lazy)))]
                [(map first s) (second (last s))])
-             [(map samplef (take ntake rnd-lazy)), (drop ntake rnd-lazy)]))
+             [(map samplef (take ntake rnd-lazy))
+              (drop ntake rnd-lazy)]))
 
          (defn multi-sample-indexed
            "Returns tuple of [sampled-values rnd-lazy].
@@ -364,10 +365,15 @@
            Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
            [samplef rnd-lazy ^long ntake]
            (if-not (= :rnd (:r (meta samplef)))
-             (loop [coll [], r rnd-lazy, i 0]
-               (if (>= i ntake) [coll r]
-                                (let [[s laz] (samplef i r)] (recur (conj coll s) laz (inc i)))))
-             [(map-indexed samplef (take ntake rnd-lazy)), (drop ntake rnd-lazy)]))
+             (loop [coll []
+                    r rnd-lazy
+                    i 0]
+               (if (>= i ntake)
+                 [coll r]
+                 (let [[s laz] (samplef i r)]
+                   (recur (conj coll s) laz (inc i)))))
+             [(map-indexed samplef (take ntake rnd-lazy))
+              (drop ntake rnd-lazy)]))
 
          (defn fold-random
            "Returns tuple of value and rnd-lazy.

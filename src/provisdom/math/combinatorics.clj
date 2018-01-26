@@ -5,7 +5,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
-    [provisdom.math.special-functions :as mf]
+    [provisdom.math.special-functions :as special-fns]
     [clojure.core.reducers :as ccr])
   (:import
     [cern.jet.math.tdouble DoubleArithmetic]))
@@ -29,7 +29,7 @@
 (defn factorial
   "Returns the factorial of `x`."
   [x]
-  (mf/gamma (inc (double x))))
+  (special-fns/gamma (inc (double x))))
 
 (s/fdef factorial
         :args (s/cat :x ::m/non-)
@@ -47,7 +47,7 @@
 (defn log-factorial
   "Returns the log-factorial of `x`"
   [x]
-  (mf/log-gamma (inc x)))
+  (special-fns/log-gamma (inc x)))
 
 (s/fdef log-factorial
         :args (s/cat :x ::m/non-)
