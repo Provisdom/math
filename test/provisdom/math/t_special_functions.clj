@@ -244,7 +244,7 @@
   ["5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
    "EMOM30 alternating 5 strict TTB with 1-sec pause at top, 6x PP@155, and 15-cal row"
    "5 rds of 10 burpee pull-ups + 5x 185# PC in 10 min"
-   "10-min EMOM odd: 12x DB snatches #65, even: 25 Wall ball"
+   "5 rds of 12x DB snatches #65 + 25x Wall ball in 10 min"
    "5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
    "12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"
    "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
