@@ -13,33 +13,48 @@
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
-(s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+(s/def ::size
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::vector ::tensor/tensor1D)
 
 (s/def ::vector-2D
   (s/with-gen
-    (s/coll-of ::m/number :kind clojure.core/vector? :into [] :min-count 2 :max-count 2)
+    (s/coll-of ::m/number
+               :kind clojure.core/vector?
+               :into []
+               :min-count 2
+               :max-count 2)
     #(gen/vector (s/gen ::m/number) 2)))
 
 (s/def ::vector-3D
   (s/with-gen
-    (s/coll-of ::m/number :kind clojure.core/vector? :into [] :min-count 3 :max-count 3)
+    (s/coll-of ::m/number
+               :kind clojure.core/vector?
+               :into []
+               :min-count 3
+               :max-count 3)
     #(gen/vector (s/gen ::m/number) 3)))
 
 (s/def ::vector-num
   (s/with-gen
-    (s/coll-of ::m/num :kind clojure.core/vector? :into [])
+    (s/coll-of ::m/num
+               :kind clojure.core/vector?
+               :into [])
     #(gen/vector (s/gen ::m/num) 0 mdl)))
 
 (s/def ::vector-finite
   (s/with-gen
-    (s/coll-of ::m/finite :kind clojure.core/vector? :into [])
+    (s/coll-of ::m/finite
+               :kind clojure.core/vector?
+               :into [])
     #(gen/vector (s/gen ::m/finite) 0 mdl)))
 
 (s/def ::vector-finite+
   (s/with-gen
-    (s/coll-of ::m/pos :kind clojure.core/vector? :into [])
+    (s/coll-of ::m/pos
+               :kind clojure.core/vector?
+               :into [])
     #(gen/vector (s/gen ::m/finite+) 0 mdl)))
 
 (s/def ::sparse-vector
@@ -116,8 +131,8 @@
         :ret ::vector)
 
 (defn sparse->vector
-  "Builds a vector using a sparse representation and an existing vector `v` (often a zero-vector).
-  `sparse` is a collection of tuples of `[index number]`.
+  "Builds a vector using a sparse representation and an existing vector `v`
+  (often a zero-vector). `sparse` is a collection of tuples of `[index number]`.
   Later values will override prior overlapping values."
   [sparse v]
   (let [s (count v)]
@@ -145,8 +160,8 @@
         :ret ::vector)
 
 (defn filter-kv
-  "Returns a vector of the items in `v` for which function `index+number->bool` returns true.
-  `index+number->bool` must be free of side-effects."
+  "Returns a vector of the items in `v` for which function `index+number->bool`
+  returns true. `index+number->bool` must be free of side-effects."
   [index+number->bool v]
   (persistent!
     (reduce-kv (fn [tot index number]
@@ -161,7 +176,8 @@
         :ret ::vector)
 
 (defn some-kv
-  "Returns the first logical true value of function `index+number->bool` for any number in `v`, else nil."
+  "Returns the first logical true value of function `index+number->bool` for any
+  number in `v`, else nil."
   [index+number->bool v]
   (loop [i 0
          s v]
@@ -205,9 +221,9 @@
         :ret ::vector)
 
 (defn concat-by-index
-  "Returns a lazy sequence constructed by concatenating two collections, `coll1` and `coll2` with
-   `coll2` beginning at index `i`.
-   Preference goes to `coll2` and empty spaces are filled with nil."
+  "Returns a lazy sequence constructed by concatenating two collections, `coll1`
+  and `coll2` with `coll2` beginning at index `i`. Preference goes to `coll2`
+  and empty spaces are filled with nil."
   [coll1 coll2 i]
   (lazy-seq
     (cond
@@ -225,8 +241,9 @@
         :ret coll?)
 
 (defn replace-nan
-  "Takes a collection of `numbers` and returns the collection with any NaN replaced with `replacement-number`.
-  Note that clojure.core/replace doesn't work with NaN."
+  "Takes a collection of `numbers` and returns the collection with any NaN
+  replaced with `replacement-number`. Note that clojure.core/replace doesn't
+  work with NaN."
   [replacement-number numbers]
   (if (vector? numbers)
     (reduce (fn [v i]
@@ -247,7 +264,7 @@
 ;;;VECTOR MATH
 (defn kahan-sum
   "Kahan Summation algorithm -- for greater floating-point summation accuracy,
-  as fast alternative to bigDecimal"
+  as fast alternative to bigDecimal."
   [numbers]
   (loop [[h & t] numbers
          sum 0.0
@@ -265,26 +282,28 @@
         :ret ::m/number)
 
 (defn dot-product
-  "The dot product is the sum of the products of the corresponding entries of two vectors.
-  Geometrically, the dot product is the product of the Euclidean magnitudes of the two vectors and the cosine of
-  the angle between them.
-  Also called [[inner-product]]."
+  "The dot product is the sum of the products of the corresponding entries of
+  two vectors. Geometrically, the dot product is the product of the Euclidean
+  magnitudes of the two vectors and the cosine of the angle between them. Also
+  called [[inner-product]]."
   [v1 v2]
-  (apply + (map (fn [a b] (* (double a) b))
+  (apply + (map (fn [a b]
+                  (* (double a) b))
                 v1
                 v2)))
 
 (s/fdef dot-product
-        :args (s/and (s/cat :v1 ::vector :v2 ::vector)
+        :args (s/and (s/cat :v1 ::vector
+                            :v2 ::vector)
                      (fn [{:keys [v1 v2]}]
                        (= (count v1) (count v2))))
         :ret ::m/number)
 
 (defn cross-product
-  "Given two linearly independent 3D vectors `v1` and `v2`, the cross product, `v1` × `v2`,
-  is a vector that is perpendicular to both `v1` and `v2`.
-  For 2D vectors, the cross product has an analog result, which is a number.
-  Only defined for 2D and 3D vectors."
+  "Given two linearly independent 3D vectors `v1` and `v2`, the cross product,
+  `v1` × `v2`, is a vector that is perpendicular to both `v1` and `v2`. For 2D
+  vectors, the cross product has an analog result, which is a number. Only
+  defined for 2D and 3D vectors."
   [v1 v2]
   (let [v10 (double (get v1 0))
         v20 (double (get v2 0))
@@ -292,7 +311,8 @@
         v21 (double (get v2 1))
         t (- (* v10 v21) (* v20 v11))]
     (cond
-      (= (count v1) (count v2) 3) (let [v12 (get v1 2), v22 (get v2 2)]
+      (= (count v1) (count v2) 3) (let [v12 (get v1 2)
+                                        v22 (get v2 2)]
                                     [(- (* v11 v22) (* v21 v12))
                                      (- (* v12 v20) (* v22 v10))
                                      t])
@@ -300,8 +320,10 @@
       :else nil)))
 
 (s/fdef cross-product
-        :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D :vector-3D ::vector-3D)
-                            :v2 (s/or :vector-2D ::vector-2D :vector-3D ::vector-3D))
+        :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D
+                                      :vector-3D ::vector-3D)
+                            :v2 (s/or :vector-2D ::vector-2D
+                                      :vector-3D ::vector-3D))
                      (fn [{:keys [v1 v2]}]
                        (let [v1-type (first v1)
                              v2-type (first v2)]

@@ -54,9 +54,9 @@
         :ret ::m/num)
 
 (defn subfactorial
-  "Returns the subfactorial of `x`.
-  The number of ways that n objects can be arranged where no object appears in
-  its natural position (known as 'derangements.')"
+  "Returns the subfactorial of `x`. The number of ways that n objects can be
+  arranged where no object appears in its natural position (known as
+  'derangements.')"
   [x]
   (if (and (m/long-able? x) (< x 22))
     (subfactorials (m/round x :up))
@@ -70,7 +70,8 @@
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!).
-  `k` must be able to be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
+  `k` must be able to be a long and less than 1e8, otherwise use
+  [[log-choose-k-from-n]]."
   [k n]
   (DoubleArithmetic/binomial (double n) (long k)))
 
@@ -82,8 +83,8 @@
 (defn choose-k-from-n'
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!).
-  Returns long if possible.
-  `k` must be able to be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
+  Returns long if possible. `k` must be able to be a long and less than 1e8,
+  otherwise use [[log-choose-k-from-n]]."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
@@ -93,8 +94,8 @@
 
 (defn log-choose-k-from-n
   "Returns the log of the number of ways to choose `k` items out of `n` items.
-  `n` must be >= `k`, and `n` and `k` must be non-negative.
-  Otherwise, use [[choose-k-from-n]]."
+  `n` must be >= `k`, and `n` and `k` must be non-negative. Otherwise, use
+  [[choose-k-from-n]]."
   [k n]
   (- (log-factorial n)
      (log-factorial k)
@@ -153,7 +154,8 @@
 
 (defn binomial-probability
   "Likelihood of seeing `successes` out of `trials` with `success-prob`.
-  `Successes` must be able to be a long and less than 1e8, otherwise use [[log-binomial-probability]]."
+  `Successes` must be able to be a long and less than 1e8, otherwise use
+  [[log-binomial-probability]]."
   [successes trials success-prob]
   (* (choose-k-from-n successes trials)
      (m/pow success-prob successes)
@@ -188,7 +190,7 @@
 (comment
   ;;;HYPERGEOMETRIC FUNCTION
   (defn generalized-hypergeometric
-    "p and q should be arrays"
+    "`p` and `q` should be arrays."
     [p q z]
     (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)}))))
 
@@ -247,8 +249,8 @@
       (step c 1))))
 
 (defn combinations
-  "All the unique ways of taking `n` different elements from `items`,
-  or all the unique ways of taking different elements from `items`."
+  "All the unique ways of taking `n` different elements from `items`, or all the
+  unique ways of taking different elements from `items`."
   ([items]
    (mapcat (fn [n] (combinations items n))
            (unchunk (range (inc (count items))))))
@@ -268,7 +270,8 @@
         :ret (s/nilable ::groups-of-items))
 
 (defn combinations-with-complements
-  "All combinations of size `n` with complements, or all combinations with complements."
+  "All combinations of size `n` with complements, or all combinations with
+  complements."
   ([items]
    (let [s (combinations items)
          r (reverse s)]
@@ -287,7 +290,8 @@
 
 (defn combinations-using-all
   "Combinations that use all of the `items` by grouping into the `breakdown`
-   pattern, where `breakdown` is a collection of positive longs that sum to the number of items."
+   pattern, where `breakdown` is a collection of positive longs that sum to the
+   number of items."
   [items breakdown]
   (if-not (next breakdown)
     (list (list items))
@@ -303,11 +307,14 @@
                               :breakdown (s/coll-of ::m/long+))
                        (fn [{:keys [items breakdown]}]
                          (== (apply + 0.0 breakdown) (count items))))
-                #(gen/one-of (map gen/return (list [[1 2 3] [2 1]] [[] []] [[[] nil [12 34]] [1]]))))
+                #(gen/one-of
+                   (map gen/return
+                        (list [[1 2 3] [2 1]] [[] []] [[[] nil [12 34]] [1]]))))
         :ret ::groups-of-items)
 
 (defn distinct-combinations-with-replacement
-  "All distinct combinations of the `items` with replacement of up to `n` items."
+  "All distinct combinations of the `items` with replacement of up to `n`
+  items."
   [items n]
   (filter #(<= (count %) n)
           (distinct (combinations (apply interleave (repeat n items))))))
@@ -356,7 +363,8 @@
         :ret ::groups-of-items)
 
 (defn selections
-  "All the ways of taking `n` (possibly the same) elements from the sequence of items."
+  "All the ways of taking `n` (possibly the same) elements from the sequence of
+  items."
   [items n]
   (apply cartesian-product
          (take n (repeat items))))

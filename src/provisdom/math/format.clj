@@ -11,7 +11,10 @@
 (s/def ::digits (s/with-gen ::m/long+ #(gen/large-integer* {:min 1 :max 35})))
 (s/def ::max-digits ::digits)
 (s/def ::max-length ::m/long+)
-(s/def ::decimal-places (s/with-gen ::m/long-non- #(gen/large-integer* {:min 0 :max 35})))
+
+(s/def ::decimal-places
+  (s/with-gen ::m/long-non- #(gen/large-integer* {:min 0 :max 35})))
+
 (s/def ::max-decimal-places ::decimal-places)
 (s/def ::money? boolean?)
 
@@ -151,8 +154,8 @@
         :ret string?)
 
 (defn parse-shorthand
-  "Converts a shorthand string, `s`, into a number if possible.
-  Otherwise returns nil."
+  "Converts a shorthand string, `s`, into a number if possible. Otherwise
+  returns nil."
   [s]
   (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
                             (str/starts-with? s "-$") (str "-" (strings/trim-start s "-$"))

@@ -65,10 +65,24 @@
    #(+ (* 16 (m/pow % 5)) (* -20 (m/cube %)) (* 5 %))
    #(+ (* 32 (m/pow % 6)) (* -48 (m/pow % 4)) (* 18 (m/sq %)) -1)
    #(+ (* 64 (m/pow % 7)) (* -112 (m/pow % 5)) (* 56 (m/cube %)) (* -7 %))
-   #(+ (* 128 (m/pow % 8)) (* -256 (m/pow % 6)) (* 160 (m/pow % 4)) (* -32 (m/sq %)) 1)
-   #(+ (* 256 (m/pow % 9)) (* -576 (m/pow % 7)) (* 432 (m/pow % 5)) (* -120 (m/cube %)) (* 9 %))
-   #(+ (* 512 (m/pow % 10)) (* -1280 (m/pow % 8)) (* 1120 (m/pow % 6)) (* -400 (m/pow % 4)) (* 50 (m/sq %)) -1)
-   #(+ (* 1024 (m/pow % 11)) (* -2816 (m/pow % 9)) (* 2816 (m/pow % 7)) (* -1232 (m/pow % 5)) (* 220 (m/cube %))
+   #(+ (* 128 (m/pow % 8))
+       (* -256 (m/pow % 6))
+       (* 160 (m/pow % 4))
+       (* -32 (m/sq %)) 1)
+   #(+ (* 256 (m/pow % 9))
+       (* -576 (m/pow % 7))
+       (* 432 (m/pow % 5))
+       (* -120 (m/cube %)) (* 9 %))
+   #(+ (* 512 (m/pow % 10))
+       (* -1280 (m/pow % 8))
+       (* 1120 (m/pow % 6))
+       (* -400 (m/pow % 4))
+       (* 50 (m/sq %)) -1)
+   #(+ (* 1024 (m/pow % 11))
+       (* -2816 (m/pow % 9))
+       (* 2816 (m/pow % 7))
+       (* -1232 (m/pow % 5))
+       (* 220 (m/cube %))
        (* -11 %))])
 
 (def ^:const ^:private chebyshev-polynomial-of-the-second-kind-fns
@@ -80,13 +94,21 @@
    #(+ (* 32 (m/pow % 5)) (* -32 (m/cube %)) (* 6 %))
    #(+ (* 64 (m/pow % 6)) (* -80 (m/pow % 4)) (* 24 (m/sq %)) -1)
    #(+ (* 128 (m/pow % 7)) (* -192 (m/pow % 5)) (* 80 (m/cube %)) (* -8 %))
-   #(+ (* 256 (m/pow % 8)) (* -448 (m/pow % 6)) (* 240 (m/pow % 4)) (* -40 (m/sq %)) 1)
-   #(+ (* 512 (m/pow % 9)) (* -1024 (m/pow % 7)) (* 672 (m/pow % 5)) (* -160 (m/cube %)) (* 10 %))])
+   #(+ (* 256 (m/pow % 8))
+       (* -448 (m/pow % 6))
+       (* 240 (m/pow % 4))
+       (* -40 (m/sq %))
+       1)
+   #(+ (* 512 (m/pow % 9))
+       (* -1024 (m/pow % 7))
+       (* 672 (m/pow % 5))
+       (* -160 (m/cube %))
+       (* 10 %))])
 
 ;;;CHEBYSHEV POLYNOMIALS
 (defn chebyshev-polynomial-fn
-  "Returns a chebyshev polynomial function of `degree`.
-  Can optionally use first kind (default) or set `second-kind?` to true."
+  "Returns a chebyshev polynomial function of `degree`. Can optionally use first
+  kind (default) or set `second-kind?` to true."
   ([degree] (chebyshev-polynomial-fn degree {}))
   ([degree {::keys [second-kind?] :or {second-kind? false}}]
    (let [degree (long degree)
@@ -110,9 +132,9 @@
 ;;http://en.wikipedia.org/wiki/Chebyshev_polynomials 
 ;;-- also solved for the derivative of second-kind at x = +-1
 (defn chebyshev-derivative-fn
-  "Returns a chebyshev-derivative function.
-  Can optionally use first kind (default) or set `second-kind?` to true.
-  Will use numerical derivative when necessary."
+  "Returns a chebyshev-derivative function. Can optionally use first kind
+  (default) or set `second-kind?` to true. Will use numerical derivative when
+  necessary."
   ([degree derivative] (chebyshev-derivative-fn degree derivative {}))
   ([degree derivative {::keys [second-kind?] :or {second-kind? false}}]
    (cond (zero? degree) (constantly 0.0)
@@ -146,9 +168,9 @@
         :ret ::number->number)
 
 (defn chebyshev-polynomial-factors-to-regular-polynomial-factors
-  "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...)
-  from chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...).
-  Can optionally use first kind (default) or set `second-kind?` to true."
+  "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...) from
+  chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...). Can optionally
+  use first kind (default) or set `second-kind?` to true."
   ([chebyshev-factors]
    (chebyshev-polynomial-factors-to-regular-polynomial-factors chebyshev-factors {}))
   ([chebyshev-factors {::keys [second-kind?] :or {second-kind? false}}]
@@ -168,7 +190,8 @@
 
 ;;;SERIES
 (defn- polynomial-functions
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
+  polynomial."
   [chebyshev-kind]
   (condp = chebyshev-kind
     0 (fn [x] #(m/pow x %))
@@ -182,8 +205,8 @@
                                       :ret ::m/number)))
 
 (defn polynomial-fn
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
-  Returns a function that takes a number and returns a vector."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
+  polynomial. Returns a function that takes a number and returns a vector."
   ([end-degree] (polynomial-fn end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -200,8 +223,9 @@
         :ret ::number->v)
 
 (defn polynomial-fns
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial.
-  Returns a collection of functions that each take a number and return a number."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
+  polynomial. Returns a collection of functions that each take a number and
+  return a number."
   ([end-degree] (polynomial-fns end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -219,7 +243,8 @@
         :ret (s/coll-of ::number->number))
 
 (defn polynomial-2D-count
-  "Returns the number of elements in 2D between `start-degree` and `end-degree`."
+  "Returns the number of elements in 2D between `start-degree` and
+  `end-degree`."
   ([end-degree] (polynomial-2D-count end-degree {}))
   ([end-degree {::keys [start-degree]
                 :or    {start-degree 0}}]
@@ -241,9 +266,10 @@
   (- (m/sqrt (+ 0.25 (* 2.0 count))) 1.5))
 
 (defn polynomial-2D-fn-by-degree
-  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular polynomial.
-  Order retains x to the highest powers first, e.g., [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3].
-  Returns a function that takes two numbers (an x and a y) and returns a vector."
+  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular
+  polynomial. Order retains x to the highest powers first, e.g.,
+  [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3]. Returns a function that takes
+  two numbers (an x and a y) and returns a vector."
   ([end-degree] (polynomial-2D-fn-by-degree end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -270,9 +296,10 @@
         :ret ::number2->v)
 
 (defn polynomial-2D-fn-by-basis-count
-  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular polynomial.
-  Order retains x to the highest powers first, e.g., [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3].
-  Returns a function that takes two numbers (an x and a y) and returns a vector."
+  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular
+  polynomial. Order retains x to the highest powers first, e.g.,
+  [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3]. Returns a function that takes
+  two numbers (an x and a y) and returns a vector."
   ([basis-count] (polynomial-2D-fn-by-basis-count basis-count {}))
   ([basis-count {::keys [start-degree chebyshev-kind]
                  :or    {start-degree 0, chebyshev-kind 0}}]
@@ -340,8 +367,8 @@
                  :ret ::v->v))
 
 (defn power-series-fn
-  "Returns a function that takes a number and returns the power series of a value x
-  using a `term-series`: (a_n × x^n)."
+  "Returns a function that takes a number and returns the power series of a
+  value 'x' using a `term-series`: (a_n × x^n)."
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (m/pow x n)))
@@ -352,8 +379,8 @@
         :ret ::number->term-series)
 
 (defn power-series-derivative-fn
-  "Returns a function that takes a number and returns the derivative of the power series of a value x
-   using a `term-series`: (a_n × x^n)."
+  "Returns a function that takes a number and returns the derivative of the
+  power series of a value 'x' using a `term-series`: (a_n × x^n)."
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (double n) (m/pow x (dec n))))
@@ -364,8 +391,8 @@
         :ret ::number->term-series)
 
 (defn power-series-integral-fn
-  "Returns a function that takes a number and returns the integral of the power series of a value x
-  using a `term-series`: (a_n × x^n)."
+  "Returns a function that takes a number and returns the integral of the power
+  series of a value x using a `term-series`: (a_n × x^n)."
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an
@@ -422,14 +449,16 @@
 
 ;;;SUMMATION
 (defn sum-convergent-series
-  "Returns the sum of a convergent series.
-  The functions `converged-pred` and `error-pred` take the sum, an index, and the next series value.
+  "Returns the sum of a convergent series. The functions `converged-pred` and
+  `error-pred` take the sum, an index, and the next series value.
   Options:
-   `kahan?` (default false) -- set to true for greater floating-point summation accuracy.
-   `converged-pred` -- predicate indicating that series has converged
-      (default is that index >= 10 AND the abs value
-      is <= m/*quad-close* or the abs value is m/*quad-close* times smaller than the abs sum)
-   `error-pred` -- predicate indicating an error (default is that index is > 10000)."
+    `::kahan?` (default false) -- set to true for greater floating-point
+      summation accuracy.
+    `::converged-pred` -- predicate indicating that series has converged
+      (default is that index >= 10 AND the abs value is <= m/*quad-close* or the
+      abs value is m/*quad-close* times smaller than the abs sum)
+    `::error-pred` -- predicate indicating an error (default is that index is >
+      10000)."
   ([term-series] (sum-convergent-series term-series {}))
   ([term-series {::keys [kahan? converged-pred error-pred]
                  :or    {kahan?         false

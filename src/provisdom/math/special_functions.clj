@@ -53,7 +53,8 @@
 
 ;;;ERROR FUNCTIONS
 (defn erf
-  "Returns the error function: 2 / (sqrt PI) × integral[0, `x`] (e ^ - (t ^ 2) × dt)."
+  "Returns the error function:
+  2 / (sqrt PI) × integral[0, `x`] (e ^ - (t ^ 2) × dt)."
   [x]
   (cond (zero? x) 0.0
         (m/inf+? x) 1.0
@@ -151,7 +152,8 @@
 ;GAMMA FUNCTIONS
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t ^ (`a`- 1) × e ^ -t × dt).
-  Although gamma is defined for positive `a`, this function allows for all non-long-able-non+ `a`."
+  Although gamma is defined for positive `a`, this function allows for all
+  non-long-able-non+ `a`."
   [a]
   (cond (m/nan? a) m/nan
         (> a 709.7) m/inf+
@@ -173,7 +175,9 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (org.apache.commons.math3.special.Gamma/regularizedGammaP (double a) (double x)))))))
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaP
+                             (double a)
+                             (double x)))))))
 
 (s/fdef lower-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -190,7 +194,9 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (org.apache.commons.math3.special.Gamma/regularizedGammaQ (double a) (double x)))))))
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaQ
+                             (double a)
+                             (double x)))))))
 
 (s/fdef upper-gamma
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -209,26 +215,34 @@
         :ret ::m/nan-or-non-)
 
 (defn regularized-gamma-p
-  "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`).
-  Equal to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
+  "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`). Equal
+  to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
   [a x]
   (cond (m/nan? a) m/nan
         (zero? x) 0.0
         (> x 1.0e150) 1.0
-        :else (min 1.0 (max 0.0 (org.apache.commons.math3.special.Gamma/regularizedGammaP (double a) (double x))))))
+        :else (min 1.0
+                   (max 0.0
+                        (org.apache.commons.math3.special.Gamma/regularizedGammaP
+                          (double a)
+                          (double x))))))
 
 (s/fdef regularized-gamma-p
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
         :ret ::m/nan-or-prob)
 
 (defn regularized-gamma-q
-  "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`).
-  Equal to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
+  "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`). Equal
+  to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
   [a x]
   (cond (or (m/nan? a) (m/nan? x)) m/nan
         (zero? x) 1.0
         (> x 1.0e150) 0.0
-        :else (min 1.0 (max 0.0 (org.apache.commons.math3.special.Gamma/regularizedGammaQ (double a) (double x))))))
+        :else (min 1.0
+                   (max 0.0
+                        (org.apache.commons.math3.special.Gamma/regularizedGammaQ
+                          (double a)
+                          (double x))))))
 
 (s/fdef regularized-gamma-q
         :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
@@ -246,9 +260,8 @@
         :ret ::m/nan-or-non-inf-)
 
 (defn log-gamma-derivative
-  "Returns the derivative of the log gamma of `a`.
-  Spec'd for `a` > -3e8 because it becomes slow.
-  Taken from Apache.  Could use a better algorithm."
+  "Returns the derivative of the log gamma of `a`. Spec'd for `a` > -3e8 because
+  it becomes slow. Taken from Apache. Could use a better algorithm."
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -276,8 +289,8 @@
 (def digamma log-gamma-derivative)
 
 (defn gamma-derivative
-  "Returns the derivative of the gamma of `a`.
-  Spec'd for `a` > -3e8 because it becomes slow."
+  "Returns the derivative of the gamma of `a`. Spec'd for `a` > -3e8 because it
+  becomes slow."
   [a]
   (* (gamma a) (log-gamma-derivative a)))
 
@@ -286,9 +299,9 @@
         :ret ::m/number)
 
 (defn trigamma
-  "Returns the trigamma (2nd derivative of log-gamma) of `a`.
-  Approximated for `a` < -1e7 because it becomes slow.
-  Taken from Apache.  Could use a better algorithm."
+  "Returns the trigamma (2nd derivative of log-gamma) of `a`. Approximated for
+  `a` < -1e7 because it becomes slow. Taken from Apache. Could use a better
+  algorithm."
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -355,9 +368,10 @@
 
 ;;;BETA FUNCTIONS
 (defn beta
-  "Returns the beta of `x` and `y`: integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt.
-  Although beta is defined for positive `x` and `y`, you can use this function at your own
-  risk for all non-zero `x` and `y`."
+  "Returns the beta of `x` and `y`:
+  integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt.
+  Although beta is defined for positive `x` and `y`, you can use this function
+  at your own risk for all non-zero `x` and `y`."
   [x y]
   (Gamma/beta x y))
 
@@ -375,8 +389,8 @@
         :ret ::m/nan-or-non-inf-)
 
 (defn regularized-beta
-  "Returns the regularized beta.
-  Equal to incomplete beta function divided by beta function."
+  "Returns the regularized beta. Equal to incomplete beta function divided by
+  beta function."
   [c x y]
   (if (zero? c)
     0.0
@@ -389,7 +403,8 @@
         :ret ::m/number)
 
 (defn incomplete-beta
-  "Returns the lower beta: integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt."
+  "Returns the lower beta:
+  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt."
   [c x y]
   (if (zero? c)
     0.0

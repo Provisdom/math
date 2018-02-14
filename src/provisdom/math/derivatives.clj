@@ -17,24 +17,32 @@
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number)
              :ret ::m/number)
-    #(gen/one-of (map gen/return (list m/sq m/cube m/cos)))))
+    #(gen/one-of (map gen/return
+                      (list m/sq m/cube m/cos)))))
 
 (s/def ::v->tensor
   (s/with-gen
     (s/fspec :args (s/cat :v ::vector/vector)
              :ret ::tensor/tensor)
-    #(gen/one-of (map gen/return (list vector/kahan-sum identity)))))
+    #(gen/one-of (map gen/return
+                      (list vector/kahan-sum identity)))))
 
 (s/def ::v->number
   (s/with-gen
-    (s/fspec :args (s/cat :v ::vector/vector) :ret ::m/number)
-    #(gen/one-of (map gen/return (list vector/kahan-sum tensor/average tensor/norm1)))))
+    (s/fspec :args (s/cat :v ::vector/vector)
+             :ret ::m/number)
+    #(gen/one-of (map gen/return
+                      (list vector/kahan-sum tensor/average tensor/norm1)))))
 
 (s/def ::v->v
   (s/with-gen
-    (s/fspec :args (s/cat :v ::vector/vector) :ret ::vector/vector)
-    #(gen/one-of (map gen/return (list (fn [v] (mapv m/sq v))
-                                       (fn [v] (mapv m/cube v)))))))
+    (s/fspec :args (s/cat :v ::vector/vector)
+             :ret ::vector/vector)
+    #(gen/one-of (map gen/return
+                      (list (fn [v]
+                              (mapv m/sq v))
+                            (fn [v]
+                              (mapv m/cube v)))))))
 
 (s/def ::v->m
   (s/fspec :args (s/cat :v ::vector/vector)
@@ -48,18 +56,25 @@
   (s/with-gen
     (s/fspec :args (s/cat :x ::m/number :y ::m/number)
              :ret ::m/number)
-    #(gen/one-of (map gen/return (list + - (fn [x y] (+ x (* 2 y))))))))
+    #(gen/one-of (map gen/return
+                      (list + - (fn [x y] (+ x (* 2 y))))))))
 
 (s/def ::h
   (s/with-gen
     ::m/finite+
-    #(gen/double* {:infinite? false :NaN? false :min m/tiny-dbl :max 0.1})))
+    #(gen/double* {:infinite? false
+                   :NaN?      false
+                   :min       m/tiny-dbl
+                   :max       0.1})))
 
 (s/def ::dx ::h)
 (s/def ::multiplier ::h)
 (s/def ::type #{:central :forward :backward})
 (s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
-(s/def ::coefficients (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
+
+(s/def ::coefficients
+  (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
+
 (s/def ::derivative (s/int-in 0 9))
 
 (comment "The zero coefficient is left out below, but can be found because 
@@ -170,7 +185,9 @@
   "backward is like forward, except for odd derivatives the sign switches."
   [deriv accuracy]
   (let [coefficient (get-forward-coefficients deriv accuracy)]
-    (mapv #(let [[e1 e2] %] [(- e1) (if (odd? deriv) (- e2) e2)]) coefficient)))
+    (mapv #(let [[e1 e2] %]
+             [(- e1) (if (odd? deriv) (- e2) e2)])
+          coefficient)))
 
 (s/fdef get-backward-coefficients
         :args (s/and (s/cat :deriv (s/int-in 1 7)
@@ -180,20 +197,20 @@
         :ret ::coefficients)
 
 (defn derivative-fn
-  "Returns a numerical derivative function.  
-   Function `number->number` takes and returns a number.
-   Note that [[derivative-fn]] will not be accurate when inputs or outputs are so large when
-   divided by `::h` that they lose precision.
-   Options:
-      `::derivative` -- can be 0 or 1 (default) to 8
-      `::h` -- (default is m/*sgl-close* for 1st deriv, 10x less for others) is the denominator,
-         which is equal to (dx ^ `::derivative`),
-         where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
-      `::type` -- can be `:central` (default), `:forward`, or `:backward`
-      `::accuracy` --can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
-         and 1-6 for forward or backward (no 6 for 4th deriv).
-         (default `::accuracy` is 2 for `::derivative` <= 2, else 6.
-         `::accuracy` is ignored for `::derivative` > 4 and default accuracies are used."
+  "Returns a numerical derivative function. Function `number->number` takes and
+  returns a number. Note that [[derivative-fn]] will not be accurate when inputs
+  or outputs are so large when divided by `::h` that they lose precision.
+  Options:
+    `::derivative` - can be 0 or 1 (default) to 8
+    `::h` - (default is m/*sgl-close* for 1st deriv, 10x less for others) is
+      the denominator, which is equal to (dx ^ `::derivative`), where 'dx' is
+      the small change (smaller `::h` isn't usually better, changes to `::h` can
+      be important)
+    `::type` - can be `:central` (default), `:forward`, or `:backward`
+    `::accuracy` - can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
+      and 1-6 for forward or backward (no 6 for 4th deriv). (default
+      `::accuracy` is 2 for `::derivative` <= 2, else 6. `::accuracy` is ignored
+      for `::derivative` > 4 and default accuracies are used."
   ([number->number] (derivative-fn number->number {}))
   ([number->number {::keys [derivative h type accuracy]
                     :or    {derivative 1
@@ -228,7 +245,8 @@
                                         :backward get-backward-coefficients)
                        multiplier (/ h)
                        dx (m/pow h (/ derivative))
-                       coefficient (map #(let [[e1 e2] %] [(* dx e1) e2]) (coefficient-fn derivative accuracy))]
+                       coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
+                                        (coefficient-fn derivative accuracy))]
                    (fn [v]
                      (* multiplier
                         (apply + (map #(let [[e1 e2] %]
@@ -246,27 +264,31 @@
                                                                     (and (== d 4) (not= t :central)) 5
                                                                     :else 6))]
                                       (if (= t :central)
-                                        (and (even? a) (or (and (<= d 2) (<= a 8)) (<= a 6)))
-                                        (and (<= a 6) (or (<= d 3) (<= a 5)))))))))
+                                        (and (even? a)
+                                             (or (and (<= d 2) (<= a 8)) (<= a 6)))
+                                        (and (<= a 6)
+                                             (or (<= d 3) (<= a 5)))))))))
         :ret ::number->number)
 
 (defn gradient-fn
-  "Returns a numerical gradient function.  
-   Function `v->number` takes a vector and returns a number.
-   The output function takes and returns a vector.
-   Options:
-      `::h` (default m/*sgl-close*) is the denominator, which is equal to dx,
-         where dx is the small change (smaller h isn't usually better, changes to h can be important)
-      `::type` can be `:central` (default), `:forward`, or `:backward`
-      `::accuracy` can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for `:forward` or `:backward`."
+  "Returns a numerical gradient function. Function `v->number` takes a vector
+  and returns a number. The output function takes and returns a vector.
+  Options:
+    `::h` (default m/*sgl-close*) is the denominator, which is equal to 'dx',
+      where 'dx' is the small change (smaller `::h` isn't usually better,
+      changes to `::h` can be important)
+    `::type` can be `:central` (default), `:forward`, or `:backward`
+    `::accuracy` can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for
+      `:forward` or `:backward`."
   ([v->number] (gradient-fn v->number {}))
   ([v->number {::keys [h type accuracy]
                :or    {h        m/sgl-close
                        type     :central
                        accuracy 2}}]
-   (let [coefficient-fn (condp = type :central get-central-coefficients
-                                      :forward get-forward-coefficients
-                                      :backward get-backward-coefficients)
+   (let [coefficient-fn (condp = type
+                          :central get-central-coefficients
+                          :forward get-forward-coefficients
+                          :backward get-backward-coefficients)
          multiplier (/ h)
          dx (double h)
          coefficient (map #(let [[e1 e2] %]
@@ -294,14 +316,16 @@
         :ret ::v->v)
 
 (defn jacobian-fn
-  "Returns a numerical jacobian function.  
-   Function `v->v` takes a vector and returns a vector.
-   The output function takes a vector and returns a matrix, where each row is the gradient of f's output.
-   Options:
-   `::h` -- (default m/*sgl-close*) is the denominator, which is equal to dx,
-        where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
-   `::type` -- can be `:central` (default), `:forward`, or `:backward`
-   `::accuracy` -- can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for `:forward` or `:backward`."
+  "Returns a numerical jacobian function. Function `v->v` takes a vector and
+  returns a vector. The output function takes a vector and returns a matrix,
+  where each row is the gradient of f's output.
+  Options:
+    `::h` -- (default m/*sgl-close*) is the denominator, which is equal to 'dx',
+      where 'dx' is the small change (smaller `::h` isn't usually better,
+      changes to `::h` can be important)
+    `::type` -- can be `:central` (default), `:forward`, or `:backward`
+    `::accuracy` -- can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for
+    `:forward` or `:backward`."
   ([v->v] (jacobian-fn v->v {}))
   ([v->v {::keys [h type accuracy]
           :or    {h        m/sgl-close
@@ -323,9 +347,12 @@
            (let [m (vec
                      (map-indexed
                        (fn [i e]
-                         (apply tensor/add (mapv #(let [[e1 e2] %]
-                                                    (tensor/multiply e2 multiplier (v->v (assoc v i (+ e e1)))))
-                                                 coefficient)))
+                         (apply tensor/add
+                                (mapv #(let [[e1 e2] %]
+                                         (tensor/multiply e2
+                                                          multiplier
+                                                          (v->v (assoc v i (+ e e1)))))
+                                      coefficient)))
                        v))]
              m)))))))
 
@@ -367,15 +394,16 @@
                  :ret ::m/number))
 
 (defn hessian-fn
-  "Returns a numerical Hessian function.
-   Function `v->number` takes a vector and returns a number.
-   The output function takes a vector and returns a symmetric matrix.
-   Options:
-      `::h` -- (default m/*sgl-close* / 10) is the denominator, which is equal to (dx * dx),
-          where dx is the small change (smaller `::h` isn't usually better, changes to `::h` can be important)
-      `::type` can be `:joint-central` (default), `:central`, `:forward`, or `:backward`
-      `::accuracy` can be 2 (default, only choice for `:joint-central`); 2, 4, 6, or 8 for `:central`;
-          and 1-6 for `:forward` or `:backward`."
+  "Returns a numerical Hessian function. Function `v->number` takes a vector and
+  returns a number. The output function takes a vector and returns a symmetric
+  matrix. Options:
+    `::h` -- (default m/*sgl-close* / 10) is the denominator, which is equal to
+    (dx * dx), where 'dx' is the small change (smaller `::h` isn't usually
+    better, changes to `::h` can be important)
+    `::type` can be `:joint-central` (default), `:central`, `:forward`, or
+      `:backward`
+    `::accuracy` can be 2 (default, only choice for `:joint-central`); 2, 4, 6,
+    and 1-6 for `:forward` or `:backward`."
   ([v->number] (hessian-fn v->number {}))
   ([v->number {::keys [h type accuracy]
                :or    {h        (* m/sgl-close 0.1)

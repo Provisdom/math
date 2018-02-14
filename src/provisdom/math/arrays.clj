@@ -18,7 +18,12 @@
 
 (s/def ::array-type #{Long/TYPE Boolean/TYPE Character/TYPE Double/TYPE})
 (s/def ::array-type-keyword #{:long :boolean :char :double})
-(s/def ::array-element (s/or :long ::m/long :boolean boolean? :char char? :double ::m/double))
+
+(s/def ::array-element
+  (s/or :long ::m/long
+        :boolean boolean?
+        :char char?
+        :double ::m/double))
 
 (s/def ::coll2D
   (s/with-gen
@@ -55,7 +60,7 @@
     #(gen/fmap double-array (gen/vector (s/gen ::m/double) 0 mdl))))
 
 (defn array2D?
-  "Returns true if 'x' is an Array and each element is an Array."
+  "Returns true if `x` is an Array and each element is an Array."
   [x]
   (and (array? x) (every? array? x)))
 
@@ -70,7 +75,7 @@
                (gen/vector (gen/vector (s/gen ::m/double) 0 mdl) 1 mdl))))
 
 (defn array3D?
-  "Returns true if 'x' is an Array and each element is a 2D Array."
+  "Returns true if `x` is an Array and each element is a 2D Array."
   [x]
   (and (array? x) (every? array2D? x)))
 
@@ -81,11 +86,18 @@
 (s/def ::array3D
   (s/with-gen
     array3D?
-    #(gen/fmap (fn [v] (array3D :double v))
-               (gen/vector (gen/vector (gen/vector (s/gen ::m/double) 0 mdl) 1 mdl) 1 mdl))))
+    #(gen/fmap (fn [v]
+                 (array3D :double v))
+               (gen/vector
+                 (gen/vector
+                   (gen/vector (s/gen ::m/double) 0 mdl)
+                   1
+                   mdl)
+                 1
+                 mdl))))
 
 (defn double-array?
-  "Returns true if 'x' is an Array and each element is a double."
+  "Returns true if `x` is an Array and each element is a double."
   [x]
   (and (array? x) (every? double? x)))
 
@@ -96,12 +108,14 @@
 (defn double-array-gen
   ([] (gen/fmap double-array (gen/vector (s/gen ::m/double))))
   ([count] (gen/fmap double-array (gen/vector (s/gen ::m/double) count)))
-  ([min-count max-count] (gen/fmap double-array (gen/vector (s/gen ::m/double) min-count max-count))))
+  ([min-count max-count]
+   (gen/fmap double-array
+             (gen/vector (s/gen ::m/double) min-count max-count))))
 
 (s/def ::double-array (s/with-gen double-array? #(double-array-gen 1 mdl)))
 
 (defn double-array2D?
-  "Returns true if 'x' is an Array and each element is a Double Array."
+  "Returns true if `x` is an Array and each element is a Double Array."
   [x]
   (and (array? x) (every? double-array? x)))
 
@@ -112,8 +126,12 @@
 (s/def ::double-array2D
   (s/with-gen
     double-array2D?
-    #(gen/fmap (fn [v] (array2D :double v))
-               (gen/vector (gen/vector (s/gen ::m/double) 0 mdl) 1 mdl))))
+    #(gen/fmap (fn [v]
+                 (array2D :double v))
+               (gen/vector
+                 (gen/vector (s/gen ::m/double) 0 mdl)
+                 1
+                 mdl))))
 
 (defn double-finite-array?
   "Returns true if 'x' is a Array and each element is a finite double."
@@ -128,9 +146,11 @@
   ([] (gen/fmap double-array (gen/vector (s/gen ::m/double-finite))))
   ([count] (gen/fmap double-array (gen/vector (s/gen ::m/double-finite) count)))
   ([min-count max-count]
-   (gen/fmap double-array (gen/vector (s/gen ::m/double-finite) min-count max-count))))
+   (gen/fmap double-array
+             (gen/vector (s/gen ::m/double-finite) min-count max-count))))
 
-(s/def ::double-finite-array (s/with-gen double-finite-array? double-finite-array-gen))
+(s/def ::double-finite-array
+  (s/with-gen double-finite-array? double-finite-array-gen))
 
 ;;;ARRAY CONSTRUCTORS
 (defn- arrayND->vector-recursion
@@ -150,10 +170,10 @@
 
 (defn keyword->array-type
   "Returns the Java type for `array-type-keyword`, which can be:
-    :double
-    :long
-    :boolean
-    :char."
+    `:double`
+    `:long`
+    `:boolean`
+    `:char`."
   [array-type-keyword]
   (condp = array-type-keyword
     :long Long/TYPE
@@ -168,10 +188,10 @@
 (defn array2D
   "Create a 2D Array.
    `array-type-keyword` can be:
-      :double
-      :long
-      :boolean
-      :char."
+      `:double`
+      `:long`
+      `:boolean`
+      `:char`."
   [array-type-keyword coll2D]
   (let [array-type (keyword->array-type array-type-keyword)]
     (into-array (map (partial into-array array-type) coll2D))))
@@ -184,10 +204,10 @@
 (defn array3D
   "Create a 3D Array.
    `array-type-keyword` can be:
-      :double
-      :long
-      :boolean
-      :char."
+      `:double`
+      `:long`
+      `:boolean`
+      `:char`."
   [array-type-keyword coll3D]
   (into-array (map (partial array2D array-type-keyword) coll3D)))
 
@@ -217,11 +237,11 @@
 
 (defn double-array=
   [dbl-array1 dbl-array2]
-  "Returns true if the two specified arrays of doubles are equal to one another. Two arrays
-  are considered equal if both arrays contain the same number of elements, and all corresponding
-  pairs of elements in the two arrays are equal. In other words, two arrays are equal if they
-  contain the same elements in the same order. Also, two array references are considered equal if
-  both are nil."
+  "Returns true if the two specified arrays of doubles are equal to one another.
+  Two arrays are considered equal if both arrays contain the same number of
+  elements, and all corresponding pairs of elements in the two arrays are equal.
+  In other words, two arrays are equal if they contain the same elements in the
+  same order. Also, two array references are considered equal if both are nil."
   (Arrays/equals (double-array dbl-array1) (double-array dbl-array2)))
 
 (s/fdef double-array=
@@ -231,10 +251,10 @@
 
 (defn double-array2D=
   [dbl-array2D-1 dbl-array2D-2]
-  "Checks whether two 2D double arrays are equal or not.
-  Two array references are considered deeply equal if both are nil,
-  or if they refer to arrays that contain the same number of elements
-  and all corresponding pairs of elements in the two arrays are deeply equal."
+  "Checks whether two 2D double arrays are equal or not. Two array references
+  are considered deeply equal if both are nil, or if they refer to arrays that
+  contain the same number of elements and all corresponding pairs of elements in
+  the two arrays are deeply equal."
   (Arrays/deepEquals ^"[[D" dbl-array2D-1 ^"[[D" dbl-array2D-2))
 
 (s/fdef double-array2D=
@@ -243,8 +263,9 @@
         :ret boolean?)
 
 (defn double-array-reduce-kv
-  "Similar to 'reduce-kv' but for double arrays. First array must be the shortest.
-  Calls f with the return value, index, and the value(s) at that index."
+  "Similar to [[reduce-kv]] but for double arrays. First array must be the
+  shortest. Calls `f` with the return value, index, and the value(s) at that
+  index."
   ([f init-dbl dbl-array]
    (areduce (doubles dbl-array) i ret (double init-dbl)
             (double (f ret
@@ -309,13 +330,14 @@
         :ret ::vector/vector)
 
 (defn double-array-sorted-find
-  "Searches the specified array of doubles for the specified value using the binary search algorithm,
-  and returns the index.  If the specified value does not exist, then will return negative index of where value
-  would fit in, starting at -1 at ending at negative (count + 1).
-  The array must be sorted (as by the [[double-array-sort!]] function prior to making this call. If it is not
-  sorted, the results are undefined. If the array contains multiple elements with the specified value,
-  there is no guarantee which one will be found. This method considers all NaN values to be equivalent
-  and equal."
+  "Searches the specified array of doubles for the specified value using the
+  binary search algorithm, and returns the index. If the specified value does
+  not exist, then will return negative index of where value would fit in,
+  starting at -1 at ending at negative (count + 1). The array must be sorted (as
+  by the [[double-array-sort!]] function prior to making this call. If it is not
+  sorted, the results are undefined. If the array contains multiple elements
+  with the specified value, there is no guarantee which one will be found. This
+  method considers all NaN values to be equivalent and equal."
   [dbl-array dbl]
   (Arrays/binarySearch (doubles dbl-array) (double dbl)))
 
@@ -348,7 +370,7 @@
 
 ;;;DOUBLE ARRAY MANIPULATION
 (defn double-array-map
-  "Similar to 'map' but for double arrays.  First array must be the shortest."
+  "Similar to [[map]] but for double arrays. First array must be the shortest."
   ([f dbl-array]
    (amap (doubles dbl-array) i ret
          (double (f (aget (doubles dbl-array) i)))))
@@ -386,8 +408,8 @@
         :ret ::double-array)
 
 (defn double-array-map-indexed
-  "Similar to 'map-indexed' but for double arrays.
-  First array must be the shortest."
+  "Similar to [[map-indexed]] but for double arrays. First array must be the
+  shortest."
   ([f dbl-array]
    (amap (doubles dbl-array) i ret
          (double (f i
@@ -475,15 +497,21 @@
                                          :dbl-array2 ::double-array
                                          :dbl-array3 ::double-array)
                                   (fn [{:keys [dbl-array1 dbl-array2 dbl-array3]}]
-                                    (and (= (count dbl-array1) (count dbl-array2) (count dbl-array3)))))
+                                    (and (= (count dbl-array1)
+                                            (count dbl-array2)
+                                            (count dbl-array3)))))
                     :more (s/and (s/cat :dbl-array1 ::double-array
                                         :dbl-array2 ::double-array
                                         :dbl-array3 ::double-array
                                         :dbl-arrays (s/with-gen (s/* ::double-array)
                                                                 #(gen/vector (s/gen ::double-array) 0 3)))
                                  (fn [{:keys [dbl-array1 dbl-array2 dbl-array3 dbl-arrays]}]
-                                   (and (= (count dbl-array1) (count dbl-array2) (count dbl-array3))
-                                        (every? (fn [da] (= (count dbl-array1) (count da))) dbl-arrays)))))
+                                   (and (= (count dbl-array1)
+                                           (count dbl-array2)
+                                           (count dbl-array3))
+                                        (every? (fn [da]
+                                                  (= (count dbl-array1) (count da)))
+                                                dbl-arrays)))))
         :ret ::double-array)
 
 (defn double-array-subtract
@@ -506,15 +534,21 @@
                                          :dbl-array2 ::double-array
                                          :dbl-array3 ::double-array)
                                   (fn [{:keys [dbl-array1 dbl-array2 dbl-array3]}]
-                                    (and (= (count dbl-array1) (count dbl-array2) (count dbl-array3)))))
+                                    (and (= (count dbl-array1)
+                                            (count dbl-array2)
+                                            (count dbl-array3)))))
                     :more (s/and (s/cat :dbl-array1 ::double-array
                                         :dbl-array2 ::double-array
                                         :dbl-array3 ::double-array
                                         :dbl-arrays (s/with-gen (s/* ::double-array)
                                                                 #(gen/vector (s/gen ::double-array) 0 3)))
                                  (fn [{:keys [dbl-array1 dbl-array2 dbl-array3 dbl-arrays]}]
-                                   (and (= (count dbl-array1) (count dbl-array2) (count dbl-array3))
-                                        (every? (fn [da] (= (count dbl-array1) (count da))) dbl-arrays)))))
+                                   (and (= (count dbl-array1)
+                                           (count dbl-array2)
+                                           (count dbl-array3))
+                                        (every? (fn [da]
+                                                  (= (count dbl-array1) (count da)))
+                                                dbl-arrays)))))
         :ret ::double-array)
 
 (defn double-array-sum
@@ -542,9 +576,9 @@
         :ret ::m/double)
 
 (defn double-array-dot-product
-  "The dot product is the sum of the products of the corresponding entries of two vectors.
-   Geometrically, the dot product is the product of the Euclidean magnitudes of the two vectors
-   and the cosine of the angle between them."
+  "The dot product is the sum of the products of the corresponding entries of
+  two vectors. Geometrically, the dot product is the product of the Euclidean
+  magnitudes of the two vectors and the cosine of the angle between them."
   [dbl-array1 dbl-array2]
   (double-array-reduce-kv (fn [tot _ da1 da2]
                             (+ tot (* da1 da2)))

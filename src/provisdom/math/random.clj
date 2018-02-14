@@ -39,7 +39,8 @@
 (defn random-long
   "Returns a random long within the given interval (or any long by default)."
   ([rnd] (random-long rnd [m/min-long m/max-long]))
-  ([rnd [lower upper]] (m/floor' (+ lower (* (- (inc (double upper)) lower) rnd)))))
+  ([rnd [lower upper]]
+   (m/floor' (+ lower (* (- (inc (double upper)) lower) rnd)))))
 
 (s/fdef random-long
         :args (s/cat :rnd ::rnd
@@ -87,7 +88,8 @@
 (defn rnd-long
   "Returns a random long within the given interval (or any long by default)."
   ([rng] (split/rand-long rng))
-  ([rng [lower upper]] (m/floor' (+ lower (* (- (inc (double upper)) lower) (rnd rng))))))
+  ([rng [lower upper]]
+   (m/floor' (+ lower (* (- (inc (double upper)) lower) (rnd rng))))))
 
 (s/fdef rnd-long
         :args (s/cat :rng ::rng
@@ -113,7 +115,8 @@
         :ret ::m/num)
 
 (defn rng-lazy
-  "Returns a lazy sequence of RNG where each iteration is split from the previous."
+  "Returns a lazy sequence of RNG where each iteration is split from the
+  previous."
   [rng]
   (iterate (comp first split/split) rng))
 
@@ -150,7 +153,8 @@
         :ret ::rng)
 
 (defn rng-gen
-  "Returns a function that will generate random numbers from the bound or other static RNG."
+  "Returns a function that will generate random numbers from the bound or other
+  static RNG."
   [rng]
   (let [gens (atom (rng-lazy rng))]
     (fn [] volatile!
@@ -200,7 +204,8 @@
         :ret ::m/num)
 
 (defn rng-lazy!
-  "Returns a lazy sequence of RNG where each iteration is split from the previous."
+  "Returns a lazy sequence of RNG where each iteration is split from the
+  previous."
   []
   (rng-lazy (rng!)))
 
@@ -258,9 +263,9 @@
 
 ;;;MACROS
 (defmacro bind-seed
-  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a lazy sequence,
-  ensure the seq is realized within the scope of the binding otherwise you will get inconsistent
-  results."
+  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a
+  lazy sequence, ensure the seq is realized within the scope of the binding
+  otherwise you will get inconsistent results."
   [seed & body]
   `(binding [*rng-gen* (rng-gen (rng ~seed))]
      ~@body))
@@ -274,9 +279,9 @@
 
 ;;;APACHE RANDOM NUMBER GENERATORS
 (defn quasi-rng
-  "Creates an Apache RNG with better coverage but more predictable through
-  a lazy sequence of vectors of size `dimensions`.
-  Because of predictability, can be better for a single use simulation."
+  "Creates an Apache RNG with better coverage but more predictable through a
+  lazy sequence of vectors of size `dimensions`. Because of predictability, can
+  be better for a single use simulation."
   [dimensions]
   (SobolSequenceGenerator. ^long dimensions))
 
@@ -285,9 +290,9 @@
         :ret ::apache-rng)
 
 (defn quasi-rnd-vector-lazy
-  "Better coverage but more predictable through
-  a lazy sequence of vectors of size `dimensions`.
-  Because of predictability, can be better for a single use simulation."
+  "Better coverage but more predictable through a lazy sequence of vectors of
+  size `dimensions`. Because of predictability, can be better for a single use
+  simulation."
   [dimensions]
   (let [qr (quasi-rng dimensions)]
     (repeatedly #(vec (.nextVector ^SobolSequenceGenerator qr)))))
@@ -297,7 +302,8 @@
         :ret (s/every ::rnd-vector))
 
 (defn secure-rng
-  "Creates an Apache RNG that is less predictable but slower RNG than Mersenne Twister."
+  "Creates an Apache RNG that is less predictable but slower RNG than Mersenne
+  Twister."
   [seed]
   (ISAACRandom. ^long seed))
 

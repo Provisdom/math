@@ -8,7 +8,8 @@
 
 (def mdl 6)
 
-(s/def ::size (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+(s/def ::size
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::interval
   (s/and (s/tuple ::m/number ::m/number)
@@ -73,12 +74,12 @@
 
 ;;;BOUNDS CONSTRUCTORS
 (defn bounds
-  "Default bounds are inf- to inf+.
-  Bounds are closed by default."
+  "Default bounds are Inf- to Inf+. Bounds are closed by default."
   ([] (bounds m/inf- m/inf+))
   ([[lower upper]] (bounds lower upper false false))
   ([lower upper] (bounds lower upper false false))
-  ([[lower upper] open-lower? open-upper?] (bounds lower upper open-lower? open-upper?))
+  ([[lower upper] open-lower? open-upper?]
+   (bounds lower upper open-lower? open-upper?))
   ([lower upper open-lower? open-upper?]
    {::lower       lower
     ::upper       upper
@@ -152,7 +153,8 @@
           bound-coll))
 
 (defn sort-bounds
-  "Returns a vector of bounds sorted by lower bound first (by default) or upper bound first."
+  "Returns a vector of bounds sorted by lower bound first (by default) or upper
+  bound first."
   ([vector-bounds] (sort-bounds vector-bounds {}))
   ([vector-bounds {::keys [by-upper?] :or {by-upper? false}}]
    (let [f (if by-upper?
@@ -170,8 +172,10 @@
 (defn intersection
   "Returns the bounds intersection or nil."
   [vector-bounds]
-  (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %)) vector-bounds))
-        [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %)) vector-bounds))]
+  (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
+                                            vector-bounds))
+        [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
+                                            vector-bounds))]
     (when-not (or (> lower upper)
                   (and (= upper lower)
                        open-lower?

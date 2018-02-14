@@ -95,7 +95,8 @@
 (s/def ::weights-and-nodes
   (s/with-gen (s/and (s/tuple ::vector/vector ::vector/vector ::vector/vector)
                      (fn [[a b c]]
-                       (and (= (count b) (count c)) (= (inc (* 2 (count a))) (count c)))))
+                       (and (= (count b) (count c))
+                            (= (inc (* 2 (count a))) (count c)))))
               #(gen/bind (s/gen ::points)
                          (fn [points]
                            (gen/return (weights-and-nodes-gk points))))))
@@ -115,7 +116,9 @@
         :args (s/cat :number ::m/number :skip? (s/? boolean?))
         :ret ::vector/vector)
 
-(defn- convert-gk-nodes [number] (vec (concat (->> number rseq (map -)) (rest number))))
+(defn- convert-gk-nodes
+  [number]
+  (vec (concat (->> number rseq (map -)) (rest number))))
 
 (s/fdef convert-gk-nodes
         :args (s/cat :number ::m/number)
@@ -329,14 +332,23 @@
    (convert-gk-weights kronrod61-weights)
    (convert-gk-nodes kronrod61-nodes)])
 
-(defn- adjust-accu-gk [accu] (-> accu (m/pow (/ 2.0 3.0)) (* 0.005)))
+(defn- adjust-accu-gk
+  [accu]
+  (-> accu (m/pow (/ 2.0 3.0)) (* 0.005)))
 
 (s/fdef adjust-accu-gk
         :args (s/cat :accu ::m/accu)
         :ret ::m/number)
 
 (defn- weights-and-nodes-gk
-  [points] (condp = points 15 g7-k15, 21 g10-k21, 31 g15-k31, 41 g20-k41, 51 g25-k51, 61 g30-k61))
+  [points]
+  (condp = points
+    15 g7-k15
+    21 g10-k21
+    31 g15-k31
+    41 g20-k41
+    51 g25-k51
+    61 g30-k61))
 
 (s/fdef weights-and-nodes-gk
         :args (s/cat :points ::points)
@@ -344,7 +356,8 @@
 
 ;ADAPTIVE INTEGRATION
 (defn- unnormalize
-  "Returns the unnormalized value for a range [a, b] with `value` from normalized range [-1, 1]."
+  "Returns the unnormalized value for a range [a, b] with `value` from
+  normalized range [-1, 1]."
   [half-sum half-diff value]
   (-> value double (* half-diff) (+ half-sum)))
 
@@ -363,11 +376,13 @@
         half-diff (* 0.5 (- b a))
         unnormalized-nodes (map (partial unnormalize half-sum half-diff) nodes)
         mapped-nodes (mapv number->tensor unnormalized-nodes)
-        high-precision-values (tensor/multiply half-diff (tensor/inner-product high-precision-weights mapped-nodes))
+        high-precision-values (tensor/multiply half-diff
+                                               (tensor/inner-product high-precision-weights mapped-nodes))
         low-precision-nodes (tensor/filter-kv (fn [idx _] (odd? idx)) mapped-nodes)
         low-precision-values (tensor/multiply half-diff
                                               (tensor/inner-product low-precision-weights low-precision-nodes))
-        error (tensor/emap m/abs (tensor/subtract low-precision-values high-precision-values))]
+        error (tensor/emap m/abs
+                           (tensor/subtract low-precision-values high-precision-values))]
     {::error                 error
      ::high-precision-values high-precision-values}))
 
@@ -431,12 +446,12 @@
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
             {::anomalies/message  (str "Error contains NaN. Value: "
-                                (apply tensor/add (map :high-values error-maps)))
+                                       (apply tensor/add (map :high-values error-maps)))
              ::anomalies/fn       (var adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve})
           (if (>= iter max-iter)
             {::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
-                                (apply tensor/add (map :high-values error-maps)))
+                                       (apply tensor/add (map :high-values error-maps)))
              ::anomalies/fn       (var adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve}
             (let [{[an bn] :finite-interval} (peek error-maps)
@@ -448,7 +463,7 @@
                     high-precision-values2 ::high-precision-values}]
                   (async/thread :all
                                 [#(get-error-and-high-precision-values number->tensor [an mn] weights-and-nodes)
-                              #(get-error-and-high-precision-values number->tensor [mn bn] weights-and-nodes)])
+                                 #(get-error-and-high-precision-values number->tensor [mn bn] weights-and-nodes)])
 
                   new-error-maps [{:uni-error       error1
                                    :high-values     high-precision-values1
@@ -506,10 +521,12 @@
 (s/def simple-select-dimensions-fn ::select-dimensions-fn)
 
 (defn- rectangular-adaptive-quadrature
-  "`splitting-importance-fn` takes the multi-dimensional error and the one-dimension-errors,
-      and should return a number representing it's importance in splitting the integration.
-   `select-dimensions-fn` takes the sequence of 1-dim errors, and should return a vector of the dimensions to split."
-  [v->tensor finite-intervals accu [min-iter max-iter] weights-and-nodes splitting-importance-fn select-dimensions-fn]
+  "`splitting-importance-fn` takes the multi-dimensional error and the
+  one-dimension-errors,and should return a number representing it's importance
+  in splitting the integration. `select-dimensions-fn` takes the sequence of
+  1-dim errors, and should return a vector of the dimensions to split."
+  [v->tensor finite-intervals accu [min-iter max-iter] weights-and-nodes
+   splitting-importance-fn select-dimensions-fn]
   (let [tolerance (adjust-accu-gk accu)
 
         {rectangular-error     ::rectangular-error
@@ -527,12 +544,12 @@
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
             {::anomalies/message  (str "Error contains NaN. Value: "
-                                (apply tensor/add (map :high-values error-maps)))
+                                       (apply tensor/add (map :high-values error-maps)))
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve})
           (if (>= iter max-iter)
             {::anomalies/message  (str "Iteration limit reached.  Error: " total-error " Value: "
-                                (apply tensor/add (map :high-values error-maps)))
+                                       (apply tensor/add (map :high-values error-maps)))
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve}
             (let [{intervals-n    :finite-intervals
@@ -582,26 +599,26 @@
 
 (defn change-of-variable
   "Takes the num-interval and returns a map containing:
-  ::multiplicative-fn
-  ::converter-fn -- for within the function to integrate.
-  ::bo/finite-interval."
+    `::multiplicative-fn`
+    `::converter-fn` -- for within the function to integrate.
+    `::bo/finite-interval`."
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn         (fn [number]
-                                                          (let [s (m/sq number)]
-                                                            (m/div (inc s) (m/sq (m/one- s)))))
+                                                                 (let [s (m/sq number)]
+                                                                   (m/div (inc s) (m/sq (m/one- s)))))
                                    ::converter-fn              (fn [number]
-                                                          (m/div number (m/one- (m/sq number))))
+                                                                 (m/div number (m/one- (m/sq number))))
                                    ::intervals/finite-interval [-1.0 1.0]}
     (m/inf+? b) {::multiplicative-fn         (fn [number]
-                                        (m/div (m/sq number)))
+                                               (m/div (m/sq number)))
                  ::converter-fn              (fn [number]
-                                        (+ a (m/div (m/one- number) number)))
+                                               (+ a (m/div (m/one- number) number)))
                  ::intervals/finite-interval [0.0 1.0]}
     (m/inf-? a) {::multiplicative-fn         (fn [number]
-                                        (m/div (m/sq number)))
+                                               (m/div (m/sq number)))
                  ::converter-fn              (fn [number]
-                                        (- b (m/div (m/one- number) number)))
+                                               (- b (m/div (m/one- number) number)))
                  ::intervals/finite-interval [0.0 1.0]}
     :else {::multiplicative-fn         (constantly 1.0)
            ::converter-fn              identity
@@ -643,19 +660,23 @@
         :ret (s/tuple ::v->tensor ::finite-intervals))
 
 (defn integration
-  "Returns the integral of a function `number->tensor` over the num-interval from a to b using
-  global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Options:
-       `::points` -- 15, 21, 31, 41, 51, 61; default is 21 or 15 if num-interval is infinite
-       `::m/accu` -- default is m/*dbl-close* (accuracy is also adjusted for Gauss-Konrod quadrature type)
-       `::iter-interval` -- default is [10 1000].
+  "Returns the integral of a function `number->tensor` over the num-interval
+  from `a` to `b` using global adaptive integration of the Gauss-Kronrod
+  Quadrature Formula.
+  Options:
+    `::points` -- 15, 21, 31, 41, 51, 61; default is 21 or 15 if num-interval is
+      infinite
+    `::m/accu` -- default is m/*dbl-close* (accuracy is also adjusted for
+      Gauss-Konrod quadrature type)
+    `::iter-interval` -- default is [10 1000].
 
-   Known Limitations:
-       Very large absolute ranges (not infinite) can cause approximation errors due to limited rounded accuracy
-          of the 'double' type.
-       Example Problem: exp(-x^2) from -166 (or more negative) to inf+ returns
-          zero instead of sqrt of pi with default `::iter-interval` and 51 `::points`.
-       Solution: use a change of variable, or increase minimum of `::iter-interval`, or increase `::points`."
+  Known Limitations:
+    Very large absolute ranges (not infinite) can cause approximation errors due
+      to limited rounded accuracy of the 'double' type.
+    Example Problem: exp(-x^2) from -166 (or more negative) to Inf+ returns zero
+      instead of sqrt of PI with default `::iter-interval` and 51 `::points`.
+    Solution: use a change of variable, or increase minimum of
+      `::iter-interval`, or increase `::points`."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
   ([number->tensor [a b] {:keys [::points ::m/accu ::iter-interval]
                           :or   {accu m/dbl-close, iter-interval [10 1000]}}]
@@ -673,20 +694,21 @@
                    :tensor ::tensor/tensor))
 
 (defn rectangular-integration
-  "Returns the integral of a function `v->tensor` over the rectangular `num-intervals` using global adaptive
-  integration of the Gauss-Kronrod Quadrature Formula.
-   `v->tensor` takes a vector with one element for each num-interval and returns a tensor.
-   Options:
-       `::points` -- 15, 21, 31, 41, 51, 61; default is 15
-       `::m/accu` -- default is m/*dbl-close* and
-          (m/*sgl-close* for 4+ variables or for 3+ variables if any num-interval is infinite)
-          (accuracy is also adjusted for for Gauss-Konrod quadrature type)
-       `::iter-interval` -- default is [10 1000].
+  "Returns the integral of a function `v->tensor` over the rectangular
+  `num-intervals` using global adaptive integration of the Gauss-Kronrod
+  Quadrature Formula. `v->tensor` takes a vector with one element for each
+  num-interval and returns a tensor.
+  Options:
+    `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+    `::m/accu` -- default is m/*dbl-close* and (m/*sgl-close* for 4+ variables
+      or for 3+ variables if any num-interval is infinite) (accuracy is also
+      adjusted for for Gauss-Konrod quadrature type)
+    `::iter-interval` -- default is [10 1000].
 
-   Known Limitations:
-       With more than 4 dimensions, use Monte Carlo simulation instead for speed.
-       Very large absolute ranges (not infinite) can cause approximation errors due to limited rounded accuracy
-          of the 'double' type."
+  Known Limitations:
+    With more than 4 dimensions, use Monte Carlo simulation instead for speed.
+    Very large absolute ranges (not infinite) can cause approximation errors due
+      to limited rounded accuracy of the 'double' type."
   ([v->tensor num-intervals] (rectangular-integration v->tensor num-intervals {}))
   ([v->tensor num-intervals {:keys [::points ::m/accu ::iter-interval]
                              :or   {points        15
@@ -709,16 +731,17 @@
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-2D-integration
-  "Returns the integral of a function `number2->tensor` over the outer and inner intervals using global adaptive
-  integration of the Gauss-Kronrod Quadrature Formula.
-  Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
-  `number2->tensor` should be a function of (outer, inner).
-  'outer-interval' is [a b]
-  'inner-interval-fn' takes the outer number and returns an interval [c d]
-   Options:
-       `::points` -- 15, 21, 31, 41, 51, 61; default is 15
-       `::m/accu` -- default is m/*dbl-close* per dimension (accuracy is adjusted for quadrature type)
-       `::iter-interval` -- default per dimension is [10 1000]."
+  "Returns the integral of a function `number2->tensor` over the outer and inner
+  intervals using global adaptive integration of the Gauss-Kronrod Quadrature
+  Formula. Use [[rectangular-integration]] for rectangular integration with
+  numbers because that function is faster. `number2->tensor` should be a
+  function of (outer, inner). `outer-interval` is [a b]. `outer->inner-interval`
+  takes the outer number and returns an interval [c d].
+  Options:
+    `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+    `::m/accu` -- default is m/*dbl-close* per dimension (accuracy is adjusted
+      for quadrature type)
+    `::iter-interval` -- default per dimension is [10 1000]."
   ([number2->tensor outer-interval outer->inner-interval]
    (non-rectangular-2D-integration number2->tensor outer-interval outer->inner-interval {}))
   ([number2->tensor outer-interval outer->inner-interval
@@ -753,17 +776,18 @@
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-3D-integration
-  "Returns the integral of a function `number3->tensor` over the outer, middle, and inner intervals using
-  global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
-   `number3->tensor` should be a function of (outer, middle, inner).
-   `outer-interval` is [a b]
-   `outer->middle-interval` takes the outer number and returns an interval [c d]
-   `outer+middle->inner-interval` takes the outer and middle number and returns an interval [e f]
-   Options:
-   `::points` -- 15, 21, 31, 41, 51, 61; default is 15
-   `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted for quadrature type)
-   `::iter-interval` -- default per dimension is [3 300]."
+  "Returns the integral of a function `number3->tensor` over the outer, middle,
+  and inner intervals using global adaptive integration of the Gauss-Kronrod
+  Quadrature Formula. Use [[rectangular-integration]] for rectangular
+  integration with numbers because that function is faster. `number3->tensor`
+  should be a function of (outer, middle, inner). `outer-interval` is [a b].
+  `outer->middle-interval` takes the outer number and returns an interval [c d].
+  `outer+middle->inner-interval` takes the outer and middle number and returns
+  an interval [e f]. Options:
+    `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+    `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted
+      for quadrature type)
+    `::iter-interval` -- default per dimension is [3 300]."
   ([number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval]
    (non-rectangular-3D-integration
      number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval {}))
@@ -808,19 +832,22 @@
                    :tensor ::tensor/tensor))
 
 (defn non-rectangular-4D-integration
-  "Returns the integral of a function `number4->tensor` over the outer, outer-middle, outer-inner, and inner intervals
-  using global adaptive integration of the Gauss-Kronrod Quadrature Formula.
-   Use [[rectangular-integration]] for rectangular integration with numbers because that function is faster.
-   `number4->tensor` should be a function of (outer, outer-middle, inner-middle, inner).
-   `outer-interval` is [a b]
-   `outer->outer-middle-interval` takes the outer number and returns an interval [c d]
-   `outer+outer-middle->inner-middle-interval` takes the outer and outer-middle number and returns an interval [e f]
-   `outer+outer-middle+inner-middle->inner-interval` takes the outer, outer-middle,
-        and inner-middle numbers and returns and interval [g h]
-   Options:
-   `::points` -- 15, 21, 31, 41, 51, 61; default is 15
-   `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted for quadrature type)
-   `::iter-interval` -- default per dimension is [2 200]."
+  "Returns the integral of a function `number4->tensor` over the outer,
+  outer-middle, outer-inner, and inner intervals using global adaptive
+  integration of the Gauss-Kronrod Quadrature Formula. Use
+  [[rectangular-integration]] for rectangular integration with numbers because
+  that function is faster. `number4->tensor` should be a function of (outer,
+  outer-middle, inner-middle, inner). `outer-interval` is [a b].
+  `outer->outer-middle-interval` takes the outer number and returns an interval
+  [c d]. `outer+outer-middle->inner-middle-interval` takes the outer and
+  outer-middle number and returns an interval [e f].
+  `outer+outer-middle+inner-middle->inner-interval` takes the outer,
+  outer-middle, and inner-middle numbers and returns and interval [g h].
+  Options:
+    `::points` -- 15, 21, 31, 41, 51, 61; default is 15
+    `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted
+      for quadrature type)
+    `::iter-interval` -- default per dimension is [2 200]."
   ([number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
     outer+outer-middle+inner-middle->inner-interval]
    (non-rectangular-4D-integration

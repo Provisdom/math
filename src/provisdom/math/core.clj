@@ -57,15 +57,25 @@
 (def ^:const ^double inv-log-two (/ log-two))
 
 ;;;TEST FOR NUMERIC TYPES
-(defn- long-range? [x] (and (<= x max-long) (>= x min-long)))
+(defn- long-range?
+  [x]
+  (and (<= x max-long) (>= x min-long)))
 
-(defn- maybe-long-range [x] (if (long-range? x) (long x) x))
+(defn- maybe-long-range
+  [x]
+  (if (long-range? x) (long x) x))
 
-(defn- int-range? [x] (and (<= x max-int) (>= x min-int)))
+(defn- int-range?
+  [x]
+  (and (<= x max-int) (>= x min-int)))
 
-(defn- sgl-range? [x] (and (<= x max-sgl) (>= x min-sgl)))
+(defn- sgl-range?
+  [x]
+  (and (<= x max-sgl) (>= x min-sgl)))
 
-(s/def ::number (s/spec number? :gen #(gen/one-of [(gen/double) (gen/large-integer)])))
+(s/def ::number
+  (s/spec number?
+          :gen #(gen/one-of [(gen/double) (gen/large-integer)])))
 
 (defn numbers?
   "Returns true if a collection of numbers."
@@ -77,239 +87,325 @@
 (s/def ::numbers
   (s/with-gen
     numbers?
-    #(s/gen (s/or :v (s/coll-of ::number :min-count 0 :max-count mdl :kind vector? :into [])
-                  :l (s/coll-of ::number :min-count 0 :max-count mdl :kind list? :into '())))))
+    #(s/gen (s/or :v (s/coll-of ::number
+                                :min-count 0
+                                :max-count mdl
+                                :kind vector?
+                                :into [])
+                  :l (s/coll-of ::number
+                                :min-count 0
+                                :max-count mdl
+                                :kind list?
+                                :into '())))))
 
 (defn num?
-  "Returns true if x is a number and not nan."
+  "Returns true if `x` is a number and not NaN."
   [x]
   (and (number? x) (== x x)))
 
-(s/def ::num (s/spec num? :gen #(gen/one-of [(gen/double* {:NaN? false}) (gen/large-integer)])))
+(s/def ::num
+  (s/spec num?
+          :gen #(gen/one-of [(gen/double* {:NaN? false}) (gen/large-integer)])))
 
 (defn nan?
-  "Returns true if x is nan."
+  "Returns true if `x` is NaN."
   [x]
   (and (number? x) (not (== x x))))
 
 (s/def ::nan (s/spec nan? :gen #(gen/return nan)))
 
 (defn pos?
-  "Returns true if x is a number that is positive."
+  "Returns true if `x` is a number that is positive."
   [x]
   (and (number? x) (clojure.core/pos? x)))
 
-(s/def ::pos (s/spec pos? :gen #(gen/one-of [(gen/double* {:min tiny-dbl :NaN? false}) (gen/large-integer* {:min 1})])))
+(s/def ::pos
+  (s/spec pos?
+          :gen #(gen/one-of
+                  [(gen/double* {:min tiny-dbl :NaN? false})
+                   (gen/large-integer* {:min 1})])))
+
 (s/def ::nan-or-pos (s/spec #(or (nan? %) (pos? %))
-                            :gen #(gen/one-of [(gen/double* {:min tiny-dbl}) (gen/large-integer* {:min 1})])))
+                            :gen #(gen/one-of
+                                    [(gen/double* {:min tiny-dbl})
+                                     (gen/large-integer* {:min 1})])))
 
 (defn neg?
-  "Returns true if x is a number that is negative."
+  "Returns true if `x` is a number that is negative."
   [x]
   (and (number? x) (clojure.core/neg? x)))
 
 (s/def ::neg
-  (s/spec neg? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :NaN? false}) (gen/large-integer* {:max -1})])))
-(s/def ::nan-or-neg (s/spec #(or (nan? %) (neg? %))
-                            :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl)}) (gen/large-integer* {:max -1})])))
+  (s/spec neg?
+          :gen #(gen/one-of
+                  [(gen/double* {:max (- tiny-dbl) :NaN? false})
+                   (gen/large-integer* {:max -1})])))
+
+(s/def ::nan-or-neg
+  (s/spec #(or (nan? %) (neg? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:max (- tiny-dbl)})
+                   (gen/large-integer* {:max -1})])))
 
 (defn non-?
-  "Returns true if x is non-negative."
+  "Returns true if `x` is non-negative."
   [x]
   (and (number? x) (>= x 0)))
 
-(s/def ::non- (s/spec non-? :gen #(gen/one-of [(gen/double* {:min 0.0 :NaN? false}) (gen/large-integer* {:min 0})])))
-(s/def ::nan-or-non- (s/spec #(or (nan? %) (non-? %))
-                             :gen #(gen/one-of [(gen/double* {:min 0.0}) (gen/large-integer* {:min 0})])))
+(s/def ::non-
+  (s/spec non-?
+          :gen #(gen/one-of
+                  [(gen/double* {:min 0.0 :NaN? false})
+                   (gen/large-integer* {:min 0})])))
+
+(s/def ::nan-or-non-
+  (s/spec #(or (nan? %) (non-? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:min 0.0})
+                   (gen/large-integer* {:min 0})])))
 
 (defn non+?
-  "Returns true if x is non-positive."
+  "Returns true if `x` is non-positive."
   [x]
   (and (number? x) (<= x 0)))
 
-(s/def ::non+ (s/spec non+? :gen #(gen/one-of [(gen/double* {:max 0.0 :NaN? false}) (gen/large-integer* {:max 0})])))
-(s/def ::nan-or-non+ (s/spec #(or (nan? %) (non+? %))
-                             :gen #(gen/one-of [(gen/double* {:max 0.0}) (gen/large-integer* {:max 0})])))
+(s/def ::non+
+  (s/spec non+?
+          :gen #(gen/one-of
+                  [(gen/double* {:max 0.0 :NaN? false})
+                   (gen/large-integer* {:max 0})])))
+
+(s/def ::nan-or-non+
+  (s/spec #(or (nan? %) (non+? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:max 0.0})
+                   (gen/large-integer* {:max 0})])))
 
 (defn finite?
-  "Returns true if x is a finite number."
+  "Returns true if `x` is a finite number."
   [x]
-  (and (num? x) (not (Double/isInfinite ^double x))))
+  (and (num? x) (not (Double/isInfinite (double x)))))
 
-(s/def ::finite (s/spec finite? :gen #(gen/one-of [(gen/double* {:infinite? false :NaN? false}) (gen/large-integer)])))
-(s/def ::nan-or-finite (s/spec #(or (nan? %) (finite? %))
-                               :gen #(gen/one-of [(gen/double* {:infinite? false}) (gen/large-integer)])))
+(s/def ::finite
+  (s/spec finite?
+          :gen #(gen/one-of
+                  [(gen/double* {:infinite? false :NaN? false})
+                   (gen/large-integer)])))
+
+(s/def ::nan-or-finite
+  (s/spec #(or (nan? %) (finite? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:infinite? false})
+                   (gen/large-integer)])))
 
 (defn finite+?
-  "Returns true if x is a positive finite number."
+  "Returns true if `x` is a positive finite number."
   [x]
   (and (pos? x) (not (Double/isInfinite ^double x))))
 
 (s/def ::finite+
-  (s/spec finite+? :gen #(gen/one-of [(gen/double* {:min tiny-dbl :infinite? false :NaN? false})
-                                      (gen/large-integer* {:min 1})])))
+  (s/spec finite+?
+          :gen #(gen/one-of
+                  [(gen/double* {:min tiny-dbl :infinite? false :NaN? false})
+                   (gen/large-integer* {:min 1})])))
 (s/def ::nan-or-finite+
-  (s/spec #(or (nan? %) (finite+? %)) :gen #(gen/one-of [(gen/double* {:min tiny-dbl :infinite? false})
-                                                         (gen/large-integer* {:min 1})])))
+  (s/spec #(or (nan? %) (finite+? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:min tiny-dbl :infinite? false})
+                   (gen/large-integer* {:min 1})])))
 
 (defn finite-?
-  "Returns true if x is a negative finite number."
+  "Returns true if `x` is a negative finite number."
   [x]
   (and (neg? x) (not (Double/isInfinite ^double x))))
 
 (s/def ::finite-
-  (s/spec finite-? :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :infinite? false :NaN? false})
-                                      (gen/large-integer* {:max -1})])))
+  (s/spec finite-?
+          :gen #(gen/one-of
+                  [(gen/double* {:max (- tiny-dbl) :infinite? false :NaN? false})
+                   (gen/large-integer* {:max -1})])))
 (s/def ::nan-or-finite-
-  (s/spec #(or (nan? %) (finite-? %)) :gen #(gen/one-of [(gen/double* {:max (- tiny-dbl) :infinite? false})
-                                                         (gen/large-integer* {:max -1})])))
+  (s/spec #(or (nan? %) (finite-? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:max (- tiny-dbl) :infinite? false})
+                   (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
-  "Returns true if x is a non-negative finite number."
+  "Returns true if `x` is a non-negative finite number."
   [x]
   (and (non-? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite-non- (s/spec finite-non-? :gen #(gen/one-of [(gen/double* {:min 0.0 :infinite? false :NaN? false})
-                                                             (gen/large-integer* {:min 0})])))
+(s/def ::finite-non-
+  (s/spec finite-non-?
+          :gen #(gen/one-of
+                  [(gen/double* {:min 0.0 :infinite? false :NaN? false})
+                   (gen/large-integer* {:min 0})])))
 (s/def ::nan-or-finite-non-
-  (s/spec #(or (nan? %) (finite-non-? %)) :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
-                                                             (gen/large-integer* {:max 0})])))
+  (s/spec #(or (nan? %) (finite-non-? %))
+          :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
+                             (gen/large-integer* {:max 0})])))
 
 (defn finite-non+?
-  "Returns true if x is a non-positive finite number."
+  "Returns true if `x` is a non-positive finite number."
   [x]
   (and (non+? x) (not (Double/isInfinite ^double x))))
 
-(s/def ::finite-non+ (s/spec finite-non+? :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false :NaN? false})
-                                                             (gen/large-integer* {:max 0})])))
+(s/def ::finite-non+
+  (s/spec finite-non+?
+          :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false :NaN? false})
+                             (gen/large-integer* {:max 0})])))
 (s/def ::nan-or-finite-non+
-  (s/spec #(or (nan? %) (finite-non+? %)) :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
-                                                             (gen/large-integer* {:max 0})])))
+  (s/spec #(or (nan? %) (finite-non+? %))
+          :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
+                             (gen/large-integer* {:max 0})])))
 
-(s/def ::double (s/spec double? :gen #(gen/double)))
+(s/def ::double
+  (s/spec double? :gen #(gen/double)))
 
 (defn double-finite?
-  "Returns true if x is a double and finite."
+  "Returns true if `x` is a double and finite."
   [x]
   (and (double? x)
        (== x x)
        (not (Double/isInfinite ^double x))))
 
-(s/def ::double-finite (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
+(s/def ::double-finite
+  (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
 
 (defn single?
-  "Returns true if x is a single."
+  "Returns true if `x` is a single."
   [x]
   (and (double? x)
        (or (sgl-range? x)
            (not (== x x))
            (Double/isInfinite ^double x))))
 
-(s/def ::single (s/spec single? :gen #(gen/double)))
+(s/def ::single
+  (s/spec single? :gen #(gen/double)))
 
 (defn single-finite?
-  "Returns true if x is a single and finite."
+  "Returns true if `x` is a single and finite."
   [x]
   (and (double? x) (sgl-range? x)))
 
 (s/def ::single-finite
-  (s/spec single-finite? :gen #(gen/double* {:infinite? false :NaN? false :min min-sgl :max max-sgl})))
+  (s/spec single-finite?
+          :gen #(gen/double* {:infinite? false
+                              :NaN?      false
+                              :min       min-sgl
+                              :max       max-sgl})))
 
 (defn long?
-  "Returns true if x is a long."
+  "Returns true if `x` is a long."
   [x]
   (and (number? x) (instance? Long x)))
 
-(s/def ::long (s/spec long? :gen gen/large-integer))
+(s/def ::long
+  (s/spec long? :gen gen/large-integer))
 
 (defn long+?
-  "Returns true if x is a long and is positive."
+  "Returns true if `x` is a long and is positive."
   [x]
   (and (pos? x) (long? x)))
 
-(s/def ::long+ (s/spec long+? :gen #(s/gen (s/int-in 1 max-long))))
+(s/def ::long+
+  (s/spec long+? :gen #(s/gen (s/int-in 1 max-long))))
 
 (defn long-?
-  "Returns true if x is a long and is negative."
+  "Returns true if `x` is a long and is negative."
   [x]
   (and (neg? x) (long? x)))
 
-(s/def ::long- (s/spec long-? :gen #(s/gen (s/int-in min-long 0))))
+(s/def ::long-
+  (s/spec long-? :gen #(s/gen (s/int-in min-long 0))))
 
 (defn long-non-?
-  "Returns true if x is a long and is non-negative."
+  "Returns true if `x` is a long and is non-negative."
   [x]
   (and (non-? x) (long? x)))
 
-(s/def ::long-non- (s/spec long-non-? :gen #(s/gen (s/int-in 0 max-long))))
+(s/def ::long-non-
+  (s/spec long-non-? :gen #(s/gen (s/int-in 0 max-long))))
 
 (defn long-non+?
-  "Returns true if x is a long and is non-positive."
+  "Returns true if `x` is a long and is non-positive."
   [x]
   (and (non+? x) (long? x)))
 
-(s/def ::long-non+ (s/spec long-non+? :gen #(s/gen (s/int-in min-long 1))))
+(s/def ::long-non+
+  (s/spec long-non+? :gen #(s/gen (s/int-in min-long 1))))
 
 (defn int?
-  "Returns true is x is an integer that is within the int range."
+  "Returns true is `x` is an integer that is within the int range."
   [x]
   (and (integer? x) (int-range? x)))
 
-(s/def ::int (s/spec int? :gen gen/int))
+(s/def ::int
+  (s/spec int? :gen gen/int))
 
 (defn int+?
-  "Returns true if x is an int and is positive."
+  "Returns true if `x` is an int and is positive."
   [x]
   (and (int? x) (pos? x)))
 
-(s/def ::int+ (s/spec int+? :gen #(s/gen (s/int-in 1 (inc max-int)))))
+(s/def ::int+
+  (s/spec int+? :gen #(s/gen (s/int-in 1 (inc max-int)))))
 
 (defn int-?
-  "Returns true if x is an int and is negative."
+  "Returns true if `x` is an int and is negative."
   [x]
   (and (int? x) (neg? x)))
 
-(s/def ::int- (s/spec int-? :gen #(s/gen (s/int-in min-int 0))))
+(s/def ::int-
+  (s/spec int-? :gen #(s/gen (s/int-in min-int 0))))
 
 (defn int-non-?
-  "Returns true if x is an int and is non-negative."
+  "Returns true if `x` is an int and is non-negative."
   [x]
   (and (int? x) (non-? x)))
 
-(s/def ::int-non- (s/spec int-non-? :gen #(s/gen (s/int-in 0 (inc max-int)))))
+(s/def ::int-non-
+  (s/spec int-non-? :gen #(s/gen (s/int-in 0 (inc max-int)))))
 
 (defn int-non+?
-  "Returns true if x is an int and is non-positive."
+  "Returns true if `x` is an int and is non-positive."
   [x]
   (and (int? x) (non+? x)))
 
-(s/def ::int-non+ (s/spec int-non+? :gen #(s/gen (s/int-in min-int 1))))
+(s/def ::int-non+
+  (s/spec int-non+? :gen #(s/gen (s/int-in min-int 1))))
 
 (defn long-able?
-  "Returns true if x is a number that can be converted to a long."
+  "Returns true if `x` is a number that can be converted to a long."
   [x]
   (and (number? x)
        (roughly-round? x 0.0)
        (long-range? x)))
 
-(s/def ::long-able (s/spec long-able? :gen gen/large-integer))
+(s/def ::long-able
+  (s/spec long-able? :gen gen/large-integer))
 
 (defn long-able+?
-  "Returns true if x is a number that can be converted to a long, and is positive."
+  "Returns true if `x` is a number that can be converted to a long, and is
+  positive."
   [x]
   (and (long-able? x) (pos? x)))
 
-(s/def ::long-able+ (s/spec long-able+? :gen #(s/gen (s/int-in 1 max-long))))
+(s/def ::long-able+
+  (s/spec long-able+? :gen #(s/gen (s/int-in 1 max-long))))
 
 (defn long-able-?
-  "Returns true if x is a number that can be converted to a long, and is negative."
+  "Returns true if `x` is a number that can be converted to a long, and is
+  negative."
   [x]
   (and (long-able? x) (neg? x)))
 
-(s/def ::long-able- (s/spec long-able-? :gen #(s/gen (s/int-in min-long 0))))
+(s/def ::long-able-
+  (s/spec long-able-? :gen #(s/gen (s/int-in min-long 0))))
 
 (defn long-able-non+?
-  "Returns true if x is a number that can be converted to a long, and is non+."
+  "Returns true if `x` is a number that can be converted to a long, and is
+  non+."
   [x]
   (and (long-able? x) (non+? x)))
 
@@ -317,93 +413,133 @@
   (s/spec long-able-non+? :gen #(s/gen (s/int-in min-long 1))))
 
 (s/def ::non-long-able-non+
-  (s/spec #(and (num? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? false))))
+  (s/spec #(and (num? %) (not (long-able-non+? %)))
+          :gen #(s/gen (s/double-in :NaN? false))))
 
 (s/def ::nan-or-non-long-able-non+
-  (s/spec #(and (number? %) (not (long-able-non+? %))) :gen #(s/gen (s/double-in :NaN? true))))
+  (s/spec #(and (number? %) (not (long-able-non+? %)))
+          :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn long-able-non-?
-  "Returns true if x is a number that can be converted to a long, and is non-."
+  "Returns true if `x` is a number that can be converted to a long, and is
+  non-."
   [x]
   (and (long-able? x) (non-? x)))
 
-(s/def ::long-able-non- (s/spec long-able-non-? :gen #(s/gen (s/int-in 0 max-long))))
+(s/def ::long-able-non-
+  (s/spec long-able-non-? :gen #(s/gen (s/int-in 0 max-long))))
 
 (defn inf+?
-  "Returns true if x is inf+."
+  "Returns true if `x` is Inf+."
   [x]
   (and (number? x)
        (Double/isInfinite ^double x)
        (pos? x)))
 
-(s/def ::non-inf+ (s/spec #(and (num? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? false))))
-(s/def ::nan-or-non-inf+ (s/spec #(and (number? %) (not (inf+? %))) :gen #(s/gen (s/double-in :NaN? true))))
+(s/def ::non-inf+
+  (s/spec #(and (num? %) (not (inf+? %)))
+          :gen #(s/gen (s/double-in :NaN? false))))
+
+(s/def ::nan-or-non-inf+
+  (s/spec #(and (number? %) (not (inf+? %)))
+          :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf-?
-  "Returns true if x is inf-."
+  "Returns true if `x` is Inf-."
   [x]
-  (and (number? x) (Double/isInfinite ^double x) (neg? x)))
+  (and (number? x) (Double/isInfinite (double x)) (neg? x)))
 
-(s/def ::non-inf- (s/spec #(and (num? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? false))))
-(s/def ::nan-or-non-inf- (s/spec #(and (number? %) (not (inf-? %))) :gen #(s/gen (s/double-in :NaN? true))))
+(s/def ::non-inf-
+  (s/spec #(and (num? %) (not (inf-? %)))
+          :gen #(s/gen (s/double-in :NaN? false))))
+
+(s/def ::nan-or-non-inf-
+  (s/spec #(and (number? %) (not (inf-? %)))
+          :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf?
-  "Returns true if x is inf+ or inf-."
+  "Returns true if `x` is Inf+ or Inf-."
   [x]
-  (and (number? x) (Double/isInfinite ^double x)))
+  (and (number? x) (Double/isInfinite (double x))))
 
-(s/def ::inf (s/spec inf? :gen #(gen/one-of [(gen/return inf-) (gen/return inf+)])))
+(s/def ::inf
+  (s/spec inf?
+          :gen #(gen/one-of
+                  [(gen/return inf-)
+                   (gen/return inf+)])))
 
 (defn one?
-  "Returns true if x if equal to one."
+  "Returns true if `x` if equal to one."
   [x]
   (and (number? x) (== 1 x)))
 
-(s/def ::one (s/spec one? :gen #(gen/return 1.0)))
+(s/def ::one
+  (s/spec one? :gen #(gen/return 1.0)))
 
 (defn prob?
-  "Returns true if x is between 0 and 1, inclusive."
+  "Returns true if `x` is between 0 and 1, inclusive."
   [x]
   (and (non-? x) (<= x 1)))
 
-(s/def ::prob (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
-(s/def ::nan-or-prob (s/spec #(or (nan? %) (prob? %)) :gen #(s/gen (s/double-in :min 0.0 :max 1.0))))
+(s/def ::prob
+  (s/spec prob? :gen #(s/gen (s/double-in :min 0.0 :max 1.0 :NaN? false))))
+
+(s/def ::nan-or-prob
+  (s/spec #(or (nan? %) (prob? %))
+          :gen #(s/gen (s/double-in :min 0.0 :max 1.0))))
 
 (defn open-prob?
-  "Returns true if x is between 0 and 1, exclusive."
+  "Returns true if `x` is between 0 and 1, exclusive."
   [x]
   (and (pos? x) (< x 1)))
 
-(s/def ::open-prob (s/spec open-prob? :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0) :NaN? false))))
+(s/def ::open-prob
+  (s/spec open-prob?
+          :gen #(s/gen (s/double-in :min tiny-dbl
+                                    :max (next-down 1.0)
+                                    :NaN? false))))
+
 (s/def ::nan-or-open-prob
-  (s/spec #(or (nan? %) (open-prob? %)) :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0)))))
+  (s/spec #(or (nan? %) (open-prob? %))
+          :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0)))))
 
 (defn corr?
-  "Returns true if x is between -1 and 1, inclusive."
+  "Returns true if `x` is between -1 and 1, inclusive."
   [x]
   (and (number? x)
        (<= x 1)
        (>= x -1)))
 
-(s/def ::corr (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
-(s/def ::nan-or-corr (s/spec #(or (nan? %) (corr? %)) :gen #(s/gen (s/double-in :min -1.0 :max 1.0))))
+(s/def ::corr
+  (s/spec corr? :gen #(s/gen (s/double-in :min -1.0 :max 1.0 :NaN? false))))
+
+(s/def ::nan-or-corr
+  (s/spec #(or (nan? %) (corr? %))
+          :gen #(s/gen (s/double-in :min -1.0 :max 1.0))))
 
 (defn open-corr?
-  "Returns true if x is between -1 and 1, exclusive."
+  "Returns true if `x` is between -1 and 1, exclusive."
   [x]
   (and (number? x)
        (< x 1)
        (> x -1)))
 
 (s/def ::open-corr
-  (s/spec open-corr? :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0) :NaN? false))))
+  (s/spec open-corr?
+          :gen #(s/gen (s/double-in :min (next-up -1.0)
+                                    :max (next-down 1.0)
+                                    :NaN? false))))
+
 (s/def ::nan-or-open-corr
-  (s/spec #(or (nan? %) (open-corr? %)) :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0)))))
+  (s/spec #(or (nan? %) (open-corr? %))
+          :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0)))))
 
 (defn maybe-long-able
-  "Returns x as a long if possible.  Otherwise returns x."
+  "Returns `x` as a long if possible.  Otherwise returns x."
   [x]
-  (if (long-able? x) (long x) x))
+  (if (long-able? x)
+    (long x)
+    x))
 
 ;;;BASIC MATH
 (defn ===
@@ -442,12 +578,11 @@
         :ret ::number)
 
 (defn div
-  "Returns `number1` divided by `number2`.
-  Or 1 divided by `number2`.
-  Dividing a positive number divided by zero returns inf+.
-  Dividing a negative number divided by zero returns inf-.
-  Dividing zero by zero will return NaN by default.
-  Optionally, can include alternative return value for 0/0, 'zero-div-by-zero'."
+  "Returns `number1` divided by `number2`. Or 1 divided by `number2`. Dividing a
+  positive number divided by zero returns Inf+. Dividing a negative number
+  divided by zero returns Inf-. Dividing zero by zero will return NaN by
+  default. Optionally, can include alternative return value for 0/0,
+  `zero-div-by-zero`."
   ([number2] (div 1 number2))
   ([number1 number2] (div number1 number2 nan))
   ([number1 number2 zero-div-by-zero]
@@ -466,8 +601,7 @@
         :ret ::number)
 
 (defn one-
-  "Returns (1 - `number`).
-  Will always return a double if `numbers` is used."
+  "Returns (1 - `number`). Will always return a double if `numbers` is used."
   ([number] (inc (- number)))
   ([number & numbers] (inc (- (apply + (double number) numbers)))))
 
@@ -726,8 +860,7 @@
 (s/def ::accu (s/with-gen ::non- #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
 
 (defn round
-  "Returns a long if possible.
-  Otherwise, returns `number`.
+  "Returns a long if possible. Otherwise, returns `number`.
     `type`:
       `:up`
       `:down`
@@ -786,8 +919,7 @@
         :ret ::number)
 
 (defn roughly-floor
-  "Rounds down unless within `accu`, then rounds up.
-  Returns a double."
+  "Rounds down unless within `accu`, then rounds up. Returns a double."
   [number accu]
   (floor (+ number (double accu))))
 
@@ -796,8 +928,8 @@
         :ret ::number)
 
 (defn roughly-floor'
-  "Rounds down unless within `accu`, then rounds up.
-  Returns a long if possible, otherwise a double."
+  "Rounds down unless within `accu`, then rounds up. Returns a long if possible,
+  otherwise a double."
   [number accu]
   (floor' (+ number (double accu))))
 
@@ -815,8 +947,8 @@
         :ret ::number)
 
 (defn roughly-ceil'
-  "Rounds up unless within `accu`, then rounds down. Returns a long
-  if possible, otherwise a double."
+  "Rounds up unless within `accu`, then rounds down. Returns a long if possible,
+  otherwise a double."
   [number accu]
   (ceil' (- number (double accu))))
 
@@ -825,8 +957,8 @@
         :ret ::number)
 
 (defn roughly?
-  "Returns true if `number1` and `number2` are within `accu` of each
-   other, or within double accuracy."
+  "Returns true if `number1` and `number2` are within `accu` of each other, or
+  within double accuracy."
   [number1 number2 accu]
   (cond (or (nan? number1) (nan? number2)) false
         (inf+? accu) true
@@ -840,8 +972,8 @@
         :ret boolean?)
 
 (defn roughly-round?
-  "Returns true if `number` is equal to a whole number or within `accu`
-  of a whole number, or within double accuracy."
+  "Returns true if `number` is equal to a whole number or within `accu` of a
+  whole number, or within double accuracy."
   [number accu]
   (cond (nan? number) false
         (inf+? accu) true
@@ -873,7 +1005,8 @@
         :ret boolean?)
 
 (defn roughly-round+?
-  "Returns true if `number` is positive and roughly a whole number, or within double accuracy."
+  "Returns true if `number` is positive and roughly a whole number, or within
+  double accuracy."
   [number accu]
   (and (pos? number) (roughly-round? number accu)))
 
@@ -882,7 +1015,8 @@
         :ret boolean?)
 
 (defn roughly-round-?
-  "Returns true if `number` is negative and roughly a whole number, or within double accuracy."
+  "Returns true if `number` is negative and roughly a whole number, or within
+  double accuracy."
   [number accu]
   (and (neg? number) (roughly-round? number accu)))
 
@@ -929,8 +1063,7 @@
 
 ;;;QUOTIENTS
 (defn quot'
-  "Quotient of dividing `numerator` by `divisor`.
-  Returns a long if possible."
+  "Quotient of dividing `numerator` by `divisor`. Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor)
           (nan? numerator)
@@ -949,11 +1082,9 @@
         :ret ::number)
 
 (defn mod'
-  "Modulus of `numerator` and `divisor`.
-  Truncates toward negative infinity.
-  Has sign of `divisor` unless numerical rounding error with [[quot']].
-  Will stay consistent with [[quot']].
-  Returns a long if possible."
+  "Modulus of `numerator` and `divisor`. Truncates toward negative infinity. Has
+  sign of `divisor` unless numerical rounding error with [[quot']]. Will stay
+  consistent with [[quot']]. Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor)
           (nan? numerator)
@@ -972,10 +1103,9 @@
         :ret ::number)
 
 (defn rem'
-  "Remainder of dividing `numerator` by `divisor`.
-  Has sign of `numerator` unless numerical rounding error with [[quot']].
-  Will stay consistent with [[quot']].
-  Returns a long if possible."
+  "Remainder of dividing `numerator` by `divisor`. Has sign of `numerator`
+  unless numerical rounding error with [[quot']]. Will stay consistent with
+  [[quot']]. Returns a long if possible."
   [numerator divisor]
   (if (or (nan? divisor)
           (nan? numerator)
@@ -993,11 +1123,10 @@
         :ret ::number)
 
 (defn quot-and-rem'
-  "Returns a tuple of longs if possible.
-  Quotient of dividing `numerator` by `divisor`.
-  Remainder of dividing `numerator` by `divisor`.
-  Has sign of `numerator` unless numerical rounding error with [[quot']].
-  Will stay consistent with [[quot']]."
+  "Returns a tuple of longs if possible. Quotient of dividing `numerator` by
+  `divisor`. Remainder of dividing `numerator` by `divisor`. Has sign of
+  `numerator` unless numerical rounding error with [[quot']]. Will stay
+  consistent with [[quot']]."
   [numerator divisor]
   [(quot' numerator divisor) (rem' numerator divisor)])
 
@@ -1006,12 +1135,10 @@
         :ret (s/tuple ::number ::number))
 
 (defn quot-and-mod'
-  "Returns a tuple of longs if possible.
-  Quotient of dividing `numerator` by `divisor`.
-  Modulus of `numerator` and `divisor`.
-  Truncates toward negative infinity.
-  Has sign of `divisor` unless numerical rounding error with [[quot']].
-  Will stay consistent with [[quot']]."
+  "Returns a tuple of longs if possible. Quotient of dividing `numerator` by
+  `divisor`. Modulus of `numerator` and `divisor`. Truncates toward negative
+  infinity. Has sign of `divisor` unless numerical rounding error with
+  [[quot']]. Will stay consistent with [[quot']]."
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
@@ -1026,8 +1153,7 @@
 
 ;;;ANGLES
 (defn reduce-angle'
-  "Returns an `angle` between 0 and 360.
-  Returns a long if possible."
+  "Returns an `angle` between 0 and 360. Returns a long if possible."
   [angle]
   (let [m (mod' angle 360)]
     (if (or (nan? m)
@@ -1049,8 +1175,7 @@
                    :inf ::inf))
 
 (defn reduce-radians'
-  "Returns `radians` between 0 and 2 × PI.
-  Returns a long if possible."
+  "Returns `radians` between 0 and 2 × PI. Returns a long if possible."
   [radians]
   (let [m (mod' radians two-pi)]
     (if (or (nan? m)
@@ -1072,8 +1197,8 @@
                    :inf ::inf))
 
 (defn radians->angle'
-  "Returns the reduced angle from `radians`, where angles = 180 × `radians` / PI.
-  Returns a long if possible."
+  "Returns the reduced angle from `radians`, where
+  angles = 180 × `radians` / PI. Returns a long if possible."
   [radians]
   (if (inf? radians)
     radians
@@ -1087,8 +1212,8 @@
                    :inf ::inf))
 
 (defn angle->radians'
-  "Returns the reduced radians from the `angle`, where radians = `angle` × PI / 180.
-  Returns a long if possible."
+  "Returns the reduced radians from the `angle`, where
+  radians = `angle` × PI / 180. Returns a long if possible."
   [angle]
   (if (inf? angle)
     angle

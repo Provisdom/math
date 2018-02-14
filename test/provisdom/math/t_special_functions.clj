@@ -234,6 +234,32 @@
    #{}                                                      ;1/24
    #{"14->21 unbroken kipping C2B"
      "Fran+1-mile run 14:47->14 minutes"}                   ;1/25
+   #{}                                                      ;1/26
+   #{}                                                      ;1/27
+   #{}                                                      ;1/28
+   #{"3->5 rds of 12x DB snatches #65 + 25x Wall ball in 10 min"} ;1/29
+   #{}                                                      ;1/30
+   #{}                                                      ;1/31
+   #{"24->30-sec each side of side plank with top leg up"
+     "E2MOM7 of 37->45-sec hollow rock"
+     "17->21 kipping HSPUs in a row"}                       ;2/1
+   #{"30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"} ;2/2
+   #{}                                                      ;2/3
+   #{}                                                      ;2/4
+   #{"Work on tying together natural-looking triple-unders"
+     "5 rds of 10 burpee pull-ups + 5x 185# PC in 11:59->10 min"
+     "41->50 cal Assault bike in 2.5 min (~63->70 RPM)"}    ;2/5
+   #{"E5MOM3 56->60 second 135# OH hold"}                   ;2/6
+   #{}                                                      ;2/7
+   #{"8 strict muscle-ups in 20 minutes; did it!"
+     "21 unbroken Thrusters @95; did it!"}                  ;2/8
+   #{"22->25 strict ab-mat->floor HSPUs in 10 min"
+     "Fast-shuffling 100M farmer’s carry with 52.5#->52.8# in 45 min"} ;2/9
+   #{}                                                      ;2/10
+   #{}                                                      ;2/11
+   #{"3x25->30-sec 1->2-leg L-sits in 10 minutes (hip flexor cramps)"
+     "E2MOM4 Handstand holds for 48->60-sec"
+     "E3MOM5 Handstand holds for 46->60-sec"}               ;2/12
    ])
 
 (comment
@@ -241,32 +267,35 @@
     })
 
 (def current-wod-list
-  ["5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
+  [(str "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  "
+        "Min 5&6 - 20 Wall Ball + 15 Burpee Min 7&8 - 20 Box Jump Overs (30/24)  "
+        "Min 9&10 - 10 Wall Ball + 20 Burpee Min 11&12 - 15 Burpee Box Jump Overs (30/24)")
+   "5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
    "EMOM30 alternating 5 strict TTB with 1-sec pause at top, 6x PP@155, and 15-cal row"
-   "5 rds of 10 burpee pull-ups + 5x 185# PC in 10 min"
-   "5 rds of 12x DB snatches #65 + 25x Wall ball in 10 min"
+   "5 rds of 10 burpee pull-ups + 5x 185# PC in 11:59->10 min"
+   "3->5 rds of 12x DB snatches #65 + 25x Wall ball in 10 min"
    "5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
    "12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"
    "Eva in 45 minutes (3->5 rds of 800M run, 30x 70# KBS, 30x pull-ups)"
-   "16 rounds of E2MOM fast-shuffling 100M farmer’s carry with 50#->53#"
-   "E5MOM3 55->60 second 135# OH hold"
+   "Fast-shuffling 100M farmer’s carry with 52.5#->52.8# in 45 min"
+   "E5MOM3 56->60 second 135# OH hold"
    "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"
    "E3MOM5 Handstand holds for 46->60-sec"
    "E2MOM4 Handstand holds for 48->60-sec"
-   "15->21 kipping HSPUs in a row"
+   "17->21 kipping HSPUs in a row"
    "5 rds of 10 kipping HSPU in 1-min, rest 2-min"
-   "E2MOM5 of 5 strict HSPUs"
+   "22->25 strict ab-mat->floor HSPUs in 10 min"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
    "10->21 continuous-kipping TTB"
    "14->21 unbroken kipping C2B"
    "Tabata (14->20sec) 1->2-leg L-sits"
-   "3x25->30-sec 1->2-leg L-sits in 10 minutes"
+   "3x25->30-sec 1->2-leg L-sits in 10 minutes (hip flexor cramps)"
    "E2MOM7 of 11->20-sec straight-arm hanging 1->2-leg L-sits"
    "3x20->30-sec straight-arm hanging 1->2-leg L-sits"
-   "21->30-sec each side of side plank with top leg up"
+   "24->30-sec each side of side plank with top leg up"
    "4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
    "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
-   "E2MOM7 of 36->45-sec hollow rock"
+   "E2MOM7 of 37->45-sec hollow rock"
    "41->50 cal Assault bike in 2.5 min (~63->70 RPM)"
    "EMOM20 of odd: bike 8-cal, even: FSx7@75# + burpee over barbell x5"
    "Back Squat 265->275x10 to 1 in 30 minutes"
@@ -274,7 +303,6 @@
    "Front Squats 5x9@185 start every 2 minutes from floor"
    "EMOM15 of PCx3, FSx3, PJx3 @135->185 (watch low back)"
    "9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"
-   "18->21 unbroken Thrusters @95"
    "Full Snatch E2MOM: 6x6@115->135, 5x4@135->155, 4x3@155->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
    "Fran+1-mile run 14:47->14 minutes"
@@ -285,7 +313,6 @@
    "Work on butterfly pull-ups"
    "Work on butterfly c2b"
    "10-min EMOM odd: 4->5 bar muscle-up, even: rest"
-   "8 strict muscle-ups in 20 minutes"
    (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
         "with elevated heels, or with a counterbalance weight held out in front")
    "3 rounds of 20 pistols w/ 90-sec rest"

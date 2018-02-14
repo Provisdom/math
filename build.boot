@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.1.0-alpha5")
+(def version "1.1.0-alpha6")
 
 (set-env!
   :resource-paths #{"src"}
@@ -14,10 +14,10 @@
                   [provisdom/boot-tasks "1.4" :scope "test"]
                   [provisdom/test "0.3.3-alpha1" :scope "test"]
                   ;;project deps
-                  [org.clojure/clojure "1.10.0-alpha2" :scope "provided"]
+                  [org.clojure/clojure "1.9.0" :scope "provided"]
                   [org.clojure/spec.alpha "0.1.143"]
                   [orchestra "2017.11.12-1"]
-                  [provisdom/utility-belt "0.2.0-alpha4"]
+                  [provisdom/utility-belt "0.2.0-alpha5"]
                   [org.apache.commons/commons-math3 "3.6.1"]
                   [apache-commons-matrix "0.4.1"]
                   [clatrix "0.5.0"]])
