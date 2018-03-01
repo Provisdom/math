@@ -1029,7 +1029,10 @@
 
 (s/def ::Q ::apache-matrix)
 (s/def ::R ::apache-matrix)
-(s/def ::LLS-solution (s/or :apache-m ::apache-matrix :anomaly ::anomalies/anomaly))
+
+(s/def ::LLS-solution (s/or :apache-m ::apache-matrix
+                            :anomaly ::anomalies/anomaly))
+
 (s/def ::error (s/nilable ::symmetric-apache-matrix))
 (defn qr-decomposition-with-linear-least-squares-and-error-matrix
   "Returns a map containing:
@@ -1046,7 +1049,8 @@
      ::error        apache-m1}
     (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
           ^DecompositionSolver s (.getSolver d)
-          solution (try (block-apache-matrix->apache-matrix (.solve s ^Array2DRowRealMatrix apache-m2))
+          solution (try (block-apache-matrix->apache-matrix
+                          (.solve s ^Array2DRowRealMatrix apache-m2))
                         (catch Exception e
                           {::anomalies/message  (.getMessage e)
                            ::anomalies/fn       (var qr-decomposition-with-linear-least-squares-and-error-matrix)
@@ -1055,7 +1059,9 @@
           r-rows (rows r)
           r-columns (columns r)
           error (when (and (apache-matrix? solution) (>= r-rows r-columns))
-                  (let [trimmed-r (get-slices-as-matrix r {::mx/exception-row-indices (range r-columns r-rows)})
+                  (let [trimmed-r (get-slices-as-matrix
+                                    r
+                                    {::mx/exception-row-indices (range r-columns r-rows)})
                         ri (inverse trimmed-r)]
                     (mx* ri (transpose ri))))]
       {::Q            (.getQ d)
@@ -1080,9 +1086,12 @@
      ::LLS-solution apache-m1}
     (let [d (QRDecomposition. ^Array2DRowRealMatrix apache-m1)
           ^DecompositionSolver s (.getSolver d)
-          ex-d {:fn (var qr-decomposition-with-linear-least-squares)}
-          solution (try (block-apache-matrix->apache-matrix (.solve s ^Array2DRowRealMatrix apache-m2))
-                        (catch Exception e (ex-info (.getMessage e) ex-d)))]
+          solution (try (block-apache-matrix->apache-matrix
+                          (.solve s ^Array2DRowRealMatrix apache-m2))
+                        (catch Exception e
+                          {::anomalies/message  (.getMessage e)
+                           ::anomalies/fn       (var qr-decomposition-with-linear-least-squares)
+                           ::anomalies/category ::anomalies/third-party}))]
       {::Q            (.getQ d)
        ::R            (.getR d)
        ::LLS-solution solution})))
@@ -1129,7 +1138,9 @@
      ::R                apache-m
      ::RRQR-permutation apache-m
      ::rank             0}
-    (let [d (RRQRDecomposition. ^Array2DRowRealMatrix apache-m (double accu))]
+    (let [d (RRQRDecomposition.
+              ^Array2DRowRealMatrix apache-m
+              (double accu))]
       {::Q                (.getQ d)
        ::R                (.getR d)
        ::RRQR-permutation (.getP d)

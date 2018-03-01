@@ -260,11 +260,26 @@
    #{"3x25->30-sec 1->2-leg L-sits in 10 minutes (hip flexor cramps)"
      "E2MOM4 Handstand holds for 48->60-sec"
      "E3MOM5 Handstand holds for 46->60-sec"}               ;2/12
+   #{}                                                      ;2/13
+   #{}                                                      ;2/14
+   #{"EMOM15 of PCx3, FSx3, PJx3 @130->185 (watch low back)"} ;2/15
+   #{}                                                      ;2/16
+   #{}                                                      ;2/17
+   #{}                                                      ;2/18
+   #{"EMOM20->25 (75->60sec per round) 4x 135# thrusters from rack"} ;2/19
+   #{}                                                      ;2/20
+   #{}                                                      ;2/21
+   #{}                                                      ;2/22
+   #{}                                                      ;2/23
+   #{}                                                      ;2/24
+   #{}                                                      ;2/25
+   #{}                                                      ;2/26
+   #{}                                                      ;2/27
+   #{}                                                      ;2/28
    ])
 
 (comment
-  #{
-    })
+  #{})
 
 (def current-wod-list
   [(str "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  "
@@ -301,7 +316,7 @@
    "Back Squat 265->275x10 to 1 in 30 minutes"
    "Back Squat 345x1"
    "Front Squats 5x9@185 start every 2 minutes from floor"
-   "EMOM15 of PCx3, FSx3, PJx3 @135->185 (watch low back)"
+   "EMOM15 of PCx3, FSx3, PJx3 @130->185 (watch low back)"
    "9->10 to 1 of 165# Power Cleans and Front Squats in 15 minutes"
    "Full Snatch E2MOM: 6x6@115->135, 5x4@135->155, 4x3@155->185 w/ 1-min extra break between groups"
    "Fran in 6:20->6 minutes"
@@ -321,7 +336,7 @@
    "Kalsu from floor 105->115 in 30 minutes"
    "Dumbbell Kalsu 35->45"
    "EMOM30 of 2->3 each of burpees + 135# thrusters from rack"
-   "EMOM25 3->4x 135# thrusters from rack"
+   "EMOM20->25 (75->60sec per round) 4x 135# thrusters from rack"
    (str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, "
         "PP, cal row, rest) 1 minute each")])
 
