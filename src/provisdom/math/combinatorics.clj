@@ -69,9 +69,8 @@
 ;;;CHOOSING
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!).
-  `k` must be able to be a long and less than 1e8, otherwise use
-  [[log-choose-k-from-n]]."
+  `n`! / (`k`! × (`n` - `k`)!). `k` must be able to be a long and less than 1e8,
+  otherwise use [[log-choose-k-from-n]]."
   [k n]
   (DoubleArithmetic/binomial (double n) (long k)))
 
@@ -82,14 +81,14 @@
 
 (defn choose-k-from-n'
   "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!).
-  Returns long if possible. `k` must be able to be a long and less than 1e8,
-  otherwise use [[log-choose-k-from-n]]."
+  `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` must be able to
+  be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
 (s/fdef choose-k-from-n'
-        :args (s/cat :k ::m/long-able :n ::m/number)
+        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
+                     :n ::m/number)
         :ret ::m/number)
 
 (defn log-choose-k-from-n
@@ -296,9 +295,10 @@
   (if-not (next breakdown)
     (list (list items))
     (let [combos (combinations-with-complements items (first breakdown))]
-      (mapcat (fn [cua] (map (fn [dl]
-                               (apply list (first cua) dl))
-                             (combinations-using-all (second cua) (rest breakdown))))
+      (mapcat (fn [cua]
+                (map (fn [dl]
+                       (apply list (first cua) dl))
+                     (combinations-using-all (second cua) (rest breakdown))))
               combos))))
 
 (s/fdef combinations-using-all
@@ -342,7 +342,8 @@
                    (if (vector? items) [] '()))]
     (if (vector? items)
       p
-      (map #(into '() %) p))))
+      (map #(into '() %)
+           p))))
 
 (s/fdef permutations
         :args (s/cat :items ::items)

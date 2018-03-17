@@ -17,7 +17,7 @@
 
 (s/def ::degree
   (s/with-gen ::m/long-able-non-
-              #(gen/large-integer* {:min 0 :max 40})))
+              #(gen/large-integer* {:min 0 :max 3})))
 
 (s/def ::start-degree ::degree)
 (s/def ::end-degree ::degree)
@@ -194,15 +194,21 @@
   polynomial."
   [chebyshev-kind]
   (condp = chebyshev-kind
-    0 (fn [x] #(m/pow x %))
-    1 (fn [x] #((chebyshev-polynomial-fn %) x))
-    2 (fn [x] #((chebyshev-polynomial-fn % {::second-kind? true}) x))))
+    0 (fn [x]
+        (fn [degree]
+          (m/pow x degree)))
+    1 (fn [x]
+        (fn [degree]
+          ((chebyshev-polynomial-fn degree) x)))
+    2 (fn [x]
+        (fn [degree]
+          ((chebyshev-polynomial-fn degree {::second-kind? true}) x)))))
 
-#_(s/fdef polynomial-functions                              ;seems to slow things down under instrumentation
-          :args (s/cat :chebyshev-kind ::chebyshev-kind)
-          :ret (s/fspec :args (s/cat :number ::m/number)
-                        :ret (s/fspec :args (s/cat :degree ::degree)
-                                      :ret ::m/number)))
+(s/fdef polynomial-functions
+        :args (s/cat :chebyshev-kind ::chebyshev-kind)
+        :ret (s/fspec :args (s/cat :number ::m/number)
+                      :ret (s/fspec :args (s/cat :degree ::degree)
+                                    :ret ::m/number)))
 
 (defn polynomial-fn
   "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
@@ -305,12 +311,14 @@
                  :or    {start-degree 0, chebyshev-kind 0}}]
    (let [d (m/ceil (polynomial-2D-degrees basis-count))]
      (fn [x y]
-       (vec (take
-              basis-count
-              ((polynomial-2D-fn-by-degree d {::start-degree   start-degree
-                                              ::chebyshev-kind chebyshev-kind})
-                x
-                y)))))))
+       (if (> start-degree d)
+         []
+         (vec (take
+                basis-count
+                ((polynomial-2D-fn-by-degree d {::start-degree   start-degree
+                                                ::chebyshev-kind chebyshev-kind})
+                  x
+                  y))))))))
 
 (s/fdef polynomial-2D-fn-by-basis-count
         :args (s/cat :basis-count ::basis-count
@@ -329,7 +337,7 @@
        (let [fv (mapv p v)]
          (mapv (fn [degrees]
                  (reduce-kv (fn [tot index degree]
-                              (* tot ((nth fv index) degree)))
+                              (* tot ((get fv index m/nan) degree)))
                             1.0
                             (vec degrees)))
                (sort-by (fn [degrees]
@@ -341,11 +349,10 @@
                         (apply combinatorics/cartesian-product
                                (repeat (count v) (range (inc end-degree)))))))))))
 
-(comment "return fn causes spec issues"
-         (s/fdef polynomial-ND-fn
-                 :args (s/cat :end-degree (s/with-gen ::end-degree #(gen/large-integer* {:min 0 :max 5}))
-                              :opts (s/? (s/keys :opt [::chebyshev-kind])))
-                 :ret ::v->v))
+(s/fdef polynomial-ND-fn
+        :args (s/cat :end-degree ::end-degree
+                     :opts (s/? (s/keys :opt [::chebyshev-kind])))
+        :ret ::v->v)
 
 (defn polynomial-ND-fn-without-cross-terms
   "Returns a function that takes a vector [x y z ...] and returns a vector.
@@ -355,16 +362,17 @@
   ([end-degree] (polynomial-ND-fn-without-cross-terms end-degree {}))
   ([end-degree {::keys [chebyshev-kind] :or {chebyshev-kind 0}}]
    (fn [v]
-     (vec (cons 1.0 (apply interleave
-                           (map (polynomial-fn end-degree {::start-degree   1
-                                                           ::chebyshev-kind chebyshev-kind})
-                                v)))))))
+     (if (zero? end-degree)
+       [1.0]
+       (vec (cons 1.0 (apply interleave
+                             (map (polynomial-fn end-degree {::start-degree   1
+                                                             ::chebyshev-kind chebyshev-kind})
+                                  v))))))))
 
-(comment "return fn will cause spec issues"
-         (s/fdef polynomial-ND-fn-without-cross-terms
-                 :args (s/cat :end-degree ::end-degree
-                              :opts (s/? (s/keys :opt [::chebyshev-kind])))
-                 :ret ::v->v))
+(s/fdef polynomial-ND-fn-without-cross-terms
+        :args (s/cat :end-degree ::end-degree
+                     :opts (s/? (s/keys :opt [::chebyshev-kind])))
+        :ret ::v->v)
 
 (defn power-series-fn
   "Returns a function that takes a number and returns the power series of a

@@ -1,4 +1,4 @@
-(ns provisdom.math.t-apache-vector
+(ns provisdom.math.apache-vector-test
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
@@ -14,20 +14,18 @@
 
 ;;;TYPES
 (deftest apache-vector?-test
+  (is (spec-check apache-v/apache-vector?))
   (is (apache-v/apache-vector? (apache-v/apache-vector [])))
   (is (apache-v/apache-vector? (apache-v/apache-vector [1])))
   (is-not (apache-v/apache-vector? "A"))
   (is-not (apache-v/apache-vector? [1 2])))
 
-(defspec-test test-apache-vector? `apache-v/apache-vector?)
-
 ;;;CONSTRUCTORS
 (deftest apache-vector-&-apache-vector->vector-test
+  (is (spec-check apache-v/apache-vector))
+  (is (spec-check apache-v/apache-vector->vector))
   (is= [] (apache-v/apache-vector->vector (apache-v/apache-vector [])))
   (is= [1.0] (apache-v/apache-vector->vector (apache-v/apache-vector [1.0])))
   (is= [1.0 2.0] (apache-v/apache-vector->vector (apache-v/apache-vector [1.0 2.0]))))
-
-(defspec-test test-apache-vector `apache-v/apache-vector)
-(defspec-test test-apache-vector->vector `apache-v/apache-vector->vector)
 
 #_(ost/unstrument)

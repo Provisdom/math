@@ -1,4 +1,4 @@
-(ns provisdom.math.t-intervals
+(ns provisdom.math.intervals-test
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
@@ -7,7 +7,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;2 seconds
+;;5 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -15,15 +15,24 @@
 
 ;;;INTERVAL TEST
 (deftest in-interval?-test
+  (is (spec-check intervals/in-interval?))
   (is (intervals/in-interval? [0.0 1.0] 0.5))
   (is (intervals/in-interval? [0.0 1.0] 0.0))
   (is (intervals/in-interval? [0.0 1.0] 1.0))
   (is-not (intervals/in-interval? [0.0 1.0] -0.5)))
 
-(defspec-test test-in-interval? `intervals/in-interval?)
+(deftest in-interval-roughly?-test
+  (is (spec-check intervals/in-interval-roughly?))
+  (is (intervals/in-interval-roughly? [0.0 1.0] 0.5 0.001))
+  (is (intervals/in-interval-roughly? [0.0 1.0] 0.0 0.001))
+  (is (intervals/in-interval-roughly? [0.0 1.0] 1.0 0.001))
+  (is (intervals/in-interval-roughly? [0.0 1.0] -0.001 0.001))
+  (is (intervals/in-interval-roughly? [0.0 1.0] 1.001 0.001))
+  (is-not (intervals/in-interval-roughly? [0.0 1.0] -0.5 0.001)))
 
 ;;;BOUNDS TEST
 (deftest in-bounds?-test
+  (is (spec-check intervals/in-bounds?))
   (is (intervals/in-bounds? {::intervals/lower       0.0
                              ::intervals/upper       1.0
                              ::intervals/open-lower? true
@@ -33,10 +42,9 @@
   (is (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) 1.0))
   (is-not (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) -0.5)))
 
-(defspec-test test-in-bounds? `intervals/in-bounds?)
-
 ;;;BOUNDS CONSTRUCTORS
 (deftest bounds-test
+  (is (spec-check intervals/bounds))
   (is= {::intervals/lower       0.0
         ::intervals/upper       1.0
         ::intervals/open-lower? true
@@ -89,6 +97,7 @@
        intervals/bounds-long-non-))
 
 (deftest vector-bounds-test
+  (is (spec-check intervals/vector-bounds))
   (is= [{::intervals/lower       m/inf-
          ::intervals/upper       m/inf+
          ::intervals/open-lower? false
@@ -113,6 +122,7 @@
        (intervals/vector-bounds 2 intervals/bounds+)))
 
 (deftest positive-definite-matrix-bounds-test
+  (is (spec-check intervals/positive-definite-matrix-bounds))
   (is= [{::intervals/lower       0.0
          ::intervals/upper       m/inf+
          ::intervals/open-lower? true
@@ -127,12 +137,9 @@
          ::intervals/open-upper? false}]
        (intervals/positive-definite-matrix-bounds 2)))
 
-(defspec-test test-bounds `intervals/bounds)
-(defspec-test test-vector-bounds `intervals/vector-bounds)
-(defspec-test test-positive-definite-matrix-bounds `intervals/positive-definite-matrix-bounds)
-
 ;;;BOUNDS MANIPULATION
 (deftest sort-bounds-test
+  (is (spec-check intervals/sort-bounds))
   (is= [{::intervals/lower       -2.0
          ::intervals/open-lower? true
          ::intervals/open-upper? true
@@ -156,6 +163,7 @@
                               {::intervals/by-upper? true})))
 
 (deftest intersection-test
+  (is (spec-check intervals/intersection))
   (is= {::intervals/lower       -1.0
         ::intervals/upper       0.0
         ::intervals/open-lower? false
@@ -173,6 +181,7 @@
                                 (intervals/bounds -3.0 1.0 false false)])))
 
 (deftest union-test
+  (is (spec-check intervals/union))
   (is= [{::intervals/lower       -1.0
          ::intervals/open-lower? false
          ::intervals/open-upper? true
@@ -197,6 +206,7 @@
                          (intervals/bounds -3.0 1.0 false false)])))
 
 (deftest encompassing-bounds-test
+  (is (spec-check intervals/encompassing-bounds))
   (is= {::intervals/lower       -2.0
         ::intervals/upper       1.0
         ::intervals/open-lower? true
@@ -215,8 +225,3 @@
         ::intervals/open-upper? false}
        (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
                                        (intervals/bounds -3.0 1.0 false false)])))
-
-(defspec-test test-sort-bounds `intervals/sort-bounds)
-(defspec-test test-intersection `intervals/intersection)
-(defspec-test test-union `intervals/union)
-(defspec-test test-encompassing-bounds `intervals/encompassing-bounds)

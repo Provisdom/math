@@ -1,4 +1,4 @@
-(ns provisdom.math.t-special-functions
+(ns provisdom.math.special-functions-test
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
@@ -275,14 +275,37 @@
    #{}                                                      ;2/25
    #{}                                                      ;2/26
    #{}                                                      ;2/27
-   #{}                                                      ;2/28
+   #{}                                                      ;2/29
+   #{}                                                      ;3/1
+   #{}                                                      ;3/2
+   #{}                                                      ;3/3
+   #{}                                                      ;3/4
+   #{"4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
+     "Tabata (14->20sec) 1->2-leg L-sits"}                  ;3/5
+   #{}                                                      ;3/6
+   #{}                                                      ;3/7
+   #{"Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
+     "E2MOM7 of 11->20-sec straight-arm hanging 1->2-leg L-sits"
+     "E3MOM5 Handstand holds for 51->60-sec"}               ;3/8
+   #{"Work on butterfly c2b"}                               ;3/9
+   #{}                                                      ;3/10
+   #{}                                                      ;3/11
+   #{}                                                      ;3/12
+   #{"3 sets of 30-sec plank, 10 V-ups, 30-sec right plank, 10 V-ups, 30-sec left plank, 1-min rest; did it!"
+     "Handstand walking 7x50' in 60-sec with 2-min rest"}   ;3/13
+   #{}                                                      ;3/14
+   #{}                                                      ;3/15
+   #{}                                                      ;3/16
+   #{"Work on kipping motion for pullups, c2b, and bar muscle-ups"} ;3/17
    ])
 
 (comment
   #{})
 
 (def current-wod-list
-  [(str "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  "
+  ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
+   "E2MOM10: 30-cal row, 12 each of 95# thrusters + pull-ups"
+   (str "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  "
         "Min 5&6 - 20 Wall Ball + 15 Burpee Min 7&8 - 20 Box Jump Overs (30/24)  "
         "Min 9&10 - 10 Wall Ball + 20 Burpee Min 11&12 - 15 Burpee Box Jump Overs (30/24)")
    "5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
@@ -295,7 +318,7 @@
    "Fast-shuffling 100M farmer’s carry with 52.5#->52.8# in 45 min"
    "E5MOM3 56->60 second 135# OH hold"
    "30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"
-   "E3MOM5 Handstand holds for 46->60-sec"
+   "E3MOM5 Handstand holds for 51->60-sec"
    "E2MOM4 Handstand holds for 48->60-sec"
    "17->21 kipping HSPUs in a row"
    "5 rds of 10 kipping HSPU in 1-min, rest 2-min"
@@ -327,6 +350,7 @@
         "in 12:35->11-min @105->135")
    "Work on butterfly pull-ups"
    "Work on butterfly c2b"
+   "Work on kipping motion for pullups, c2b, and bar muscle-ups"
    "10-min EMOM odd: 4->5 bar muscle-up, even: rest"
    (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
         "with elevated heels, or with a counterbalance weight held out in front")
@@ -399,7 +423,7 @@
         e (select-wod d)]
     e))
 
-;;2 SECONDS
+;;40 SECONDS
 
 (set! *warn-on-reflection* true)
 
@@ -407,6 +431,7 @@
 
 ;;;ERF FUNCTIONS
 (deftest erf-test
+  (is (spec-check special-fns/erf))
   (is= -1.0 (special-fns/erf m/inf-))
   (is= 1.0 (special-fns/erf m/inf+))
   (is (m/nan? (special-fns/erf m/nan)))
@@ -422,6 +447,7 @@
   (is= -0.11246291601828491 (special-fns/erf -0.1)))
 
 (deftest erf-diff-test
+  (is (spec-check special-fns/erf-diff))
   (is= 2.0 (special-fns/erf-diff m/inf- m/inf+))
   (is= 0.0 (special-fns/erf-diff m/inf+ m/inf+))
   (is= -1.0 (special-fns/erf-diff m/inf+ 0.0))
@@ -433,6 +459,7 @@
   (is= 0.842700792949715 (special-fns/erf-diff 0.0 1.0)))
 
 (deftest erf-derivative-test
+  (is (spec-check special-fns/erf-derivative))
   (is= 0.0 (special-fns/erf-derivative m/inf-))
   (is= 0.0 (special-fns/erf-derivative m/inf+))
   (is= 1.1283791670955126 (special-fns/erf-derivative 0.0))
@@ -441,6 +468,7 @@
   (is= 0.9615412988393078 (special-fns/erf-derivative 0.4)))
 
 (deftest erfc-test
+  (is (spec-check special-fns/erfc))
   (is= 2.0 (special-fns/erfc m/inf-))
   (is= 0.0 (special-fns/erfc m/inf+))
   (is (m/nan? (special-fns/erfc m/nan)))
@@ -451,6 +479,7 @@
   (is= 0.5716076449533315 (special-fns/erfc 0.4)))
 
 (deftest inv-erf-test
+  (is (spec-check special-fns/inv-erf))
   (is= m/inf- (special-fns/inv-erf -1.0))
   (is= m/inf+ (special-fns/inv-erf 1.0))
   (is= 0.0 (special-fns/inv-erf 0.0))
@@ -472,6 +501,7 @@
   (is= 0.37080715859355795 (special-fns/inv-erf 0.4)))
 
 (deftest inv-erfc-test
+  (is (spec-check special-fns/inv-erfc))
   (is= m/inf- (special-fns/inv-erfc 2.0))
   (is= m/inf+ (special-fns/inv-erfc 0.0))
   (is= 0.37080715859355795 (special-fns/inv-erfc 0.6))
@@ -480,6 +510,7 @@
   (is= -2.100000000000001 (special-fns/inv-erfc 1.997020533343667)))
 
 (deftest inv-cdf-standard-normal-test
+  (is (spec-check special-fns/inv-cdf-standard-normal))
   (is= m/inf- (special-fns/inv-cdf-standard-normal 0.0))
   (is= -0.5244005127080409 (special-fns/inv-cdf-standard-normal 0.3))
   (is= 0.0 (special-fns/inv-cdf-standard-normal 0.5))
@@ -488,6 +519,7 @@
   (is= 2.750032615602772 (special-fns/inv-cdf-standard-normal 0.997020533343667)))
 
 (deftest cdf-standard-normal-test
+  (is (spec-check special-fns/cdf-standard-normal))
   (is= 0.0 (special-fns/cdf-standard-normal m/inf-))
   (is= 0.5 (special-fns/cdf-standard-normal 0.0))
   (is= 1.0 (special-fns/cdf-standard-normal m/inf+))
@@ -495,17 +527,9 @@
   (is= 0.15729920705028516 (special-fns/cdf-standard-normal -1.0056199694085204))
   (is= 0.997020533343667 (special-fns/cdf-standard-normal 2.750032615602772)))
 
-(defspec-test test-erf `special-fns/erf)
-(defspec-test test-erf-diff `special-fns/erf-diff)
-(defspec-test test-erf-derivative `special-fns/erf-derivative)
-(defspec-test test-erfc `special-fns/erfc)
-(defspec-test test-inv-erf `special-fns/inv-erf)
-(defspec-test test-inv-erfc `special-fns/inv-erfc)
-(defspec-test test-inv-cdf-standard-normal `special-fns/inv-cdf-standard-normal)
-(defspec-test test-cdf-standard-normal `special-fns/cdf-standard-normal)
-
 ;;;GAMMA
 (deftest gamma-test
+  (is (spec-check special-fns/gamma))
   (is= 0.0 (special-fns/gamma m/inf-))
   (is= m/inf+ (special-fns/gamma m/inf+))
   (is (m/nan? (special-fns/gamma m/nan)))
@@ -520,6 +544,7 @@
   (is= -10.686287021193193 (special-fns/gamma -0.1)))
 
 (deftest lower-gamma-test
+  (is (spec-check special-fns/lower-gamma))
   (is (m/nan? (special-fns/lower-gamma m/nan m/nan)))
   (is= 0.0 (special-fns/lower-gamma m/inf+ 0.0))
   (is= 0.0 (special-fns/lower-gamma 0.1 0.0))
@@ -534,6 +559,7 @@
   (is= 9.283972028379889 (special-fns/lower-gamma 0.1 1)))
 
 (deftest upper-gamma-test
+  (is (spec-check special-fns/upper-gamma))
   (is (m/nan? (special-fns/upper-gamma m/nan m/nan)))
   (is= m/inf+ (special-fns/upper-gamma m/inf+ 0.0))
   (is= 9.513507698668732 (special-fns/upper-gamma 0.1 0.0))
@@ -548,6 +574,7 @@
   (is= 0.22953567028884256 (special-fns/upper-gamma 0.1 1)))
 
 (deftest upper-gamma-derivative-x-test
+  (is (spec-check special-fns/upper-gamma-derivative-x))
   (is (m/nan? (special-fns/upper-gamma-derivative-x m/nan m/nan)))
   (is= 0.0 (special-fns/upper-gamma-derivative-x m/inf+ 0.0))
   (is (m/nan? (special-fns/upper-gamma-derivative-x m/inf+ m/inf+)))
@@ -564,6 +591,7 @@
   (is= 0.03866916944030238 (special-fns/upper-gamma-derivative-x 0.1 1)))
 
 (deftest regularized-gamma-p-test
+  (is (spec-check special-fns/regularized-gamma-p))
   (is (m/nan? (special-fns/regularized-gamma-p m/nan m/nan)))
   (is= 0.0 (special-fns/regularized-gamma-p m/inf+ 0.0))
   (is= 0.0 (special-fns/regularized-gamma-p 0.1 0.0))
@@ -578,6 +606,7 @@
   (is= 0.9758726562736726 (special-fns/regularized-gamma-p 0.1 1)))
 
 (deftest regularized-gamma-q-test
+  (is (spec-check special-fns/regularized-gamma-q))
   (is (m/nan? (special-fns/regularized-gamma-q m/nan m/nan)))
   (is= 1.0 (special-fns/regularized-gamma-q m/inf+ 0.0))
   (is= 1.0 (special-fns/regularized-gamma-q 0.1 0.0))
@@ -592,6 +621,7 @@
   (is= 0.02412734372632741 (special-fns/regularized-gamma-q 0.1 1)))
 
 (deftest log-gamma-test
+  (is (spec-check special-fns/log-gamma))
   (is= m/inf+ (special-fns/log-gamma m/inf+))
   (is (m/nan? (special-fns/log-gamma m/nan)))
   (is= 2.2527126517342055 (special-fns/log-gamma 0.1))
@@ -601,6 +631,12 @@
   (is= 0.2608672465316666 (special-fns/log-gamma 0.7)))
 
 (deftest log-gamma-derivative-test                          ;same as digamma
+  (is (spec-check special-fns/log-gamma-derivative
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 600}}))
   (is= m/inf+ (special-fns/log-gamma-derivative m/inf+))
   (is (m/nan? (special-fns/log-gamma-derivative m/nan)))
   (is= -10.423754943278134 (special-fns/log-gamma-derivative 0.1))
@@ -614,6 +650,12 @@
   (is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0)))
 
 (deftest gamma-derivative-test
+  (is (spec-check special-fns/gamma-derivative
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 500}}))
   (is= m/inf+ (special-fns/gamma-derivative m/inf+))
   (is (m/nan? (special-fns/gamma-derivative m/nan)))
   (is= -99.16647290191278 (special-fns/gamma-derivative 0.1))
@@ -624,6 +666,11 @@
   (is= -1.5836580833783638 (special-fns/gamma-derivative 0.7)))
 
 (deftest trigamma-test
+  (is (spec-check special-fns/trigamma {:coll-check-limit 10
+                                        :coll-error-limit 10
+                                        :fspec-iterations 10
+                                        :recursion-limit  1
+                                        :test-check       {:num-tests 45}}))
   (is= m/inf+ (special-fns/trigamma m/inf+))
   (is (m/nan? (special-fns/trigamma m/nan)))
   (is= 101.43329914974142 (special-fns/trigamma 0.1))
@@ -636,6 +683,7 @@
   (is= m/inf+ (special-fns/trigamma -2.0)))
 
 (deftest multivariate-gamma-test
+  (is (spec-check special-fns/multivariate-gamma))
   (is (m/nan? (special-fns/multivariate-gamma m/nan 0)))
   (is= 1.0 (special-fns/multivariate-gamma m/inf+ 0))
   (is= 1.0 (special-fns/multivariate-gamma 0.1 0))
@@ -645,6 +693,7 @@
   (is= 75.05107616754486 (special-fns/multivariate-gamma 1.1 3)))
 
 (deftest multivariate-log-gamma-test
+  (is (spec-check special-fns/log-gamma))
   (is (m/nan? (special-fns/multivariate-log-gamma m/nan 0)))
   (is= 0.0 (special-fns/multivariate-log-gamma m/inf+ 0))
   (is= 0.0 (special-fns/multivariate-log-gamma 0.1 0))
@@ -652,22 +701,9 @@
   (is= -0.049872441259839764 (special-fns/multivariate-log-gamma 1.1 1))
   (is= 0.9207263597340951 (special-fns/multivariate-log-gamma 1.1 2)))
 
-(defspec-test test-gamma `special-fns/gamma)
-(defspec-test test-lower-gamma `special-fns/lower-gamma)
-(defspec-test test-upper-gamma `special-fns/upper-gamma)
-(defspec-test test-upper-gamma-derivative-x `special-fns/upper-gamma-derivative-x)
-(defspec-test test-regularized-gamma-p `special-fns/regularized-gamma-p)
-(defspec-test test-regularized-gamma-q `special-fns/regularized-gamma-q)
-(defspec-test test-log-gamma `special-fns/log-gamma)
-;(defspec-test test-log-gamma-derivative `mf/log-gamma-derivative)
-;(defspec-test test-digamma `mf/digamma)
-;(defspec-test test-gamma-derivative `mf/gamma-derivative)
-;(defspec-test test-trigamma `mf/trigamma)
-(defspec-test test-multivariate-gamma `special-fns/multivariate-gamma)
-(defspec-test test-multivariate-log-gamma `special-fns/multivariate-log-gamma)
-
 ;;;BETA
 (deftest beta-test
+  (is (spec-check special-fns/beta))
   (is (m/nan? (special-fns/beta m/nan m/nan)))
   (is= 0.47619047619047616 (special-fns/beta 1.0 2.1))
   (is (m/nan? (special-fns/beta 0.1 m/inf+)))
@@ -681,6 +717,7 @@
   (is= 9.999999999999998 (special-fns/beta 1 0.1)))
 
 (deftest log-beta-test
+  (is (spec-check special-fns/log-beta))
   (is (m/nan? (special-fns/log-beta m/nan m/nan)))
   (is= -0.7419373447293773 (special-fns/log-beta 1.0 2.1))
   (is (m/nan? (special-fns/log-beta 0.1 m/inf+)))
@@ -694,6 +731,7 @@
   (is= 2.302585092994046 (special-fns/log-beta 1 0.1)))
 
 (deftest regularized-beta-test
+  (is (spec-check special-fns/regularized-beta))
   (is= 0.7667417521157982 (special-fns/regularized-beta 0.5 1.0 2.1))
   (is= 1.0 (special-fns/regularized-beta 1 1 1.1))
   (is= 1.0 (special-fns/regularized-beta 1 1.1 1))
@@ -706,6 +744,7 @@
   (is= 0.0 (special-fns/regularized-beta 0 1 1)))
 
 (deftest incomplete-beta-test
+  (is (spec-check special-fns/incomplete-beta))
   (is= 0.36511512005514196 (special-fns/incomplete-beta 0.5 1.0 2.1))
   (is= 0.9090909090909091 (special-fns/incomplete-beta 1 1 1.1))
   (is= 0.9090909090909091 (special-fns/incomplete-beta 1 1.1 1))
@@ -716,10 +755,5 @@
   (is= 9.999999999999998 (special-fns/incomplete-beta 1 1 0.1))
   (is= 1.5707963267948968 (special-fns/incomplete-beta 0.5 0.5 0.5))
   (is= 0.0 (special-fns/incomplete-beta 0 1 1)))
-
-(defspec-test test-beta `special-fns/beta)
-(defspec-test test-log-beta `special-fns/log-beta)
-(defspec-test test-regularized-beta `special-fns/regularized-beta)
-(defspec-test test-incomplete-beta `special-fns/incomplete-beta)
 
 #_(ost/unstrument)

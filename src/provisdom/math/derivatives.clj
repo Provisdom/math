@@ -383,15 +383,14 @@
          (- (+ (v->number e++) (v->number e--))
             (v->number e+-) (v->number e-+))))))
 
-(comment "spec functions problems"
-         (s/fdef joint-central-derivative
-                 :args (s/cat :v->number ::v->number
-                              :v ::vector/vector
-                              :row ::mx/row
-                              :column ::mx/column
-                              :dx ::dx
-                              :multiplier ::multiplier)
-                 :ret ::m/number))
+(s/fdef joint-central-derivative
+        :args (s/cat :v->number ::v->number
+                     :v ::vector/vector
+                     :row ::mx/row
+                     :column ::mx/column
+                     :dx ::dx
+                     :multiplier ::multiplier)
+        :ret ::m/number)
 
 (defn hessian-fn
   "Returns a numerical Hessian function. Function `v->number` takes a vector and
@@ -418,8 +417,9 @@
            v)))
      (let [multiplier (/ h)
            dx (m/sqrt h)
-           coefficient (map #(let [[e1 e2] %]
-                               [(* dx e1) e2])
+           coefficient (map (fn [central-coefficient]
+                              (let [[e1 e2] central-coefficient]
+                                [(* dx e1) e2]))
                             (get-central-coefficients 2 2))]
        (fn [v]
          (if (empty? v)
@@ -435,8 +435,9 @@
 
                      (== row column)
                      (* multiplier
-                        (apply + (map #(let [[e1 e2] %]
-                                         (* (v->number (assoc v row (+ (get v row) e1))) e2))
+                        (apply + (map (fn [coeff]
+                                        (let [[e1 e2] coeff]
+                                          (* (v->number (assoc v row (+ (get v row) e1))) e2)))
                                       coefficient)))
 
                      :else (joint-central-derivative v->number v row column dx multiplier))))))))))))

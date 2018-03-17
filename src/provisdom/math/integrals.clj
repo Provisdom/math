@@ -399,10 +399,14 @@
    `::one-dimension-errors`."
   [v->tensor finite-intervals [low-precision-weights high-precision-weights nodes]]
   (let [half-sums (mapv tensor/average finite-intervals)
-        half-diffs (mapv (fn [[a b]] (* 0.5 (- b a))) finite-intervals)
+        half-diffs (mapv (fn [[a b]]
+                           (* 0.5 (- b a)))
+                         finite-intervals)
         unnormalized-nodes (for [v (range (count finite-intervals))]
-                             (mapv (partial unnormalize (nth half-sums v) (nth half-diffs v)) nodes))
-        mapped-nodes (mapv v->tensor (tensor/to-tensor (apply combo/cartesian-product unnormalized-nodes)))
+                             (mapv (partial unnormalize (nth half-sums v) (nth half-diffs v))
+                                   nodes))
+        mapped-nodes (mapv v->tensor
+                           (tensor/to-tensor (apply combo/cartesian-product unnormalized-nodes)))
         multiplier (apply * half-diffs)
         dimensions (count finite-intervals)
         f-low-precision #(tensor/inner-product low-precision-weights (vec (take-nth 2 (rest %))))
@@ -415,7 +419,10 @@
                               (range dimensions)))
                       (range dimensions)))
         partitioned-nodes (tensor/partition-recursively (count high-precision-weights) mapped-nodes)
-        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef] (ef tot)) partitioned-nodes %))
+        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef]
+                                                        (ef tot))
+                                                      partitioned-nodes
+                                                      %))
         high-precision-values (reduce-f (repeat dimensions f-high-precision))
         low-precision-values (reduce-f (repeat dimensions f-low-precision))
         dim1 (mapv reduce-f f1dim)
@@ -506,11 +513,16 @@
   (let [m (if (empty? one-dimension-errors)
             m/inf-
             (apply max one-dimension-errors))
-        ps (map vector (range) one-dimension-errors)]
+        ps (map vector
+                (range)
+                one-dimension-errors)]
     (if iter-below-min?
-      (let [dim (ffirst (filter #(= (second %) m) ps))]
+      (let [dim (ffirst (filter #(= (second %) m)
+                                ps))]
         (if dim [dim] []))
-      (mapv first (filter #(>= (second %) (* m 0.1)) ps)))))
+      (mapv first
+            (filter #(>= (second %) (* m 0.1))
+                    ps)))))
 
 (s/def ::select-dimensions-fn
   (s/with-gen (s/fspec :args (s/cat :one-dimension-errors ::one-dimension-errors
@@ -650,8 +662,14 @@
         fms (map ::multiplicative-fn maps)
         fvs (map ::converter-fn maps)
         new-intervals (mapv ::intervals/finite-interval maps)]
-    [#(tensor/multiply (apply * (map (fn [f a] (f a)) fms %))
-                       (v->tensor (mapv (fn [f a] (f a)) fvs %)))
+    [#(tensor/multiply (apply * (map (fn [f a]
+                                       (f a))
+                                     fms
+                                     %))
+                       (v->tensor (mapv (fn [f a]
+                                          (f a))
+                                        fvs
+                                        %)))
      new-intervals]))
 
 (s/fdef change-of-variable-for-rectangular-integration

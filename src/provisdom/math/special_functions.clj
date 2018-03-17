@@ -340,7 +340,8 @@
 
 (s/fdef multivariate-gamma
         :args (s/and (s/cat :a ::m/number
-                            :p (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max 20})))
+                            :p (s/with-gen ::m/int-non-
+                                           #(gen/large-integer* {:min 0 :max 20})))
                      (fn [{:keys [a p]}]
                        (and (not (m/long-able-non+?
                                    (+ a (* 0.5 (m/one- p)))))
@@ -361,7 +362,8 @@
 
 (s/fdef multivariate-log-gamma
         :args (s/and (s/cat :a ::m/nan-or-pos
-                            :p (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max 20})))
+                            :p (s/with-gen ::m/int-non-
+                                           #(gen/large-integer* {:min 0 :max 20})))
                      (fn [{:keys [a p]}]
                        (or (m/nan? a) (> a (* 0.5 p)))))
         :ret ::m/nan-or-non-inf-)

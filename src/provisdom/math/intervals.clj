@@ -57,6 +57,17 @@
         :args (s/cat :interval ::interval :number ::m/number)
         :ret boolean?)
 
+(defn in-interval-roughly?
+  "Tests whether `number` is roughly inside of the interval."
+  [[lower upper] number accu]
+  (and (>= number (- lower accu)) (<= number (+ upper accu))))
+
+(s/fdef in-interval-roughly?
+        :args (s/cat :interval ::interval
+                     :number ::m/number
+                     :accu ::m/accu)
+        :ret boolean?)
+
 ;;;BOUNDS TEST
 (defn in-bounds?
   "Tests whether `number` is inside of the bounds."
@@ -189,14 +200,16 @@
 (defn union
   "Returns a vector of non-overlapping bounds."
   [vector-bounds]
-  (loop [sep []
-         [a b & c] (sort-bounds vector-bounds)]
-    (if b
-      (let [g (intersection [a b])]
-        (if g
-          (recur sep (cons g c))
-          (recur (conj sep a) (cons b c))))
-      (conj sep a))))
+  (if (empty? vector-bounds)
+    []
+    (loop [sep []
+           [a b & c] (sort-bounds vector-bounds)]
+      (if b
+        (let [g (intersection [a b])]
+          (if g
+            (recur sep (cons g c))
+            (recur (conj sep a) (cons b c))))
+        (conj sep a)))))
 
 (s/fdef union
         :args (s/cat :vector-bounds ::vector-bounds)
@@ -206,10 +219,12 @@
   "Returns smallest bounds that encompass the bounds in `vector-bounds`."
   [vector-bounds]
   (let [[lower open-lower?] (min-bound
-                              (map #(vector (::lower %) (::open-lower? %))
+                              (map (fn [bounds]
+                                     (vector (::lower bounds) (::open-lower? bounds)))
                                    vector-bounds))
         [upper open-upper?] (max-bound
-                              (map #(vector (::upper %) (::open-upper? %))
+                              (map (fn [bounds]
+                                     (vector (::upper bounds) (::open-upper? bounds)))
                                    vector-bounds))]
     (bounds lower upper open-lower? open-upper?)))
 

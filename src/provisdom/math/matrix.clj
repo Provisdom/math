@@ -1058,37 +1058,35 @@
                   (rest s2)
                   (rest s3))))))))
 
-(comment "can't spec general functions"
-         (s/fdef ereduce-kv
-                 :args (s/or :three (s/cat :f (s/fspec :args (s/cat :res any?
-                                                                    :row ::row
-                                                                    :column ::column
-                                                                    :number ::m/number)
-                                                       :ret any?)
-                                           :init any?
-                                           :m ::matrix)
-                             :four (s/cat :f (s/fspec :args (s/cat :res any?
-                                                                   :row ::row
-                                                                   :column ::column
-                                                                   :number1 ::m/number
-                                                                   :number2 ::m/number)
-                                                      :ret any?)
-                                          :init any?
-                                          :m1 ::matrix
-                                          :m2 ::matrix)
-                             :five (s/cat :f (s/fspec :args (s/cat :res any?
-                                                                   :row ::row
-                                                                   :column ::column
-                                                                   :number1 ::m/number
-                                                                   :number2 ::m/number
-                                                                   :number3 ::m/number)
-                                                      :ret any?)
-                                          :init any?
-                                          :m1 ::matrix
-                                          :m2 ::matrix
-                                          :m3 ::matrix))
-                 :ret any?)
-         )
+(s/fdef ereduce-kv
+        :args (s/or :three (s/cat :f (s/fspec :args (s/cat :res any?
+                                                           :row ::row
+                                                           :column ::column
+                                                           :number ::m/number)
+                                              :ret any?)
+                                  :init any?
+                                  :m ::matrix)
+                    :four (s/cat :f (s/fspec :args (s/cat :res any?
+                                                          :row ::row
+                                                          :column ::column
+                                                          :number1 ::m/number
+                                                          :number2 ::m/number)
+                                             :ret any?)
+                                 :init any?
+                                 :m1 ::matrix
+                                 :m2 ::matrix)
+                    :five (s/cat :f (s/fspec :args (s/cat :res any?
+                                                          :row ::row
+                                                          :column ::column
+                                                          :number1 ::m/number
+                                                          :number2 ::m/number
+                                                          :number3 ::m/number)
+                                             :ret any?)
+                                 :init any?
+                                 :m1 ::matrix
+                                 :m2 ::matrix
+                                 :m3 ::matrix))
+        :ret any?)
 
 (defn matrix->sparse
   "Returns a sparse-matrix (i.e., a vector of tuples of [row column number]).
@@ -1228,7 +1226,9 @@
   "Removes a column in a matrix"
   [m column]
   (if (<= (inc column) (columns m))
-    (let [m2 (mapv #(vector/removev % column) m)]
+    (let [m2 (mapv (fn [r]
+                     (vector/removev r column))
+                   m)]
       (if (empty? m2) [[]] m2))
     m))
 

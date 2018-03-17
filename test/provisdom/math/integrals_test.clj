@@ -1,4 +1,4 @@
-(ns provisdom.math.t-integrals
+(ns provisdom.math.integrals-test
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
@@ -9,7 +9,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;50 SECONDS
+;;50 SECONDS -- haven't done much of this one yet
 
 (set! *warn-on-reflection* true)
 
@@ -22,7 +22,7 @@
 ; Distributed under the Eclipse Public License, the same as Clojure.
 
 (defn- simpsons-estimate
-  "Equation '8.5' page 509 - approximates the integral of f over [a b]."
+  "Equation '8.5' page 509 - approximates the integral of `f` over [`a` `b`]."
   ^double
   [f ^double a ^double b ^double h]
   (* (/ h 3.0)
@@ -31,7 +31,7 @@
         (f b))))
 
 (defn- close-enough?
-  "Finds if |a - b| < |error|."
+  "Finds if |`a` - `b`| < |`error`|."
   [^double a ^double b ^double error]
   (< (m/abs (- a b)) (m/abs error)))
 
@@ -42,7 +42,7 @@
   (+ S* S** (* (/ 1.0 15.0) (+ S* S** (* -1.0 S)))))
 
 (defn- adapt-quad-internal
-  "Do not call this fn directly.  Start with adaptive-quadrature instead."
+  "Do not call this fn directly. Start with adaptive-quadrature instead."
   [f delta eps n k sigma a h fa fc fb S]
   (let [delta (double delta)
         eps (double eps)
@@ -69,10 +69,10 @@
                (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
 
 (defn- adaptive-quadrature-test
-  "Approximates the definite integral of f over [a b] with an error less
-  or equal than eps.  f is a real valued function of one real argument.
-  The parameter n specifies how many recursive calls are allowed.  An
-  exception is thrown before the n+1st recursive call."
+  "Approximates the definite integral of `f` over [`a` `b`] with an error less
+  or equal than `eps`. `f is a real valued function of one real argument. The
+  parameter `n` specifies how many recursive calls are allowed. An exception is
+  thrown before the `n`+1st recursive call."
   [f a b eps n]
   (let [a (double a)
         b (double b)
@@ -99,21 +99,22 @@
 
 (comment
   (s/fdef univariate-integration-test
-          :args (s/and
-                  (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?)
-                         :lower-bound double?
-                         :upper-bound double?)
-                  #(> (:upper-bound %) (:lower-bound %)))
+          :args (s/and (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?)
+                              :lower-bound double?
+                              :upper-bound double?)
+                       #(> (:upper-bound %) (:lower-bound %)))
           :ret double?))
 
 ;;;INTEGRATION TESTS
+;
 (comment "returned functions don't seem to equate..."
          (deftest change-of-variable-test
+           (is (spec-check integrals/change-of-variable))
            (is= {::integrals/multiplicative-fn (fn [number]
-                                          (let [s (m/sq number)]
-                                            (m/div (inc s) (m/sq (m/one- s)))))
+                                                 (let [s (m/sq number)]
+                                                   (m/div (inc s) (m/sq (m/one- s)))))
                  ::integrals/converter-fn      (fn [number]
-                                          (m/div number (m/one- (m/sq number))))
+                                                 (m/div number (m/one- (m/sq number))))
                  ::intervals/interval          [-1.0 1.0]}
                 (integrals/change-of-variable [m/inf- m/inf+]))
            (is= {::integrals/multiplicative-fn (constantly 1.0)
@@ -121,19 +122,26 @@
                  ::intervals/interval          [3.0 4.0]}
                 (integrals/change-of-variable [3.0 4.0]))
            (is= {::integrals/multiplicative-fn (fn [number]
-                                          (m/div (m/sq number)))
+                                                 (m/div (m/sq number)))
                  ::integrals/converter-fn      (fn [number]
-                                          (+ 3.0 (m/div (m/one- number) number)))
+                                                 (+ 3.0 (m/div (m/one- number) number)))
                  ::intervals/interval          [0.0 1.0]}
                 (integrals/change-of-variable [3.0 m/inf+]))
            (is= {::integrals/multiplicative-fn (fn [number]
-                                          (m/div (m/sq number)))
+                                                 (m/div (m/sq number)))
                  ::integrals/converter-fn      (fn [number]
-                                          (- 4.0 (m/div (m/one- number) number)))
+                                                 (- 4.0 (m/div (m/one- number) number)))
                  ::intervals/interval          [0.0 1.0]}
-                (integrals/change-of-variable [m/inf- 4.0]))))
+                (integrals/change-of-variable [m/inf- 4.0])))
+         )
 
 (deftest integration-test
+  (is (spec-check integrals/integration
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 1}}))
   ;;ordinary
   (is= 69.33333333333331 (integrals/integration m/sq [2.0 6.0]))
   (is= 2.886579864025407E-15 (integrals/integration m/cos [m/PI (* 5 m/PI)]))
@@ -146,9 +154,12 @@
         ::anomalies/fn       #'provisdom.math.integrals/adaptive-quadrature,
         ::anomalies/category ::anomalies/no-solve}
        (integrals/integration m/cos [m/PI m/inf+]))
-  (is= 0.19999999999999996 (integrals/integration #(m/pow % -2.0) [5.0 m/inf+]))
-  (is= 0.19999999999999996 (integrals/integration #(m/pow % -2.0) [m/inf- -5.0]))
-  (is= 1.7724538509055163 (integrals/integration #(m/exp (- (m/sq %))) [m/inf- m/inf+]))
+  (is= 0.19999999999999996
+       (integrals/integration #(m/pow % -2.0) [5.0 m/inf+]))
+  (is= 0.19999999999999996
+       (integrals/integration #(m/pow % -2.0) [m/inf- -5.0]))
+  (is= 1.7724538509055163
+       (integrals/integration #(m/exp (- (m/sq %))) [m/inf- m/inf+]))
   ;;vector
   (is= [15.999999999999998 69.33333333333333]
        (integrals/integration
@@ -171,54 +182,76 @@
          [5.0 m/inf+])))
 
 (deftest rectangular-integration-test
+  (is (spec-check integrals/rectangular-integration
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 1}}))
   (is= 1.0
        (integrals/rectangular-integration
-         (fn [[a b]] (+ (double (or a 0.0)) (or b 0.0)))
+         (fn [[a b]]
+           (+ (double (or a 0.0)) (or b 0.0)))
          [[0.0 1.0] [0.0 1.0]]))
   #_(is= 1.5                                                ;pretty slow
          (integrals/rectangular-integration
-           (fn [[a b c]] (+ (double (or a 0.0)) (or b 0.0) (or c 0.0)))
+           (fn [[a b c]]
+             (+ (double (or a 0.0)) (or b 0.0) (or c 0.0)))
            [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   #_(is= 2.0                                                ;slow
          (integrals/rectangular-integration
-           (fn [[a b c d]] (+ (double (or a 0.0)) (or b 0.0) (or c 0.0) (or d 0.0)))
+           (fn [[a b c d]]
+             (+ (double (or a 0.0)) (or b 0.0) (or c 0.0) (or d 0.0)))
            [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   #_(is= 3.1415926535897944                                 ;slow-ish 3.141592653589793 PI
          (integrals/rectangular-integration
-           (fn [[a b]] (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0))))))
+           (fn [[a b]]
+             (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0))))))
            [[m/inf- m/inf+] [m/inf- m/inf+]]))
   (is= 0.1
        (integrals/rectangular-integration
-         (fn [[a b]] (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
+         (fn [[a b]]
+           (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
          [[5.0 m/inf+] [1.0 2.0]]))
   (is= 0.01666666666666667
        (integrals/rectangular-integration
-         (fn [[a b]] (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
+         (fn [[a b]]
+           (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
          [[3.0 4.0] [m/inf- -5.0]]))
   ;;vector
   (is= [32.0 64.0]
        (integrals/rectangular-integration
-         (fn [[a b]] [(or a 0.0) (* (double (or a 0.0)) (or b 0.0))])
+         (fn [[a b]]
+           [(or a 0.0) (* (double (or a 0.0)) (or b 0.0))])
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [0.24705031697079533 0.24705031697079533]
        (integrals/rectangular-integration
-         (fn [[a b]] [(m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))
-                      (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))])
+         (fn [[a b]]
+           [(m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))
+            (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))])
          [[m/inf- m/inf+] [1.0 3.0]]))
   ;;matrix
   (is= [[32.0 64.0] [32.0 40.00000000000001]]
        (integrals/rectangular-integration
-         (fn [[a b]] [[(or a 0.0) (* (double (or a 0.0)) (or b 0.0))] [(+ 2.0 (or b 0.0)) 5.0]])
+         (fn [[a b]]
+           [[(or a 0.0) (* (double (or a 0.0)) (or b 0.0))] [(+ 2.0 (or b 0.0)) 5.0]])
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
        (integrals/rectangular-integration
-         (fn [[a b]] [[(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]
-                      [(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]])
+         (fn [[a b]]
+           [[(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]
+            [(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]])
          [[2.0 6.0] [m/inf- -5.0]])))
 
 #_(deftest non-rectangular-2D-integration-test              ;too slow
+    (is (spec-check integrals/non-rectangular-2D-integration
+                    {:coll-check-limit 10
+                     :coll-error-limit 10
+                     :fspec-iterations 10
+                     :recursion-limit  1
+                     :test-check       {:num-tests 1}}))
     (is= 1.0
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
@@ -236,58 +269,74 @@
            (fn [outer inner]
              (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner)))))
            [m/inf- m/inf+]
-           (fn [outer] [m/inf- m/inf+])))
+           (fn [outer]
+             [m/inf- m/inf+])))
     (is= [32.0 64.0]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
              (vector outer (* outer (double inner))))
            [2.0 6.0]
-           (fn [outer] [1.0 3.0])))
+           (fn [outer]
+             [1.0 3.0])))
     (is= [0.24705031697079533 0.24705031697079533]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
              [(* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))
               (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))])
            [m/inf- m/inf+]
-           (fn [outer] [1.0 3.0])))
+           (fn [outer]
+             [1.0 3.0])))
     (is= [[32.0 64.0] [32.0 39.99999999999999]]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
              (vector [outer (* outer (double inner))] [(+ 2.0 inner) 5.0]))
            [2.0 6.0]
-           (fn [outer] [1.0 3.0])))
-    (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
+           (fn [outer]
+             [1.0 3.0])))
+    (is= [[0.06666666666666667 0.06666666666666667]
+          [0.06666666666666667 0.06666666666666667]]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
              [[(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]
               [(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]])
            [2.0 6.0]
-           (fn [outer] [m/inf- -5.0]))))
+           (fn [outer]
+             [m/inf- -5.0]))))
 
 #_(deftest non-rectangular-3D-integration-test              ;too slow
+    (is (spec-check integrals/non-rectangular-3D-integration
+                    {:coll-check-limit 10
+                     :coll-error-limit 10
+                     :fspec-iterations 10
+                     :recursion-limit  1
+                     :test-check       {:num-tests 1}}))
     (is= 1.5
          (integrals/non-rectangular-3D-integration
            (fn [outer middle inner]
              (+ (double outer) middle inner))
            [0.0 1.0]
-           (fn [outer] [0.0 1.0])
-           (fn [outer middle] [0.0 1.0]))))
+           (fn [outer]
+             [0.0 1.0])
+           (fn [outer middle]
+             [0.0 1.0]))))
 
 #_(deftest non-rectangular-4D-integration-test              ;too slow
+    (is (spec-check integrals/non-rectangular-4D-integration
+                    {:coll-check-limit 10
+                     :coll-error-limit 10
+                     :fspec-iterations 10
+                     :recursion-limit  1
+                     :test-check       {:num-tests 1}}))
     (is= 2.0000000000000004
          (integrals/non-rectangular-4D-integration
            (fn [outer outer-middle inner-middle inner]
              (+ (double outer) outer-middle inner-middle inner))
            [0.0 1.0]
-           (fn [outer] [0.0 1.0])
-           (fn [outer outer-middle] [0.0 1.0])
-           (fn [outer outer-middle inner-middle] [0.0 1.0]))))
-
-(defspec-test test-change-of-variable `integrals/change-of-variable)
-;(defspec-test test-integration `integrals/integration) ;slow
-;(defspec-test test-rectangular-integration `integrals/rectangular-integration) slow
-;(defspec-test test-integration-non-rectangular-2D `integrals/integration-non-rectangular-2D) ;too slow
-;(defspec-test test-integration-non-rectangular-3D `integrals/integration-non-rectangular-3D) ;way too slow
-;(defspec-test test-integration-non-rectangular-4D `integrals/integration-non-rectangular-4D) ;way way too slow
+           (fn [outer]
+             [0.0 1.0])
+           (fn [outer outer-middle]
+             [0.0 1.0])
+           (fn [outer outer-middle inner-middle]
+             [0.0 1.0]))))
 
 #_(ost/unstrument)

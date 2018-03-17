@@ -8,12 +8,16 @@
     [provisdom.math.core :as m]
     [clojure.string :as str]))
 
-(s/def ::digits (s/with-gen ::m/long+ #(gen/large-integer* {:min 1 :max 35})))
+(s/def ::digits
+  (s/with-gen ::m/long+
+              #(gen/large-integer* {:min 1 :max 35})))
+
 (s/def ::max-digits ::digits)
 (s/def ::max-length ::m/long+)
 
 (s/def ::decimal-places
-  (s/with-gen ::m/long-non- #(gen/large-integer* {:min 0 :max 35})))
+  (s/with-gen ::m/long-non-
+              #(gen/large-integer* {:min 0 :max 35})))
 
 (s/def ::max-decimal-places ::decimal-places)
 (s/def ::money? boolean?)

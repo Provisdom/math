@@ -71,7 +71,8 @@
 (s/def ::array2D
   (s/with-gen
     array2D?
-    #(gen/fmap (fn [v] (array2D :double v))
+    #(gen/fmap (fn [v]
+                 (array2D :double v))
                (gen/vector (gen/vector (s/gen ::m/double) 0 mdl) 1 mdl))))
 
 (defn array3D?
@@ -112,7 +113,10 @@
    (gen/fmap double-array
              (gen/vector (s/gen ::m/double) min-count max-count))))
 
-(s/def ::double-array (s/with-gen double-array? #(double-array-gen 1 mdl)))
+(s/def ::double-array
+  (s/with-gen
+    double-array?
+    #(double-array-gen 1 mdl)))
 
 (defn double-array2D?
   "Returns true if `x` is an Array and each element is a Double Array."
@@ -489,29 +493,51 @@
 
 (s/fdef double-array-add
         :args (s/or :one (s/cat :dbl-array ::double-array)
-                    :two (s/and (s/cat :dbl-array1 ::double-array
-                                       :dbl-array2 ::double-array)
-                                (fn [{:keys [dbl-array1 dbl-array2]}]
-                                  (= (count dbl-array1) (count dbl-array2))))
-                    :three (s/and (s/cat :dbl-array1 ::double-array
-                                         :dbl-array2 ::double-array
-                                         :dbl-array3 ::double-array)
-                                  (fn [{:keys [dbl-array1 dbl-array2 dbl-array3]}]
-                                    (and (= (count dbl-array1)
-                                            (count dbl-array2)
-                                            (count dbl-array3)))))
-                    :more (s/and (s/cat :dbl-array1 ::double-array
-                                        :dbl-array2 ::double-array
-                                        :dbl-array3 ::double-array
-                                        :dbl-arrays (s/with-gen (s/* ::double-array)
-                                                                #(gen/vector (s/gen ::double-array) 0 3)))
-                                 (fn [{:keys [dbl-array1 dbl-array2 dbl-array3 dbl-arrays]}]
-                                   (and (= (count dbl-array1)
-                                           (count dbl-array2)
-                                           (count dbl-array3))
-                                        (every? (fn [da]
-                                                  (= (count dbl-array1) (count da)))
-                                                dbl-arrays)))))
+                    :two (s/with-gen
+                           (s/and (s/cat :dbl-array1 ::double-array
+                                         :dbl-array2 ::double-array)
+                                  (fn [{:keys [dbl-array1 dbl-array2]}]
+                                    (println (vec dbl-array1) (vec dbl-array2))
+                                    (= (count dbl-array1) (count dbl-array2))))
+                           #(gen/bind
+                              (s/gen (s/int-in 0 6))
+                              (fn [i]
+                                (gen/tuple (double-array-gen i)
+                                           (double-array-gen i)))))
+                    :three (s/with-gen
+                             (s/and (s/cat :dbl-array1 ::double-array
+                                           :dbl-array2 ::double-array
+                                           :dbl-array3 ::double-array)
+                                    (fn [{:keys [dbl-array1 dbl-array2 dbl-array3]}]
+                                      (and (= (count dbl-array1)
+                                              (count dbl-array2)
+                                              (count dbl-array3)))))
+                             #(gen/bind
+                                (s/gen (s/int-in 0 6))
+                                (fn [i]
+                                  (gen/tuple (double-array-gen i)
+                                             (double-array-gen i)
+                                             (double-array-gen i)))))
+                    :more (s/with-gen
+                            (s/and (s/cat :dbl-array1 ::double-array
+                                          :dbl-array2 ::double-array
+                                          :dbl-array3 ::double-array
+                                          :dbl-arrays (s/with-gen (s/* ::double-array)
+                                                                  #(gen/vector (s/gen ::double-array) 0 3)))
+                                   (fn [{:keys [dbl-array1 dbl-array2 dbl-array3 dbl-arrays]}]
+                                     (and (= (count dbl-array1)
+                                             (count dbl-array2)
+                                             (count dbl-array3))
+                                          (every? (fn [da]
+                                                    (= (count dbl-array1) (count da)))
+                                                  dbl-arrays))))
+                            #(gen/bind
+                               (s/gen (s/int-in 0 6))
+                               (fn [i]
+                                 (gen/tuple (double-array-gen i)
+                                            (double-array-gen i)
+                                            (double-array-gen i)
+                                            (gen/vector (double-array-gen i)))))))
         :ret ::double-array)
 
 (defn double-array-subtract

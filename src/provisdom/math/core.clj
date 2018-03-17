@@ -657,7 +657,8 @@
 
 (s/fdef sgn
         :args (s/cat :number ::number)
-        :ret (s/or :nan ::nan :ret #{-1 0 1}))
+        :ret (s/or :nan ::nan
+                   :ret #{-1 0 1}))
 
 (defn exp
   "Returns e^`number`."
@@ -857,7 +858,9 @@
         :ret ::number)
 
 ;;;ROUNDING
-(s/def ::accu (s/with-gen ::non- #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
+(s/def ::accu
+  (s/with-gen ::non-
+              #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
 
 (defn round
   "Returns a long if possible. Otherwise, returns `number`.
@@ -878,7 +881,8 @@
       number)))
 
 (s/fdef round
-        :args (s/cat :number ::number :t #{:up :down :away-from-zero :toward-zero})
+        :args (s/cat :number ::number
+                     :t #{:up :down :away-from-zero :toward-zero})
         :ret ::number)
 
 (defn floor

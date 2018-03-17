@@ -16,9 +16,10 @@
 
 (def mdl 6)
 
-(s/def ::rng (s/with-gen
-               (partial satisfies? split/IRandom)
-               #(gen/return (split/next-rng))))
+(s/def ::rng
+  (s/with-gen
+    (partial satisfies? split/IRandom)
+    #(gen/return (split/next-rng))))
 
 (s/def ::seed ::m/long)
 (s/def ::rnd ::m/prob)

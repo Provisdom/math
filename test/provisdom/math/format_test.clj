@@ -1,4 +1,4 @@
-(ns provisdom.math.t-format
+(ns provisdom.math.format-test
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
@@ -15,6 +15,7 @@
 
 ;;;NUMBERS
 (deftest trim-number-as-string-test
+  (is (spec-check format/trim-number-as-string))
   (is= "-.003" (format/trim-number-as-string "-00.00300"))
   (is= "-.003" (format/trim-number-as-string "-.00300"))
   (is= ".003" (format/trim-number-as-string "00.00300"))
@@ -22,6 +23,7 @@
   (is= "300" (format/trim-number-as-string "0000300")))
 
 (deftest format-as-float-test
+  (is (spec-check format/format-as-float))
   (is= "123" (format/format-as-float 123.456 0))
   (is= "123.4560" (format/format-as-float 123.456 4))
   (is= "0.0000" (format/format-as-float 1.23456E-5 4))
@@ -30,6 +32,7 @@
   (is= "323234893849384900000.000" (format/format-as-float 3.232348938493849E20 3)))
 
 (deftest format-as-exponential-test
+  (is (spec-check format/format-as-exponential))
   (is= "2E+0" (format/format-as-exponential 2.0 {::format/digits 1}))
   (is= "2.3432E+4" (format/format-as-exponential 23432))
   (is= "2E+4" (format/format-as-exponential 23432 {::format/digits 1}))
@@ -42,6 +45,7 @@
   (is= "3.2323489384938490000E+20" (format/format-as-exponential 3.232348938493849E20 {::format/digits 20})))
 
 (deftest format-number-test
+  (is (spec-check format/format-number))
   (is= "23" (format/format-number 23.33 1))
   (is= "1.2E+6" (format/format-number 1234567 6))
   (is= "1234567" (format/format-number 1234567 8))
@@ -80,13 +84,9 @@
   (is= "-2.3423E+11" (format/format-number -2.342311111114234E11 12 {::format/max-digits 5}))
   (is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3})))
 
-(defspec-test test-trim-number-as-string `format/trim-number-as-string)
-(defspec-test test-format-as-float `format/format-as-float)
-(defspec-test test-format-as-exponential `format/format-as-exponential)
-(defspec-test test-format-number `format/format-number)
-
 ;;;SHORTHAND
 (deftest unparse-shorthand-test
+  (is (spec-check format/unparse-shorthand))
   (is= "3E+20" (format/unparse-shorthand 3.232348938493849E20 3))
   (is= "3T" (format/unparse-shorthand 3232394349923 3))
   (is= "32B" (format/unparse-shorthand 32323943499 3))
@@ -104,6 +104,7 @@
   (is= "-$323M" (format/unparse-shorthand -323234324 3 {::format/money? true})))
 
 (deftest parse-shorthand-test
+  (is (spec-check format/parse-shorthand))
   (is= 2.3432343E16 (format/parse-shorthand "23432.343T"))
   (is= 2.3432343E13 (format/parse-shorthand "23432.343B"))
   (is= 2.3432343E10 (format/parse-shorthand "23432.343M"))
@@ -112,8 +113,5 @@
   (is= m/inf- (format/parse-shorthand "-Inf"))
   (is= 2.3432343E16 (format/parse-shorthand "$23432.343T"))
   (is= -2.3432343E16 (format/parse-shorthand "-$23432.343T")))
-
-(defspec-test test-unparse-shorthand `format/unparse-shorthand)
-(defspec-test test-parse-shorthand `format/parse-shorthand)
 
 

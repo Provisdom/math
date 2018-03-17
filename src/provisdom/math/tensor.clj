@@ -13,10 +13,15 @@
 (def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::index
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non-
+              #(gen/large-integer* {:min 0 :max mdl})))
+
 (s/def ::indices
-  (s/with-gen (s/coll-of ::index) #(gen/vector (s/gen ::index) 0 mdl)))
+  (s/with-gen (s/coll-of ::index)
+              #(gen/vector (s/gen ::index) 0 mdl)))
+
 (s/def ::shape ::indices)
+
 (s/def ::index+tensor->bool
   (s/with-gen
     (s/fspec :args (s/cat :index ::index :tensor ::tensor)
@@ -31,7 +36,8 @@
   (or (number? x)
       (and (vector? x) (every? #(number? %) x))
       (and (vector? x)
-           (every? #(and (vector? %) (= (count %) (count (first x)))) x)
+           (every? #(and (vector? %) (= (count %) (count (first x))))
+                   x)
            (every? tensor? x))))
 
 (s/fdef tensor?
@@ -133,7 +139,8 @@
         dim (count sh)]
     (if (= dim c)
       (f sh)
-      (mapv #(recursive-compute-tensor shape f (conj sh %)) (range (get shape dim))))))
+      (mapv #(recursive-compute-tensor shape f (conj sh %))
+            (range (get shape dim))))))
 
 (defn compute-tensor
   "`indices->number` is a function that takes a vector of `indices` and returns
@@ -266,15 +273,12 @@
                                (indices+number->bool indices (get-in tensor indices)))
                              [])))))
 
-(comment                                                    ;instrumentation won't pass (fspec issues)
-  (s/fdef every-kv?
-          :args (s/cat :indices+number->bool (s/with-gen
-                                               (s/fspec :args (s/cat :indices ::indices
-                                                                     :number ::number)
-                                                        :ret boolean?)
-                                               #(gen/return (constantly true)))
-                       :tensor ::tensor)
-          :ret boolean?))
+(s/fdef every-kv?
+        :args (s/cat :indices+number->bool (s/fspec :args (s/cat :indices ::indices
+                                                                 :number ::m/number)
+                                                    :ret boolean?)
+                     :tensor ::tensor)
+        :ret boolean?)
 
 (defn filter-kv
   "Returns a vector of tensors of the tensors in `tensor-v` for which function
@@ -311,7 +315,8 @@
   (let [c (count shape)
         dim (count sh)]
     (if (= dim c)
-      (apply f (map #(get-in % sh) tensors))
+      (apply f (map #(get-in % sh)
+                    tensors))
       (mapv #(recursive-emap shape f (conj sh %) tensors)
             (range (get shape dim))))))
 
@@ -329,7 +334,8 @@
                                                    [sh c])))
                                              [(first shapes) (count (first shapes))]
                                              (rest shapes))
-         new-tensors (when (every? #(expandable-shape? % largest-shape) shapes)
+         new-tensors (when (every? #(expandable-shape? % largest-shape)
+                                   shapes)
                        (map (fn [tensor shape]
                               (repeat-tensor (vec (take (- large-count (count shape)) largest-shape))
                                              tensor))
@@ -338,19 +344,18 @@
      (when new-tensors
        (recursive-emap largest-shape f [] new-tensors)))))
 
-(comment                                                    ;slow
-  (s/fdef emap
-          :args (s/and (s/cat :f (s/with-gen
-                                   (s/fspec :args (s/cat :number (s/+ ::m/number))
-                                            :ret ::m/number)
-                                   #(gen/return (constantly 1.0)))
-                              :tensor ::tensor
-                              :more (s/* ::tensor))
-                       (fn [{:keys [more f]}]
-                         (some (fn [a]
-                                 (or (= (inc (count more)) a) (= a :rest)))
-                               (arities/arities f))))
-          :ret (s/nilable ::tensor)))
+(s/fdef emap
+        :args (s/and (s/cat :f (s/with-gen
+                                 (s/fspec :args (s/cat :number (s/+ ::m/number))
+                                          :ret ::m/number)
+                                 #(gen/return (constantly 1.0)))
+                            :tensor ::tensor
+                            :more (s/* ::tensor))
+                     (fn [{:keys [more f]}]
+                       (some (fn [a]
+                               (or (= (inc (count more)) a) (= a :rest)))
+                             (arities/arities f))))
+        :ret (s/nilable ::tensor))
 
 (defn- recursive-emap-kv
   "Recursively maps for [[emap-kv]]."
@@ -358,8 +363,12 @@
   (let [c (count shape)
         dim (count indices)]
     (if (= dim c)
-      (apply f indices (map #(get-in % indices) tensors))
-      (mapv #(recursive-emap-kv shape f (conj indices %) tensors) (range (get shape dim))))))
+      (apply f indices (map (fn [tensor]
+                              (get-in tensor indices))
+                            tensors))
+      (mapv (fn [index]
+              (recursive-emap-kv shape f (conj indices index) tensors))
+            (range (get shape dim))))))
 
 (defn emap-kv
   "Element-wise mapping over all elements of one or more tensors. Function `f`
@@ -375,7 +384,9 @@
                                                    [sh c])))
                                              [(first shapes) (count (first shapes))]
                                              (rest shapes))
-         new-tensors (when (every? #(expandable-shape? % largest-shape) shapes)
+         new-tensors (when (every? (fn [shape]
+                                     (expandable-shape? shape largest-shape))
+                                   shapes)
                        (map (fn [tensor sh]
                               (repeat-tensor (vec (take (- large-count (count sh)) largest-shape))
                                              tensor))
@@ -562,7 +573,8 @@
 (defn normalize1
   "Returns as length one in [[norm1]]."
   [tensor]
-  (emap #(m/div % (norm1 tensor)) tensor))
+  (emap #(m/div % (norm1 tensor))
+        tensor))
 
 (s/fdef normalize1
         :args (s/cat :tensor ::tensor)
@@ -571,7 +583,8 @@
 (defn normalize
   "Returns as length one in [[norm2]]."
   [tensor]
-  (emap #(m/div % (norm tensor)) tensor))
+  (emap #(m/div % (norm tensor))
+        tensor))
 
 (s/fdef normalize
         :args (s/cat :tensor ::tensor)

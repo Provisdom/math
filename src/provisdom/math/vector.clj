@@ -14,7 +14,8 @@
 (def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::size
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non-
+              #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::vector ::tensor/tensor1D)
 
@@ -237,7 +238,8 @@
 (s/fdef concat-by-index
         :args (s/cat :coll1 (s/coll-of any?)
                      :coll2 (s/coll-of any?)
-                     :i (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
+                     :i (s/with-gen ::m/int
+                                    #(gen/large-integer* {:min (- mdl) :max mdl})))
         :ret coll?)
 
 (defn replace-nan
