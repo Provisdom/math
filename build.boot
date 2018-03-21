@@ -1,5 +1,5 @@
 (def project 'provisdom/math)
-(def version "1.1.0-alpha9")
+(def version "1.1.0-alpha10")
 
 (set-env!
   :resource-paths #{"src"}
@@ -43,7 +43,7 @@
                        provisdom.math.core-test
                        provisdom.math.derivatives-test
                        provisdom.math.format-test
-                       provisdom.math.integrals-test
+                       ;provisdom.math.integrals-test ;need to speed this up first
                        ;provisdom.math.internal-splittable-random-test ;not for CI
                        provisdom.math.intervals-test
                        provisdom.math.matrix-test

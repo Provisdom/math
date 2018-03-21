@@ -631,7 +631,7 @@
   "Takes the num-interval and returns a map containing:
     `::multiplicative-fn`
     `::converter-fn` -- for within the function to integrate.
-    `::bo/finite-interval`."
+    `::intervals/finite-interval`."
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn         (fn [number]

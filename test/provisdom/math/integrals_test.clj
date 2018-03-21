@@ -6,6 +6,7 @@
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.integrals :as integrals]
     [provisdom.math.intervals :as intervals]
+    [clojure.spec.alpha :as s]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
@@ -42,7 +43,7 @@
   (+ S* S** (* (/ 1.0 15.0) (+ S* S** (* -1.0 S)))))
 
 (defn- adapt-quad-internal
-  "Do not call this fn directly. Start with adaptive-quadrature instead."
+  "Do not call this function directly. Start with adaptive-quadrature instead."
   [f delta eps n k sigma a h fa fc fb S]
   (let [delta (double delta)
         eps (double eps)
@@ -64,9 +65,11 @@
       (close-enough? (+ S-left S-right) S (/ (* 60.0 eps h) delta))
       (+ sigma (insured-approximation S-left S-right S))
       (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
-      :else (+ (adapt-quad-internal f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left) ;From a to the midpoint
-               ;;From the midpoint to b
-               (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
+      :else (+
+              ;;From a to the midpoint
+              (adapt-quad-internal f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
+              ;;From the midpoint to b
+              (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
 
 (defn- adaptive-quadrature-test
   "Approximates the definite integral of `f` over [`a` `b`] with an error less
@@ -99,59 +102,103 @@
 
 (comment
   (s/fdef univariate-integration-test
-          :args (s/and (s/cat :f (s/fspec :args (s/cat :x double?) :ret double?)
+          :args (s/and (s/cat :f (s/fspec :args (s/cat :x double?)
+                                          :ret double?)
                               :lower-bound double?
                               :upper-bound double?)
                        #(> (:upper-bound %) (:lower-bound %)))
           :ret double?))
 
 ;;;INTEGRATION TESTS
-;
-(comment "returned functions don't seem to equate...may have to just pick a random input/output to test"
-         (deftest change-of-variable-test
-           (is (spec-check integrals/change-of-variable))
-           (is= {::integrals/multiplicative-fn (fn [number]
-                                                 (let [s (m/sq number)]
-                                                   (m/div (inc s) (m/sq (m/one- s)))))
-                 ::integrals/converter-fn      (fn [number]
-                                                 (m/div number (m/one- (m/sq number))))
-                 ::intervals/interval          [-1.0 1.0]}
-                (integrals/change-of-variable [m/inf- m/inf+]))
-           (is= {::integrals/multiplicative-fn (constantly 1.0)
-                 ::integrals/converter-fn      identity
-                 ::intervals/interval          [3.0 4.0]}
-                (integrals/change-of-variable [3.0 4.0]))
-           (is= {::integrals/multiplicative-fn (fn [number]
-                                                 (m/div (m/sq number)))
-                 ::integrals/converter-fn      (fn [number]
-                                                 (+ 3.0 (m/div (m/one- number) number)))
-                 ::intervals/interval          [0.0 1.0]}
-                (integrals/change-of-variable [3.0 m/inf+]))
-           (is= {::integrals/multiplicative-fn (fn [number]
-                                                 (m/div (m/sq number)))
-                 ::integrals/converter-fn      (fn [number]
-                                                 (- 4.0 (m/div (m/one- number) number)))
-                 ::intervals/interval          [0.0 1.0]}
-                (integrals/change-of-variable [m/inf- 4.0])))
-         )
+(s/def ::mul1
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret
+                        (let [s (m/sq number)]
+                          (m/div (inc s) (m/sq (m/one- s))))))))
+
+(s/def ::con1
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret
+                        (m/div number (m/one- (m/sq number)))))))
+
+(s/def ::mul2
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret #{1.0}))
+
+(s/def ::con2
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret number))))
+
+(s/def ::mul3
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret
+                        (m/div (m/sq number))))))
+
+(s/def ::con3
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret
+                        (+ 3.0 (m/div (m/one- number) number))))))
+
+(s/def ::con4
+  (s/fspec :args (s/cat :number ::m/number)
+           :ret ::m/number
+           :fn (fn [{{number :number} :args
+                     ret              :ret}]
+                 (m/=== ret
+                        (- 4.0 (m/div (m/one- number) number))))))
+
+(deftest change-of-variable-test
+  (is (spec-check integrals/change-of-variable))
+  (let [cov (integrals/change-of-variable [m/inf- m/inf+])]
+    (s/explain ::mul1 (::integrals/multiplicative-fn cov))
+    (s/explain ::con1 (::integrals/converter-fn cov))
+    (is= [-1.0 1.0] (::intervals/finite-interval cov)))
+  (let [cov2 (integrals/change-of-variable [3.0 4.0])]
+    (s/explain ::mul2 (::integrals/multiplicative-fn cov2))
+    (s/explain ::con2 (::integrals/converter-fn cov2))
+    (is= [3.0 4.0] (::intervals/finite-interval cov2)))
+  (let [cov3 (integrals/change-of-variable [3.0 m/inf+])]
+    (s/explain ::mul3 (::integrals/multiplicative-fn cov3))
+    (s/explain ::con3 (::integrals/converter-fn cov3))
+    (is= [0.0 1.0] (::intervals/finite-interval cov3)))
+  (let [cov4 (integrals/change-of-variable [m/inf- 4.0])]
+    (s/explain ::mul3 (::integrals/multiplicative-fn cov4))
+    (s/explain ::con4 (::integrals/converter-fn cov4))
+    (is= [0.0 1.0] (::intervals/finite-interval cov4))))
 
 (deftest integration-test
-  (is (spec-check integrals/integration
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 1}}))
+  #_(is (spec-check integrals/integration
+                    {:coll-check-limit 10
+                     :coll-error-limit 10
+                     :fspec-iterations 10
+                     :recursion-limit  1
+                     :test-check       {:num-tests 1}}))
   ;;ordinary
   (is= 69.33333333333331 (integrals/integration m/sq [2.0 6.0]))
   (is= 2.886579864025407E-15 (integrals/integration m/cos [m/PI (* 5 m/PI)]))
   (is= -1.000000000000004 (integrals/integration m/cos [m/PI (* 5.5 m/PI)]))
   (is= 3.3306690738754696E-16 (integrals/integration m/cos [m/PI (* 6 m/PI)]))
-  ;;change of variable
+
+  ;;change of variable -- takes almost a minute to run this one
   ;!!!!this is getting a NaN value, presumably something to do with error = NaN
   ;!!!!need to stop the integration upon a NaN I think -- same as below -- why NaN?
-  (is= {::anomalies/message  "Error contains NaN. Value: -Infinity",
-        ::anomalies/fn       #'provisdom.math.integrals/adaptive-quadrature,
+  (is= {::anomalies/message  "Error contains NaN. Value: -Infinity"
+        ::anomalies/fn       #'provisdom.math.integrals/adaptive-quadrature
         ::anomalies/category ::anomalies/no-solve}
        (integrals/integration m/cos [m/PI m/inf+]))
   (is= 0.19999999999999996
