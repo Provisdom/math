@@ -107,7 +107,7 @@
 
 ;;;INTEGRATION TESTS
 ;
-(comment "returned functions don't seem to equate..."
+(comment "returned functions don't seem to equate...may have to just pick a random input/output to test"
          (deftest change-of-variable-test
            (is (spec-check integrals/change-of-variable))
            (is= {::integrals/multiplicative-fn (fn [number]
@@ -191,58 +191,82 @@
   (is= 1.0
        (integrals/rectangular-integration
          (fn [[a b]]
-           (+ (double (or a 0.0)) (or b 0.0)))
+           (let [a (or a 0.0)
+                 b (or b 0.0)]
+             (+ (double a) b)))
          [[0.0 1.0] [0.0 1.0]]))
   #_(is= 1.5                                                ;pretty slow
          (integrals/rectangular-integration
            (fn [[a b c]]
-             (+ (double (or a 0.0)) (or b 0.0) (or c 0.0)))
+             (let [a (or a 0.0)
+                   b (or b 0.0)
+                   c (or c 0.0)]
+               (+ (double a) b c)))
            [[0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   #_(is= 2.0                                                ;slow
          (integrals/rectangular-integration
            (fn [[a b c d]]
-             (+ (double (or a 0.0)) (or b 0.0) (or c 0.0) (or d 0.0)))
+             (let [a (or a 0.0)
+                   b (or b 0.0)
+                   c (or c 0.0)
+                   d (or d 0.0)]
+               (+ (double a) b c d)))
            [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
   #_(is= 3.1415926535897944                                 ;slow-ish 3.141592653589793 PI
          (integrals/rectangular-integration
            (fn [[a b]]
-             (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0))))))
+             (let [a (or a 0.0)
+                   b (or b 0.0)]
+               (m/exp (- (+ (m/sq a) (m/sq b))))))
            [[m/inf- m/inf+] [m/inf- m/inf+]]))
   (is= 0.1
        (integrals/rectangular-integration
          (fn [[a b]]
-           (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
+           (let [a (or a 0.0)
+                 b (or b 0.0)]
+             (m/pow (* (double a) b) -2.0)))
          [[5.0 m/inf+] [1.0 2.0]]))
   (is= 0.01666666666666667
        (integrals/rectangular-integration
          (fn [[a b]]
-           (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0))
+           (let [a (or a 0.0)
+                 b (or b 0.0)]
+             (m/pow (* (double a) b) -2.0)))
          [[3.0 4.0] [m/inf- -5.0]]))
   ;;vector
   (is= [32.0 64.0]
        (integrals/rectangular-integration
          (fn [[a b]]
-           [(or a 0.0) (* (double (or a 0.0)) (or b 0.0))])
+           (let [a (or a 0.0)
+                 b (or b 0.0)]
+             [a (* (double a) b)]))
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
   (is= [0.24705031697079533 0.24705031697079533]
        (integrals/rectangular-integration
          (fn [[a b]]
-           [(m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))
-            (m/exp (- (+ (m/sq (or a 0.0)) (m/sq (or b 0.0)))))])
+           (let [a (or a 0.0)
+                 b (or b 0.0)
+                 c (m/exp (- (+ (m/sq a) (m/sq b))))]
+             [c c]))
          [[m/inf- m/inf+] [1.0 3.0]]))
   ;;matrix
   (is= [[32.0 64.0] [32.0 40.00000000000001]]
        (integrals/rectangular-integration
          (fn [[a b]]
-           [[(or a 0.0) (* (double (or a 0.0)) (or b 0.0))] [(+ 2.0 (or b 0.0)) 5.0]])
+           (let [a (or a 0.0)
+                 b (or b 0.0)]
+             [[a (* (double a) b)] [(+ 2.0 b) 5.0]]))
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
-  (is= [[0.06666666666666667 0.06666666666666667] [0.06666666666666667 0.06666666666666667]]
+  (is= [[0.06666666666666667 0.06666666666666667]
+        [0.06666666666666667 0.06666666666666667]]
        (integrals/rectangular-integration
          (fn [[a b]]
-           [[(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]
-            [(m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0) (m/pow (* (double (or a 0.0)) (or b 0.0)) -2.0)]])
+           (let [a (or a 0.0)
+                 b (or b 0.0)
+                 c (m/pow (* (double a) b) -2.0)]
+             [[c c] [c c]]))
          [[2.0 6.0] [m/inf- -5.0]])))
 
 #_(deftest non-rectangular-2D-integration-test              ;too slow
@@ -257,13 +281,15 @@
            (fn [outer inner]
              (+ outer (double inner)))
            [0.0 1.0]
-           (fn [outer] [0.0 1.0])))
+           (fn [outer]
+             [0.0 1.0])))
     (is= 192.0
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
              (+ outer inner))
            [2.0 6.0]
-           (fn [outer] [(+ outer 2.0) (+ outer 6.0)])))
+           (fn [outer]
+             [(+ outer 2.0) (+ outer 6.0)])))
     (is= 3.141592653589793                                  ;3.141592653589793 PI
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
@@ -281,8 +307,8 @@
     (is= [0.24705031697079533 0.24705031697079533]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
-             [(* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))
-              (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))])
+             (let [val (* (m/exp (- (m/sq outer))) (m/exp (- (m/sq inner))))]
+               [val val]))
            [m/inf- m/inf+]
            (fn [outer]
              [1.0 3.0])))
@@ -297,8 +323,8 @@
           [0.06666666666666667 0.06666666666666667]]
          (integrals/non-rectangular-2D-integration
            (fn [outer inner]
-             [[(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]
-              [(m/pow (* (double outer) inner) -2.0) (m/pow (* (double outer) inner) -2.0)]])
+             (let [val (m/pow (* (double outer) inner) -2.0)]
+               [[val val] [val val]]))
            [2.0 6.0]
            (fn [outer]
              [m/inf- -5.0]))))

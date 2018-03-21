@@ -295,12 +295,17 @@
      "Handstand walking 7x50' in 60-sec with 2-min rest"}   ;3/13
    #{}                                                      ;3/14
    #{}                                                      ;3/15
-   #{}                                                      ;3/16
-   #{"Work on kipping motion for pullups, c2b, and bar muscle-ups"} ;3/17
+   #{"Work on kipping motion for pullups, c2b, and bar muscle-ups"} ;3/16
+   #{}                                                      ;3/17
+   #{"E2MOM7 of 37->45-sec hollow rock"}                    ;3/18
+   #{}                                                      ;3/19
+   #{"Work on Thrusters at (15,15,5), then 3x10 on front squats and press, then thrusters."} ;3/20
    ])
 
 (comment
-  #{})
+  #{
+
+    })
 
 (def current-wod-list
   ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
@@ -356,7 +361,7 @@
         "with elevated heels, or with a counterbalance weight held out in front")
    "3 rounds of 20 pistols w/ 90-sec rest"
    "Work on tying together natural-looking triple-unders"
-   "Work on Front squats and press at (15,15,5), then thrusters, then down."
+   "Work on Thrusters at (15,15,5), then 3x10 on front squats and press, then thrusters."
    "Kalsu from floor 105->115 in 30 minutes"
    "Dumbbell Kalsu 35->45"
    "EMOM30 of 2->3 each of burpees + 135# thrusters from rack"

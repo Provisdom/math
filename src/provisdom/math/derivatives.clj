@@ -372,16 +372,17 @@
   [v->number v row column dx multiplier]
   (if (or (>= row (count v)) (>= column (count v)))
     m/nan
-    (let [i+ (assoc v row (+ (get v row) dx)),
-          i- (assoc v row (- (get v row) dx)),
-          e++ (assoc i+ column (+ (get v row) dx)),
-          e+- (assoc i+ column (- (get v row) dx)),
-          e-+ (assoc i- column (+ (get v row) dx)),
+    (let [i+ (assoc v row (+ (get v row) dx))
+          i- (assoc v row (- (get v row) dx))
+          e++ (assoc i+ column (+ (get v row) dx))
+          e+- (assoc i+ column (- (get v row) dx))
+          e-+ (assoc i- column (+ (get v row) dx))
           e-- (assoc i- column (- (get v row) dx))]
       (* 0.25
          multiplier
          (- (+ (v->number e++) (v->number e--))
-            (v->number e+-) (v->number e-+))))))
+            (v->number e+-)
+            (v->number e-+))))))
 
 (s/fdef joint-central-derivative
         :args (s/cat :v->number ::v->number
@@ -518,8 +519,11 @@
   ([fxy {::keys [h] :or {h (* m/sgl-close 0.1)}}]
    (fn [x y]
      (joint-central-derivative
-       (fn [[x-local y-local]]
-         (fxy x-local y-local))
+       (fn [v]
+         (if (= 2 (count v))
+           (let [[x-local y-local] v]
+             (fxy x-local y-local))
+           m/nan))
        [x y]
        0
        1

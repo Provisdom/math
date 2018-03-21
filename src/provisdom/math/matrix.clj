@@ -26,8 +26,14 @@
 (def mdl 6)                                                 ;max-dim-length for generators
 
 (s/def ::by-row? boolean?)
-(s/def ::row-indices (s/or :index ::tensor/index :indices ::tensor/indices))
-(s/def ::column-indices (s/or :index ::tensor/index :indices ::tensor/indices))
+
+(s/def ::row-indices
+  (s/or :index ::tensor/index
+        :indices ::tensor/indices))
+
+(s/def ::column-indices
+  (s/or :index ::tensor/index
+        :indices ::tensor/indices))
 
 (s/def ::exception-row-indices
   (s/or :index ::tensor/index
@@ -37,7 +43,8 @@
   (s/or :index ::tensor/index
         :indices ::tensor/indices))
 
-(s/def ::row (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+(s/def ::row
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::column
   (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
@@ -345,12 +352,14 @@
   `rows` and `columns`."
   ([rows columns] (constant-matrix rows columns 0.0))
   ([rows columns number]
-   (if (zero? rows)
+   (if (or (zero? columns) (zero? rows))
      [[]]
      (vec (repeat rows (vec (repeat columns number)))))))
 
 (s/fdef constant-matrix
-        :args (s/cat :rows ::rows :columns ::columns :number (s/? ::m/number))
+        :args (s/cat :rows ::rows
+                     :columns ::columns
+                     :number (s/? ::m/number))
         :ret ::matrix)
 
 (defn compute-matrix
@@ -1014,14 +1023,15 @@
 
 (defn ereduce-kv
   "Function `f` takes a result, row, column, and number(s). Reduces over 1, 2,
-  or 3 matrices."
+  or 3 matrices. Number of columns in the first matrix must be the least."
   ([f init m]
    (let [nr (rows m)]
      (loop [r 0
             val init
             s m]
        (let [g (fn [result column number]
-                 (f result r column number))]
+                 (when (and (m/int-non-? column) (number? number))
+                   (f result r column number)))]
          (if (>= r nr)
            val
            (recur (inc r)
@@ -1034,7 +1044,10 @@
             s1 m1
             s2 m2]
        (let [g (fn [result column number1 number2]
-                 (f result r column number1 number2))]
+                 (when (and (m/int-non-? column)
+                            (number? number1)
+                            (number? number2))
+                   (f result r column number1 number2)))]
          (if (>= r nr)
            val
            (recur (inc r)
@@ -1049,7 +1062,11 @@
             s2 m2
             s3 m3]
        (let [g (fn [result column number1 number2 number3]
-                 (f result r column number1 number2 number3))]
+                 (when (and (m/int-non-? column)
+                            (number? number1)
+                            (number? number2)
+                            (number? number3))
+                   (f result r column number1 number2 number3)))]
          (if (>= r nr)
            val
            (recur (inc r)
@@ -1066,26 +1083,33 @@
                                               :ret any?)
                                   :init any?
                                   :m ::matrix)
-                    :four (s/cat :f (s/fspec :args (s/cat :res any?
-                                                          :row ::row
-                                                          :column ::column
-                                                          :number1 ::m/number
-                                                          :number2 ::m/number)
-                                             :ret any?)
-                                 :init any?
-                                 :m1 ::matrix
-                                 :m2 ::matrix)
-                    :five (s/cat :f (s/fspec :args (s/cat :res any?
-                                                          :row ::row
-                                                          :column ::column
-                                                          :number1 ::m/number
-                                                          :number2 ::m/number
-                                                          :number3 ::m/number)
-                                             :ret any?)
-                                 :init any?
-                                 :m1 ::matrix
-                                 :m2 ::matrix
-                                 :m3 ::matrix))
+                    :four (s/and
+                            (s/cat :f (s/fspec :args (s/cat :res any?
+                                                            :row ::row
+                                                            :column ::column
+                                                            :number1 ::m/number
+                                                            :number2 ::m/number)
+                                               :ret any?)
+                                   :init any?
+                                   :m1 ::matrix
+                                   :m2 ::matrix)
+                            (fn [{:keys [m1 m2]}]
+                              (<= (columns m1) (columns m2))))
+                    :five (s/and
+                            (s/cat :f (s/fspec :args (s/cat :res any?
+                                                            :row ::row
+                                                            :column ::column
+                                                            :number1 ::m/number
+                                                            :number2 ::m/number
+                                                            :number3 ::m/number)
+                                               :ret any?)
+                                   :init any?
+                                   :m1 ::matrix
+                                   :m2 ::matrix
+                                   :m3 ::matrix)
+                            (fn [{:keys [m1 m2 m3]}]
+                              (and (<= (columns m1) (columns m2))
+                                   (<= (columns m1) (columns m3))))))
         :ret any?)
 
 (defn matrix->sparse
@@ -1095,13 +1119,15 @@
   ([m number->bool]
    (ereduce-kv (fn [result row column number]
                  (if (number->bool number)
-                   (conj result [row column number])
+                   (when (vector? result)
+                     (conj result [row column number]))
                    result))
                []
                m)))
 
 (s/fdef matrix->sparse
-        :args (s/cat :m ::matrix :number->bool (s/? ::number->bool))
+        :args (s/cat :m ::matrix
+                     :number->bool (s/? ::number->bool))
         :ret ::sparse-matrix)
 
 (defn symmetric-matrix->sparse
@@ -1112,7 +1138,8 @@
   ([symmetric-m number->bool]
    (ereduce-kv (fn [result row column number]
                  (if (and (<= row column) (number->bool number))
-                   (conj result [row column number])
+                   (when (vector? result)
+                     (conj result [row column number]))
                    result))
                []
                symmetric-m)))
@@ -1427,9 +1454,13 @@
 
 (s/fdef kronecker-product
         :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
-                    :two+ (s/cat :m1 ::matrix
-                                 :m2 ::matrix
-                                 :ms (s/* ::matrix)))
+                    :two (s/cat :m1 ::matrix
+                                :m2 ::matrix)
+                    :three+ (s/cat :m1 ::matrix
+                                   :m2 ::matrix
+                                   :ms (s/with-gen
+                                         (s/+ ::matrix)
+                                         #(gen/vector (s/gen ::matrix) 1 2))))
         :ret ::matrix)
 
 ;;;MATRIX ROUNDING

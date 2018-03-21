@@ -320,42 +320,62 @@
       (mapv #(recursive-emap shape f (conj sh %) tensors)
             (range (get shape dim))))))
 
+(defn- emap-core
+  [f tensor & more]
+  (let [tensors (concat [tensor] more)
+        shapes (map shape tensors)
+        [largest-shape large-count] (reduce (fn [[sh c] new-sh]
+                                              (let [new-c (count new-sh)]
+                                                (if (> new-c c)
+                                                  [new-sh new-c]
+                                                  [sh c])))
+                                            [(first shapes) (count (first shapes))]
+                                            (rest shapes))
+        new-tensors (when (every? #(expandable-shape? % largest-shape)
+                                  shapes)
+                      (map (fn [tensor shape]
+                             (repeat-tensor (vec (take (- large-count (count shape)) largest-shape))
+                                            tensor))
+                           tensors
+                           shapes))]
+    (when new-tensors
+      (recursive-emap largest-shape f [] new-tensors))))
+
 (defn emap
   "Element-wise mapping over all elements of one or more tensors. Returns nil if
   tensors can't be expanded as necessary."
   ([f tensor] (recursive-emap (shape tensor) f [] [tensor]))
-  ([f tensor & more]
-   (let [tensors (concat [tensor] more)
-         shapes (map shape tensors)
-         [largest-shape large-count] (reduce (fn [[sh c] new-sh]
-                                               (let [new-c (count new-sh)]
-                                                 (if (> new-c c)
-                                                   [new-sh new-c]
-                                                   [sh c])))
-                                             [(first shapes) (count (first shapes))]
-                                             (rest shapes))
-         new-tensors (when (every? #(expandable-shape? % largest-shape)
-                                   shapes)
-                       (map (fn [tensor shape]
-                              (repeat-tensor (vec (take (- large-count (count shape)) largest-shape))
-                                             tensor))
-                            tensors
-                            shapes))]
-     (when new-tensors
-       (recursive-emap largest-shape f [] new-tensors)))))
+  ([f tensor1 tensor2] (emap-core f tensor1 tensor2))
+  ([f tensor1 tensor2 tensor3] (emap-core f tensor1 tensor2 tensor3))
+  ([f tensor1 tensor2 tensor3 & more]
+   (apply emap-core f tensor1 tensor2 tensor3 more)))
 
 (s/fdef emap
-        :args (s/and (s/cat :f (s/with-gen
-                                 (s/fspec :args (s/cat :number (s/+ ::m/number))
-                                          :ret ::m/number)
-                                 #(gen/return (constantly 1.0)))
-                            :tensor ::tensor
-                            :more (s/* ::tensor))
-                     (fn [{:keys [more f]}]
-                       (some (fn [a]
-                               (or (= (inc (count more)) a) (= a :rest)))
-                             (arities/arities f))))
-        :ret (s/nilable ::tensor))
+        :args (s/or :one (s/cat :f (s/fspec :args (s/cat :number ::m/number)
+                                            :ret any?)
+                                :tensor ::tensor)
+                    :two (s/cat :f (s/fspec :args (s/cat :number1 ::m/number
+                                                         :number2 ::m/number)
+                                            :ret any?)
+                                :tensor1 ::tensor
+                                :tensor2 ::tensor)
+                    :three (s/cat :f (s/fspec :args (s/cat :number1 ::m/number
+                                                           :number2 ::m/number
+                                                           :number3 ::m/number)
+                                              :ret any?)
+                                  :tensor1 ::tensor
+                                  :tensor2 ::tensor
+                                  :tensor3 ::tensor)
+                    :more (s/cat :f (s/fspec :args (s/cat :number1 ::m/number
+                                                          :number2 ::m/number
+                                                          :number3 ::m/number
+                                                          :number-more (s/+ ::m/number))
+                                             :ret any?)
+                                 :tensor1 ::tensor
+                                 :tensor2 ::tensor
+                                 :tensor3 ::tensor
+                                 :more (s/* ::tensor)))
+        :ret any?)
 
 (defn- recursive-emap-kv
   "Recursively maps for [[emap-kv]]."
@@ -370,43 +390,66 @@
               (recursive-emap-kv shape f (conj indices index) tensors))
             (range (get shape dim))))))
 
+(defn- emap-kv-core
+  [f tensor & more]
+  (let [tensors (concat [tensor] more)
+        shapes (map shape tensors)
+        [largest-shape large-count] (reduce (fn [[sh c] new-sh]
+                                              (let [new-c (count new-sh)]
+                                                (if (> new-c c)
+                                                  [new-sh new-c]
+                                                  [sh c])))
+                                            [(first shapes) (count (first shapes))]
+                                            (rest shapes))
+        new-tensors (when (every? (fn [shape]
+                                    (expandable-shape? shape largest-shape))
+                                  shapes)
+                      (map (fn [tensor sh]
+                             (repeat-tensor (vec (take (- large-count (count sh)) largest-shape))
+                                            tensor))
+                           tensors
+                           shapes))]
+    (recursive-emap-kv largest-shape f [] new-tensors)))
+
 (defn emap-kv
   "Element-wise mapping over all elements of one or more tensors. Function `f`
   takes the indices and one number per tensor, and returns a number."
   ([f tensor] (recursive-emap-kv (shape tensor) f [] [tensor]))
-  ([f tensor & more]
-   (let [tensors (concat [tensor] more)
-         shapes (map shape tensors)
-         [largest-shape large-count] (reduce (fn [[sh c] new-sh]
-                                               (let [new-c (count new-sh)]
-                                                 (if (> new-c c)
-                                                   [new-sh new-c]
-                                                   [sh c])))
-                                             [(first shapes) (count (first shapes))]
-                                             (rest shapes))
-         new-tensors (when (every? (fn [shape]
-                                     (expandable-shape? shape largest-shape))
-                                   shapes)
-                       (map (fn [tensor sh]
-                              (repeat-tensor (vec (take (- large-count (count sh)) largest-shape))
-                                             tensor))
-                            tensors
-                            shapes))]
-     (recursive-emap-kv largest-shape f [] new-tensors))))
+  ([f tensor1 tensor2] (emap-kv-core f tensor1 tensor2))
+  ([f tensor1 tensor2 tensor3] (emap-kv-core f tensor1 tensor2 tensor3))
+  ([f tensor1 tensor2 tensor3 & more]
+   (apply emap-kv-core f tensor1 tensor2 tensor3 more)))
 
-(comment                                                    ;;slow
-  (s/fdef emap-kv
-          :args (and (s/cat :f (s/with-gen
-                                 (s/fspec :args (s/cat :indices ::indices
-                                                       :number (s/+ ::m/number))
-                                          :ret ::m/number)
-                                 #(gen/return (constantly 1.0)))
-                            :tensor ::tensor
-                            :more (s/* ::tensor))
-                     (fn [{:keys [f more]}]
-                       (some (fn [a] (or (= (+ 2 (count more)) a) (= a :rest)))
-                             (arities/arities f))))
-          :ret (s/nilable ::tensor)))
+(s/fdef emap-kv
+        :args (s/or :one (s/cat :f (s/fspec :args (s/cat :indices ::indices
+                                                         :number ::m/number)
+                                            :ret any?)
+                                :tensor ::tensor)
+                    :two (s/cat :f (s/fspec :args (s/cat :indices ::indices
+                                                         :number1 ::m/number
+                                                         :number2 ::m/number)
+                                            :ret any?)
+                                :tensor1 ::tensor
+                                :tensor2 ::tensor)
+                    :three (s/cat :f (s/fspec :args (s/cat :indices ::indices
+                                                           :number1 ::m/number
+                                                           :number2 ::m/number
+                                                           :number3 ::m/number)
+                                              :ret any?)
+                                  :tensor1 ::tensor
+                                  :tensor2 ::tensor
+                                  :tensor3 ::tensor)
+                    :more (s/cat :f (s/fspec :args (s/cat :indices ::indices
+                                                          :number1 ::m/number
+                                                          :number2 ::m/number
+                                                          :number3 ::m/number
+                                                          :number-more (s/+ ::m/number))
+                                             :ret any?)
+                                 :tensor1 ::tensor
+                                 :tensor2 ::tensor
+                                 :tensor3 ::tensor
+                                 :more (s/* ::tensor)))
+        :ret any?)
 
 (defn partition-recursively
   "Partitions recursively in sets of 'n' elements. There may be unused elements.
@@ -427,13 +470,15 @@
   "Tensor equality that works with NaN."
   ([tensor] true)
   ([tensor1 tensor2]
-   (let [bs (emap (fn [i j] (m/=== i j))
+   (let [eq (emap (fn [n1 n2]
+                    (m/=== n1 n2))
                   tensor1
                   tensor2)]
-     (if (and bs (every? true? (flatten bs)))
+     (if (and eq (every? true? (flatten eq)))
        true
        false)))
-  ([tensor1 tensor2 & more] (and (=== tensor1 tensor2) (apply === tensor2 more))))
+  ([tensor1 tensor2 & more]
+   (and (=== tensor1 tensor2) (apply === tensor2 more))))
 
 (s/fdef ===
         :args (s/or :one (s/cat :tensor ::tensor)
@@ -447,7 +492,8 @@
   ([] 0.0)
   ([tensor] tensor)
   ([tensor1 tensor2]
-   (emap (fn [i j] (+ (double i) j))
+   (emap (fn [i j]
+           (+ (double i) j))
          tensor1
          tensor2))
   ([tensor1 tensor2 & more]
@@ -457,7 +503,9 @@
 (s/fdef add
         :args (s/or :zero (s/cat)
                     :one (s/cat :tensor ::tensor)
-                    :two+ (s/cat :tensor1 ::tensor :tensor2 ::tensor :more (s/* ::tensor)))
+                    :two+ (s/cat :tensor1 ::tensor
+                                 :tensor2 ::tensor
+                                 :more (s/* ::tensor)))
         :ret (s/nilable ::tensor))
 
 (defn subtract
@@ -465,7 +513,8 @@
   ([] 0.0)
   ([tensor] (emap - tensor))
   ([tensor1 tensor2]
-   (emap (fn [i j] (- (double i) j))
+   (emap (fn [i j]
+           (- (double i) j))
          tensor1
          tensor2))
   ([tensor1 tensor2 & more]
@@ -485,7 +534,8 @@
   ([] 1.0)
   ([tensor] tensor)
   ([tensor1 tensor2]
-   (emap (fn [i j] (* (double i) j))
+   (emap (fn [i j]
+           (* (double i) j))
          tensor1
          tensor2))
   ([tensor1 tensor2 & more]

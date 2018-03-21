@@ -3,13 +3,11 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.core :as m]
-    [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.derivatives :as derivatives]
-    [provisdom.math.intervals :as intervals]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;63 SECONDS -- recheck speed, could be slower now, may need to check individual tests again
+;;70 SECONDS
 
 (set! *warn-on-reflection* true)
 
@@ -132,7 +130,9 @@
   [[a b]]
   (if-not b
     m/nan
-    (+ (* (double a) b) (* 2 (m/sq a)) (m/cube b))))
+    (+ (* (double a) b)
+       (* 2 (m/sq a))
+       (m/cube b))))
 
 (deftest gradient-fn-test
   (is (spec-check derivatives/gradient-fn))
@@ -144,7 +144,7 @@
                                            :coll-error-limit 10
                                            :fspec-iterations 10
                                            :recursion-limit  1
-                                           :test-check       {:num-tests 200}}))
+                                           :test-check       {:num-tests 50}}))
   (is= [[16.00000000745058 51.00000000745058] [96.00000001490116 72.0]] ;[[16,51][96,72]]
        ((derivatives/jacobian-fn
           (fn [[a b]]
@@ -161,7 +161,7 @@
                                           :coll-error-limit 10
                                           :fspec-iterations 10
                                           :recursion-limit  1
-                                          :test-check       {:num-tests 80}}))
+                                          :test-check       {:num-tests 50}}))
   ;;type 'joint-central' is the default
   (is= [[4.00000004674439 1.00000003833145]
         [1.00000003833145 23.999999854140697]] ;[[4,1][1,24]]

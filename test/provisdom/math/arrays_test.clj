@@ -8,7 +8,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;32 seconds ;;can't satisfy 'such that' after 100?? -- e.g., double-array-add-test
+;105 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -128,7 +128,7 @@
                    :coll-error-limit 10
                    :fspec-iterations 10
                    :recursion-limit  1
-                   :test-check       {:num-tests 1}}))
+                   :test-check       {:num-tests 500}}))
   (is= 8.0
        (array/double-array-reduce-kv
          (fn [tot k v]
@@ -164,39 +164,26 @@
 
 ;;;DOUBLE ARRAY MANIPULATION
 (deftest double-array-map-test
-  (is (spec-check array/double-array-map
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 1}}))
+  (is (spec-check array/double-array-map))
   (is= [4.0 5.0 6.0]
        (array/arrayND->vector
          (array/double-array-map
-           (fn [e] (+ 3.0 e))
+           (fn [e]
+             (+ 3.0 e))
            (double-array [1 2 3])))))
 
 (deftest double-array-map-indexed-test
-  (is (spec-check array/double-array-map-indexed
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 1}}))
+  (is (spec-check array/double-array-map-indexed))
   (is= [4.0 6.0 8.0]
        (array/arrayND->vector
          (array/double-array-map-indexed
-           (fn [e k] (+ 3.0 e k))
+           (fn [e k]
+             (+ 3.0 e k))
            (double-array [1 2 3])))))
 
 ;;;DOUBLE ARRAY MATH
 (deftest double-array-add-test
-  (is (spec-check array/double-array-add                    ;can't satisfy 'such that' after 100??
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 1}}))
+  (is (spec-check array/double-array-add))
   (is= [3.0 5.0 7.0]
        (array/arrayND->vector
          (array/double-array-add
@@ -204,12 +191,7 @@
            (double-array [2 3 4])))))
 
 (deftest double-array-subtract-test
-  (is (spec-check array/double-array-subtract
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 10}}))
+  (is (spec-check array/double-array-subtract))
   (is= [-1.0 -1.0 -1.0]
        (array/arrayND->vector
          (array/double-array-subtract

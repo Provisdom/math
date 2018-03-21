@@ -9,7 +9,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;10 seconds -- ereduce-kv is the tricky one
+;;189 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -296,7 +296,12 @@
                          (mx/rnd-reflection-matrix! 2))))
 
 (deftest rnd-spectral-matrix!-test
-  (is (spec-check mx/rnd-spectral-matrix!))
+  (is (spec-check mx/rnd-spectral-matrix!
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 300}}))
   (random/bind-seed 0
                     (is= [[]] (mx/rnd-spectral-matrix! [])))
   (random/bind-seed 0
@@ -598,12 +603,12 @@
                    [[1.0 0.5] [2.0 4.0]]
                    {::mx/by-row false})))
 
-(deftest ereduce-kv-test                                    ;tricky
+(deftest ereduce-kv-test
   (is (spec-check mx/ereduce-kv {:coll-check-limit 10
                                  :coll-error-limit 10
                                  :fspec-iterations 10
                                  :recursion-limit  1
-                                 :test-check       {:num-tests 1}}))
+                                 :test-check       {:num-tests 300}}))
   (is= 29.9
        (mx/ereduce-kv (fn [tot r c n1 n2 n3]
                         (when (number? tot)
@@ -655,7 +660,12 @@
   (is= [[1 0 0.5]] (mx/matrix->sparse [[1.0] [0.5]] #(< % 0.7))))
 
 (deftest symmetric-matrix->sparse-test
-  (is (spec-check mx/symmetric-matrix->sparse))
+  (is (spec-check mx/symmetric-matrix->sparse
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 500}}))
   (is= [] (mx/symmetric-matrix->sparse [[]]))
   (is= [[0 1 1.0]] (mx/symmetric-matrix->sparse [[0.0 1.0] [1.0 0.0]]))
   (is= [[0 0 1.0] [0 1 0.5] [1 1 4.0]]
@@ -869,7 +879,11 @@
                [[1.0 0.5] [2.0 4.0]])))
 
 (deftest kronecker-product-test
-  (is (spec-check mx/kronecker-product))
+  (is (spec-check mx/kronecker-product {:coll-check-limit 10
+                                        :coll-error-limit 10
+                                        :fspec-iterations 10
+                                        :recursion-limit  1
+                                        :test-check       {:num-tests 25}}))
   (is= [[]] (mx/kronecker-product))
   (is= [[]] (mx/kronecker-product [[]]))
   (is= [[1]] (mx/kronecker-product [[1]]))

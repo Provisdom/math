@@ -18,7 +18,7 @@
                   [org.clojure/clojure "1.9.0" :scope "provided"]
                   [org.clojure/spec.alpha "0.1.143"]
                   [orchestra "2017.11.12-1"]
-                  [provisdom/utility-belt "0.2.0-alpha10"]
+                  [provisdom/utility-belt "0.2.0-alpha11"]
                   [org.apache.commons/commons-math3 "3.6.1"]
                   [apache-commons-matrix "0.4.1"]
                   [clatrix "0.5.0"]])

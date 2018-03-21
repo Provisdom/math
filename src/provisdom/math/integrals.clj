@@ -18,13 +18,17 @@
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number)
              :ret ::m/number)
-    #(gen/one-of (map gen/return (list m/sq m/cube m/cos)))))
+    #(gen/one-of
+       (map gen/return
+            (list m/sq m/cube m/cos)))))
 
 (s/def ::v->tensor
   (s/with-gen
     (s/fspec :args (s/cat :v ::vector/vector)
              :ret ::tensor/tensor)
-    #(gen/one-of (map gen/return (list vector/kahan-sum identity)))))
+    #(gen/one-of
+       (map gen/return
+            (list vector/kahan-sum identity)))))
 
 ;;;;LOOK AT STIELTJES STUFF OR WHATEVER FOR DISCRETIZING A GAUSSIAN FOR MORE 
 ;;;;THAN 11 OUTCOMES -- KRONROD? vs. GAUSS? vs ...?
@@ -59,25 +63,30 @@
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number)
              :ret ::tensor/tensor)
-    #(gen/one-of (list (s/gen ::number->number)
-                       (gen/return (fn [number]
-                                     [number 4.0]))
-                       (gen/return (fn [number]
-                                     [[number 4.0] [3.0 (inc (double number))]]))))))
+    #(gen/one-of
+       (list (s/gen ::number->number)
+             (gen/return (fn [number]
+                           [number 4.0]))
+             (gen/return (fn [number]
+                           [[number 4.0] [3.0 (inc (double number))]]))))))
 
 (s/def ::number->num-interval
   (s/with-gen
     (s/fspec :args (s/cat :number ::m/number)
              :ret ::intervals/num-interval)
-    #(gen/one-of (map gen/return (list (fn [n]
-                                         [(dec (double n)) n]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [n]
+                    [(dec (double n)) n]))))))
 
 (s/def ::number2->num-interval
   (s/with-gen
     (s/fspec :args (s/cat :number1 ::m/number :number2 ::m/number)
              :ret ::intervals/num-interval)
-    #(gen/one-of (map gen/return (list (fn [n1 n2]
-                                         [(- (m/abs n1)) (+ 0.5 (m/abs n2))]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [n1 n2]
+                    [(- (m/abs n1)) (+ 0.5 (m/abs n2))]))))))
 
 (s/def ::number3->num-interval
   (s/with-gen
@@ -85,10 +94,11 @@
                           :number2 ::m/number
                           :number3 ::m/number)
              :ret ::intervals/num-interval)
-    #(gen/one-of (map gen/return
-                      (list (fn [n1 n2 n3]
-                              [(- (m/abs (+ (double n1) n2)))
-                               (+ 0.5 (m/abs n3))]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [n1 n2 n3]
+                    [(- (m/abs (+ (double n1) n2)))
+                     (+ 0.5 (m/abs n3))]))))))
 
 (s/def ::points #{15, 21, 31, 41, 51, 61})
 
@@ -109,7 +119,9 @@
 (defn- convert-gk-weights
   ([number] (convert-gk-weights number true))
   ([number skip?]
-   (let [end (if skip? (rest number) number)]
+   (let [end (if skip?
+               (rest number)
+               number)]
      (-> number rseq (concat end) vec))))
 
 (s/fdef convert-gk-weights
@@ -374,11 +386,14 @@
   [number->tensor [a b] [low-precision-weights high-precision-weights nodes]]
   (let [half-sum (* 0.5 (+ a b))
         half-diff (* 0.5 (- b a))
-        unnormalized-nodes (map (partial unnormalize half-sum half-diff) nodes)
+        unnormalized-nodes (map (partial unnormalize half-sum half-diff)
+                                nodes)
         mapped-nodes (mapv number->tensor unnormalized-nodes)
         high-precision-values (tensor/multiply half-diff
                                                (tensor/inner-product high-precision-weights mapped-nodes))
-        low-precision-nodes (tensor/filter-kv (fn [idx _] (odd? idx)) mapped-nodes)
+        low-precision-nodes (tensor/filter-kv (fn [idx _]
+                                                (odd? idx))
+                                              mapped-nodes)
         low-precision-values (tensor/multiply half-diff
                                               (tensor/inner-product low-precision-weights low-precision-nodes))
         error (tensor/emap m/abs
@@ -426,7 +441,9 @@
         high-precision-values (reduce-f (repeat dimensions f-high-precision))
         low-precision-values (reduce-f (repeat dimensions f-low-precision))
         dim1 (mapv reduce-f f1dim)
-        err-f #(tensor/average (tensor/emap m/abs (tensor/subtract % high-precision-values)))]
+        err-f #(tensor/average
+                 (tensor/emap m/abs
+                              (tensor/subtract % high-precision-values)))]
     {::rectangular-error     (err-f low-precision-values)
      ::high-precision-values high-precision-values
      ::one-dimension-errors  (mapv err-f dim1)}))
@@ -571,10 +588,11 @@
                                                       mn (* 0.5 (+ an bn))]
                                                   [[% an mn] [% mn bn]])
                                                dimensions)
-                  new-intervals (map #(reduce (fn [tot [d an bn]]
-                                                (assoc tot d [an bn]))
-                                              intervals-n
-                                              %)
+                  new-intervals (map (fn [dim-with-interval]
+                                       (reduce (fn [tot [d an bn]]
+                                                 (assoc tot d [an bn]))
+                                               intervals-n
+                                               dim-with-interval))
                                      (apply combo/cartesian-product dims-with-new-intervals))
                   new-fns (map (fn [intervals-local]
                                  #(get-rectangular-errors-and-high-precision-value
@@ -771,7 +789,8 @@
    (integration
      (fn [outer]
        (let [ret (integration
-                   (fn [inner] (number2->tensor outer inner))
+                   (fn [inner]
+                     (number2->tensor outer inner))
                    (outer->inner-interval outer)
                    props)]
          (if (tensor/tensor? ret) ret m/nan)))
@@ -782,8 +801,10 @@
   (s/with-gen
     (s/fspec :args (s/cat :outer ::m/number :inner ::m/number)
              :ret ::tensor/tensor)
-    #(gen/one-of (map gen/return (list (fn [outer inner]
-                                         [[outer 0.0] [2.0 inner]]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [outer inner]
+                    [[outer 0.0] [2.0 inner]]))))))
 
 (s/fdef non-rectangular-2D-integration
         :args (s/cat :number2->tensor ::number2->tensor
@@ -837,8 +858,10 @@
                           :middle ::m/number
                           :inner ::m/number)
              :ret ::tensor/tensor)
-    #(gen/one-of (map gen/return (list (fn [outer middle inner]
-                                         [[outer middle] [2.0 inner]]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [outer middle inner]
+                    [[outer middle] [2.0 inner]]))))))
 
 (s/fdef non-rectangular-3D-integration
         :args (s/cat :number3->tensor ::number3->tensor
@@ -909,8 +932,10 @@
                           :inner-middle ::m/number
                           :inner ::m/number)
              :ret ::tensor/tensor)
-    #(gen/one-of (map gen/return (list (fn [outer outer-middle inner-middle inner]
-                                         [[outer outer-middle] [inner-middle inner]]))))))
+    #(gen/one-of
+       (map gen/return
+            (list (fn [outer outer-middle inner-middle inner]
+                    [[outer outer-middle] [inner-middle inner]]))))))
 
 (s/fdef non-rectangular-4D-integration
         :args (s/cat :number4->tensor ::number4->tensor

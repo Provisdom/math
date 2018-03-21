@@ -8,7 +8,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;150 seconds -- emap can't satisfy after 100 tries
+;;145 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -154,7 +154,11 @@
                          [[1 2] [3 4]])))
 
 (deftest emap-test
-  (is (spec-check tensor/emap))
+  (is (spec-check tensor/emap {:coll-check-limit 10
+                               :coll-error-limit 10
+                               :fspec-iterations 10
+                               :recursion-limit  1
+                               :test-check       {:num-tests 300}}))
   (is= [[6 6] [6 6]]
        (tensor/emap +
                     1
@@ -171,26 +175,47 @@
                     [[1.0 0.5] [2.0 4.0]]
                     [[1.0 0.5] [2.0 4.0]]
                     [1.0 0.5]))
+  ;;notice need to check for spec with 4+ tensors
   (is= [[4.0 2.0] [7.0 12.5]]
-       (tensor/emap (fn [n1 n2 n3 n4]
-                      (+ n1 n2 n3 n4))
+       (tensor/emap (fn [& args]
+                      (when (= 4 (count args))
+                        (let [[n1 n2 n3 n4] args]
+                          (+ n1 n2 n3 n4))))
                     [[1.0 0.5] [2.0 4.0]]
                     [[1.0 0.5] [2.0 4.0]]
                     [1.0 0.5]
                     [[1.0 0.5] [2.0 4.0]]))
   (is= [[2.0 1.0] [4.0 8.0]]
-       (tensor/emap (fn [n1 n2] (+ n1 n2))
+       (tensor/emap (fn [n1 n2]
+                      (+ n1 n2))
                     [[1.0 0.5] [2.0 4.0]]
                     [[1.0 0.5] [2.0 4.0]])))
 
 (deftest emap-kv-test
-  (is (spec-check tensor/emap-kv))
-  (is= [[7 10] [10 13]]
-       (tensor/emap-kv (fn [[i1 i2] n1 n2 n3]
-                         (+ i1 i2 n1 n2 n3))
+  #_(is (spec-check tensor/emap-kv {:coll-check-limit 10
+                                    :coll-error-limit 10
+                                    :fspec-iterations 10
+                                    :recursion-limit  1
+                                    :test-check       {:num-tests 300}}))
+  ;;notice need to check indices for spec
+  (is= [1.0 1.5]
+       (tensor/emap-kv (fn [indices n1]
+                         (when (m/one? (count indices))
+                           (let [[i] indices]
+                             (+ i n1))))
+                       [1.0 0.5]))
+  ;;notice also need to check for spec with 4+ tensors
+  (is= [[8 10] [12 17]]
+       (tensor/emap-kv (fn [indices & args]
+                         (when (and (= 4 (count args))
+                                    (= 2 (count indices)))
+                           (let [[i1 i2] indices
+                                 [n1 n2 n3 n4] args]
+                             (+ i1 i2 n1 n2 n3 n4))))
                        1
                        [2 3]
-                       [[4 5] [6 7]])))
+                       [[4 5] [6 7]]
+                       [[1 0] [2 4]])))
 
 (deftest partition-recursively-test
   (is (spec-check tensor/partition-recursively))
