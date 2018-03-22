@@ -5,11 +5,11 @@
     [provisdom.math.clatrix :as clx]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
+    [provisdom.math.random :as random]
     [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
-    [provisdom.math.random :as random]))
+    [orchestra.spec.test :as ost]))
 
-;;154 seconds
+;;173 seconds
 
 (set! *warn-on-reflection* true)
 
