@@ -1,116 +1,187 @@
 (ns provisdom.math.format
-  (require [clojure.string :as str]
-           [provisdom.utility-belt.format :refer :all]
-           [provisdom.math.core :as m]
-           [taoensso.truss :as truss :refer (have have! have?)]))
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.utility-belt.strings :as strings]
+    [provisdom.math.core :as m]
+    [clojure.string :as str]))
 
-(set! *warn-on-reflection* true)
+(s/def ::digits
+  (s/with-gen ::m/long+
+              #(gen/large-integer* {:min 1 :max 35})))
 
-(defn trim-number 
-  "Trims number of any unnecessary characters, e.g. -0.3 and 0.30"
+(s/def ::max-digits ::digits)
+(s/def ::max-length ::m/long+)
+
+(s/def ::decimal-places
+  (s/with-gen ::m/long-non-
+              #(gen/large-integer* {:min 0 :max 35})))
+
+(s/def ::max-decimal-places ::decimal-places)
+(s/def ::money? boolean?)
+
+(def by-letter
+  {"T" 1000000000000
+   "B" 1000000000
+   "M" 1000000
+   "K" 1000})
+
+(defn trim-number-as-string
+  "Trims number of any unnecessary characters e.g. -0.3 and 0.30."
   [s]
-  (let [s (cond (starts-with? s "-0") (trim-number 
-                                        (str "-" (trim-start s "-0"))),
-                (substring? "." s) (trim-end s "0")
+  (let [s (cond (str/starts-with? s "-0") (trim-number-as-string (str "-" (strings/trim-start s "-0")))
+                (str/includes? s ".") (strings/trim-end s "0")
                 :else s)]
-    (trim-start s "0")))
+    (strings/trim-start s "0")))
 
-(defn- by-letter [s]
-  (case s 
-    "T" 1000000000000
-    "B" 1000000000
-    "M" 1000000
-    "K" 1000))
-    
-(defn format-float 
-  "Formats a number with a non-negative number of decimal places"
-  [^double n ^long decimal-places]
-  {:pre [(have? m/non-? decimal-places)]}
-  (format (str "%." decimal-places "f") n))
+(s/fdef trim-number-as-string
+        :args (s/cat :s string?)
+        :ret string?)
 
-(defn format-exponential 
-  "Formats a number into exponential form with a number of digits"
-  [n & [digits]]
-  {:pre [(have? [:or nil? m/non-?] digits)]}
-  (if digits
-    (replace-string
-      (replace-string
-        (format (str "%." (long (dec digits)) "E") (double n))
-        "E+0" "E+")
-      "E-0" "E-")
-    (let [s (replace-string
-              (replace-string 
-                (format (str "%." 15 "E") (double n)) 
-                "E+0" "E+")
-              "E-0" "E-")]
-      (loop [s1 s]
-        (if (substring? "0E" s1) (recur (replace-string s1 "0E" "E"))
-          s1)))))
+(defn format-as-float
+  "Formats `finite` into float form with a number of decimal places."
+  [finite decimal-places]
+  (format (str "%." decimal-places "f") (double finite)))
+
+(s/fdef format-as-float
+        :args (s/cat :finite ::m/finite :decimal-places ::decimal-places)
+        :ret string?)
+
+(defn format-as-exponential
+  "Formats `finite` into exponential form with a number of digits."
+  ([finite] (format-as-exponential finite {}))
+  ([finite {::keys [digits]}]
+   (if digits
+     (str/replace
+       (str/replace
+         (format (str "%." (long (dec digits)) "E")
+                 (double finite))
+         "E+0"
+         "E+")
+       "E-0"
+       "E-")
+     (let [s (str/replace
+               (str/replace
+                 (format (str "%." 15 "E") (double finite))
+                 "E+0"
+                 "E+")
+               "E-0"
+               "E-")]
+       (loop [s1 s]
+         (if (str/includes? s1 "0E")
+           (recur (str/replace s1 "0E" "E"))
+           s1))))))
+
+(s/fdef format-as-exponential
+        :args (s/cat :finite ::m/finite
+                     :opts (s/? (s/keys :opt [::digits])))
+        :ret string?)
 
 (defn format-number
-  "Formats a number into its best form."
-  [n max-length & {:keys [max-decimal-places max-digits]}]
-  {:pre [(have? m/non-? max-length)]}
-  (let [n (if-not max-decimal-places (double n)
-            (double (read-string (format-float n max-decimal-places)))),
-        stn (if-not max-digits (str n) (format-exponential n max-digits)),
-        n (if-not max-digits n (read-string stn)),
-        ml (min max-length (count stn)),
-        sd (count (str (m/round n :type :toward))),
-        g? (or (and (> sd ml) (> sd (+ 5.5 (* -0.5 (m/sgn n))))) 
-               (< (m/abs n) 0.0001))]
-    (loop [i (max ml 1)]
-      (let [s (if g? (format-exponential n i) (format-float n (dec i)))]
-        (if (or (m/one? i) (<= (count s) ml)) s
-          (recur (dec i)))))))
+  "Formats `number` into its best form."
+  ([number max-length] (format-number number max-length {}))
+  ([number max-length {::keys [max-decimal-places max-digits]}]
+   (cond (m/nan? number) "NaN"
+         (m/inf+? number) "Inf"
+         (m/inf-? number) "-Inf"
+         :else (let [rounded-number (double (if max-decimal-places
+                                              (read-string (format-as-float number max-decimal-places))
+                                              number))
+                     rounded-number-as-string (if max-digits
+                                                (format-as-exponential rounded-number {::digits max-digits})
+                                                (str rounded-number))
+                     shortened-number (if max-digits
+                                        (read-string rounded-number-as-string)
+                                        rounded-number)
+                     new-max-length (min max-length (count rounded-number-as-string))
+                     standard-digits (count (str (m/round shortened-number :toward-zero)))
+                     want-exponential? (or (and (> standard-digits new-max-length)
+                                                (> standard-digits (+ 5.5 (* -0.5 (m/sgn shortened-number)))))
+                                           (< (m/abs shortened-number) 0.0001))]
+                 (loop [i (max new-max-length 1)]
+                   (let [s (if want-exponential?
+                             (format-as-exponential shortened-number {::digits i})
+                             (format-as-float shortened-number (dec i)))]
+                     (if (or (m/one? i) (<= (count s) new-max-length))
+                       s
+                       (recur (dec i)))))))))
+
+(s/fdef format-number
+        :args (s/cat :number ::m/number
+                     :max-length ::max-length
+                     :opts (s/? (s/keys :opt [::max-decimal-places ::max-digits])))
+        :ret string?)
 
 ;;;SHORTHAND
-(defn unparse-shorthand 
-  "Converts a number into shorthand."
-  [n max-length & {:keys [max-decimal-places max-digits money?]}]
-  (cond (m/nan? n) "NaN"
-        (m/inf+? n) "Inf"
-        (m/inf-? n) "-Inf"
-        :else (let [n (if-not max-decimal-places (double n)
-                        (double 
-                          (read-string 
-                            (format-float n max-decimal-places)))),
-                    n (if-not max-digits n 
-                        (read-string 
-                          (format-exponential n max-digits))),
-                    ab (m/abs n),
-                    f (fn [x l]
-                        (let [stn (str (format-number (/ x (by-letter l)) 
-                                                      (dec max-length))),
-                              stn (if (ends-with? stn ".0") 
-                                    (butlast-string (butlast-string stn)) 
-                                    stn)]
-                          (str stn l))),
-                    s (cond (>= ab 1e15) (format-number n max-length)
-                            (>= ab (by-letter "T")) (f n "T")
-                            (>= ab (by-letter "B")) (f n "B")
-                            (>= ab (by-letter "M")) (f n "M")
-                            (>= ab (by-letter "K")) (f n "K")
-                            :else (format-number n max-length))]
-                (if money? 
-                  (if (neg? n) (str "-$" (rest-string s)) (str "$" s))
-                  s))))
+(defn unparse-shorthand
+  "Converts `number` into shorthand."
+  ([number max-length] (unparse-shorthand number max-length {}))
+  ([number max-length {::keys [max-decimal-places max-digits money?]}]
+   (cond (m/nan? number) "NaN"
+         (m/inf+? number) "Inf"
+         (m/inf-? number) "-Inf"
+         :else (let [rounded-number (double (if max-decimal-places
+                                              (read-string
+                                                (format-as-float number max-decimal-places))
+                                              number))
+                     shortened-number (if max-digits
+                                        (read-string
+                                          (format-as-exponential rounded-number {::digits max-digits}))
+                                        rounded-number)
+                     absolute-value (m/abs shortened-number)
+                     f (fn [x letter]
+                         (let [adjusted-number (str (format-number (/ x (by-letter letter))
+                                                                   (max 1 (dec max-length))))
+                               without-ending (if (str/ends-with? adjusted-number ".0")
+                                                (strings/butlast-string
+                                                  (strings/butlast-string adjusted-number))
+                                                adjusted-number)]
+                           (str without-ending letter)))
+                     s (cond (>= absolute-value 1e15) (format-number shortened-number max-length)
+                             (>= absolute-value (by-letter "T")) (f shortened-number "T")
+                             (>= absolute-value (by-letter "B")) (f shortened-number "B")
+                             (>= absolute-value (by-letter "M")) (f shortened-number "M")
+                             (>= absolute-value (by-letter "K")) (f shortened-number "K")
+                             :else (format-number shortened-number max-length))]
+                 (if money?
+                   (if (neg? shortened-number)
+                     (str "-$" (strings/rest-string s))
+                     (str "$" s))
+                   s)))))
 
-(defn parse-shorthand 
-  "Converts a shorthand string into a number"
+(s/fdef unparse-shorthand
+        :args (s/cat :number ::m/number
+                     :max-length ::max-length
+                     :opts (s/? (s/keys :opt [::max-decimal-places ::max-digits ::money?])))
+        :ret string?)
+
+(defn parse-shorthand
+  "Converts a shorthand string, `s`, into a number if possible. Otherwise
+  returns nil."
   [s]
-  (let [s (if (starts-with? s "$") (rest-string s) s),
-        s (if (starts-with? s "-$") (str "-" (trim-start s "-$")) s)]
-    (case s 
+  (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
+                            (str/starts-with? s "-$") (str "-" (strings/trim-start s "-$"))
+                            :else s)]
+    (case removed-money
       "NaN" m/nan
       "Inf" m/inf+
       "-Inf" m/inf-
-      (let [f (fn [x l]
-                (let [n (read-string (butlast-string x))]
-                  (when (number? n) (* (by-letter l) n))))]
-        (cond (ends-with? s "T") (f s "T")
-              (ends-with? s "B") (f s "B")
-              (ends-with? s "M") (f s "M")
-              (ends-with? s "K") (f s "K")
-              :else (let [n (read-string s)] (when (number? n) n)))))))
+      (let [f (fn [x letter]
+                (let [n (read-string (strings/butlast-string x))]
+                  (when (number? n)
+                    (* (by-letter letter) n))))]
+        (try (cond (str/ends-with? removed-money "T") (f removed-money "T")
+                   (str/ends-with? removed-money "B") (f removed-money "B")
+                   (str/ends-with? removed-money "M") (f removed-money "M")
+                   (str/ends-with? removed-money "K") (f removed-money "K")
+                   :else (let [n (read-string removed-money)]
+                           (when (number? n)
+                             n)))
+             (catch Exception _ nil))))))
+
+(s/fdef parse-shorthand
+        :args (s/cat :s string?)
+        :ret (s/nilable ::m/number))
 

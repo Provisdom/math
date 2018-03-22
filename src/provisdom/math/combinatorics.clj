@@ -1,12 +1,14 @@
 (ns provisdom.math.combinatorics
-  (:require [provisdom.math [core :as m]
-             [special-functions :as mf]
-             [matrix :as mx]]
-            [clojure.core.reducers :as ccr]
-            [taoensso.truss :refer (have have! have?)])
-  (:import [cern.jet.math.tdouble DoubleArithmetic]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m]
+    [provisdom.math.special-functions :as special-fns]
+    [clojure.core.reducers :as ccr])
+  (:import
+    [cern.jet.math.tdouble DoubleArithmetic]))
 
 ;;;CONSTANTS
 (def ^:private ^:const subfactorials
@@ -23,102 +25,199 @@
    44152005855084346, 445958869294805289, 4638590332229999353,
    49631246523618756274])
 
+;;;FACTORIALS
 (defn factorial
-  "Returns the factorial of x.
-Returns long if possible."
-  [^double x]
-  {:pre [(have? m/non-? x)]}
-  (m/maybe-long-able (mf/gamma (inc x))))
+  "Returns the factorial of `x`."
+  [x]
+  (special-fns/gamma (inc (double x))))
+
+(s/fdef factorial
+        :args (s/cat :x ::m/non-)
+        :ret ::m/num)
+
+(defn factorial'
+  "Returns the factorial of `x`. Returns long if possible."
+  [x]
+  (m/maybe-long-able (factorial x)))
+
+(s/fdef factorial'
+        :args (s/cat :x ::m/non-)
+        :ret ::m/num)
 
 (defn log-factorial
-  "Returns the log-factorial of x"
-  ^double [^double x]
-  {:pre [(have? m/non-? x)]}
-  (mf/log-gamma (inc x)))
+  "Returns the log-factorial of `x`"
+  [x]
+  (special-fns/log-gamma (inc x)))
+
+(s/fdef log-factorial
+        :args (s/cat :x ::m/non-)
+        :ret ::m/num)
 
 (defn subfactorial
-  "Returns the subfactorial of x.
-The number of ways that n objects can be arranged where no object appears in 
-   its natural position (known as 'derangements.')"
-  [^double x]
-  {:pre [(have? m/non-? x)]}
-  (if (and (m/long-able? x) (< x 22)) (subfactorials (m/round x))
-                                      (m/round (/ (factorial x) m/E))))
+  "Returns the subfactorial of `x`. The number of ways that n objects can be
+  arranged where no object appears in its natural position (known as
+  'derangements.')"
+  [x]
+  (if (and (m/long-able? x) (< x 22))
+    (subfactorials (m/round x :up))
+    (m/round (/ (factorial x) m/E) :up)))
 
+(s/fdef subfactorial
+        :args (s/cat :x ::m/non-)
+        :ret ::m/num)
+
+;;;CHOOSING
 (defn choose-k-from-n
-  "Returns the number of ways to choose k items out of n items. 
-n!/(k!(n - k)!).
-Returns long if possible.
-k must be able to be a long.
-Otherwise use log-choose-k-from-n."
-  [k ^double n]
-  {:pre [(have? #(m/roughly-round? % 0.0) k)]}
-  (m/maybe-long-able (DoubleArithmetic/binomial n (long k))))
+  "Returns the number of ways to choose `k` items out of `n` items.
+  `n`! / (`k`! × (`n` - `k`)!). `k` must be able to be a long and less than 1e8,
+  otherwise use [[log-choose-k-from-n]]."
+  [k n]
+  (DoubleArithmetic/binomial (double n) (long k)))
+
+(s/fdef choose-k-from-n
+        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
+                     :n ::m/number)
+        :ret ::m/number)
+
+(defn choose-k-from-n'
+  "Returns the number of ways to choose `k` items out of `n` items.
+  `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` must be able to
+  be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
+  [k n]
+  (m/maybe-long-able (choose-k-from-n k n)))
+
+(s/fdef choose-k-from-n'
+        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
+                     :n ::m/number)
+        :ret ::m/number)
 
 (defn log-choose-k-from-n
-  "Returns the log of the number of ways to choose k items out of n items.
-n must be >= k, and n and k must be non-negative.  
-Otherwise, use choose-k-from-n."
-  [^double k ^double n]
-  {:pre [(have? m/non-? k n) (have? #(>= n %) k)]}
-  (- (log-factorial n) (log-factorial k) (log-factorial (- n k))))
+  "Returns the log of the number of ways to choose `k` items out of `n` items.
+  `n` must be >= `k`, and `n` and `k` must be non-negative. Otherwise, use
+  [[choose-k-from-n]]."
+  [k n]
+  (- (log-factorial n)
+     (log-factorial k)
+     (log-factorial (- n k))))
+
+(s/fdef log-choose-k-from-n
+        :args (s/and (s/cat :k ::m/non- :n ::m/non-)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind
-  "Returns the number of ways to partition a set of n items into k subsets.
-Returns long if possible."
-  [n k]
-  {:pre [(have? #(m/roughly-round-non-? % 0.0) k n)]}
-  (m/maybe-long-able
+  "Returns the number of ways to partition a set of `n` items into `k` subsets."
+  [k n]
+  (if (> k 170)
+    m/nan
     (* (/ (factorial k))
        (ccr/fold
          + (fn [tot e]
              (+ tot
-                (* (m/pow (- 1) e) (choose-k-from-n e k) (m/pow (- k e) n))))
+                (* (m/pow (- 1) e)
+                   (choose-k-from-n e k)
+                   (m/pow (- k e) n))))
          (range (inc k))))))
 
+(s/fdef stirling-number-of-the-second-kind
+        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/number)
+
+(defn stirling-number-of-the-second-kind'
+  "Returns the number of ways to partition a set of `n` items into `k` subsets.
+  Returns long if possible."
+  [k n]
+  (m/maybe-long-able (stirling-number-of-the-second-kind k n)))
+
+(s/fdef stirling-number-of-the-second-kind'
+        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/number)
+
 (defn bell-number
-  "Returns the number of partitions of a set of size n."
+  "Returns the number of partitions of a set of size `n`."
   [n]
-  {:pre [(have? #(m/roughly-round-non-? % 0.0) n)]}
-  (if (< n 27) (bell-numbers (long n))
-               (ccr/fold + (fn [tot e] (+ tot (stirling-number-of-the-second-kind n e)))
-                         (range (inc n)))))
+  (cond (> n 170) m/nan
+        (and (m/non-? n) (< n 27)) (bell-numbers (long n))
+        :else (ccr/fold + (fn [tot e]
+                            (+ tot (stirling-number-of-the-second-kind e n)))
+                        (range (inc n)))))
+
+(s/fdef bell-number
+        :args (s/cat :n ::m/long-able)
+        :ret ::m/number)
 
 (defn binomial-probability
-  "Likelihood of seeing 'successes' out of 'trials' with success-prob.  
-Successes must be able to be a long, otherwise use 'log-binomial-probability'"
-  ^double [successes ^double trials ^double success-prob]
-  {:pre [(have? m/prob? success-prob)
-         (have? m/long-able? successes)
-         (have? m/non-? trials)
-         (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
-  (* (choose-k-from-n successes trials) (m/pow success-prob successes)
-     (m/pow (m/rev success-prob) (- trials successes))))
+  "Likelihood of seeing `successes` out of `trials` with `success-prob`.
+  `Successes` must be able to be a long and less than 1e8, otherwise use
+  [[log-binomial-probability]]."
+  [successes trials success-prob]
+  (* (choose-k-from-n successes trials)
+     (m/pow success-prob successes)
+     (m/pow (m/one- success-prob) (- trials successes))))
+
+(s/fdef binomial-probability
+        :args (s/and (s/cat :successes (s/and ::m/long-able-non- #(< % 1e8))
+                            :trials ::m/non-
+                            :success-prob ::m/prob)
+                     (fn [{:keys [trials successes]}]
+                       (>= trials successes)))
+        :ret ::m/number)
 
 (defn log-binomial-probability
-  "Log-Likelihood of seeing 'successes' out of 'trials' with success-prob"
-  ^double [^double successes ^double trials ^double success-prob]
-  {:pre [(have? m/prob? success-prob)
-         (have? #(m/roughly-round? % 0.0) successes)
-         (have? m/non-? trials)
-         (have? (fn [[trials successes]] (>= trials successes)) [trials successes])]}
-  (+ (log-choose-k-from-n successes trials) (* successes (m/log success-prob))
-     (* (- trials successes) (m/log (m/rev success-prob)))))
+  "Log-Likelihood of seeing `successes` out of `trials` with `success-prob`."
+  [successes trials success-prob]
+  (+ (log-choose-k-from-n successes trials)
+     (* successes (m/log success-prob))
+     (if (= trials successes)
+       0.0
+       (* (- trials successes)
+          (m/log (m/one- success-prob))))))
 
-;;;HYPERGEOMETRIC FUNCTION
-(defn generalized-hypergeometric
-  "p and q should be arrays"
-  [p q z] (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)})))
+(s/fdef log-binomial-probability
+        :args (s/and (s/cat :successes ::m/long-able-non-
+                            :trials ::m/non-
+                            :success-prob ::m/prob)
+                     (fn [{:keys [trials successes]}]
+                       (>= trials successes)))
+        :ret ::m/number)
 
-;;;COMBINATIONS
+(comment
+  ;;;HYPERGEOMETRIC FUNCTION
+  (defn generalized-hypergeometric
+    "`p` and `q` should be arrays."
+    [p q z]
+    (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)}))))
+
+;;;UNORDERED COMBINATIONS
+(def mdl 3)                                                 ;max-dim-length for generators
+
+(s/def ::items
+  (s/with-gen
+    (s/coll-of any?)
+    #(gen/vector (s/gen any?) 0 mdl)))
+
+(s/def ::groups-of-items
+  (s/with-gen
+    (s/coll-of ::items)
+    #(gen/vector (s/gen ::items) 0 mdl)))
+
+(s/def ::replacement-count
+  (s/with-gen
+    ::m/int-non-
+    #(gen/large-integer* {:min 0 :max mdl})))
+
 ;taken from an old version of clojure.math.combinatorics
 (defn- unchunk
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
-lazy with no chunks. Chunks are good for efficiency when the data items are
-small, but when being processed via map, for example, a reference is kept to
-every function result in the chunk until the entire chunk has been processed,
-which increases the amount of memory in use that cannot be garbage
-collected."
+  lazy with no chunks. Chunks are good for efficiency when the data items are
+  small, but when being processed via map, for example, a reference is kept to
+  every function result in the chunk until the entire chunk has been processed,
+  which increases the amount of memory in use that cannot be garbage collected."
   [s]
   (lazy-seq
     (when (seq s)
@@ -127,93 +226,152 @@ collected."
 (defn- index-combinations
   [n cnt]
   (lazy-seq
-    (let [c (vec (cons nil (for [j (range 1 (inc n))] (+ j cnt (- (inc n)))))),
-          iter-comb
-          (fn iter-comb [c j]
-            (if (> j n) nil
+    (let [c (vec (cons nil
+                       (for [j (range 1 (inc n))]
+                         (+ j cnt (- (inc n))))))
+          iter-comb (fn iter-comb [c j]
+                      (when-not (> j n)
                         (let [c (assoc c j (dec (c j)))]
-                          (if (< (c j) j) [c (inc j)]
-                                          (loop [c c, j j]
-                                            (if (= j 1) [c j]
-                                                        (recur (assoc c (dec j) (dec (c j))) (dec j)))))))),
-          step
-          (fn step [c j]
-            (cons (rseq (subvec c 1 (inc n)))
-                  (lazy-seq (let [next-step (iter-comb c j)]
-                              (when next-step (step (next-step 0) (next-step 1)))))))]
+                          (if (< (c j) j)
+                            [c (inc j)]
+                            (loop [c c
+                                   j j]
+                              (if (= j 1)
+                                [c j]
+                                (recur (assoc c (dec j) (dec (c j))) (dec j))))))))
+          step (fn step [c j]
+                 (cons (rseq (subvec c 1 (inc n)))
+                       (lazy-seq
+                         (let [next-step (iter-comb c j)]
+                           (when next-step
+                             (step (next-step 0) (next-step 1)))))))]
       (step c 1))))
 
 (defn combinations
-  "All the unique ways of taking n different elements from items,
-  or all the unique ways of taking different elements from items"
+  "All the unique ways of taking `n` different elements from `items`, or all the
+  unique ways of taking different elements from `items`."
   ([items]
-   (mapcat (fn [n] (combinations items n)) (unchunk (range (inc (count items))))))
-  ([items ^long n]
-   {:pre [(have? m/non-? n)]}
+   (mapcat (fn [n] (combinations items n))
+           (unchunk (range (inc (count items))))))
+  ([items n]
    (let [v-items (vec (reverse items))]
      (if (zero? n)
        (list ())
        (let [cnt (count items)]
          (cond (> n cnt) nil
                (= n cnt) (list (seq items))
-               :else (map #(map v-items %) (index-combinations n cnt))))))))
+               :else (map #(map v-items %)
+                          (index-combinations n cnt))))))))
+
+(s/fdef combinations
+        :args (s/cat :items ::items
+                     :n (s/? ::m/long-non-))
+        :ret (s/nilable ::groups-of-items))
 
 (defn combinations-with-complements
-  "All combinations of size 'n' with complements, or all combinations with complements"
+  "All combinations of size `n` with complements, or all combinations with
+  complements."
   ([items]
-   (let [s (combinations items), r (reverse s)] (partition 2 (interleave s r))))
-  ([items ^long n]
-   {:pre [(have? m/non-? n)]}
-   (let [s (combinations items n)
-         r (reverse (combinations items (- (count items) n)))]
-     (partition 2 (interleave s r)))))
+   (let [s (combinations items)
+         r (reverse s)]
+     (partition 2 (interleave s r))))
+  ([items n]
+   (when-let [s (combinations items n)]
+     (partition 2
+                (interleave s
+                            (reverse
+                              (combinations items (- (count items) n))))))))
+
+(s/fdef combinations-with-complements
+        :args (s/cat :items ::items
+                     :n (s/? ::m/long-non-))
+        :ret (s/nilable ::groups-of-items))
 
 (defn combinations-using-all
-  "Combinations that use all of the items by grouping into the breakdown 
-   pattern, where breakdown is a vector of longs that sum to the number of items."
+  "Combinations that use all of the `items` by grouping into the `breakdown`
+   pattern, where `breakdown` is a collection of positive longs that sum to the
+   number of items."
   [items breakdown]
-  {:pre [(have? (fn [[items breakdown]] (= (mx/esum breakdown) (count items))) [items breakdown])]}
   (if-not (next breakdown)
     (list (list items))
-    (let [cwos (combinations-with-complements items (first breakdown))]
-      (mapcat (fn [cua] (map (fn [dl] (apply list (first cua) dl))
-                             (combinations-using-all (second cua) (rest breakdown)))) cwos))))
+    (let [combos (combinations-with-complements items (first breakdown))]
+      (mapcat (fn [cua]
+                (map (fn [dl]
+                       (apply list (first cua) dl))
+                     (combinations-using-all (second cua) (rest breakdown))))
+              combos))))
+
+(s/fdef combinations-using-all
+        :args (s/with-gen
+                (s/and (s/cat :items ::items
+                              :breakdown (s/coll-of ::m/long+))
+                       (fn [{:keys [items breakdown]}]
+                         (== (apply + 0.0 breakdown) (count items))))
+                #(gen/one-of
+                   (map gen/return
+                        (list [[1 2 3] [2 1]] [[] []] [[[] nil [12 34]] [1]]))))
+        :ret ::groups-of-items)
 
 (defn distinct-combinations-with-replacement
-  "All distinct combinations of the items with replacement of up to 'n' items"
-  [items ^long n]
-  {:pre [(have? m/non-? n)]}
-  (filter #(<= (count %) n) (distinct (map sort (combinations (apply concat (repeat n items)))))))
+  "All distinct combinations of the `items` with replacement of up to `n`
+  items."
+  [items n]
+  (filter #(<= (count %) n)
+          (distinct (combinations (apply interleave (repeat n items))))))
 
-;;;WITH ORDERING
+(s/fdef distinct-combinations-with-replacement
+        :args (s/cat :items ::items
+                     :n ::replacement-count)
+        :ret ::groups-of-items)
+
+;;;ORDERED COMBINATIONS
 (defn- permute
-  "All the permutations of items"
+  "All the permutations of `items`."
   [items prefix]
   (if (empty? items)
     [prefix]
     (mapcat (fn [i]
-              (permute (concat (take i items) (drop (inc i) items)) (conj prefix (nth items i))))
+              (permute (concat (take i items) (drop (inc i) items))
+                       (conj prefix (nth items i))))
             (range (count items)))))
 
 (defn permutations
-  "All the permutations of items"
+  "All the permutations of `items`."
   [items]
-  (let [p (permute (into [] items) (if (vector? items) [] '()))]
-    (if (vector? items) p (map #(into '() %) p))))
+  (let [p (permute (into [] items)
+                   (if (vector? items) [] '()))]
+    (if (vector? items)
+      p
+      (map #(into '() %)
+           p))))
+
+(s/fdef permutations
+        :args (s/cat :items ::items)
+        :ret ::groups-of-items)
 
 (defn cartesian-product
-  "All the ways to take one item from each sequence"
-  [& colls]
-  (let [v (vec colls)]
+  "All the ways to take one item from each sequence in `sequences-of-items`."
+  [& sequences-of-items]
+  (let [v (vec sequences-of-items)]
     (if (empty? v)
       '(())
       (for [x (first v)
             more (apply cartesian-product (rest v))]
         (cons x more)))))
 
+(s/fdef cartesian-product
+        :args (s/cat :sequences-of-items (s/* ::items))
+        :ret ::groups-of-items)
+
 (defn selections
-  "All the ways of taking n (possibly the same) elements from the sequence of items"
-  [items ^long n]
-  {:pre [(have? m/non-? n)]}
-  (apply cartesian-product (take n (repeat items))))
+  "All the ways of taking `n` (possibly the same) elements from the sequence of
+  items."
+  [items n]
+  (apply cartesian-product
+         (take n (repeat items))))
+
+(s/fdef selections
+        :args (s/cat :items ::items
+                     :n ::replacement-count)
+        :ret ::groups-of-items)
 

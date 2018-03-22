@@ -1,206 +1,419 @@
 (ns provisdom.math.special-functions
-  (:require [provisdom.utility-belt.core :as co]
-            [provisdom.math [core :as m]
-             [matrix :as mx]
-             [apache :as ap]]
-            [taoensso.truss :as truss :refer (have have! have?)])
-  (:import [cern.jet.stat.tdouble Gamma]))
-
-(set! *warn-on-reflection* true)
+  (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
+    [clojure.spec.test.alpha :as st]
+    [orchestra.spec.test :as ost]
+    [provisdom.math.core :as m])
+  (:import
+    [cern.jet.stat.tdouble Gamma]
+    [org.apache.commons.math3.special.Gamma]
+    [org.apache.commons.math3.special Beta Erf]))
 
 ;;;DECLARATIONS
-(declare regularized-gamma-p)
+(declare regularized-gamma-p erfc)
 
 ;;;CONSTANTS
-(def ^:const euler-mascheroni-constant 
+(def ^:const euler-mascheroni-constant
   0.57721566490153286060651209008240243104215933593992M)
 
 (def ^:const lanczos-coefficients
-  "lanczos coefficients"
-  [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 
+  "Lanczos Coefficients."
+  [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
    771.32342877765313, -176.61502916214059, 12.507343278686905,
    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7])
 
 (def ^:const exact-stirling-errors
-  "expansion error for values 0.0 through 15.0 by 0.5"
-  [0.0, 0.1534264097200273452913848, 0.0810614667953272582196702, 
-   0.0548141210519176538961390, 0.0413406959554092940938221, 
-   0.03316287351993628748511048, 0.02767792568499833914878929, 
-   0.02374616365629749597132920, 0.02079067210376509311152277, 
-   0.01848845053267318523077934, 0.01664469118982119216319487, 
-   0.01513497322191737887351255, 0.01387612882307074799874573, 
-   0.01281046524292022692424986, 0.01189670994589177009505572, 
-   0.01110455975820691732662991, 0.010411265261972096497478567, 
-   0.009799416126158803298389475, 0.009255462182712732917728637, 
-   0.008768700134139385462952823, 0.008330563433362871256469318, 
-   0.007934114564314020547248100, 0.007573675487951840794972024, 
-   0.007244554301320383179543912, 0.006942840107209529865664152, 
+  "Expansion error for values 0.0 through 15.0 by 0.5."
+  [0.0, 0.1534264097200273452913848, 0.0810614667953272582196702,
+   0.0548141210519176538961390, 0.0413406959554092940938221,
+   0.03316287351993628748511048, 0.02767792568499833914878929,
+   0.02374616365629749597132920, 0.02079067210376509311152277,
+   0.01848845053267318523077934, 0.01664469118982119216319487,
+   0.01513497322191737887351255, 0.01387612882307074799874573,
+   0.01281046524292022692424986, 0.01189670994589177009505572,
+   0.01110455975820691732662991, 0.010411265261972096497478567,
+   0.009799416126158803298389475, 0.009255462182712732917728637,
+   0.008768700134139385462952823, 0.008330563433362871256469318,
+   0.007934114564314020547248100, 0.007573675487951840794972024,
+   0.007244554301320383179543912, 0.006942840107209529865664152,
    0.006665247032707682442354394, 0.006408994188004207068439631,
    0.006171712263039457647532867, 0.005951370112758847735624416,
    0.005746216513010115682023589, 0.005554733551962801371038690])
 
 (def ^:const rational-approximation-coefficients
-  [[2.506628277459239e+00 -3.066479806614716e+01 1.383577518672690e+02 
-    -2.759285104469687e+02 2.209460984245205e+02 -3.969683028665376e+01 ]
-   [1.0 -1.328068155288572e+01 6.680131188771972e+01 -1.556989798598866e+02 
+  [[2.506628277459239e+00 -3.066479806614716e+01 1.383577518672690e+02
+    -2.759285104469687e+02 2.209460984245205e+02 -3.969683028665376e+01]
+   [1.0 -1.328068155288572e+01 6.680131188771972e+01 -1.556989798598866e+02
     1.615858368580409e+02 -5.447609879822406e+01]
-   [2.938163982698783e+00 4.374664141464968e+00 -2.549732539343734e+00 
-    -2.400758277161838e+00 -3.223964580411365e-01 -7.784894002430293e-03 ]
-   [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01 
+   [2.938163982698783e+00 4.374664141464968e+00 -2.549732539343734e+00
+    -2.400758277161838e+00 -3.223964580411365e-01 -7.784894002430293e-03]
+   [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
 ;;;ERROR FUNCTIONS
-(defn erf 
-  "Returns the error function: 2 / (sqrt PI) * integral[0, x] (e^-(t*t) * dt)"
-  (^double [^double x]
-    (cond (zero? x) 0.0, (m/inf+? x) 1.0, (m/inf-? x) -1.0, 
-          :else (* (m/sgn x) (->> x m/sq (regularized-gamma-p m/half)))))
-  (^double [^double x1 ^double x2] (ap/erf x1 x2)))
+(defn erf
+  "Returns the error function:
+  2 / (sqrt PI) × integral[0, `x`] (e ^ - (t ^ 2) × dt)."
+  [x]
+  (cond (zero? x) 0.0
+        (m/inf+? x) 1.0
+        (m/inf-? x) -1.0
+        :else (* (m/sgn x)
+                 (regularized-gamma-p m/half (m/sq x)))))
 
-(defn erf-derivative 
-  "Returns the derivative of the error function"
-  ^double [^double x] (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
+(s/fdef erf
+        :args (s/cat :x ::m/number)
+        :ret ::m/nan-or-corr)
 
-(defn erfc 
-  "Returns the complementary error function"
-  ^double [^double x] (m/rev (erf x)))
+(defn erf-diff
+  "Returns the difference between [[erf]](`x1`) and [[erf]](`x2`)."
+  [x1 x2]
+  (if (> x1 x2)
+    (- (erf-diff x2 x1))
+    (if (< x1 -0.4769362762044697)
+      (if (neg? x2)
+        (- (erfc (- x2)) (erfc (- x1)))
+        (- (erf x2) (erf x1)))
+      (if (and (> x2 0.4769362762044697) (pos? x1))
+        (- (erfc x1) (erfc x2))
+        (- (erf x2) (erf x1))))))
 
-(defn inv-erf 
-  "Returns the inverse error function"
-  ^double [^double x]
-  {:pre [(have? #(>= % -1) x) (have? #(<= % 1) x)]}
-  (cond (m/roughly? 1.0 x m/*dbl-close*) m/inf+, 
-        (m/roughly? -1.0 x m/*dbl-close*) m/inf-, 
-        (zero? x) 0.0 :else (ap/erf-inv x)))
+(s/fdef erf-diff
+        :args (s/cat :x1 ::m/num :x2 ::m/num)
+        :ret (s/double-in :min -2.0 :max 2.0))
 
-(defn inv-erfc 
-  "Returns the inverse complementary error function"
-  ^double [^double x]
-  {:pre [(have? m/non-? x) (have? #(<= % 2) x)]}
-  (cond (m/roughly? x 0.0 m/*dbl-close*) m/inf+, 
-        (m/roughly? x 2.0 m/*dbl-close*) m/inf-, 
-        (m/one? x) 0.0 :else (ap/erfc-inv x)))
+(defn erf-derivative
+  "Returns the derivative of the error function."
+  [x]
+  (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
+
+(s/fdef erf-derivative
+        :args (s/cat :x ::m/num)
+        :ret ::m/non-)
+
+(defn erfc
+  "Returns the complementary error function."
+  [x]
+  (m/one- (erf x)))
+
+(s/fdef erfc
+        :args (s/cat :x ::m/number)
+        :ret (s/or :nan ::m/nan :non-nan (s/double-in :min 0.0 :max 2.0)))
+
+(defn inv-erf
+  "Returns the inverse error function."
+  [x]
+  (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
+        (m/roughly? -1.0 x m/dbl-close) m/inf-
+        (zero? x) 0.0
+        :else (Erf/erfInv (double x))))
+
+(s/fdef inv-erf
+        :args (s/cat :x ::m/corr)
+        :ret ::m/num)
+
+(defn inv-erfc
+  "Returns the inverse complementary error function."
+  [x]
+  (cond (m/roughly? x 0.0 m/dbl-close) m/inf+
+        (m/roughly? x 2.0 m/dbl-close) m/inf-
+        (m/one? x) 0.0
+        :else (inv-erf (m/one- x))))
+
+(s/fdef inv-erfc
+        :args (s/cat :x (s/double-in :min 0.0 :max 2.0))
+        :ret ::m/num)
 
 (defn inv-cdf-standard-normal
-  "Returns the standard Normal inverse cdf"
-  [^double cumul-prob]
-  {:pre [(have? m/prob? cumul-prob)]}
-  (cond (zero? cumul-prob) m/inf-, (m/one? cumul-prob) m/inf+, 
-        (== 0.5 cumul-prob) 0.0 
+  "Returns the standard Normal inverse cdf."
+  [cumul-prob]
+  (cond (zero? cumul-prob) m/inf-
+        (m/one? cumul-prob) m/inf+
+        (== 0.5 cumul-prob) 0.0
         :else (* m/sqrt-two (inv-erf (dec (* 2 cumul-prob))))))
+
+(s/fdef inv-cdf-standard-normal
+        :args (s/cat :cumul-prob ::m/prob)
+        :ret ::m/num)
+
+(defn cdf-standard-normal
+  "Returns the standard Normal cdf."
+  [x]
+  (cond (m/inf+? x) 1.0
+        (m/inf-? x) 0.0
+        (zero? x) 0.5
+        :else (* 0.5 (inc (erf (* x m/inv-sqrt-two))))))
+
+(s/fdef cdf-standard-normal
+        :args (s/cat :x ::m/number)
+        :ret ::m/nan-or-prob)
 
 ;GAMMA FUNCTIONS
 (defn gamma
-  "Returns the gamma function: integral[0, inf] (t^(x-1) * e^-t * dt).
-Although gamma is defined for pos x, this function allows for all non-long-able-non+ x."
-  ^double [^double x]
-  {:pre [(have? (complement m/long-able-non+?) x)]}
-  (Gamma/gamma x))
+  "Returns the gamma function: integral[0, inf] (t ^ (`a`- 1) × e ^ -t × dt).
+  Although gamma is defined for positive `a`, this function allows for all
+  non-long-able-non+ `a`."
+  [a]
+  (cond (m/nan? a) m/nan
+        (> a 709.7) m/inf+
+        (< a -709.7) 0.0
+        :else (Gamma/gamma a)))
 
-(defn lower-gamma 
+(s/fdef gamma
+        :args (s/cat :a ::m/nan-or-non-long-able-non+)
+        :ret ::m/nan-or-non-inf-)
+
+(defn lower-gamma
   "Returns the lower incomplete gamma function: 
-   integral[0, c] (t^(x-1) * e^-t * dt)"
-  ^double [^double c ^double x]
-  {:pre [(have? m/non-? c) (have? pos? x)]}
-  (cond (zero? c) 0.0, (m/one? x) (m/rev (m/exp (- c))),
-        :else (* (gamma x) (ap/regularized-gamma-p c x))))
+   integral[0, `x`] (t ^ (`a` - 1) × e ^ -t × dt)."
+  [a x]
+  (cond (m/nan? a) m/nan
+        (zero? x) 0.0
+        (m/one? a) (m/one- (m/exp (- x)))
+        (> x 1.0e150) 1.0
+        :else (* (gamma a)
+                 (min 1.0
+                      (max 0.0
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaP
+                             (double a)
+                             (double x)))))))
+
+(s/fdef lower-gamma
+        :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
+        :ret ::m/nan-or-non-)
 
 (defn upper-gamma
   "Returns the upper incomplete gamma function: 
-   integral[c, inf] (t^(x-1) * e^-t * dt)"
-  ^double [^double c ^double x]
-  {:pre [(have? m/non-? c) (have? pos? x)]}
-  (cond (zero? c) (gamma x), (m/one? x) (m/exp (- c)),
-        :else (* (gamma x) (ap/regularized-gamma-q c x))))
+   integral[`x`, inf] (t ^ (`a` - 1) × e ^ -t × dt)."
+  [a x]
+  (cond (m/nan? a) m/nan
+        (zero? x) (gamma a)
+        (m/one? a) (m/exp (- x))
+        (> x 1.0e150) 0.0
+        :else (* (gamma a)
+                 (min 1.0
+                      (max 0.0
+                           (org.apache.commons.math3.special.Gamma/regularizedGammaQ
+                             (double a)
+                             (double x)))))))
 
-(defn upper-gamma-derivative-c 
-  "Returns the upper gamma derivative c"
-  ^double [^double c ^double x]
-  {:pre [(have? m/non-? c) (have? pos? x)]}
-  (->> x dec (m/pow c) - (* (m/exp (- c)))))
+(s/fdef upper-gamma
+        :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
+        :ret ::m/nan-or-non-)
 
-(defn regularized-gamma-p 
-  "Returns the regularized gamma function P(c, x) = 1 - Q(c, x).  
-Equal to lower incomplete gamma function divided by gamma function"
-  ^double [^double c ^double x]
-  {:pre [(have? m/non-? c) (have? pos? x)]}
-  (if (zero? c) 0.0 (ap/regularized-gamma-p c x)))
+(defn upper-gamma-derivative-x
+  "Returns the upper gamma derivative `x`."
+  [a x]
+  (let [v (* (m/exp (- x))
+             (m/pow x (dec a))
+             (/ (gamma a)))]
+    (if (m/inf-? v) m/inf+ v)))
 
-(defn regularized-gamma-q 
-  "Returns the regularized gamma function Q(c, x) = 1 - P(c, x).  
-Equal to upper incomplete gamma function divided by gamma function"
-  ^double [^double c ^double x]
-  {:pre [(have? m/non-? c) (have? pos? x)]}
-  (if(zero? c) 1.0 (ap/regularized-gamma-q c x)))
+(s/fdef upper-gamma-derivative-x
+        :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
+        :ret ::m/nan-or-non-)
 
-(defn log-gamma 
-  "Returns the log gamma of x"
-  ^double [^double x]
-  {:pre [(have? pos? x)]}
-  (ap/log-gamma x))
+(defn regularized-gamma-p
+  "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`). Equal
+  to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
+  [a x]
+  (cond (m/nan? a) m/nan
+        (zero? x) 0.0
+        (> x 1.0e150) 1.0
+        :else (min 1.0
+                   (max 0.0
+                        (org.apache.commons.math3.special.Gamma/regularizedGammaP
+                          (double a)
+                          (double x))))))
+
+(s/fdef regularized-gamma-p
+        :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
+        :ret ::m/nan-or-prob)
+
+(defn regularized-gamma-q
+  "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`). Equal
+  to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
+  [a x]
+  (cond (or (m/nan? a) (m/nan? x)) m/nan
+        (zero? x) 1.0
+        (> x 1.0e150) 0.0
+        :else (min 1.0
+                   (max 0.0
+                        (org.apache.commons.math3.special.Gamma/regularizedGammaQ
+                          (double a)
+                          (double x))))))
+
+(s/fdef regularized-gamma-q
+        :args (s/cat :a ::m/nan-or-pos :x ::m/nan-or-non-)
+        :ret ::m/nan-or-prob)
+
+(defn log-gamma
+  "Returns the log gamma of `a`."
+  [a]
+  (if (m/inf+? a)
+    m/inf+
+    (org.apache.commons.math3.special.Gamma/logGamma (double a))))
+
+(s/fdef log-gamma
+        :args (s/cat :a ::m/nan-or-pos)
+        :ret ::m/nan-or-non-inf-)
 
 (defn log-gamma-derivative
-  "Returns the derivative of the log gamma of x"
-  ^double [^double x]
-  {:pre [(have? pos? x)]}
-  (ap/digamma x))
+  "Returns the derivative of the log gamma of `a`. Spec'd for `a` > -3e8 because
+  it becomes slow. Taken from Apache. Could use a better algorithm."
+  [a]
+  (let [a (double a)]
+    (if (m/roughly-round-non+? a m/sgl-close)
+      m/inf-
+      (loop [x a
+             tot 0.0]
+        (let [inv-x (/ x)]
+          (if (or (m/nan? x) (m/inf? x))
+            x
+            (cond (and (pos? x) (<= x 1.0e-5)) (- tot 0.5772156649015329 inv-x)
+                  (>= x 49.0) (let [inv2-x (m/pow x -2.0)]
+                                (+ tot
+                                   (m/log x)
+                                   (* -0.5 inv-x)
+                                   (* (- inv2-x)
+                                      (+ (/ 12.0)
+                                         (* inv2-x
+                                            (- (/ 120) (/ inv2-x 252.0)))))))
+                  :else (recur (inc x) (- tot inv-x)))))))))
 
-(defn digamma  
-  "Equivalent to log-gamma-derivative" 
-  ^double [^double x]
-  {:pre [(have? pos? x)]}
-  (log-gamma-derivative x))
+(s/fdef log-gamma-derivative
+        :args (s/cat :a (s/and ::m/number #(or (m/nan? %) (> % -3e8))))
+        :ret ::m/number)
 
-(defn gamma-derivative 
-  "Returns the derivative of the gamma of x"
-  ^double [^double x]
-  {:pre [(have? pos? x)]}
-  (* (gamma x) (log-gamma-derivative x)))
+(def digamma log-gamma-derivative)
 
-(defn trigamma  
-  ^double [^double x]
-  (ap/trigamma x))
+(defn gamma-derivative
+  "Returns the derivative of the gamma of `a`. Spec'd for `a` > -3e8 because it
+  becomes slow."
+  [a]
+  (* (gamma a) (log-gamma-derivative a)))
+
+(s/fdef gamma-derivative
+        :args (s/cat :a (s/and ::m/nan-or-non-long-able-non+ #(or (m/nan? %) (> % -3e8))))
+        :ret ::m/number)
+
+(defn trigamma
+  "Returns the trigamma (2nd derivative of log-gamma) of `a`. Approximated for
+  `a` < -1e7 because it becomes slow. Taken from Apache. Could use a better
+  algorithm."
+  [a]
+  (let [a (double a)]
+    (if (m/roughly-round-non+? a m/sgl-close)
+      m/inf+
+      (loop [x a
+             tot 0.0]
+        (let [inv2-x (m/pow x -2.0)]
+          (cond (or (m/nan? x) (m/inf? x)) x
+                (< x -1e7) (let [r (m/round (+ x 9e6) :toward-zero)]
+                             (recur (- x r) (+ tot 1.1263618e-5))) ;approx
+                :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
+                            (>= x 49.0) (let [inv-x (/ x)]
+                                          (+ tot
+                                             inv-x
+                                             (/ inv2-x 2.0)
+                                             (* inv2-x
+                                                inv-x
+                                                (- (/ 6.0)
+                                                   (* inv2-x
+                                                      (+ (/ 3) (/ inv2-x 42.0)))))))
+                            :else (recur (inc x) (+ tot inv2-x)))))))))
+
+(s/fdef trigamma
+        :args (s/cat :a ::m/number)
+        :ret (s/nilable ::m/number))
 
 (defn multivariate-gamma
-  "Returns the multivariate gamma of x with dimension p"
-  ^double [^double x p]
-  {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
-  (* (m/pow m/PI (* 0.25 p (dec p))) 
-     (mx/eproduct (fn [i] (gamma (+ x (* 0.5 (m/rev i))))) (range 1 (inc p)))))
+  "Returns the multivariate gamma of `a` with dimension `p`."
+  [a p]
+  (if (m/nan? a)
+    m/nan
+    (* (m/pow m/PI (* 0.25 p (dec p)))
+       (apply * (map (fn [i]
+                       (gamma (+ a (* 0.5 (m/one- i)))))
+                     (range 1 (inc p)))))))
+
+(s/fdef multivariate-gamma
+        :args (s/and (s/cat :a ::m/number
+                            :p (s/with-gen ::m/int-non-
+                                           #(gen/large-integer* {:min 0 :max 20})))
+                     (fn [{:keys [a p]}]
+                       (and (not (m/long-able-non+?
+                                   (+ a (* 0.5 (m/one- p)))))
+                            (or (zero? p)
+                                (not (m/long-able-non+?
+                                       (+ a (* 0.5 (m/one- (dec p))))))))))
+        :ret ::m/nan-or-non-inf-)
 
 (defn multivariate-log-gamma
-  "Returns the multivariate log gamma of x with dimension p"
-  ^double [^double x p]
-  {:pre [(have? #(m/roughly-round? % 0.0) p) (have? m/non-? p)]}
-   (+ (* m/log-pi 0.25 p (dec p)) 
-      (mx/esum (fn [i] (log-gamma (+ x (* 0.5 (m/rev i))))) 
-               (range 1 (inc p)))))
+  "Returns the multivariate log gamma of `a` with dimension `p`."
+  [a p]
+  (if (m/nan? a)
+    m/nan
+    (+ (* m/log-pi 0.25 p (dec p))
+       (apply + (map (fn [i]
+                       (log-gamma (+ a (* 0.5 (m/one- i)))))
+                     (range 1 (inc p)))))))
+
+(s/fdef multivariate-log-gamma
+        :args (s/and (s/cat :a ::m/nan-or-pos
+                            :p (s/with-gen ::m/int-non-
+                                           #(gen/large-integer* {:min 0 :max 20})))
+                     (fn [{:keys [a p]}]
+                       (or (m/nan? a) (> a (* 0.5 p)))))
+        :ret ::m/nan-or-non-inf-)
 
 ;;;BETA FUNCTIONS
-(defn beta 
-  "Returns the beta of x and y: integral[0, 1] (t^(x-1) * (1-t)^(y-1) * dt
-Although beta is defined for pos x and y, this function allows for all 
-   non-zero x and y."
-  ^double [^double x ^double y]
-  {:pre [(have? (complement zero?) x y)]}
+(defn beta
+  "Returns the beta of `x` and `y`:
+  integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt.
+  Although beta is defined for positive `x` and `y`, you can use this function
+  at your own risk for all non-zero `x` and `y`."
+  [x y]
   (Gamma/beta x y))
 
-(defn log-beta 
-  "Returns the log-beta of x and y"
-  ^double [^double x ^double y]
-  {:pre [(have? pos? x y)]}
-  (ap/log-beta x y))
+(s/fdef beta
+        :args (s/cat :x ::m/nan-or-pos :y ::m/nan-or-pos)
+        :ret ::m/nan-or-finite)
 
-(defn regularized-beta 
-  "Returns the regularized beta.  
-Equal to incomplete beta function divided by beta function"
-  ^double [^double c ^double x ^double y]
-  {:pre [(have? pos? x y) (have? m/prob? c)]}
-  (if (zero? c) 0.0 (Gamma/incompleteBeta x y c))) ;cern misnamed this
+(defn log-beta
+  "Returns the log-beta of `x` and `y`."
+  [x y]
+  (Beta/logBeta (double x) (double y)))
 
-(defn incomplete-beta 
-  "Returns the lower beta: integral[0, c] (t^(x-1) * (1-t)^(y-1) * dt"
-  ^double [^double c ^double x ^double y]
-  {:pre [(have? pos? x y) (have? m/prob? c)]}
-  ;;cern misnamed this
-  (if (zero? c) 0.0 (* (Gamma/incompleteBeta x y c) (Gamma/beta x y)))) 
+(s/fdef log-beta
+        :args (s/cat :x ::m/nan-or-pos :y ::m/nan-or-pos)
+        :ret ::m/nan-or-non-inf-)
+
+(defn regularized-beta
+  "Returns the regularized beta. Equal to incomplete beta function divided by
+  beta function."
+  [c x y]
+  (if (zero? c)
+    0.0
+    (Gamma/incompleteBeta x y c)))                          ;NOTE that cern misnamed this
+
+(s/fdef regularized-beta
+        :args (s/cat :c ::m/prob
+                     :x (s/and ::m/finite+ #(< % 1E305))
+                     :y (s/and ::m/finite+ #(< % 1E305)))
+        :ret ::m/number)
+
+(defn incomplete-beta
+  "Returns the lower beta:
+  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt."
+  [c x y]
+  (if (zero? c)
+    0.0
+    (* (Gamma/incompleteBeta x y c) (Gamma/beta x y))))     ;NOTE that cern misnamed this
+
+(s/fdef incomplete-beta
+        :args (s/cat :c ::m/prob
+                     :x (s/and ::m/finite+ #(< % 1E305))
+                     :y (s/and ::m/finite+ #(< % 1E305)))
+        :ret ::m/nan-or-finite)
