@@ -9,7 +9,6 @@
   :dependencies '[[org.clojure/tools.nrepl "0.2.13" :scope "test"]
                   [org.clojure/test.check "0.10.0-alpha2"]
                   [adzerk/boot-test "1.2.0" :scope "test"]
-                  [midje "1.9.2-alpha3" :exclusions [org.clojure/clojure] :scope "test"]
                   [criterium "0.4.4" :scope "test"]
                   [provisdom/boot-tasks "1.4" :scope "test"]
                   [provisdom/test "0.3.7" :scope "test"]
