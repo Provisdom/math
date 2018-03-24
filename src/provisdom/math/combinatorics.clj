@@ -96,12 +96,15 @@
   `n` must be >= `k`, and `n` and `k` must be non-negative. Otherwise, use
   [[choose-k-from-n]]."
   [k n]
-  (- (log-factorial n)
-     (log-factorial k)
-     (log-factorial (- n k))))
+  (if (m/nan? (- n k))
+    m/nan?
+    (- (log-factorial n)
+       (log-factorial k)
+       (log-factorial (- n k)))))
 
 (s/fdef log-choose-k-from-n
-        :args (s/and (s/cat :k ::m/non- :n ::m/non-)
+        :args (s/and (s/cat :k ::m/non-
+                            :n ::m/non-)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/number)

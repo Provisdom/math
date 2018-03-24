@@ -298,7 +298,7 @@
 (defn long?
   "Returns true if `x` is a long."
   [x]
-  (and (number? x) (instance? Long x)))
+  (and (number? x) (or (clojure.core/int? x) (instance? Long x))))
 
 (s/def ::long
   (s/spec long? :gen gen/large-integer))
