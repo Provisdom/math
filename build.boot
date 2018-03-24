@@ -19,8 +19,7 @@
                   [orchestra "2017.11.12-1"]
                   [provisdom/utility-belt "0.2.0-alpha11"]
                   [org.apache.commons/commons-math3 "3.6.1"]
-                  [apache-commons-matrix "0.4.1"]
-                  [clatrix "0.5.0"]])
+                  [apache-commons-matrix "0.4.1"]])
 
 (require
   '[adzerk.boot-test :refer [test]]
@@ -37,7 +36,6 @@
                        provisdom.math.apache-matrix-test
                        provisdom.math.apache-vector-test
                        provisdom.math.arrays-test
-                       provisdom.math.clatrix-test
                        provisdom.math.combinatorics-test
                        provisdom.math.core-test
                        provisdom.math.derivatives-test

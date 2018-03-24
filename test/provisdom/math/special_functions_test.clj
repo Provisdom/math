@@ -301,13 +301,12 @@
    #{}                                                      ;3/19
    #{"Work on Thrusters at (15,15,5), then 3x10 on front squats and press, then thrusters."} ;3/20
    #{}                                                      ;3/21
+   #{}                                                      ;3/22
+   #{}                                                      ;3/23
    ])
 
 (comment
-  #{"consider just doing 12-min wod, but fast"
-    "Work on pistols either on box (build up to 20 in a row per leg then lower box), with elevated heels, or with a counterbalance weight held out in front"
-    "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  Min 5&6 - 20 Wall Ball + 15 Burpee Min 7&8 - 20 Box Jump Overs (30/24)  Min 9&10 - 10 Wall Ball + 20 Burpee Min 11&12 - 15 Burpee Box Jump Overs (30/24)"
-    })
+  #{})
 
 (def current-wod-list
   ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
