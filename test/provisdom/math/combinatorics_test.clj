@@ -7,7 +7,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;38 seconds
+;;39 seconds
 
 (ost/instrument)
 
