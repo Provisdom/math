@@ -13,3 +13,5 @@ deploy:
   stage: deploy
   script:
     - boot push-jar
+  only:
+    - master
