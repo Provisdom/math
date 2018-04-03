@@ -303,10 +303,25 @@
    #{}                                                      ;3/21
    #{}                                                      ;3/22
    #{}                                                      ;3/23
+   #{}                                                      ;3/24
+   #{}                                                      ;3/25
+   #{}                                                      ;3/26
+   #{}                                                      ;3/27
+   #{}                                                      ;3/28
+   #{}                                                      ;3/29
+   #{}                                                      ;3/30
+   #{}                                                      ;3/31
+   #{}                                                      ;4/1
+   #{}                                                      ;4/2
+   #{}                                                      ;4/3
    ])
 
 (comment
-  #{})
+  #{
+    "Back Squat -- work up to about 275"
+    "Full Snatch 3x4@115, 2x3@135, 2x2@155"
+    "20 each of wall ball, SDHP @75, 20-inch box jumps, PP, cal row"
+    })
 
 (def current-wod-list
   ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
