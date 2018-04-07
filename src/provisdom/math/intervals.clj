@@ -43,7 +43,13 @@
 (s/def ::upper ::m/number)
 (s/def ::open-lower? boolean?)
 (s/def ::open-upper? boolean?)
-(s/def ::bounds (s/keys :req [::lower ::upper ::open-lower? ::open-upper?]))
+
+(s/def ::bounds
+  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
+         (fn [{::keys [lower upper]}]
+           (or (and (m/nan? lower) (m/nan? upper))
+               (>= upper lower)))))
+
 (s/def ::vector-bounds (s/coll-of ::bounds :kind vector? :into []))
 (s/def ::by-upper? boolean?)
 
@@ -100,14 +106,20 @@
 (s/fdef bounds
         :args (s/or :zero (s/cat)
                     :one (s/cat :interval ::interval)
-                    :two (s/cat :lower ::lower :upper ::upper)
+                    :two (s/and (s/cat :lower ::lower :upper ::upper)
+                                (fn [{:keys [lower upper]}]
+                                  (or (and (m/nan? lower) (m/nan? upper))
+                                      (>= upper lower))))
                     :three (s/cat :interval ::interval
                                   :open-lower? ::open-lower?
                                   :open-upper? ::open-upper?)
-                    :four (s/cat :lower ::lower
-                                 :upper ::upper
-                                 :open-lower? ::open-lower?
-                                 :open-upper? ::open-upper?))
+                    :four (s/and (s/cat :lower ::lower
+                                        :upper ::upper
+                                        :open-lower? ::open-lower?
+                                        :open-upper? ::open-upper?)
+                                 (fn [{:keys [lower upper]}]
+                                   (or (and (m/nan? lower) (m/nan? upper))
+                                       (>= upper lower)))))
         :ret ::bounds)
 
 (def bounds-finite (bounds m/inf- m/inf+ true true))
@@ -143,6 +155,16 @@
 (s/fdef positive-definite-matrix-bounds
         :args (s/cat :size ::size)
         :ret ::vector-bounds)
+
+(defn get-interval
+  "Returns Interval from bounds."
+  [bounds]
+  [(::lower bounds)
+   (::upper bounds)])
+
+(s/fdef get-interval
+        :args (s/cat :bounds ::bounds)
+        :ret ::interval)
 
 ;;;BOUNDS MANIPULATION
 (defn- min-bound
@@ -229,7 +251,9 @@
     (bounds lower upper open-lower? open-upper?)))
 
 (s/fdef encompassing-bounds
-        :args (s/cat :vector-bounds ::vector-bounds)
+        :args (s/cat :vector-bounds (s/and ::vector-bounds
+                                           (fn [vb]
+                                             (pos? (count vb)))))
         :ret ::bounds)
   
 

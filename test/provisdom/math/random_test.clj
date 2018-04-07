@@ -94,7 +94,8 @@
 (deftest rng-lazy!-test
   (is (spec-check random/rng-lazy!))
   (is= '(0.11345034205715454 0.6129746825466243 0.21643910878148487)
-       (take 3 (map random/rnd (random/bind-seed 3 (random/rng-lazy!))))))
+       (take 3 (map random/rnd
+                    (random/bind-seed 3 (random/rng-lazy!))))))
 
 (deftest rnd-lazy!-test
   (is (spec-check random/rnd-lazy!))

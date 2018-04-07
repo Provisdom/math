@@ -7,7 +7,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;5 seconds
+;;6 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -136,6 +136,11 @@
          ::intervals/open-lower? true
          ::intervals/open-upper? false}]
        (intervals/positive-definite-matrix-bounds 2)))
+
+(deftest get-interval-test
+  (is (spec-check intervals/get-interval))
+  (is= [1.0 2.0]
+       (intervals/get-interval (intervals/bounds 1.0 2.0 true false))))
 
 ;;;BOUNDS MANIPULATION
 (deftest sort-bounds-test

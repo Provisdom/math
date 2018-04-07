@@ -314,21 +314,21 @@
    #{}                                                      ;4/1
    #{}                                                      ;4/2
    #{}                                                      ;4/3
+   #{}                                                      ;4/4
+   #{}                                                      ;4/5
+   #{(str "30 Wall Ball + 10 Burpees + 25x 30-in Box Jumps + 20 Wall Ball + 15 Burpees + 20 Box Jump Overs (30/24) "
+          "+ 10 Wall Ball + 20 Burpees + 4->15 Burpee Box Jump Overs (30/24) in 12 minutes")} ;4/6
    ])
 
 (comment
   #{
-    "Back Squat -- work up to about 275"
-    "Full Snatch 3x4@115, 2x3@135, 2x2@155"
-    "20 each of wall ball, SDHP @75, 20-inch box jumps, PP, cal row"
     })
 
 (def current-wod-list
   ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
    "E2MOM10: 30-cal row, 12 each of 95# thrusters + pull-ups"
-   (str "E2MOM  x 12 MINUTES Min 1&2 - 30 Wall Ball + 10 Burpee Min 3&4 - 25 Box Jumps (30/24)  "
-        "Min 5&6 - 20 Wall Ball + 15 Burpee Min 7&8 - 20 Box Jump Overs (30/24)  "
-        "Min 9&10 - 10 Wall Ball + 20 Burpee Min 11&12 - 15 Burpee Box Jump Overs (30/24)")
+   (str "30 Wall Ball + 10 Burpees + 25x 30-in Box Jumps + 20 Wall Ball + 15 Burpees + 20 Box Jump Overs (30/24) "
+        "+ 10 Wall Ball + 20 Burpees + 4->15 Burpee Box Jump Overs (30/24) in 12 minutes")
    "5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
    "EMOM30 alternating 5 strict TTB with 1-sec pause at top, 6x PP@155, and 15-cal row"
    "5 rds of 10 burpee pull-ups + 5x 185# PC in 11:59->10 min"
