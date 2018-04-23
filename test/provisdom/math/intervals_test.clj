@@ -7,7 +7,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;6 seconds
+;;3 seconds
 
 (set! *warn-on-reflection* true)
 

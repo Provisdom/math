@@ -2,8 +2,6 @@
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
-    [provisdom.math.core :as m]
-    [provisdom.math.combinatorics :as cm]
     [provisdom.math.random :as random]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
@@ -144,14 +142,7 @@
 (comment
   (def samplef (fn [r] (* 100 r)))
   (def sample-lazy-fn (fn [r] [(* 100 (first r)) (rest r)]))
-  (fact "multi sample"
-        (first (multi-sample sample-lazy-fn (mersenne-random) 3))
-        => [83.35762378570932 11.249249636232017 85.02406979201282]
-        (first (multi-sample (with-meta samplef {:r :rnd}) (mersenne-random) 3))
-        => [83.35762378570932 11.249249636232017 85.02406979201282]
-        (first (multi-sample
-                 (with-meta sample-lazy-fn {:r :rnd-lazy}) (mersenne-random) 3))
-        => [83.35762378570932 11.249249636232017 85.02406979201282])
+  ;;replace multi-sample with: (repeatedly n sample-fn!)
   (fact "multi sample indexed"
         (first (multi-sample-indexed
                  (fn [i r] [(+ (* 100 i) (first r)) (rest r)])

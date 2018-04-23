@@ -318,15 +318,39 @@
    #{}                                                      ;4/5
    #{(str "30 Wall Ball + 10 Burpees + 25x 30-in Box Jumps + 20 Wall Ball + 15 Burpees + 20 Box Jump Overs (30/24) "
           "+ 10 Wall Ball + 20 Burpees + 4->15 Burpee Box Jump Overs (30/24) in 12 minutes")} ;4/6
+   #{}                                                      ;4/7
+   #{}                                                      ;4/8
+   #{"41->50 cal Assault bike in 2.5 min (~65->70 RPM)"
+     "5 rds of 30-cal row, 12x 95# thrusters, 12x pull-ups in 20 minutes (5+cal row on last round)"} ;4/9
+   #{}                                                      ;4/10
+   #{}                                                      ;4/11
+   #{}                                                      ;4/12
+   #{}                                                      ;4/13
+   #{}                                                      ;4/14
+   #{}                                                      ;4/15
+   #{}                                                      ;4/16
+   #{(str "Fight Gone Bad: 286->300 3x(wall ball, SDHP @75, 20-inch box jumps, "
+          "PP, cal row, rest) 1 minute each")}              ;4/17
+   #{}                                                      ;4/18
+   #{}                                                      ;4/19
+   #{}                                                      ;4/20
+   #{}                                                      ;4/21
+   #{"E2MOM4 Handstand holds for 48->60-sec"
+     (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
+          "with elevated heels, or with a counterbalance weight held out in front")
+     "5 rds of 8->10 (or 10 abmat->) kipping HSPU in 1-min, rest 2-min"} ;4/22
    ])
 
 (comment
   #{
+    "Bench Press"
+    "3x5 185# Front Squats from floor"
+    "7,5,3x 95# thrusters + pullups, then 20-cal bike"
     })
 
 (def current-wod-list
   ["EMOM15: 5 strict pull-ups, 10 strict HSPUs, :50-sec ring plank"
-   "E2MOM10: 30-cal row, 12 each of 95# thrusters + pull-ups"
+   "5 rds of 30-cal row, 12x 95# thrusters, 12x pull-ups in 20 minutes (5+cal row on last round)"
    (str "30 Wall Ball + 10 Burpees + 25x 30-in Box Jumps + 20 Wall Ball + 15 Burpees + 20 Box Jump Overs (30/24) "
         "+ 10 Wall Ball + 20 Burpees + 4->15 Burpee Box Jump Overs (30/24) in 12 minutes")
    "5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
@@ -342,7 +366,7 @@
    "E3MOM5 Handstand holds for 51->60-sec"
    "E2MOM4 Handstand holds for 48->60-sec"
    "17->21 kipping HSPUs in a row"
-   "5 rds of 10 kipping HSPU in 1-min, rest 2-min"
+   "5 rds of 8->10 (or 10 abmat->) kipping HSPU in 1-min, rest 2-min"
    "22->25 strict ab-mat->floor HSPUs in 10 min"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
    "10->21 continuous-kipping TTB"
@@ -355,7 +379,7 @@
    "4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
    "Sitting-up straddle leg-lift holds (for pistols, L-sits, etc.)"
    "E2MOM7 of 37->45-sec hollow rock"
-   "41->50 cal Assault bike in 2.5 min (~63->70 RPM)"
+   "41->50 cal Assault bike in 2.5 min (~65->70 RPM)"
    "EMOM20 of odd: bike 8-cal, even: FSx7@75# + burpee over barbell x5"
    "Back Squat 265->275x10 to 1 in 30 minutes"
    "Back Squat 345x1"

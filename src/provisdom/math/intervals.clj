@@ -25,6 +25,10 @@
   (s/and (s/tuple ::m/finite ::m/finite)
          (fn [[x1 x2]] (>= x2 x1))))
 
+(s/def ::finite+-interval
+  (s/and (s/tuple ::m/finite+ ::m/finite+)
+         (fn [[x1 x2]] (>= x2 x1))))
+
 (s/def ::int+-interval
   (s/and (s/tuple ::m/int+ ::m/int+)
          (fn [[x1 x2]] (>= x2 x1))))
@@ -50,7 +54,13 @@
            (or (and (m/nan? lower) (m/nan? upper))
                (>= upper lower)))))
 
-(s/def ::vector-bounds (s/coll-of ::bounds :kind vector? :into []))
+(s/def ::vector-bounds
+  (s/with-gen
+    (s/coll-of ::bounds
+               :kind vector?
+               :into [])
+    #(gen/vector (s/gen ::bounds) 0 mdl)))
+
 (s/def ::by-upper? boolean?)
 
 ;;INTERVALS
