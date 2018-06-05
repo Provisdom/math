@@ -3,7 +3,6 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.combinatorics :as combinatorics]
-    [provisdom.math.core :as m]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
@@ -59,22 +58,17 @@
 ;;;CHOOSING
 (deftest choose-k-from-n-test
   (is (spec-check combinatorics/choose-k-from-n))
-  (is= 0.0 (combinatorics/choose-k-from-n -1 1))
   (is= 1.0 (combinatorics/choose-k-from-n 0 1))
   (is= 1.0 (combinatorics/choose-k-from-n 0 0))
-  (is= 1.0 (combinatorics/choose-k-from-n 0 -1))
-  (is= 0.9 (combinatorics/choose-k-from-n 1 0.9))
-  (is= 0.0 (combinatorics/choose-k-from-n 1 0))
   (is= 1.0 (combinatorics/choose-k-from-n 1 1))
   (is= 1.4 (combinatorics/choose-k-from-n 1 1.4))
-  (is= 0.2799999999999999 (combinatorics/choose-k-from-n 2 1.4))
-  (is= 4.0 (combinatorics/choose-k-from-n 1.0 4))
+  (is= 4.0 (combinatorics/choose-k-from-n 1 4))
   (is= 10.0 (combinatorics/choose-k-from-n 2 5))
   (is= 1.2689769520640436E24 (combinatorics/choose-k-from-n 12 545.0)))
 
 (deftest choose-k-from-n'-test
   (is (spec-check combinatorics/choose-k-from-n'))
-  (is= 4 (combinatorics/choose-k-from-n' 1.0 4)))
+  (is= 4 (combinatorics/choose-k-from-n' 1 4)))
 
 (deftest log-choose-k-from-n-test
   (is (spec-check combinatorics/log-choose-k-from-n))
@@ -82,7 +76,7 @@
   (is= 0.0 (combinatorics/log-choose-k-from-n 0 0))
   (is= 0.0 (combinatorics/log-choose-k-from-n 1 1))
   (is= 0.33647223662121284 (combinatorics/log-choose-k-from-n 1 1.4))
-  (is= 1.3862943611198908 (combinatorics/log-choose-k-from-n 1.0 4))
+  (is= 1.3862943611198908 (combinatorics/log-choose-k-from-n 1 4))
   (is= 2.3025850929940455 (combinatorics/log-choose-k-from-n 2 5))
   (is= 55.50025325814249 (combinatorics/log-choose-k-from-n 12 545.0)))
 
@@ -91,10 +85,10 @@
   (is= 0.0 (combinatorics/stirling-number-of-the-second-kind 0 1))
   (is= 1.0 (combinatorics/stirling-number-of-the-second-kind 0 0))
   (is= 1.0 (combinatorics/stirling-number-of-the-second-kind 1 1))
-  (is= 1.0 (combinatorics/stirling-number-of-the-second-kind 1 4.0))
-  (is= 15.0 (combinatorics/stirling-number-of-the-second-kind 2.0 5))
+  (is= 1.0 (combinatorics/stirling-number-of-the-second-kind 1 4))
+  (is= 15.0 (combinatorics/stirling-number-of-the-second-kind 2 5))
   (is= 1.4318980615233435E207
-       (combinatorics/stirling-number-of-the-second-kind 12 200.0)))
+       (combinatorics/stirling-number-of-the-second-kind 12 200)))
 
 (deftest stirling-number-of-the-second-kind'-test
   (is (spec-check combinatorics/stirling-number-of-the-second-kind'))
@@ -104,33 +98,30 @@
   (is (spec-check combinatorics/bell-number))
   (is= 1 (combinatorics/bell-number 0))
   (is= 1 (combinatorics/bell-number 1))
-  (is= 2 (combinatorics/bell-number 2.0))
+  (is= 2 (combinatorics/bell-number 2))
   (is= 52 (combinatorics/bell-number 5))
   (is= 49631246523618756274N (combinatorics/bell-number 26))
   (is= 5.4571704793605997E20 (combinatorics/bell-number 27))
-  (is= 6.160539404599935E21 (combinatorics/bell-number 28.0)))
+  (is= 6.160539404599935E21 (combinatorics/bell-number 28)))
 
 (deftest binomial-probability-test
   (is (spec-check combinatorics/binomial-probability))
   (is= 1.0 (combinatorics/binomial-probability 0 0 0.4))
   (is= 0.4 (combinatorics/binomial-probability 1 1 0.4))
   (is= 0.45650814137931667 (combinatorics/binomial-probability 1 1.4 0.4))
-  (is= 0.34559999999999996 (combinatorics/binomial-probability 1.0 4 0.4))
+  (is= 0.34559999999999996 (combinatorics/binomial-probability 1 4 0.4))
   (is= 0.3456 (combinatorics/binomial-probability 2 5 0.4))
-  (is= 1.210013134840654E-99 (combinatorics/binomial-probability 12 545.0 0.4))
-  (is= 0.0 (combinatorics/binomial-probability 12 24 0.0))
-  (is= 0.0 (combinatorics/binomial-probability 12 24 1.0)))
+  (is= 1.210013134840654E-99 (combinatorics/binomial-probability 12 545.0 0.4)))
 
 (deftest log-binomial-probability-test
   (is (spec-check combinatorics/log-binomial-probability))
   (is= 0.0 (combinatorics/log-binomial-probability 0 0 0.4))
   (is= -0.916290731874155 (combinatorics/log-binomial-probability 1 1 0.4))
   (is= -0.7841487447593384 (combinatorics/log-binomial-probability 1 1.4 0.4))
-  (is= -1.0624732420522363 (combinatorics/log-binomial-probability 1.0 4 0.4))
+  (is= -1.0624732420522363 (combinatorics/log-binomial-probability 1 4 0.4))
   (is= -1.0624732420522367 (combinatorics/log-binomial-probability 2 5 0.4))
-  (is= -227.7652929916204 (combinatorics/log-binomial-probability 12 545.0 0.4))
-  (is= m/inf- (combinatorics/log-binomial-probability 12 24 0.0))
-  (is= m/inf- (combinatorics/log-binomial-probability 12 24 1.0)))
+  (is= -227.7652929916204
+       (combinatorics/log-binomial-probability 12 545.0 0.4)))
 
 ;;;UNORDERED COMBINATIONS
 (deftest combinations-test

@@ -16,8 +16,8 @@
 (s/def ::second-kind? boolean?)
 
 (s/def ::degree
-  (s/with-gen ::m/long-able-non-
-              #(gen/large-integer* {:min 0 :max 3})))
+  (s/with-gen ::m/long-non-
+              #(s/gen (s/int-in 0 3))))
 
 (s/def ::start-degree ::degree)
 (s/def ::end-degree ::degree)
@@ -357,8 +357,7 @@
 (defn polynomial-ND-fn-without-cross-terms
   "Returns a function that takes a vector [x y z ...] and returns a vector.
   Terms are sorted by order and then by dimension, e.g.,
-  [1 x y z x^2 xy xz y^2 yz z^2 x^3 (x^2 × y) (x^2 × z) (x × y^2)
-  (x × y × z) (x × z^2) y^3 (y^2 × z) (y × z^2) z^3]."
+  [1 x y z x^2 y^2 z^2 x^3 y^3 z^3]."
   ([end-degree] (polynomial-ND-fn-without-cross-terms end-degree {}))
   ([end-degree {::keys [chebyshev-kind] :or {chebyshev-kind 0}}]
    (fn [v]

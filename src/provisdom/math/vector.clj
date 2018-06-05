@@ -53,10 +53,17 @@
 
 (s/def ::vector-finite+
   (s/with-gen
-    (s/coll-of ::m/pos
+    (s/coll-of ::m/finite+
                :kind clojure.core/vector?
                :into [])
     #(gen/vector (s/gen ::m/finite+) 0 mdl)))
+
+(s/def ::vector-long
+  (s/with-gen
+    (s/coll-of ::m/long
+               :kind clojure.core/vector?
+               :into [])
+    #(gen/vector (s/gen ::m/long) 0 mdl)))
 
 (s/def ::sparse-vector
   (s/with-gen

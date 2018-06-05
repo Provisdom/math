@@ -54,6 +54,11 @@
            (or (and (m/nan? lower) (m/nan? upper))
                (>= upper lower)))))
 
+(s/def ::bounds-num
+  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
+         (fn [{::keys [lower upper]}]
+           (>= upper lower))))
+
 (s/def ::vector-bounds
   (s/with-gen
     (s/coll-of ::bounds
@@ -133,11 +138,13 @@
         :ret ::bounds)
 
 (def bounds-finite (bounds m/inf- m/inf+ true true))
+(def bounds-finite+ (bounds 0.0 m/inf+ true true))
 (def bounds+ (bounds 0.0 m/inf+ true false))
 (def bounds-non- (bounds 0.0 m/inf+))
 (def bounds-prob (bounds 0.0 1.0))
 (def bounds-open-prob (bounds 0.0 1.0 true true))
 (def bounds-long-non- (bounds 0 m/max-long))
+(def bounds-long+ (bounds 0 m/max-long true false))
 
 (defn vector-bounds
   "Returns a vector of bounds."
@@ -163,6 +170,24 @@
            (get-in m [r c])))))
 
 (s/fdef positive-definite-matrix-bounds
+        :args (s/cat :size ::size)
+        :ret ::vector-bounds)
+
+(defn finite-positive-definite-matrix-bounds
+  "Returns a vector of bounds flattened for a finite symmetric positive matrix."
+  [size]
+  (let [m (if (zero? size)
+            [[]]
+            (mapv (fn [row]
+                    (mapv (fn [column]
+                            (if (== row column) bounds-finite+ bounds-finite))
+                          (range size)))
+                  (range size)))]
+    (vec (for [r (range size)
+               c (range r size)]
+           (get-in m [r c])))))
+
+(s/fdef finite-positive-definite-matrix-bounds
         :args (s/cat :size ::size)
         :ret ::vector-bounds)
 

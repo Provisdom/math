@@ -566,6 +566,27 @@
                                          ::mx/exception-column-indices]))
         :ret (s/nilable ::apache-matrix))
 
+(defn matrix-partition
+  "Returns a map containing the four sub-matrices labeled `::top-left`,
+  `::bottom-left`, `::top-right`, and `::bottom-right`. `first-bottom-row` is
+  the bottom of where the slice will occur. `first-right-column` is the right
+  edge of where the slice will occur."
+  [apache-m first-bottom-row first-right-column]
+  {::top-left     (get-slices-as-matrix apache-m {::mx/row-indices    (range first-bottom-row)
+                                                  ::mx/column-indices (range first-right-column)})
+   ::bottom-left  (get-slices-as-matrix apache-m {::exception-row-indices (range first-bottom-row)
+                                                  ::column-indices        (range first-right-column)})
+   ::top-right    (get-slices-as-matrix apache-m {::row-indices              (range first-bottom-row)
+                                                  ::exception-column-indices (range first-right-column)})
+   ::bottom-right (get-slices-as-matrix apache-m {::exception-row-indices    (range first-bottom-row)
+                                                  ::exception-column-indices (range first-right-column)})})
+
+(s/fdef matrix-partition
+        :args (s/cat :apache-m ::apache-matrix
+                     :first-bottom-row ::mx/row
+                     :first-right-column ::mx/column)
+        :ret (s/keys :req [::mx/top-left ::mx/bottom-left ::mx/top-right ::mx/bottom-right]))
+
 (defn some-kv
   "Returns the first logical true value of (pred row column number) for any
   number in Apache Commons matrix, else nil.

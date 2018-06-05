@@ -137,6 +137,22 @@
          ::intervals/open-upper? false}]
        (intervals/positive-definite-matrix-bounds 2)))
 
+(deftest finite-positive-definite-matrix-bounds-test
+  (is (spec-check intervals/finite-positive-definite-matrix-bounds))
+  (is= [{::intervals/lower       0.0
+         ::intervals/upper       m/inf+
+         ::intervals/open-lower? true
+         ::intervals/open-upper? true}
+        {::intervals/lower       m/inf-
+         ::intervals/upper       m/inf+
+         ::intervals/open-lower? true
+         ::intervals/open-upper? true}
+        {::intervals/lower       0.0
+         ::intervals/upper       m/inf+
+         ::intervals/open-lower? true
+         ::intervals/open-upper? true}]
+       (intervals/finite-positive-definite-matrix-bounds 2)))
+
 (deftest get-interval-test
   (is (spec-check intervals/get-interval))
   (is= [1.0 2.0]

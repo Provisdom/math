@@ -382,17 +382,11 @@
        (roughly-round? x 0.0)
        (long-range? x)))
 
-(s/def ::long-able
-  (s/spec long-able? :gen gen/large-integer))
-
 (defn long-able+?
   "Returns true if `x` is a number that can be converted to a long, and is
   positive."
   [x]
   (and (long-able? x) (pos? x)))
-
-(s/def ::long-able+
-  (s/spec long-able+? :gen #(s/gen (s/int-in 1 max-long))))
 
 (defn long-able-?
   "Returns true if `x` is a number that can be converted to a long, and is
@@ -400,25 +394,11 @@
   [x]
   (and (long-able? x) (neg? x)))
 
-(s/def ::long-able-
-  (s/spec long-able-? :gen #(s/gen (s/int-in min-long 0))))
-
 (defn long-able-non+?
   "Returns true if `x` is a number that can be converted to a long, and is
   non+."
   [x]
   (and (long-able? x) (non+? x)))
-
-(s/def ::long-able-non+
-  (s/spec long-able-non+? :gen #(s/gen (s/int-in min-long 1))))
-
-(s/def ::non-long-able-non+
-  (s/spec #(and (num? %) (not (long-able-non+? %)))
-          :gen #(s/gen (s/double-in :NaN? false))))
-
-(s/def ::nan-or-non-long-able-non+
-  (s/spec #(and (number? %) (not (long-able-non+? %)))
-          :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn long-able-non-?
   "Returns true if `x` is a number that can be converted to a long, and is
@@ -426,8 +406,13 @@
   [x]
   (and (long-able? x) (non-? x)))
 
-(s/def ::long-able-non-
-  (s/spec long-able-non-? :gen #(s/gen (s/int-in 0 max-long))))
+(s/def ::non-roughly-round-non+
+  (s/spec #(and (num? %) (not (roughly-round? % 0.0)))
+          :gen #(s/gen (s/double-in :NaN? false))))
+
+(s/def ::nan-or-non-roughly-round-non+
+  (s/spec #(and (number? %) (or nan (not (roughly-round? % 0.0))))
+          :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf+?
   "Returns true if `x` is Inf+."

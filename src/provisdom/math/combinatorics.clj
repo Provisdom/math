@@ -10,6 +10,7 @@
   (:import
     [cern.jet.math.tdouble DoubleArithmetic]))
 
+(declare log-choose-k-from-n)
 ;;;CONSTANTS
 (def ^:private ^:const subfactorials
   "also called 'recontres numbers' or 'derangements'"
@@ -47,7 +48,7 @@
 (defn log-factorial
   "Returns the log-factorial of `x`"
   [x]
-  (special-fns/log-gamma (inc x)))
+  (special-fns/log-gamma (inc (double x))))
 
 (s/fdef log-factorial
         :args (s/cat :x ::m/non-)
@@ -69,45 +70,53 @@
 ;;;CHOOSING
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!). `k` must be able to be a long and less than 1e8,
+  `n`! / (`k`! × (`n` - `k`)!). `k` must be able to be a long and less than 1e7,
   otherwise use [[log-choose-k-from-n]]."
   [k n]
-  (DoubleArithmetic/binomial (double n) (long k)))
+  (let [b (DoubleArithmetic/binomial (double n) (long k))]
+    (if (m/nan? b)
+      (m/exp (log-choose-k-from-n k n))
+      b)))
 
 (s/fdef choose-k-from-n
-        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
-                     :n ::m/number)
-        :ret ::m/number)
+        :args (s/and (s/cat :k (s/and ::m/long-non- #(< % 1e7)) ;too slow otherwise
+                            :n ::m/non-)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/num)
 
 (defn choose-k-from-n'
   "Returns the number of ways to choose `k` items out of `n` items.
   `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` must be able to
-  be a long and less than 1e8, otherwise use [[log-choose-k-from-n]]."
+  be a long and less than 1e7, otherwise use [[log-choose-k-from-n]]."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
 (s/fdef choose-k-from-n'
-        :args (s/cat :k (s/and ::m/long-able #(< % 1e8))    ;too slow otherwise
-                     :n ::m/number)
-        :ret ::m/number)
+        :args (s/and (s/cat :k (s/and ::m/long-non- #(< % 1e7)) ;too slow otherwise
+                            :n ::m/non-)
+                     (fn [{:keys [k n]}]
+                       (>= n k)))
+        :ret ::m/num)
 
 (defn log-choose-k-from-n
   "Returns the log of the number of ways to choose `k` items out of `n` items.
   `n` must be >= `k`, and `n` and `k` must be non-negative. Otherwise, use
   [[choose-k-from-n]]."
   [k n]
-  (if (m/nan? (- n k))
-    m/nan?
-    (- (log-factorial n)
-       (log-factorial k)
-       (log-factorial (- n k)))))
+  (let [lfn (log-factorial n)]
+    (if (m/inf+? lfn)
+      m/inf+
+      (- (log-factorial n)
+         (log-factorial k)
+         (log-factorial (- n k))))))
 
 (s/fdef log-choose-k-from-n
         :args (s/and (s/cat :k ::m/non-
                             :n ::m/non-)
                      (fn [{:keys [k n]}]
                        (>= n k)))
-        :ret ::m/number)
+        :ret ::m/num)
 
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of `n` items into `k` subsets."
@@ -124,7 +133,8 @@
          (range (inc k))))))
 
 (s/fdef stirling-number-of-the-second-kind
-        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
+        :args (s/and (s/cat :k ::m/long-non-
+                            :n ::m/long)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/number)
@@ -136,7 +146,7 @@
   (m/maybe-long-able (stirling-number-of-the-second-kind k n)))
 
 (s/fdef stirling-number-of-the-second-kind'
-        :args (s/and (s/cat :k ::m/long-able-non- :n ::m/long-able)
+        :args (s/and (s/cat :k ::m/long-non- :n ::m/long)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/number)
@@ -151,22 +161,23 @@
                         (range (inc n)))))
 
 (s/fdef bell-number
-        :args (s/cat :n ::m/long-able)
+        :args (s/cat :n ::m/long)
         :ret ::m/number)
 
 (defn binomial-probability
   "Likelihood of seeing `successes` out of `trials` with `success-prob`.
-  `Successes` must be able to be a long and less than 1e8, otherwise use
-  [[log-binomial-probability]]."
+  `Successes` must be a long and less than 1e7, otherwise use
+  [[log-binomial-probability]]. For general use, if `trials` is greater than
+  1000, use [[log-binomial-probability]]."
   [successes trials success-prob]
   (* (choose-k-from-n successes trials)
      (m/pow success-prob successes)
      (m/pow (m/one- success-prob) (- trials successes))))
 
 (s/fdef binomial-probability
-        :args (s/and (s/cat :successes (s/and ::m/long-able-non- #(< % 1e8))
-                            :trials ::m/non-
-                            :success-prob ::m/prob)
+        :args (s/and (s/cat :successes (s/and ::m/long-non- #(< % 1e7))
+                            :trials ::m/finite-non-
+                            :success-prob ::m/open-prob)
                      (fn [{:keys [trials successes]}]
                        (>= trials successes)))
         :ret ::m/number)
@@ -176,18 +187,18 @@
   [successes trials success-prob]
   (+ (log-choose-k-from-n successes trials)
      (* successes (m/log success-prob))
-     (if (= trials successes)
+     (if (== trials successes)
        0.0
        (* (- trials successes)
           (m/log (m/one- success-prob))))))
 
 (s/fdef log-binomial-probability
-        :args (s/and (s/cat :successes ::m/long-able-non-
-                            :trials ::m/non-
-                            :success-prob ::m/prob)
+        :args (s/and (s/cat :successes ::m/long-non-
+                            :trials ::m/finite-non-
+                            :success-prob ::m/open-prob)
                      (fn [{:keys [trials successes]}]
                        (>= trials successes)))
-        :ret ::m/number)
+        :ret ::m/num)
 
 (comment
   ;;;HYPERGEOMETRIC FUNCTION
@@ -254,8 +265,11 @@
   "All the unique ways of taking `n` different elements from `items`, or all the
   unique ways of taking different elements from `items`."
   ([items]
-   (mapcat (fn [n] (combinations items n))
-           (unchunk (range (inc (count items))))))
+   (let [c (count items)
+         c (if (= c m/max-long) (double c) c)]
+     (mapcat (fn [n]
+               (combinations items n))
+             (unchunk (range (inc c))))))
   ([items n]
    (let [v-items (vec (reverse items))]
      (if (zero? n)

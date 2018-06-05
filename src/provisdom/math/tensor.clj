@@ -5,8 +5,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
-    [provisdom.math.random :as random]
-    [provisdom.utility-belt.arities :as arities]))
+    [provisdom.math.random :as random]))
 
 (declare transpose rank tensor?)
 

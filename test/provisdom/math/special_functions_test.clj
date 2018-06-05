@@ -339,13 +339,57 @@
      (str "Work on pistols either on box (build up to 20 in a row per leg then lower box), "
           "with elevated heels, or with a counterbalance weight held out in front")
      "5 rds of 8->10 (or 10 abmat->) kipping HSPU in 1-min, rest 2-min"} ;4/22
+   #{}                                                      ;4/23
+   #{}                                                      ;4/24
+   #{}                                                      ;4/25
+   #{}                                                      ;4/26
+   #{}                                                      ;4/27
+   #{"30x 95# S2OH, 9 MUs, 20x 135# S2OH, 7 MUs, 10x 185# S2OH, 5 MUs in 15:47->15 minutes"} ;4/28
+   #{}                                                      ;4/29
+   #{}                                                      ;4/30
+   #{}                                                      ;5/1
+   #{}                                                      ;5/2
+   #{}                                                      ;5/3
+   #{"41->50 cal Assault bike in 2.5 min (~65->70 RPM)"}    ;5/4
+   #{"12->21 butterfly pull-ups (be patient to kick)"
+     "14->21 unbroken kipping C2B"}                         ;5/5
+   #{}                                                      ;5/6
+   #{}                                                      ;5/7
+   #{"5 rds of 10 burpee pull-ups + 5x 185# PC in 10 min; did it!"} ;5/8
+   #{}                                                      ;5/9
+   #{}                                                      ;5/10
+   #{"5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"} ;5/11
+   #{}                                                      ;5/12
+   #{}                                                      ;5/13
+   #{}                                                      ;5/14
+   #{}                                                      ;5/15
+   #{}                                                      ;5/16
+   #{}                                                      ;5/17
+   #{}                                                      ;5/18
+   #{}                                                      ;5/19
+   #{}                                                      ;5/20
+   #{}                                                      ;5/21
+   #{}                                                      ;5/22
+   #{}                                                      ;5/23
+   #{}                                                      ;5/24
+   #{}                                                      ;5/25
+   #{}                                                      ;5/26
+   #{}                                                      ;5/27
+   #{}                                                      ;5/28
+   #{}                                                      ;5/29
+   #{}                                                      ;5/30
+   #{}                                                      ;5/31
+   #{}                                                      ;6/1
+   #{}                                                      ;6/2
+   #{"15->21 continuous-kipping TTB"}                       ;6/3
+   #{}                                                      ;6/4
+   #{"4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"} ;6/5
+
    ])
 
 (comment
-  #{
-    "Bench Press"
-    "3x5 185# Front Squats from floor"
-    "7,5,3x 95# thrusters + pullups, then 20-cal bike"
+  #{"5 rds: 3 strict pull-ups, 6 strict HSPUs, :30-sec ring plank"
+    "4->5 rds of 10 hollow rocks, 10 V-ups, 10 tuck-ups, 10-sec hollow hold, rest 1 minute"
     })
 
 (def current-wod-list
@@ -355,7 +399,6 @@
         "+ 10 Wall Ball + 20 Burpees + 4->15 Burpee Box Jump Overs (30/24) in 12 minutes")
    "5 rds of 19->20 24” box jump overs + 9->10 TTB + 9->10 push-ups in 10 min"
    "EMOM30 alternating 5 strict TTB with 1-sec pause at top, 6x PP@155, and 15-cal row"
-   "5 rds of 10 burpee pull-ups + 5x 185# PC in 11:59->10 min"
    "3->5 rds of 12x DB snatches #65 + 25x Wall ball in 10 min"
    "5 Rounds of 10-cal bike, 155# S2OH x10, double-unders x35 in 15 minutes"
    "12-min EMOM odd: 18->20-cal row, even: 13->15x 24-inch box jump overs"
@@ -369,7 +412,7 @@
    "5 rds of 8->10 (or 10 abmat->) kipping HSPU in 1-min, rest 2-min"
    "22->25 strict ab-mat->floor HSPUs in 10 min"
    "Handstand walking 7x50' in 60-sec with 2-min rest"
-   "10->21 continuous-kipping TTB"
+   "15->21 continuous-kipping TTB"
    "14->21 unbroken kipping C2B"
    "Tabata (14->20sec) 1->2-leg L-sits"
    "3x25->30-sec 1->2-leg L-sits in 10 minutes (hip flexor cramps)"
@@ -393,7 +436,7 @@
    "E4MOM5 thruster@85->95x21+run200M"
    (str "5 rds of 5x(HPC,thruster,back thruster)+12x barbell facing burpees "
         "in 12:35->11-min @105->135")
-   "Work on butterfly pull-ups"
+   "12->21 butterfly pull-ups (be patient to kick)"
    "Work on butterfly c2b"
    "Work on kipping motion for pullups, c2b, and bar muscle-ups"
    "10-min EMOM odd: 4->5 bar muscle-up, even: rest"
@@ -479,7 +522,6 @@
   (is (spec-check special-fns/erf))
   (is= -1.0 (special-fns/erf m/inf-))
   (is= 1.0 (special-fns/erf m/inf+))
-  (is (m/nan? (special-fns/erf m/nan)))
   (is= 0.0 (special-fns/erf 0.0))
   (is= -0.997020533343667 (special-fns/erf -2.1))
   ;;Math 0.842700792949714869341220635082609259296066997966302908459937
@@ -516,7 +558,6 @@
   (is (spec-check special-fns/erfc))
   (is= 2.0 (special-fns/erfc m/inf-))
   (is= 0.0 (special-fns/erfc m/inf+))
-  (is (m/nan? (special-fns/erfc m/nan)))
   (is= 1.0 (special-fns/erfc 0.0))
   (is= 0.157299207050285 (special-fns/erfc 1.0))
   (is= 1.997020533343667 (special-fns/erfc -2.1))
@@ -560,24 +601,26 @@
   (is= -0.5244005127080409 (special-fns/inv-cdf-standard-normal 0.3))
   (is= 0.0 (special-fns/inv-cdf-standard-normal 0.5))
   (is= m/inf+ (special-fns/inv-cdf-standard-normal 1.0))
-  (is= -1.0056199694085204 (special-fns/inv-cdf-standard-normal 0.157299207050285))
-  (is= 2.750032615602772 (special-fns/inv-cdf-standard-normal 0.997020533343667)))
+  (is= -1.0056199694085204
+       (special-fns/inv-cdf-standard-normal 0.157299207050285))
+  (is= 2.750032615602772
+       (special-fns/inv-cdf-standard-normal 0.997020533343667)))
 
 (deftest cdf-standard-normal-test
   (is (spec-check special-fns/cdf-standard-normal))
   (is= 0.0 (special-fns/cdf-standard-normal m/inf-))
   (is= 0.5 (special-fns/cdf-standard-normal 0.0))
   (is= 1.0 (special-fns/cdf-standard-normal m/inf+))
-  (is (m/nan? (special-fns/cdf-standard-normal m/nan)))
-  (is= 0.15729920705028516 (special-fns/cdf-standard-normal -1.0056199694085204))
-  (is= 0.997020533343667 (special-fns/cdf-standard-normal 2.750032615602772)))
+  (is= 0.15729920705028516
+       (special-fns/cdf-standard-normal -1.0056199694085204))
+  (is= 0.997020533343667
+       (special-fns/cdf-standard-normal 2.750032615602772)))
 
 ;;;GAMMA
 (deftest gamma-test
   (is (spec-check special-fns/gamma))
   (is= 0.0 (special-fns/gamma m/inf-))
   (is= m/inf+ (special-fns/gamma m/inf+))
-  (is (m/nan? (special-fns/gamma m/nan)))
   (is= 9.513507698668732 (special-fns/gamma 0.1))
   (is= 1.0 (special-fns/gamma 1.0))
   (is= -4.626098277572807 (special-fns/gamma -2.1))
@@ -590,14 +633,10 @@
 
 (deftest lower-gamma-test
   (is (spec-check special-fns/lower-gamma))
-  (is (m/nan? (special-fns/lower-gamma m/nan m/nan)))
   (is= 0.0 (special-fns/lower-gamma m/inf+ 0.0))
   (is= 0.0 (special-fns/lower-gamma 0.1 0.0))
   (is= 0.8775435717470181 (special-fns/lower-gamma 1.0 2.1))
   (is= 1.0 (special-fns/lower-gamma 0.1 m/inf+))
-  (is (m/nan? (special-fns/lower-gamma m/nan m/inf+)))
-  (is (m/nan? (special-fns/lower-gamma m/inf+ m/nan)))
-  (is (m/nan? (special-fns/lower-gamma 1.0 m/nan)))
   (is= 0.6671289163019205 (special-fns/lower-gamma 1 1.1))
   (is= 0.6321205588285577 (special-fns/lower-gamma 1 1))
   (is= 0.0 (special-fns/lower-gamma 1 0))
@@ -605,14 +644,10 @@
 
 (deftest upper-gamma-test
   (is (spec-check special-fns/upper-gamma))
-  (is (m/nan? (special-fns/upper-gamma m/nan m/nan)))
   (is= m/inf+ (special-fns/upper-gamma m/inf+ 0.0))
   (is= 9.513507698668732 (special-fns/upper-gamma 0.1 0.0))
   (is= 0.1224564282529819 (special-fns/upper-gamma 1.0 2.1))
   (is= 0.0 (special-fns/upper-gamma 0.1 m/inf+))
-  (is (m/nan? (special-fns/upper-gamma m/nan m/inf+)))
-  (is (m/nan? (special-fns/upper-gamma m/inf+ m/nan)))
-  (is (m/nan? (special-fns/upper-gamma 1.0 m/nan)))
   (is= 0.33287108369807955 (special-fns/upper-gamma 1 1.1))
   (is= 0.36787944117144233 (special-fns/upper-gamma 1 1))
   (is= 1.0 (special-fns/upper-gamma 1 0))
@@ -620,16 +655,12 @@
 
 (deftest upper-gamma-derivative-x-test
   (is (spec-check special-fns/upper-gamma-derivative-x))
-  (is (m/nan? (special-fns/upper-gamma-derivative-x m/nan m/nan)))
   (is= 0.0 (special-fns/upper-gamma-derivative-x m/inf+ 0.0))
-  (is (m/nan? (special-fns/upper-gamma-derivative-x m/inf+ m/inf+)))
+  (is= 0.0 (special-fns/upper-gamma-derivative-x m/inf+ m/inf+))
   (is (m/nan? (special-fns/upper-gamma-derivative-x m/inf+ 1.0)))
   (is= m/inf+ (special-fns/upper-gamma-derivative-x 0.1 0.0))
   (is= 0.1224564282529819 (special-fns/upper-gamma-derivative-x 1.0 2.1))
   (is= 0.0 (special-fns/upper-gamma-derivative-x 0.1 m/inf+))
-  (is (m/nan? (special-fns/upper-gamma-derivative-x m/nan m/inf+)))
-  (is (m/nan? (special-fns/upper-gamma-derivative-x m/inf+ m/nan)))
-  (is (m/nan? (special-fns/upper-gamma-derivative-x 1.0 m/nan)))
   (is= 0.33287108369807955 (special-fns/upper-gamma-derivative-x 1 1.1))
   (is= 0.36787944117144233 (special-fns/upper-gamma-derivative-x 1 1))
   (is= 1.0 (special-fns/upper-gamma-derivative-x 1 0))
@@ -637,14 +668,10 @@
 
 (deftest regularized-gamma-p-test
   (is (spec-check special-fns/regularized-gamma-p))
-  (is (m/nan? (special-fns/regularized-gamma-p m/nan m/nan)))
   (is= 0.0 (special-fns/regularized-gamma-p m/inf+ 0.0))
   (is= 0.0 (special-fns/regularized-gamma-p 0.1 0.0))
   (is= 0.8775435717470181 (special-fns/regularized-gamma-p 1.0 2.1))
   (is= 1.0 (special-fns/regularized-gamma-p 0.1 m/inf+))
-  (is (m/nan? (special-fns/regularized-gamma-p m/nan m/inf+)))
-  (is (m/nan? (special-fns/regularized-gamma-p m/inf+ m/nan)))
-  (is (m/nan? (special-fns/regularized-gamma-p 1.0 m/nan)))
   (is= 0.6671289163019202 (special-fns/regularized-gamma-p 1 1.1))
   (is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
   (is= 0.0 (special-fns/regularized-gamma-p 1 0))
@@ -652,14 +679,10 @@
 
 (deftest regularized-gamma-q-test
   (is (spec-check special-fns/regularized-gamma-q))
-  (is (m/nan? (special-fns/regularized-gamma-q m/nan m/nan)))
   (is= 1.0 (special-fns/regularized-gamma-q m/inf+ 0.0))
   (is= 1.0 (special-fns/regularized-gamma-q 0.1 0.0))
   (is= 0.1224564282529819 (special-fns/regularized-gamma-q 1.0 2.1))
   (is= 0.0 (special-fns/regularized-gamma-q 0.1 m/inf+))
-  (is (m/nan? (special-fns/regularized-gamma-q m/nan m/inf+)))
-  (is (m/nan? (special-fns/regularized-gamma-q m/inf+ m/nan)))
-  (is (m/nan? (special-fns/regularized-gamma-q 1.0 m/nan)))
   (is= 0.33287108369807983 (special-fns/regularized-gamma-q 1 1.1))
   (is= 0.3678794411714422 (special-fns/regularized-gamma-q 1 1))
   (is= 1.0 (special-fns/regularized-gamma-q 1 0))
@@ -668,7 +691,6 @@
 (deftest log-gamma-test
   (is (spec-check special-fns/log-gamma))
   (is= m/inf+ (special-fns/log-gamma m/inf+))
-  (is (m/nan? (special-fns/log-gamma m/nan)))
   (is= 2.2527126517342055 (special-fns/log-gamma 0.1))
   (is= 0.04543773854448518 (special-fns/log-gamma 2.1))
   (is= -0.049872441259839764 (special-fns/log-gamma 1.1))
@@ -683,7 +705,6 @@
                    :recursion-limit  1
                    :test-check       {:num-tests 600}}))
   (is= m/inf+ (special-fns/log-gamma-derivative m/inf+))
-  (is (m/nan? (special-fns/log-gamma-derivative m/nan)))
   (is= -10.423754943278134 (special-fns/log-gamma-derivative 0.1))
   (is= -0.5772156677920671 (special-fns/log-gamma-derivative 1))
   (is= 0.48533596581277155 (special-fns/log-gamma-derivative 2.1))
@@ -702,7 +723,6 @@
                    :recursion-limit  1
                    :test-check       {:num-tests 500}}))
   (is= m/inf+ (special-fns/gamma-derivative m/inf+))
-  (is (m/nan? (special-fns/gamma-derivative m/nan)))
   (is= -99.16647290191278 (special-fns/gamma-derivative 0.1))
   (is= -0.5772156677920671 (special-fns/gamma-derivative 1))
   (is= 0.507897219192069 (special-fns/gamma-derivative 2.1))
@@ -717,7 +737,6 @@
                                         :recursion-limit  1
                                         :test-check       {:num-tests 45}}))
   (is= m/inf+ (special-fns/trigamma m/inf+))
-  (is (m/nan? (special-fns/trigamma m/nan)))
   (is= 101.43329914974142 (special-fns/trigamma 0.1))
   (is= 0.6068528687496855 (special-fns/trigamma 2.1))
   (is= 1.4332991497414205 (special-fns/trigamma 1.1))
@@ -729,7 +748,6 @@
 
 (deftest multivariate-gamma-test
   (is (spec-check special-fns/multivariate-gamma))
-  (is (m/nan? (special-fns/multivariate-gamma m/nan 0)))
   (is= 1.0 (special-fns/multivariate-gamma m/inf+ 0))
   (is= 1.0 (special-fns/multivariate-gamma 0.1 0))
   (is= 1.0 (special-fns/multivariate-gamma 1.1 0))
@@ -739,7 +757,6 @@
 
 (deftest multivariate-log-gamma-test
   (is (spec-check special-fns/log-gamma))
-  (is (m/nan? (special-fns/multivariate-log-gamma m/nan 0)))
   (is= 0.0 (special-fns/multivariate-log-gamma m/inf+ 0))
   (is= 0.0 (special-fns/multivariate-log-gamma 0.1 0))
   (is= 0.0 (special-fns/multivariate-log-gamma 1.1 0))
@@ -749,12 +766,8 @@
 ;;;BETA
 (deftest beta-test
   (is (spec-check special-fns/beta))
-  (is (m/nan? (special-fns/beta m/nan m/nan)))
   (is= 0.47619047619047616 (special-fns/beta 1.0 2.1))
   (is (m/nan? (special-fns/beta 0.1 m/inf+)))
-  (is (m/nan? (special-fns/beta m/nan m/inf+)))
-  (is (m/nan? (special-fns/beta m/inf+ m/nan)))
-  (is (m/nan? (special-fns/beta 1.0 m/nan)))
   (is= 0.9090909090909091 (special-fns/beta 1 1.1))
   (is= 0.9090909090909091 (special-fns/beta 1.1 1))
   (is= 1.0 (special-fns/beta 1 1))
@@ -763,12 +776,8 @@
 
 (deftest log-beta-test
   (is (spec-check special-fns/log-beta))
-  (is (m/nan? (special-fns/log-beta m/nan m/nan)))
   (is= -0.7419373447293773 (special-fns/log-beta 1.0 2.1))
   (is (m/nan? (special-fns/log-beta 0.1 m/inf+)))
-  (is (m/nan? (special-fns/log-beta m/nan m/inf+)))
-  (is (m/nan? (special-fns/log-beta m/inf+ m/nan)))
-  (is (m/nan? (special-fns/log-beta 1.0 m/nan)))
   (is= -0.09531017980432493 (special-fns/log-beta 1 1.1))
   (is= -0.09531017980432493 (special-fns/log-beta 1.1 1))
   (is= 0.0 (special-fns/log-beta 1 1))
