@@ -4,14 +4,12 @@
 (set-env!
   :resource-paths #{"src"}
   :source-paths #{"test"}
-  :wagons '[[s3-wagon-private "1.2.0"]]
-  :repositories #(conj % ["private" {:url "s3p://provisdom-artifacts/releases"}])
   :dependencies '[[org.clojure/tools.nrepl "0.2.13" :scope "test"]
                   [org.clojure/test.check "0.10.0-alpha2"]
                   [adzerk/boot-test "1.2.0" :scope "test"]
                   [criterium "0.4.4" :scope "test"]
                   [provisdom/boot-tasks "1.4" :scope "test"]
-                  [provisdom/test "0.3.7" :scope "test"]
+                  [provisdom/test "1.10" :scope "test"]
 
                   ;;project deps
                   [org.clojure/clojure "1.9.0" :scope "provided"]
@@ -50,3 +48,14 @@
                        provisdom.math.tensor-test
                        provisdom.math.vector-test
                        }})
+
+(deftask circle-deploy
+         []
+         (let [n (System/getenv "CIRCLE_BUILD_NUM")]
+           (assert n "CIRCLE_BUILD_NUM not set.")
+           (comp
+             (pom :version (str version "." n))
+             (jar)
+             (push :repo-map {:url      "https://clojars.org/repo"
+                              :username (System/getenv "CLOJARS_USER")
+                              :password (System/getenv "CLOJARS_PASSWORD")}))))
