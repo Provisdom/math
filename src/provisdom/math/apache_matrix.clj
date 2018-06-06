@@ -553,10 +553,11 @@
                                                             cs))
                                                   (range n-rows))
                 (and (true? rs) (true? cs)) apache-m)]
-    (when new-m
+    (if new-m
       (if (apache-matrix? new-m)
         new-m
-        (apache-matrix new-m)))))
+        (apache-matrix new-m))
+      (apache-matrix [[]]))))
 
 (s/fdef get-slices-as-matrix
         :args (s/cat :apache-m ::apache-matrix
@@ -564,28 +565,33 @@
                                          ::mx/column-indices
                                          ::mx/exception-row-indices
                                          ::mx/exception-column-indices]))
-        :ret (s/nilable ::apache-matrix))
+        :ret ::apache-matrix)
+
+(s/def ::top-left ::apache-matrix)
+(s/def ::bottom-left ::apache-matrix)
+(s/def ::top-right ::apache-matrix)
+(s/def ::bottom-right ::apache-matrix)
 
 (defn matrix-partition
   "Returns a map containing the four sub-matrices labeled `::top-left`,
-  `::bottom-left`, `::top-right`, and `::bottom-right`. `first-bottom-row` is
-  the bottom of where the slice will occur. `first-right-column` is the right
-  edge of where the slice will occur."
+  `::bottom-left`, `::top-right`, and `::bottom-right`.
+  `first-bottom-row` is the bottom of where the slice will occur.
+  `first-right-column` is the right edge of where the slice will occur."
   [apache-m first-bottom-row first-right-column]
   {::top-left     (get-slices-as-matrix apache-m {::mx/row-indices    (range first-bottom-row)
                                                   ::mx/column-indices (range first-right-column)})
-   ::bottom-left  (get-slices-as-matrix apache-m {::exception-row-indices (range first-bottom-row)
-                                                  ::column-indices        (range first-right-column)})
-   ::top-right    (get-slices-as-matrix apache-m {::row-indices              (range first-bottom-row)
-                                                  ::exception-column-indices (range first-right-column)})
-   ::bottom-right (get-slices-as-matrix apache-m {::exception-row-indices    (range first-bottom-row)
-                                                  ::exception-column-indices (range first-right-column)})})
+   ::bottom-left  (get-slices-as-matrix apache-m {::mx/exception-row-indices (range first-bottom-row)
+                                                  ::mx/column-indices        (range first-right-column)})
+   ::top-right    (get-slices-as-matrix apache-m {::mx/row-indices              (range first-bottom-row)
+                                                  ::mx/exception-column-indices (range first-right-column)})
+   ::bottom-right (get-slices-as-matrix apache-m {::mx/exception-row-indices    (range first-bottom-row)
+                                                  ::mx/exception-column-indices (range first-right-column)})})
 
 (s/fdef matrix-partition
         :args (s/cat :apache-m ::apache-matrix
                      :first-bottom-row ::mx/row
                      :first-right-column ::mx/column)
-        :ret (s/keys :req [::mx/top-left ::mx/bottom-left ::mx/top-right ::mx/bottom-right]))
+        :ret (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
 
 (defn some-kv
   "Returns the first logical true value of (pred row column number) for any

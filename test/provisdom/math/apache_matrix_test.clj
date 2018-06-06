@@ -304,15 +304,15 @@
                    :recursion-limit  1
                    :test-check       {:num-tests 250}}))
   (random/bind-seed 0
-                    (is= (apache-mx/apache-matrix [[]])
-                         (apache-mx/rnd-positive-definite-apache-matrix-finite! 0)))
+    (is= (apache-mx/apache-matrix [[]])
+         (apache-mx/rnd-positive-definite-apache-matrix-finite! 0)))
   (random/bind-seed 0
-                    (is= (apache-mx/apache-matrix [[0.8833108082136426]])
-                         (apache-mx/rnd-positive-definite-apache-matrix-finite! 1)))
+    (is= (apache-mx/apache-matrix [[0.8833108082136426]])
+         (apache-mx/rnd-positive-definite-apache-matrix-finite! 1)))
   (random/bind-seed 0
-                    (is= (apache-mx/apache-matrix [[0.6946098792362991 0.3550851337817903]
-                                                   [0.3550851337817903 0.21513470056994127]])
-                         (apache-mx/rnd-positive-definite-apache-matrix-finite! 2))))
+    (is= (apache-mx/apache-matrix [[0.6946098792362991 0.3550851337817903]
+                                   [0.3550851337817903 0.21513470056994127]])
+         (apache-mx/rnd-positive-definite-apache-matrix-finite! 2))))
 
 (deftest rnd-correlation-apache-matrix!-test
   (is (spec-check apache-mx/rnd-correlation-apache-matrix!
@@ -322,15 +322,15 @@
                    :recursion-limit  1
                    :test-check       {:num-tests 250}}))
   (random/bind-seed 0
-                    (is= (apache-mx/apache-matrix [[]])
-                         (apache-mx/rnd-correlation-apache-matrix! 0)))
+    (is= (apache-mx/apache-matrix [[]])
+         (apache-mx/rnd-correlation-apache-matrix! 0)))
   (random/bind-seed 0
-                    (is= (apache-mx/apache-matrix [[1.0]])
-                         (apache-mx/rnd-correlation-apache-matrix! 1)))
+    (is= (apache-mx/apache-matrix [[1.0]])
+         (apache-mx/rnd-correlation-apache-matrix! 1)))
   (random/bind-seed 0
-                    (is= [[1.0 0.9185584128047] [0.9185584128047 1.0]]
-                         (apache-mx/apache-matrix->matrix
-                           (apache-mx/rnd-correlation-apache-matrix! 2)))))
+    (is= [[1.0 0.9185584128047] [0.9185584128047 1.0]]
+         (apache-mx/apache-matrix->matrix
+           (apache-mx/rnd-correlation-apache-matrix! 2)))))
 
 ;;;INFO
 (deftest rows-test
@@ -394,7 +394,8 @@
   (is (spec-check apache-mx/get-slices-as-matrix))
   (is= (apache-mx/apache-matrix [[1.0 0.5]])
        (apache-mx/get-slices-as-matrix
-         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]]) {::mx/row-indices 0}))
+         (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
+         {::mx/row-indices 0}))
   (is= (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
@@ -419,7 +420,7 @@
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/exception-row-indices 0}))
-  (is= nil
+  (is= (apache-mx/apache-matrix [[]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/exception-row-indices [0 1]}))
@@ -427,19 +428,19 @@
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/exception-column-indices 0}))
-  (is= nil
+  (is= (apache-mx/apache-matrix [[]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/exception-column-indices [0 1]}))
-  (is= nil
+  (is= (apache-mx/apache-matrix [[]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/row-indices 0 ::mx/exception-row-indices 0}))
-  (is= nil
+  (is= (apache-mx/apache-matrix [[]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/row-indices [0] ::mx/exception-row-indices 0}))
-  (is= nil
+  (is= (apache-mx/apache-matrix [[]])
        (apache-mx/get-slices-as-matrix
          (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
          {::mx/row-indices 0 ::mx/exception-row-indices [0]}))
@@ -458,52 +459,60 @@
 
 (deftest matrix-partition-test
   (is (spec-check apache-mx/matrix-partition))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[9.0 10.0] [13.0 14.0]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[11.0 12.0] [15.0 16.0]])
-        ::mx/top-left     (apache-mx/apache-matrix [[1.0 2.0] [5.0 6.0]])
-        ::mx/top-right    (apache-mx/apache-matrix [[3.0 4.0] [7.0 8.0]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[9.0 10.0] [13.0 14.0]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix [[11.0 12.0] [15.0 16.0]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[1.0 2.0] [5.0 6.0]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[3.0 4.0] [7.0 8.0]])}
        (apache-mx/matrix-partition s 2 2))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[5.0] [9.0] [13.0]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[6.0 7.0 8.0] [10.0 11.0 12.0] [14.0 15.0 16.0]])
-        ::mx/top-left     (apache-mx/apache-matrix [[1.0]])
-        ::mx/top-right    (apache-mx/apache-matrix [[2.0 3.0 4.0]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[5.0] [9.0] [13.0]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix
+                                   [[6.0 7.0 8.0] [10.0 11.0 12.0] [14.0 15.0 16.0]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[1.0]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[2.0 3.0 4.0]])}
        (apache-mx/matrix-partition s 1 1))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[1.0 2.0 3.0] [5.0 6.0 7.0]
-                                                    [9.0 10.0 11.0] [13.0 14.0 15.0]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[4.0] [8.0] [12.0] [16.0]])
-        ::mx/top-left     (apache-mx/apache-matrix [[]])
-        ::mx/top-right    (apache-mx/apache-matrix [[]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0] [5.0 6.0 7.0]
+                                    [9.0 10.0 11.0] [13.0 14.0 15.0]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix
+                                   [[4.0] [8.0] [12.0] [16.0]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[]])}
        (apache-mx/matrix-partition s 0 3))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[13.0 14.0 15.0 16.0]])
-        ::mx/top-left     (apache-mx/apache-matrix [[]])
-        ::mx/top-right    (apache-mx/apache-matrix [[1.0 2.0 3.0 4.0]
-                                                    [5.0 6.0 7.0 8.0]
-                                                    [9.0 10.0 11.0 12.0]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix [[13.0 14.0 15.0 16.0]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0 4.0]
+                                    [5.0 6.0 7.0 8.0]
+                                    [9.0 10.0 11.0 12.0]])}
        (apache-mx/matrix-partition s 3 0))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[]])
-        ::mx/top-left     (apache-mx/apache-matrix [[]])
-        ::mx/top-right    (apache-mx/apache-matrix [[]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[]])}
        (apache-mx/matrix-partition s 0 4))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[]])
-        ::mx/top-left     (apache-mx/apache-matrix [[]])
-        ::mx/top-right    (apache-mx/apache-matrix [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])}
        (apache-mx/matrix-partition s 4 0))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
-        ::mx/top-left     (apache-mx/apache-matrix [[]])
-        ::mx/top-right    (apache-mx/apache-matrix [[]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[]])}
        (apache-mx/matrix-partition s 0 0))
-  (is= {::mx/bottom-left  (apache-mx/apache-matrix [[]])
-        ::mx/bottom-right (apache-mx/apache-matrix [[]])
-        ::mx/top-left     (apache-mx/apache-matrix [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
-        ::mx/top-right    (apache-mx/apache-matrix [[]])}
+  (is= {::apache-mx/bottom-left  (apache-mx/apache-matrix [[]])
+        ::apache-mx/bottom-right (apache-mx/apache-matrix [[]])
+        ::apache-mx/top-left     (apache-mx/apache-matrix
+                                   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                                    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
+        ::apache-mx/top-right    (apache-mx/apache-matrix [[]])}
        (apache-mx/matrix-partition s 4 4)))
 
 (deftest some-kv-test

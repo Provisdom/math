@@ -309,14 +309,16 @@
   ([basis-count] (polynomial-2D-fn-by-basis-count basis-count {}))
   ([basis-count {::keys [start-degree chebyshev-kind]
                  :or    {start-degree 0, chebyshev-kind 0}}]
-   (let [d (m/ceil (polynomial-2D-degrees basis-count))]
+   (let [end-degree (m/ceil' (polynomial-2D-degrees basis-count))]
      (fn [x y]
-       (if (> start-degree d)
+       (if (> start-degree end-degree)
          []
          (vec (take
                 basis-count
-                ((polynomial-2D-fn-by-degree d {::start-degree   start-degree
-                                                ::chebyshev-kind chebyshev-kind})
+                ((polynomial-2D-fn-by-degree
+                   end-degree
+                   {::start-degree   start-degree
+                    ::chebyshev-kind chebyshev-kind})
                   x
                   y))))))))
 
