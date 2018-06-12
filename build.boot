@@ -9,7 +9,7 @@
                   [adzerk/boot-test "1.2.0" :scope "test"]
                   [criterium "0.4.4" :scope "test"]
                   [provisdom/boot-tasks "1.4" :scope "test"]
-                  [provisdom/test "1.10" :scope "test"]
+                  [provisdom/test "1.12" :scope "test"]
 
                   ;;project deps
                   [org.clojure/clojure "1.9.0" :scope "provided"]
