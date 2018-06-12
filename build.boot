@@ -9,14 +9,15 @@
                   [adzerk/boot-test "1.2.0" :scope "test"]
                   [criterium "0.4.4" :scope "test"]
                   [provisdom/boot-tasks "1.4" :scope "test"]
-                  [provisdom/test "1.12" :scope "test"]
+                  [provisdom/test "2.12" :scope "test"]
 
                   ;;project deps
                   [org.clojure/clojure "1.9.0" :scope "provided"]
                   [org.clojure/spec.alpha "0.1.143"]
                   [orchestra "2017.11.12-1"]
                   [provisdom/utility-belt "1.6"]
-                  [org.apache.commons/commons-math3 "3.6.1"]])
+                  [org.apache.commons/commons-math3 "3.6.1"]
+                  [net.sourceforge.parallelcolt/parallelcolt "0.10.0"]])
 
 (require
   '[adzerk.boot-test :refer [test]]
