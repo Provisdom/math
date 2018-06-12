@@ -1366,25 +1366,28 @@
         :ret (s/nilable ::matrix))
 
 (defn replace-submatrix
-  "Returns a Matrix after substituting a 'sub' matrix at top-left location 'row'
-  and 'column'. 'row-start' and 'column-start' can be negative. Unassigned
-  elements will be 0.0."
+  "Returns a Matrix after substituting a `submatrix` at top-left location
+  `row-start` and `column-start`. `row-start` and `column-start` can be
+  negative. Unassigned elements will be 0.0."
   [m submatrix row-start column-start]
   (let [tr (+ (rows submatrix) row-start)
         tc (+ (columns submatrix) column-start)
         nr (rows m)
-        nc (columns m)]
-    (vec (for [r (range (min row-start 0) (max tr nr))]
-           (vec (for [c (range (min column-start 0) (max tc nc))]
-                  (cond (and (>= r row-start)
-                             (< r tr)
-                             (>= c column-start)
-                             (< c tc)) (get-in submatrix [(- r row-start) (- c column-start)])
-                        (and (m/non-? r)
-                             (< r nr)
-                             (m/non-? c)
-                             (< c nc)) (get-in m [r c])
-                        :else 0.0)))))))
+        nc (columns m)
+        ret (vec (for [r (range (min row-start 0) (max tr nr))]
+                   (vec (for [c (range (min column-start 0) (max tc nc))]
+                          (cond (and (>= r row-start)
+                                     (< r tr)
+                                     (>= c column-start)
+                                     (< c tc)) (get-in submatrix [(- r row-start) (- c column-start)])
+                                (and (m/non-? r)
+                                     (< r nr)
+                                     (m/non-? c)
+                                     (< c nc)) (get-in m [r c])
+                                :else 0.0)))))]
+    (if (matrix? ret)
+      ret
+      [[]])))
 
 (s/fdef replace-submatrix
         :args (s/cat :m ::matrix
