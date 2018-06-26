@@ -16,15 +16,15 @@
 (deftest factorial-test
   (is (spec-check combinatorics/factorial))
   (is= 1.0 (combinatorics/factorial 0))
-  (is= 0.9513507698668734 (combinatorics/factorial 0.1))
-  (is= 0.8862269254527579 (combinatorics/factorial 0.5))
-  (is= 0.9617658319073873 (combinatorics/factorial 0.9))
+  (is= 0.9513507698668731 (combinatorics/factorial 0.1))
+  (is= 0.886226925452758 (combinatorics/factorial 0.5))
+  (is= 0.9617658319073874 (combinatorics/factorial 0.9))
   (is= 1.0 (combinatorics/factorial 1))
   (is= 1.329340388179137 (combinatorics/factorial 1.5))
   (is= 2.0 (combinatorics/factorial 2.0))
   (is= 5.109094217170944E19 (combinatorics/factorial 21))
-  (is= 1.1240007277776077E21 (combinatorics/factorial 22))
-  (is= 2.585201673888498E22 (combinatorics/factorial 23)))
+  (is= 1.1240007277776075E21 (combinatorics/factorial 22))
+  (is= 2.5852016738884974E22 (combinatorics/factorial 23)))
 
 (deftest factorial'-test
   (is (spec-check combinatorics/factorial'))
@@ -52,22 +52,32 @@
   (is= 1 (combinatorics/subfactorial 2.0))
   (is= 895014631192902121 (combinatorics/subfactorial 20))
   (is= 18795307255050944540N (combinatorics/subfactorial 21))
-  (is= 4.134967596111208E20 (combinatorics/subfactorial 22))
-  (is= 9.510425471055779E21 (combinatorics/subfactorial 23)))
+  (is= 4.1349675961112075E20 (combinatorics/subfactorial 22))
+  (is= 9.510425471055777E21 (combinatorics/subfactorial 23)))
 
 ;;;CHOOSING
 (deftest choose-k-from-n-test
-  (is (spec-check combinatorics/choose-k-from-n))
+  (is (spec-check combinatorics/choose-k-from-n
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 50}}))
   (is= 1.0 (combinatorics/choose-k-from-n 0 1))
   (is= 1.0 (combinatorics/choose-k-from-n 0 0))
   (is= 1.0 (combinatorics/choose-k-from-n 1 1))
-  (is= 1.4 (combinatorics/choose-k-from-n 1 1.4))
+  (is= 2.0 (combinatorics/choose-k-from-n 1 2))
   (is= 4.0 (combinatorics/choose-k-from-n 1 4))
   (is= 10.0 (combinatorics/choose-k-from-n 2 5))
-  (is= 1.2689769520640436E24 (combinatorics/choose-k-from-n 12 545.0)))
+  (is= 1.2689769520640436E24 (combinatorics/choose-k-from-n 12 545)))
 
 (deftest choose-k-from-n'-test
-  (is (spec-check combinatorics/choose-k-from-n'))
+  (is (spec-check combinatorics/choose-k-from-n'
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 50}}))
   (is= 4 (combinatorics/choose-k-from-n' 1 4)))
 
 (deftest log-choose-k-from-n-test
@@ -78,7 +88,7 @@
   (is= 0.33647223662121284 (combinatorics/log-choose-k-from-n 1 1.4))
   (is= 1.3862943611198908 (combinatorics/log-choose-k-from-n 1 4))
   (is= 2.3025850929940455 (combinatorics/log-choose-k-from-n 2 5))
-  (is= 55.50025325814249 (combinatorics/log-choose-k-from-n 12 545.0)))
+  (is= 55.50025325814249 (combinatorics/log-choose-k-from-n 12 545)))
 
 (deftest stirling-number-of-the-second-kind-test
   (is (spec-check combinatorics/stirling-number-of-the-second-kind))
@@ -105,13 +115,18 @@
   (is= 6.160539404599935E21 (combinatorics/bell-number 28)))
 
 (deftest binomial-probability-test
-  (is (spec-check combinatorics/binomial-probability))
+  (is (spec-check combinatorics/binomial-probability
+                  {:coll-check-limit 10
+                   :coll-error-limit 10
+                   :fspec-iterations 10
+                   :recursion-limit  1
+                   :test-check       {:num-tests 50}}))
   (is= 1.0 (combinatorics/binomial-probability 0 0 0.4))
   (is= 0.4 (combinatorics/binomial-probability 1 1 0.4))
-  (is= 0.45650814137931667 (combinatorics/binomial-probability 1 1.4 0.4))
+  (is= 0.48 (combinatorics/binomial-probability 1 2 0.4))
   (is= 0.34559999999999996 (combinatorics/binomial-probability 1 4 0.4))
   (is= 0.3456 (combinatorics/binomial-probability 2 5 0.4))
-  (is= 1.210013134840654E-99 (combinatorics/binomial-probability 12 545.0 0.4)))
+  (is= 1.210013134840654E-99 (combinatorics/binomial-probability 12 545 0.4)))
 
 (deftest log-binomial-probability-test
   (is (spec-check combinatorics/log-binomial-probability))

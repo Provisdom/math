@@ -8,7 +8,7 @@
     [provisdom.math.special-functions :as special-fns]
     [clojure.core.reducers :as ccr])
   (:import
-    [cern.jet.math.tdouble DoubleArithmetic]))
+    [org.apache.commons.math3.util CombinatoricsUtils]))
 
 (declare log-choose-k-from-n)
 ;;;CONSTANTS
@@ -70,31 +70,29 @@
 ;;;CHOOSING
 (defn choose-k-from-n
   "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!). `k` must be able to be a long and less than 1e7,
-  otherwise use [[log-choose-k-from-n]]."
+  `n`! / (`k`! × (`n` - `k`)!). `k` and `n` must be int, otherwise use
+  [[log-choose-k-from-n]]."
   [k n]
-  (let [b (DoubleArithmetic/binomial (double n) (long k))]
-    (if (m/nan? b)
-      (m/exp (log-choose-k-from-n k n))
-      b)))
+  (let [b (CombinatoricsUtils/binomialCoefficientDouble (int n) (int k))]
+    b))
 
 (s/fdef choose-k-from-n
-        :args (s/and (s/cat :k (s/and ::m/long-non- #(< % 1e7)) ;too slow otherwise
-                            :n ::m/non-)
+        :args (s/and (s/cat :k ::m/int-non-
+                            :n ::m/int-non-)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/num)
 
 (defn choose-k-from-n'
   "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` must be able to
-  be a long and less than 1e7, otherwise use [[log-choose-k-from-n]]."
+  `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` and `n` must be
+  int, otherwise use [[log-choose-k-from-n]]."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
 (s/fdef choose-k-from-n'
-        :args (s/and (s/cat :k (s/and ::m/long-non- #(< % 1e7)) ;too slow otherwise
-                            :n ::m/non-)
+        :args (s/and (s/cat :k ::m/int-non-
+                            :n ::m/int-non-)
                      (fn [{:keys [k n]}]
                        (>= n k)))
         :ret ::m/num)
@@ -166,7 +164,7 @@
 
 (defn binomial-probability
   "Likelihood of seeing `successes` out of `trials` with `success-prob`.
-  `Successes` must be a long and less than 1e7, otherwise use
+  `successes` and `trials` must be int, otherwise use
   [[log-binomial-probability]]. For general use, if `trials` is greater than
   1000, use [[log-binomial-probability]]."
   [successes trials success-prob]
@@ -175,8 +173,8 @@
      (m/pow (m/one- success-prob) (- trials successes))))
 
 (s/fdef binomial-probability
-        :args (s/and (s/cat :successes (s/and ::m/long-non- #(< % 1e7))
-                            :trials ::m/finite-non-
+        :args (s/and (s/cat :successes ::m/int-non-
+                            :trials ::m/int-non-
                             :success-prob ::m/open-prob)
                      (fn [{:keys [trials successes]}]
                        (>= trials successes)))
