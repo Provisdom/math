@@ -392,28 +392,30 @@
 
 (defn regularized-beta
   "Returns the regularized beta. Equal to incomplete beta function divided by
-  beta function."
+  beta function. If Apache's solution doesn't converge, then NaN is returned."
   [c x y]
-  (if (zero? c)
-    0.0
-    (Beta/regularizedBeta c x y)))
+  (cond (zero? c) 0.0
+        (m/one? c) 1.0
+        :else (try (Beta/regularizedBeta c x y 1e-14 100000)
+                   (catch Exception _ m/nan))))
 
 (s/fdef regularized-beta
         :args (s/cat :c ::m/prob
-                     :x (s/and ::m/finite+ #(< % 1E154))
-                     :y (s/and ::m/finite+ #(< % 1E154)))
+                     :x ::m/finite+
+                     :y ::m/finite+)
         :ret ::m/number)
 
 (defn incomplete-beta
   "Returns the lower beta:
-  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt."
+  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt. If Apache's
+  solution doesn't converge, then NaN is returned."
   [c x y]
   (if (zero? c)
     0.0
-    (* (Beta/regularizedBeta c x y) (beta x y))))
+    (* (regularized-beta c x y) (beta x y))))
 
 (s/fdef incomplete-beta
         :args (s/cat :c ::m/prob
-                     :x (s/and ::m/finite+ #(< % 1E154))
-                     :y (s/and ::m/finite+ #(< % 1E154)))
+                     :x ::m/finite+
+                     :y ::m/finite+)
         :ret ::m/nan-or-finite)

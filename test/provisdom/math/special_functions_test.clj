@@ -7,7 +7,7 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;40 SECONDS
+;;11 SECONDS
 
 (set! *warn-on-reflection* true)
 
@@ -194,12 +194,7 @@
   (is= 0.2608672465316666 (special-fns/log-gamma 0.7)))
 
 (deftest log-gamma-derivative-test                          ;same as digamma
-  (is (spec-check special-fns/log-gamma-derivative
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 600}}))
+  (is (spec-check special-fns/log-gamma-derivative))
   (is= m/inf+ (special-fns/log-gamma-derivative m/inf+))
   (is= -10.423754943278134 (special-fns/log-gamma-derivative 0.1))
   (is= -0.5772156677920671 (special-fns/log-gamma-derivative 1))
@@ -212,19 +207,14 @@
   (is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0)))
 
 (deftest gamma-derivative-test
-  (is (spec-check special-fns/gamma-derivative
-                  {:coll-check-limit 10
-                   :coll-error-limit 10
-                   :fspec-iterations 10
-                   :recursion-limit  1
-                   :test-check       {:num-tests 500}}))
+  (is (spec-check special-fns/gamma-derivative))
   (is= m/inf+ (special-fns/gamma-derivative m/inf+))
   (is= -99.16647290191278 (special-fns/gamma-derivative 0.1))
   (is= -0.5772156677920671 (special-fns/gamma-derivative 1))
-  (is= 0.507897219192069 (special-fns/gamma-derivative 2.1))
-  (is= -0.40313959152254947 (special-fns/gamma-derivative 1.1))
+  (is= 0.5078972191920689 (special-fns/gamma-derivative 2.1))
+  (is= -0.40313959152254936 (special-fns/gamma-derivative 1.1))
   (is= -1.0428235898368972 (special-fns/gamma-derivative -2.5))
-  (is= -1.5836580833783638 (special-fns/gamma-derivative 0.7)))
+  (is= -1.5836580833783633 (special-fns/gamma-derivative 0.7)))
 
 (deftest trigamma-test
   (is (spec-check special-fns/trigamma {:coll-check-limit 10
@@ -247,9 +237,9 @@
   (is= 1.0 (special-fns/multivariate-gamma m/inf+ 0))
   (is= 1.0 (special-fns/multivariate-gamma 0.1 0))
   (is= 1.0 (special-fns/multivariate-gamma 1.1 0))
-  (is= 0.9513507698668734 (special-fns/multivariate-gamma 1.1 1))
-  (is= 2.511113699545877 (special-fns/multivariate-gamma 1.1 2))
-  (is= 75.05107616754486 (special-fns/multivariate-gamma 1.1 3)))
+  (is= 0.9513507698668731 (special-fns/multivariate-gamma 1.1 1))
+  (is= 2.511113699545875 (special-fns/multivariate-gamma 1.1 2))
+  (is= 75.05107616754478 (special-fns/multivariate-gamma 1.1 3)))
 
 (deftest multivariate-log-gamma-test
   (is (spec-check special-fns/log-gamma))
