@@ -6,12 +6,10 @@
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m])
   (:import
-    [cern.jet.stat.tdouble Gamma]
-    [org.apache.commons.math3.special.Gamma]
-    [org.apache.commons.math3.special Beta Erf]))
+    [org.apache.commons.math3.special Gamma Beta Erf]))
 
 ;;;DECLARATIONS
-(declare regularized-gamma-p erfc)
+(declare regularized-gamma-p erfc log-beta)
 
 ;;;CONSTANTS
 (def ^:const euler-mascheroni-constant
@@ -176,9 +174,7 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (org.apache.commons.math3.special.Gamma/regularizedGammaP
-                             (double a)
-                             (double x)))))))
+                           (Gamma/regularizedGammaP (double a) (double x)))))))
 
 (s/fdef lower-gamma
         :args (s/cat :a ::m/pos
@@ -195,9 +191,7 @@
         :else (* (gamma a)
                  (min 1.0
                       (max 0.0
-                           (org.apache.commons.math3.special.Gamma/regularizedGammaQ
-                             (double a)
-                             (double x)))))))
+                           (Gamma/regularizedGammaQ (double a) (double x)))))))
 
 (s/fdef upper-gamma
         :args (s/cat :a ::m/pos :x ::m/non-)
@@ -226,9 +220,7 @@
         (> x 1.0e150) 1.0
         :else (min 1.0
                    (max 0.0
-                        (org.apache.commons.math3.special.Gamma/regularizedGammaP
-                          (double a)
-                          (double x))))))
+                        (Gamma/regularizedGammaP (double a) (double x))))))
 
 (s/fdef regularized-gamma-p
         :args (s/cat :a ::m/pos :x ::m/non-)
@@ -243,9 +235,7 @@
         (> x 1.0e150) 0.0
         :else (min 1.0
                    (max 0.0
-                        (org.apache.commons.math3.special.Gamma/regularizedGammaQ
-                          (double a)
-                          (double x))))))
+                        (Gamma/regularizedGammaQ (double a) (double x))))))
 
 (s/fdef regularized-gamma-q
         :args (s/cat :a ::m/pos :x ::m/non-)
@@ -256,7 +246,7 @@
   [a]
   (if (m/inf+? a)
     m/inf+
-    (org.apache.commons.math3.special.Gamma/logGamma (double a))))
+    (Gamma/logGamma (double a))))
 
 (s/fdef log-gamma
         :args (s/cat :a ::m/pos)
@@ -299,8 +289,8 @@
 
 (s/fdef gamma-derivative
         :args (s/cat :a (s/or :pos ::m/pos
-                                     :non+ (s/and ::m/non-roughly-round-non+
-                                                  #(> % -3e8))))
+                              :non+ (s/and ::m/non-roughly-round-non+
+                                           #(> % -3e8))))
         :ret ::m/number)
 
 (defn trigamma
@@ -381,15 +371,15 @@
 ;;;BETA FUNCTIONS
 (defn beta
   "Returns the beta of `x` and `y`:
-  integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt.
-  Although beta is defined for positive `x` and `y`, you can use this function
-  at your own risk for all non-zero `x` and `y`."
+  integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt."
   [x y]
-  (Gamma/beta x y))
+  (let [log-b (log-beta x y)]
+    (when log-b
+      (m/exp log-b))))
 
 (s/fdef beta
         :args (s/cat :x ::m/pos :y ::m/pos)
-        :ret ::m/nan-or-finite)
+        :ret ::m/nan-or-non-)
 
 (defn log-beta
   "Returns the log-beta of `x` and `y`."
@@ -406,12 +396,12 @@
   [c x y]
   (if (zero? c)
     0.0
-    (Gamma/incompleteBeta x y c)))                          ;NOTE that cern misnamed this
+    (Beta/regularizedBeta c x y)))
 
 (s/fdef regularized-beta
         :args (s/cat :c ::m/prob
-                     :x (s/and ::m/finite+ #(< % 1E305))
-                     :y (s/and ::m/finite+ #(< % 1E305)))
+                     :x (s/and ::m/finite+ #(< % 1E154))
+                     :y (s/and ::m/finite+ #(< % 1E154)))
         :ret ::m/number)
 
 (defn incomplete-beta
@@ -420,10 +410,10 @@
   [c x y]
   (if (zero? c)
     0.0
-    (* (Gamma/incompleteBeta x y c) (Gamma/beta x y))))     ;NOTE that cern misnamed this
+    (* (Beta/regularizedBeta c x y) (beta x y))))
 
 (s/fdef incomplete-beta
         :args (s/cat :c ::m/prob
-                     :x (s/and ::m/finite+ #(< % 1E305))
-                     :y (s/and ::m/finite+ #(< % 1E305)))
+                     :x (s/and ::m/finite+ #(< % 1E154))
+                     :y (s/and ::m/finite+ #(< % 1E154)))
         :ret ::m/nan-or-finite)

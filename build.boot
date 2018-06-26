@@ -15,9 +15,11 @@
                   [org.clojure/clojure "1.9.0" :scope "provided"]
                   [org.clojure/spec.alpha "0.1.143"]
                   [orchestra "2017.11.12-1"]
-                  [provisdom/utility-belt "1.6"]
+                  [provisdom/utility-belt "1.8"]
                   [org.apache.commons/commons-math3 "3.6.1"]
-                  [net.sourceforge.parallelcolt/parallelcolt "0.10.0"]])
+                  [uncomplicate/neanderthal "0.19.0"]]
+  :exclusions '[[org.jcuda/jcuda-natives :classifier "apple-x86_64"]
+                [org.jcuda/jcublas-natives :classifier "apple-x86_64"]])
 
 (require
   '[adzerk.boot-test :refer [test]]
