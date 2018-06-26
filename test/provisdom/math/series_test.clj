@@ -263,16 +263,16 @@
   (is= 11.12
        (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? true}))
   (is= 11.0 (series/sum-convergent-series [1 3 7]))
-  (is= 3.59639673467086E-16 (series/sum-convergent-series (sin-series m/PI)))
+  (is= 3.5963967346223924E-16 (series/sum-convergent-series (sin-series m/PI)))
   (is= -1.0000000000000007
        (series/sum-convergent-series (sin-series (* 1.5 m/PI))))
-  (is= 1.5291315517394673E-14
+  (is= 1.529127485971617E-14
        (series/sum-convergent-series (sin-series (* 2 m/PI))))
   (is= 0.9999999999999877
        (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
-  (is= 1.0007413181275937E-13
+  (is= 9.974104098997765E-14
        (series/sum-convergent-series (sin-series (* 3.0 m/PI))))
-  (is= -1.000000000000508
+  (is= -1.0000000000005222
        (series/sum-convergent-series (sin-series (* 3.5 m/PI))))
   (is= 0.9999999999999878
        (series/sum-convergent-series (sin-series (* 2.5 m/PI))
