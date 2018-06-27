@@ -310,14 +310,15 @@
 
 (defn- recursive-emap
   "Recursively maps for [[emap]]."
-  [shape f sh tensors]
-  (let [c (count shape)
+  [largest-shape f sh tensors]
+  (let [c (count largest-shape)
         dim (count sh)]
     (if (= dim c)
-      (apply f (map #(get-in % sh)
+      (apply f (map (fn [tensor]
+                      (get-in tensor sh))
                     tensors))
-      (mapv #(recursive-emap shape f (conj sh %) tensors)
-            (range (get shape dim))))))
+      (mapv #(recursive-emap largest-shape f (conj sh %) tensors)
+            (range (get largest-shape dim))))))
 
 (defn- emap-core
   [f tensor & more]
