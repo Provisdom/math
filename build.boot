@@ -18,8 +18,8 @@
                   [provisdom/utility-belt "1.8"]
                   [org.apache.commons/commons-math3 "3.6.1"]
                   [uncomplicate/neanderthal "0.19.0"]]
-  :exclusions '[[org.jcuda/jcuda-natives :classifier "apple-x86_64"]
-                [org.jcuda/jcublas-natives :classifier "apple-x86_64"]])
+  :exclusions '[org.jcuda/jcuda-natives
+                org.jcuda/jcublas-natives])
 
 (require
   '[adzerk.boot-test :refer [test]]
