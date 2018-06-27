@@ -17,7 +17,8 @@
                   [orchestra "2017.11.12-1"]
                   [provisdom/utility-belt "1.8"]
                   [org.apache.commons/commons-math3 "3.6.1"]
-                  [uncomplicate/neanderthal "0.19.0"]]
+                  [uncomplicate/neanderthal "0.19.0"]
+                  [uncomplicate/fluokitten "0.6.1"]]
   :exclusions '[org.jcuda/jcuda-natives
                 org.jcuda/jcublas-natives])
 
