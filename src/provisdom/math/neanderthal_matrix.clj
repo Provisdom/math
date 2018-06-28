@@ -10,12 +10,12 @@
     [uncomplicate.neanderthal.linalg :as linear-algebra]
     [uncomplicate.neanderthal.native :as native]))
 
-(declare )
+(declare neanderthal-rows)
 
 (defn vector->neanderthal-matrix
   "`v` is a vector of data."
-  [rows columns v]
-  (native/dge rows columns v))
+  [rows columns v by-column?]
+  (native/dge rows columns v {:layout (if by-column? :column :row)}))
 
 (defn matrix->neanderthal-matrix
   ""
@@ -25,12 +25,17 @@
 (defn neanderthal-matrix->matrix
   ""
   [neanderthal-mx]
-  (mapv vec neanderthal-mx))
+  (mapv (comp vec seq) (neanderthal-rows neanderthal-mx)))
 
 (defn neanderthal-rows
   "Returns the rows as neanderthal vectors."
   [neanderthal-mx]
   (neanderthal/rows neanderthal-mx))
+
+(defn neanderthal-columns
+  "Returns the columns as neanderthal vectors."
+  [neanderthal-mx]
+  (neanderthal/cols neanderthal-mx))
 
 (defn rows
   "Returns the number of rows."
