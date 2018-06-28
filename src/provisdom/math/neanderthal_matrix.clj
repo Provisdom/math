@@ -24,8 +24,10 @@
 
 (defn neanderthal-matrix->matrix
   ""
-  [neanderthal-mx]
-  (mapv (comp vec seq) (neanderthal-rows neanderthal-mx)))
+  ([neanderthal-mx]
+   (mapv (comp vec seq) (neanderthal-rows neanderthal-mx)))
+  ([neanderthal-mx take-n]
+   (mapv (comp vec seq) (take take-n (neanderthal-rows neanderthal-mx)))))
 
 (defn neanderthal-rows
   "Returns the rows as neanderthal vectors."
