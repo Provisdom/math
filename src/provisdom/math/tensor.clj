@@ -178,7 +178,7 @@
   [shape numbers]
   (if (empty? shape)
     (or (first numbers) 0.0)
-    (let [tot (apply * shape)]
+    (let [tot (reduce * shape)]
       (if (zero? tot)
         (repeat-tensor shape)
         (let [cn (count numbers)
@@ -199,7 +199,7 @@
 (defn rnd-tensor!
   "Creates a new tensor with a given `shape` with random doubles."
   [shape]
-  (fill-tensor shape (take (apply * shape) (random/rnd-lazy!))))
+  (fill-tensor shape (take (reduce * shape) (random/rnd-lazy!))))
 
 (s/fdef rnd-tensor!
         :args (s/cat :shape ::shape)
@@ -574,7 +574,7 @@
   (if (number? tensor)
     tensor
     (let [numbers (flatten tensor)]
-      (m/div (apply + (map double numbers))
+      (m/div (reduce + (map double numbers))
              (count numbers) m/nan))))
 
 (s/fdef average
@@ -586,7 +586,7 @@
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
-    (apply + (map m/abs (flatten tensor)))))
+    (reduce + (map m/abs (flatten tensor)))))
 
 (s/fdef norm1
         :args (s/cat :tensor ::tensor)
@@ -597,7 +597,7 @@
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
-    (m/sqrt (apply + (map m/sq (flatten tensor))))))
+    (m/sqrt (reduce + (map m/sq (flatten tensor))))))
 
 (s/fdef norm
         :args (s/cat :tensor ::tensor)
@@ -611,7 +611,7 @@
   [tensor p]
   (if (number? tensor)
     (m/abs tensor)
-    (m/pow (apply + (map #(m/pow (m/abs %) p)
+    (m/pow (reduce + (map #(m/pow (m/abs %) p)
                          (flatten tensor)))
            (/ p))))
 
