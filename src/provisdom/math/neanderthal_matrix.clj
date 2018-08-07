@@ -68,8 +68,10 @@
 
 (defn mx*
   "Matrix multiplication."
-  [neanderthal-mx1 neanderthal-mx2]
-  (neanderthal/mm neanderthal-mx1 neanderthal-mx2))
+  ([neanderthal-mx1 neanderthal-mx2]
+   (neanderthal/mm neanderthal-mx1 neanderthal-mx2))
+  ([neanderthal-mx1 neanderthal-mx2 & more]
+    (apply neanderthal/mm neanderthal-mx1 neanderthal-mx2 more)))
 
 (defn fmap
   "Maps a function onto a functor."
@@ -101,23 +103,28 @@
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls!)})))
 
-(defn lls-with-projection-and-annihilation
+(defn lls-with-error
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns map
-  of solution, projection matrix, and annihilation matrix."
+  of solution, projection matrix, annihilation matrix, and the maximum
+  likelihood estimate for the error."
   [a b]
   (try (let [qr (linear-algebra/qrf a)
              q (linear-algebra/org qr)
              r1 (neanderthal/view-tr (:or qr) {:uplo :upper})
-             solution (linear-algebra/sv! r1 (mx* (transpose q) b))
-             projection (mx* q (transpose q))
+             qt (transpose q)
+             solution (linear-algebra/sv! r1 (mx* qt b))
+             projection (mx* q qt)
              cols (columns projection)
              identity (->identity-neanderthal-matrix cols)
-             annihilation (neanderthal/axpy -1.0 projection identity)]
+             annihilation (neanderthal/axpy -1.0 projection identity)
+             error (neanderthal/scal (/ 1.0 (rows b))
+                                     (mx* (transpose b) annihilation b))]
          {:solution     solution
           :projection   projection
-          :annihilation annihilation})
+          :annihilation annihilation
+          :error error})
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
-                           ::anomalies/fn       (var lls-with-projection-and-annihilation)})))
+                           ::anomalies/fn       (var lls-with-error)})))
 
 
