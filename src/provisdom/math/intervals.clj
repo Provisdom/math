@@ -21,6 +21,10 @@
   (s/and (s/tuple ::m/num ::m/num)
          (fn [[x1 x2]] (>= x2 x1))))
 
+(s/def ::pos-interval
+  (s/and (s/tuple ::m/pos ::m/pos)
+         (fn [[x1 x2]] (>= x2 x1))))
+
 (s/def ::finite-interval
   (s/and (s/tuple ::m/finite ::m/finite)
          (fn [[x1 x2]] (>= x2 x1))))
@@ -29,12 +33,20 @@
   (s/and (s/tuple ::m/finite+ ::m/finite+)
          (fn [[x1 x2]] (>= x2 x1))))
 
+(s/def ::int-interval
+  (s/and (s/tuple ::m/int ::m/int)
+         (fn [[x1 x2]] (>= x2 x1))))
+
 (s/def ::int+-interval
   (s/and (s/tuple ::m/int+ ::m/int+)
          (fn [[x1 x2]] (>= x2 x1))))
 
 (s/def ::long-interval
   (s/and (s/tuple ::m/long ::m/long)
+         (fn [[x1 x2]] (>= x2 x1))))
+
+(s/def ::long+-interval
+  (s/and (s/tuple ::m/long+ ::m/long+)
          (fn [[x1 x2]] (>= x2 x1))))
 
 (defn long-interval-gen
