@@ -71,12 +71,22 @@
   ([neanderthal-mx1 neanderthal-mx2]
    (neanderthal/mm neanderthal-mx1 neanderthal-mx2))
   ([neanderthal-mx1 neanderthal-mx2 & more]
-    (apply neanderthal/mm neanderthal-mx1 neanderthal-mx2 more)))
+   (apply neanderthal/mm neanderthal-mx1 neanderthal-mx2 more)))
 
 (defn fmap
   "Maps a function onto a functor."
   [f a]
   (fluokitten/fmap f a))
+
+(defn lower-cholesky
+  "Lower * Upper = `a`"
+  [a]
+  (try (let [a-sy (neanderthal/view-sy (neanderthal/copy a) {:uplo :lower})
+             lower-tr (neanderthal/view-tr (:lu (linear-algebra/ptrf! a-sy)))]
+         (native/dge lower-tr))
+       (catch Exception _ {::anomalies/category ::anomalies/no-solve
+                           ::anomalies/message  "No Cholesky Solution"
+                           ::anomalies/fn       (var lower-cholesky)})))
 
 (defn lls
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns
@@ -122,7 +132,7 @@
          {:solution     solution
           :projection   projection
           :annihilation annihilation
-          :error error})
+          :error        error})
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
