@@ -12,6 +12,7 @@
 
 ;;;DECLARATIONS
 (declare column-matrix transpose diagonal deserialize-symmetric-matrix
+         deserialize-upper-triangular-matrix deserialize-lower-triangular-matrix
          get-slices-as-matrix some-kv matrix? row-matrix? column-matrix?
          square-matrix? symmetric-matrix? diagonal-matrix? diagonal-matrix
          row-matrix rows columns size-of-symmetric-or-triangular-matrix
@@ -20,8 +21,7 @@
          emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
          ecount-of-symmetric-or-triangular-matrix
          ecount-of-symmetric-or-triangular-matrix-without-diagonal
-         upper-triangular-matrix lower-triangular-matrix?
-         upper-triangular-matrix? lower-triangular-matrix)
+         lower-triangular-matrix? upper-triangular-matrix?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -126,7 +126,10 @@
   (and (vector? x)
        (vector? (first x))
        (not (and (empty? (first x)) (> (count x) 1)))
-       (every? #(and (vector? %) (= (count %) (count (first x))) (every? m/num? %)) x)))
+       (every? #(and (vector? %)
+                     (= (count %) (count (first x)))
+                     (every? m/num? %))
+               x)))
 
 (s/fdef matrix-num?
         :args (s/cat :x any?)
@@ -136,7 +139,11 @@
   (s/with-gen
     matrix-num?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-               (fn [i] (gen/vector (gen/vector (s/gen ::m/num) i) 1 mdl)))))
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/num) i)
+                   1
+                   mdl)))))
 
 (defn matrix-finite?
   "Returns true if a matrix of finite numbers."
@@ -144,7 +151,10 @@
   (and (vector? x)
        (vector? (first x))
        (not (and (empty? (first x)) (> (count x) 1)))
-       (every? #(and (vector? %) (= (count %) (count (first x))) (every? m/finite? %)) x)))
+       (every? #(and (vector? %)
+                     (= (count %) (count (first x)))
+                     (every? m/finite? %))
+               x)))
 
 (s/fdef matrix-finite?
         :args (s/cat :x any?)
@@ -154,7 +164,11 @@
   (s/with-gen
     matrix-finite?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-               (fn [i] (gen/vector (gen/vector (s/gen ::m/finite) i) 1 mdl)))))
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/finite) i)
+                   1
+                   mdl)))))
 
 (defn empty-matrix?
   "Returns true if the matrix is an empty matrix."
@@ -189,7 +203,10 @@
   [x]
   (or (empty-matrix? x)
       (and (vector? x)
-           (every? #(and (vector? %) (= (count %) 1) (every? number? %)) x))))
+           (every? #(and (vector? %)
+                         (= (count %) 1)
+                         (every? number? %))
+                   x))))
 
 (s/fdef column-matrix?
         :args (s/cat :x any?)
@@ -211,7 +228,9 @@
 
 (s/def ::zero-matrix
   (s/with-gen
-    (s/coll-of (s/coll-of zero? :kind vector? :into []) :kind vector? :into [])
+    (s/coll-of (s/coll-of zero? :kind vector? :into [])
+               :kind vector?
+               :into [])
     #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 0 mdl)))
 
 (defn square-matrix?
@@ -227,14 +246,24 @@
   (s/with-gen
     square-matrix?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-               (fn [i] (gen/vector (gen/vector (s/gen ::m/number) i) (max 1 i))))))
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/number) i)
+                   (max 1 i))))))
 
 (s/def ::square-matrix-finite
   (s/with-gen
-    (s/and (s/coll-of (s/coll-of ::m/finite :kind vector? :into []) :min-count 1 :kind vector? :into [])
+    (s/and (s/coll-of
+             (s/coll-of ::m/finite :kind vector? :into [])
+             :min-count 1
+             :kind vector?
+             :into [])
            (fn [m] (= (rows m) (columns m))))
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-               (fn [i] (gen/vector (gen/vector (s/gen ::m/finite) i) (max 1 i))))))
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/finite) i)
+                   (max 1 i))))))
 
 (defn diagonal-matrix?
   "Returns true if a diagonal matrix (the entries outside the main diagonal are
@@ -272,7 +301,7 @@
     upper-triangular-matrix?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i]
-                 (gen/fmap upper-triangular-matrix
+                 (gen/fmap deserialize-upper-triangular-matrix
                            (gen/vector (s/gen ::m/number)
                                        (ecount-of-symmetric-or-triangular-matrix i)))))))
 
@@ -294,7 +323,7 @@
     lower-triangular-matrix?
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i]
-                 (gen/fmap lower-triangular-matrix
+                 (gen/fmap deserialize-lower-triangular-matrix
                            (gen/vector (s/gen ::m/number)
                                        (ecount-of-symmetric-or-triangular-matrix i)))))))
 
