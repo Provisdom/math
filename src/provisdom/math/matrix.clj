@@ -17,8 +17,7 @@
          square-matrix? symmetric-matrix? diagonal-matrix? diagonal-matrix
          row-matrix rows columns size-of-symmetric-or-triangular-matrix
          size-of-symmetric-or-triangular-matrix-without-diagonal
-         compute-vector coerce to-matrix symmetric-matrix-by-averaging
-         emap constant-matrix mx* assoc-diagonal covariance->correlation-matrix
+         to-matrix symmetric-matrix-by-averaging constant-matrix mx* assoc-diagonal
          ecount-of-symmetric-or-triangular-matrix
          ecount-of-symmetric-or-triangular-matrix-without-diagonal
          lower-triangular-matrix? upper-triangular-matrix?)
