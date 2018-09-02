@@ -49,6 +49,31 @@
    [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
+;;;LOGISTIC FUNCTIONS
+(defn logistic
+  ""
+  [x]
+  (condp = x
+    m/inf- 0.0
+    m/inf+ 1.0
+    (/ (inc (m/exp (- x))))))
+
+(s/fdef logistic
+        :args (s/cat :x ::m/num)
+        :ret ::m/prob)
+
+(defn logit
+  ""
+  [p]
+  (condp = p
+    0.0 m/inf-
+    1.0 m/inf+
+    (m/log (/ p (m/one- p)))))
+
+(s/fdef logit
+        :args (s/cat :p ::m/prob)
+        :ret ::m/num)
+
 ;;;ERROR FUNCTIONS
 (defn erf
   "Returns the error function:

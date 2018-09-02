@@ -58,6 +58,13 @@
                :into [])
     #(gen/vector (s/gen ::m/finite+) 0 mdl)))
 
+(s/def ::vector-prob
+  (s/with-gen
+    (s/coll-of ::m/prob
+               :kind clojure.core/vector?
+               :into [])
+    #(gen/vector (s/gen ::m/prob) 0 mdl)))
+
 (s/def ::vector-long
   (s/with-gen
     (s/coll-of ::m/long

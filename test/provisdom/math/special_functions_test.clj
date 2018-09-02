@@ -13,6 +13,21 @@
 
 (ost/instrument)
 
+;;;LOGISTIC FUNCTIONS
+(deftest logistic-test
+  (is (spec-check special-fns/logistic))
+  (is= 0.0 (special-fns/logistic m/inf-))
+  (is= 1.0 (special-fns/logistic m/inf+))
+  (is= 0.5 (special-fns/logistic 0.0))
+  (is= 0.10909682119561293 (special-fns/logistic -2.1)))
+
+(deftest logit-test
+  (is (spec-check special-fns/logit))
+  (is= m/inf- (special-fns/logit 0.0))
+  (is= m/inf+ (special-fns/logit 1.0))
+  (is= -0.4054651081081643 (special-fns/logit 0.4))
+  (is= 0.0 (special-fns/logit 0.5)))
+
 ;;;ERF FUNCTIONS
 (deftest erf-test
   (is (spec-check special-fns/erf))
