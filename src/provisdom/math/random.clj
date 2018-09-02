@@ -79,7 +79,7 @@
 (defn rnd
   "Returns a random finite within the given interval (or [0, 1] by default)."
   ([rng] (split/rand-double rng))
-  ([rng [lower upper]] (+ lower (* (- upper lower) (split/rand-double rng)))))
+  ([rng [lower upper]] (+ lower (* (- (double upper) lower) (split/rand-double rng)))))
 
 (s/fdef rnd
         :args (s/cat :rng ::rng
