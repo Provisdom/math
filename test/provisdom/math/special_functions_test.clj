@@ -13,22 +13,7 @@
 
 (ost/instrument)
 
-;;;LOGISTIC FUNCTIONS
-(deftest logistic-test
-  (is (spec-check special-fns/logistic))
-  (is= 0.0 (special-fns/logistic m/inf-))
-  (is= 1.0 (special-fns/logistic m/inf+))
-  (is= 0.5 (special-fns/logistic 0.0))
-  (is= 0.10909682119561293 (special-fns/logistic -2.1)))
-
-(deftest logit-test
-  (is (spec-check special-fns/logit))
-  (is= m/inf- (special-fns/logit 0.0))
-  (is= m/inf+ (special-fns/logit 1.0))
-  (is= -0.4054651081081643 (special-fns/logit 0.4))
-  (is= 0.0 (special-fns/logit 0.5)))
-
-;;;ERF FUNCTIONS
+;;;ERROR FUNCTIONS
 (deftest erf-test
   (is (spec-check special-fns/erf))
   (is= -1.0 (special-fns/erf m/inf-))
@@ -106,6 +91,7 @@
   (is= 1.0000000000000002 (special-fns/inv-erfc 0.157299207050285))
   (is= -2.100000000000001 (special-fns/inv-erfc 1.997020533343667)))
 
+;;;SIGMOID FUNCTIONS
 (deftest inv-cdf-standard-normal-test
   (is (spec-check special-fns/inv-cdf-standard-normal))
   (is= m/inf- (special-fns/inv-cdf-standard-normal 0.0))
@@ -126,6 +112,20 @@
        (special-fns/cdf-standard-normal -1.0056199694085204))
   (is= 0.997020533343667
        (special-fns/cdf-standard-normal 2.750032615602772)))
+
+(deftest logistic-test
+  (is (spec-check special-fns/logistic))
+  (is= 0.0 (special-fns/logistic m/inf-))
+  (is= 1.0 (special-fns/logistic m/inf+))
+  (is= 0.5 (special-fns/logistic 0.0))
+  (is= 0.10909682119561293 (special-fns/logistic -2.1)))
+
+(deftest logit-test
+  (is (spec-check special-fns/logit))
+  (is= m/inf- (special-fns/logit 0.0))
+  (is= m/inf+ (special-fns/logit 1.0))
+  (is= -0.4054651081081643 (special-fns/logit 0.4))
+  (is= 0.0 (special-fns/logit 0.5)))
 
 ;;;GAMMA
 (deftest gamma-test

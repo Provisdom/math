@@ -49,31 +49,6 @@
    [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
-;;;LOGISTIC FUNCTIONS
-(defn logistic
-  ""
-  [x]
-  (condp = x
-    m/inf- 0.0
-    m/inf+ 1.0
-    (/ (inc (m/exp (- x))))))
-
-(s/fdef logistic
-        :args (s/cat :x ::m/num)
-        :ret ::m/prob)
-
-(defn logit
-  ""
-  [p]
-  (condp = p
-    0.0 m/inf-
-    1.0 m/inf+
-    (m/log (/ p (m/one- p)))))
-
-(s/fdef logit
-        :args (s/cat :p ::m/prob)
-        :ret ::m/num)
-
 ;;;ERROR FUNCTIONS
 (defn erf
   "Returns the error function:
@@ -149,6 +124,7 @@
         :args (s/cat :x (s/double-in :min 0.0 :max 2.0))
         :ret ::m/num)
 
+;;;SIGMOID FUNCTIONS
 (defn inv-cdf-standard-normal
   "Returns the standard Normal inverse cdf."
   [cumulative-prob]
@@ -172,6 +148,34 @@
 (s/fdef cdf-standard-normal
         :args (s/cat :x ::m/num)
         :ret ::m/prob)
+
+(def ^{:doc "See [[inv-cdf-standard-normal]]"} probit inv-cdf-standard-normal)
+
+(def ^{:doc "See [[cdf-standard-normal]]"} inv-probit cdf-standard-normal)
+
+(defn logistic
+  ""
+  [x]
+  (condp = x
+    m/inf- 0.0
+    m/inf+ 1.0
+    (/ (inc (m/exp (- x))))))
+
+(s/fdef logistic
+        :args (s/cat :x ::m/num)
+        :ret ::m/prob)
+
+(defn logit
+  ""
+  [p]
+  (condp = p
+    0.0 m/inf-
+    1.0 m/inf+
+    (m/log (/ p (m/one- p)))))
+
+(s/fdef logit
+        :args (s/cat :p ::m/prob)
+        :ret ::m/num)
 
 ;GAMMA FUNCTIONS
 (defn gamma
