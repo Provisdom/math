@@ -169,6 +169,31 @@
                    1
                    mdl)))))
 
+(defn matrix-finite-non-?
+  "Returns true if a matrix of finite non-negative numbers."
+  [x]
+  (and (vector? x)
+       (vector? (first x))
+       (not (and (empty? (first x)) (> (count x) 1)))
+       (every? #(and (vector? %)
+                     (= (count %) (count (first x)))
+                     (every? m/finite-non-? %))
+               x)))
+
+(s/fdef matrix-finite-non-?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::matrix-finite-non-
+  (s/with-gen
+    matrix-finite-non-?
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/finite-non-) i)
+                   1
+                   mdl)))))
+
 (defn matrix-prob?
   "Returns true if a matrix of probabilities."
   [x]

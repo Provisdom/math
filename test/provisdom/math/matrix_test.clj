@@ -61,6 +61,21 @@
   (is-not (mx/matrix-finite? [[m/inf+]]))
   (is (mx/matrix-finite? [[0.0] [0.0]])))
 
+(deftest matrix-finite-non-?-test
+  (is (spec-check mx/matrix-finite-non-?))
+  (is-not (mx/matrix-finite-non-? [0]))
+  (is-not (mx/matrix-finite-non-? [[] []]))
+  (is (mx/matrix-finite-non-? [[]]))
+  (is-not (mx/matrix-finite-non-? 0))
+  (is-not (mx/matrix-finite-non-? [[[0.0] [0.0]]]))
+  (is-not (mx/matrix-finite-non-? [[nil]]))
+  (is-not (mx/matrix-finite-non-? [["A"]]))
+  (is-not (mx/matrix-finite-non-? '((0))))
+  (is (mx/matrix-finite-non-? [[0]]))
+  (is-not (mx/matrix-finite-non-? [[m/nan]]))
+  (is-not (mx/matrix-finite-non-? [[m/inf+]]))
+  (is (mx/matrix-finite-non-? [[0.0] [0.0]])))
+
 (deftest matrix-prob?-test
   (is (spec-check mx/matrix-prob?))
   (is-not (mx/matrix-prob? [0]))
