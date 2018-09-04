@@ -169,6 +169,31 @@
                    1
                    mdl)))))
 
+(defn matrix-prob?
+  "Returns true if a matrix of probabilities."
+  [x]
+  (and (vector? x)
+       (vector? (first x))
+       (not (and (empty? (first x)) (> (count x) 1)))
+       (every? #(and (vector? %)
+                     (= (count %) (count (first x)))
+                     (every? m/prob? %))
+               x)))
+
+(s/fdef matrix-prob?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::matrix-prob
+  (s/with-gen
+    matrix-prob?
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+               (fn [i]
+                 (gen/vector
+                   (gen/vector (s/gen ::m/prob) i)
+                   1
+                   mdl)))))
+
 (defn empty-matrix?
   "Returns true if the matrix is an empty matrix."
   [x]
