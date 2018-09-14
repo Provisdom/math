@@ -12,6 +12,11 @@
 
 (declare neanderthal-rows)
 
+(defn neanderthal-vector->vector
+  ""
+  [neanderthal-v]
+  (apply vector neanderthal-v))
+
 (defn vector->neanderthal-matrix
   "`v` is a vector of data."
   [rows columns v by-column?]
@@ -37,9 +42,11 @@
 (defn neanderthal-matrix->matrix
   ""
   ([neanderthal-mx]
-   (mapv (comp vec seq) (neanderthal-rows neanderthal-mx)))
+   (mapv neanderthal-vector->vector
+         (neanderthal-rows neanderthal-mx)))
   ([neanderthal-mx take-nrows]
-   (mapv (comp vec seq) (take take-nrows (neanderthal-rows neanderthal-mx)))))
+   (mapv neanderthal-vector->vector
+         (take take-nrows (neanderthal-rows neanderthal-mx)))))
 
 (defn neanderthal-rows
   "Returns the rows as neanderthal vectors."
@@ -60,6 +67,11 @@
   "Returns the number of columns."
   [neanderthal-mx]
   (neanderthal/ncols neanderthal-mx))
+
+(defn diagonal
+  ""
+  [neanderthal-mx]
+  (neanderthal/dia neanderthal-mx))
 
 (defn transpose
   ""
