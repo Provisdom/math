@@ -149,4 +149,35 @@
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
 
+(defn sv-decomposition
+  "Calculates the compact Singular Value Decomposition of a Neanderthal
+  matrix. The Singular Value Decomposition of `neanderthal-m` is a set of three
+   matrices: `svd-left`, `singular-values`, and `svd-right` such that:
+    `neanderthal-m` = `svd-left` × `singular-values` × `svd-right`.
+   Let `neanderthal-m` be a m × n matrix, then `svd-left` is a m × p orthogonal
+   matrix of the left singular vectors, `singular-values` is a p × p diagonal
+   matrix of singular values with positive or nil elements, and are ordered from
+   largest to smallest. `svd-right` is a p × n orthogonal matrix of the right
+   singular vectors where p = min(m,n). Note that:
+   Identity Matrix = (transpose `svd-left`) × `svd-left` =
+    `svd-right` × (transpose `svd-right`).
+   Returns a map containing:
+      `::svd-left` -- Neanderthal matrix of left singular vectors
+      `::singular-values` -- diagonal Neanderthal Commons matrix
+      `::svd-right` -- transpose of Neanderthal matrix of right singular
+        vectors
+      `::rank` -- rank."
+  [neanderthal-m]
+  (try (let [sol (linear-algebra/svd neanderthal-m true true)
+             svd-left (:u sol)
+             svd-right (:vt sol)
+             singular-values (:sigma sol)]
+         {::svd-left        svd-left
+          ::svd-right       svd-right
+          ::singular-values singular-values
+          ::rank            (count (filter pos? (diagonal singular-values)))})
+       (catch Exception _ {::anomalies/category ::anomalies/no-solve
+                           ::anomalies/message  "No SVD Solution"
+                           ::anomalies/fn       (var sv-decomposition)})))
+
 
