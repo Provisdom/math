@@ -152,11 +152,13 @@
 (def bounds-num (bounds))
 (def bounds-finite (bounds m/inf- m/inf+ true true))
 (def bounds-finite+ (bounds 0.0 m/inf+ true true))
+(def bounds-finite-non- (bounds 0.0 m/inf+ false true))
 (def bounds+ (bounds 0.0 m/inf+ true false))
 (def bounds-non- (bounds 0.0 m/inf+))
 (def bounds-prob (bounds 0.0 1.0))
 (def bounds-open-prob (bounds 0.0 1.0 true true))
 (def bounds-long-non- (bounds 0 m/max-long))
+(def bounds-long (bounds m/min-long m/max-long false false))
 (def bounds-long+ (bounds 0 m/max-long true false))
 
 (defn vector-bounds
