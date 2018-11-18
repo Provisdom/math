@@ -33,7 +33,24 @@
        :url         "https://gitlab.com/provisdom/math"
        :scm         {:url "https://github.com/Provisdom/math"}
        :license     {"Provisdom" "(c) 2015-2018 Provisdom Corporation"}}
-  test {:namespaces '#{} })
+  test {:namespaces '#{
+                       provisdom.math.apache-matrix-test
+                       provisdom.math.apache-vector-test
+                       provisdom.math.arrays-test
+                       provisdom.math.combinatorics-test
+                       provisdom.math.core-test
+                       provisdom.math.derivatives-test
+                       provisdom.math.format-test
+                       ;provisdom.math.integrals-test ;need to speed this up first
+                       ;provisdom.math.internal-splittable-random-test ;not for CI
+                       provisdom.math.intervals-test
+                       provisdom.math.matrix-test
+                       provisdom.math.random-test
+                       provisdom.math.series-test
+                       provisdom.math.special-functions-test
+                       provisdom.math.tensor-test
+                       provisdom.math.vector-test
+                       }})
 
 (deftask circle-deploy
          []

@@ -149,6 +149,7 @@
                                        (>= upper lower)))))
         :ret ::bounds)
 
+(def bounds-num (bounds))
 (def bounds-finite (bounds m/inf- m/inf+ true true))
 (def bounds-finite+ (bounds 0.0 m/inf+ true true))
 (def bounds+ (bounds 0.0 m/inf+ true false))
