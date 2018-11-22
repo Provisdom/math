@@ -23,6 +23,54 @@
   (is (vector/vector? [2 3]))
   (is-not (vector/vector? [[2]])))
 
+(deftest vector-prob?-test
+  (is (spec-check vector/vector-prob?))
+  (is-not (vector/vector-prob? 1))
+  (is (vector/vector-prob? []))
+  (is (vector/vector-prob? [0.0 1.0]))
+  (is (vector/vector-prob? [0.7 0.7])))
+
+(deftest vector-open-prob?-test
+  (is (spec-check vector/vector-open-prob?))
+  (is-not (vector/vector-open-prob? 1))
+  (is (vector/vector-open-prob? []))
+  (is-not (vector/vector-open-prob? [0.0 1.0]))
+  (is (vector/vector-open-prob? [0.7 0.7])))
+
+(deftest vector-roughly-prob?-test
+  (is (spec-check vector/vector-roughly-prob?))
+  (is-not (vector/vector-roughly-prob? 1 0.01))
+  (is (vector/vector-roughly-prob? [] 0.01))
+  (is (vector/vector-roughly-prob? [0.0 1.0] 0.01))
+  (is (vector/vector-roughly-prob? [0.0 1.01] 0.01))
+  (is (vector/vector-roughly-prob? [0.7 0.7] 0.01)))
+
+(deftest probs?-test
+  (is (spec-check vector/probs?))
+  (is-not (vector/probs? 1 0.01))
+  (is-not (vector/probs? [] 0.01))
+  (is (vector/probs? [0.0 1.0] 0.01))
+  (is-not (vector/probs? [0.0 1.01] 0.01))
+  (is-not (vector/probs? [0.7 0.7] 0.01)))
+
+(deftest open-probs?-test
+  (is (spec-check vector/open-probs?))
+  (is-not (vector/open-probs? 1 0.01))
+  (is-not (vector/open-probs? [] 0.01))
+  (is-not (vector/open-probs? [0.0 1.0] 0.01))
+  (is-not (vector/open-probs? [0.0 1.01] 0.01))
+  (is-not (vector/open-probs? [0.7 0.7] 0.01))
+  (is (vector/open-probs? [0.1 0.909] 0.01)))
+
+(deftest roughly-probs?-test
+  (is (spec-check vector/roughly-probs?))
+  (is-not (vector/roughly-probs? 1 0.01 0.02))
+  (is-not (vector/roughly-probs? [] 0.01 0.02))
+  (is (vector/roughly-probs? [0.0 1.0] 0.01 0.02))
+  (is (vector/roughly-probs? [0.0 1.009] 0.01 0.02))
+  (is-not (vector/roughly-probs? [0.7 0.7] 0.01 0.02))
+  (is (vector/roughly-probs? [0.01 1.009] 0.01 0.02)))
+
 ;;;CONSTRUCTORS
 (deftest to-vector-test
   (is (spec-check vector/to-vector))
@@ -118,6 +166,14 @@
   (is= [] (vector/replace-nan 0 []))
   (is= [0 1 2 0] (vector/replace-nan 0 [m/nan 1 2 m/nan]))
   (is= '(0 1 2 0) (vector/replace-nan 0 (apply list [m/nan 1 2 m/nan]))))
+
+(deftest round-roughly-vector-prob-test
+  (is (spec-check vector/round-roughly-vector-prob))
+  (is= [] (vector/round-roughly-vector-prob [] 0.01))
+  (is= [0.0 1.0] (vector/round-roughly-vector-prob [0.0 1.0] 0.01))
+  (is= [0.0 1.0] (vector/round-roughly-vector-prob [0.0 1.01] 0.01))
+  (is= [0.7 0.7] (vector/round-roughly-vector-prob [0.7 0.7] 0.01))
+  (is= [0.01 1.0] (vector/round-roughly-vector-prob [0.01 1.01] 0.01)))
 
 ;;;MATH
 (deftest kahan-sum-test

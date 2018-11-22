@@ -9,7 +9,7 @@
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
-(declare)
+(declare kahan-sum)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -65,6 +65,13 @@
                :into [])
     #(gen/vector (s/gen ::m/prob) 0 mdl)))
 
+(s/def ::vector-open-prob
+  (s/with-gen
+    (s/coll-of ::m/open-prob
+               :kind clojure.core/vector?
+               :into [])
+    #(gen/vector (s/gen ::m/open-prob) 0 mdl)))
+
 (s/def ::vector-long
   (s/with-gen
     (s/coll-of ::m/long
@@ -99,6 +106,74 @@
 
 (s/fdef vector?
         :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn vector-prob?
+  "Returns true if a vector of probs only."
+  [x]
+  (and (vector? x)
+       (every? m/prob? x)))
+
+(s/fdef vector-prob?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn vector-open-prob?
+  "Returns true if a vector of open probs only."
+  [x]
+  (and (vector? x)
+       (every? m/open-prob? x)))
+
+(s/fdef vector-open-prob?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(defn vector-roughly-prob?
+  "Returns true if a vector of roughly probs only."
+  [x accu]
+  (and (vector? x)
+       (every? (fn [number]
+                 (m/roughly-prob? number accu))
+               x)))
+
+(s/fdef vector-roughly-prob?
+        :args (s/cat :x any?
+                     :accu ::m/accu)
+        :ret boolean?)
+
+(defn probs?
+  "Returns true if a vector of probs that sums to one within `sum-accu`."
+  [x sum-accu]
+  (and (vector-prob? x)
+       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+
+(s/fdef probs?
+        :args (s/cat :x any?
+                     :sum-accu ::m/accu)
+        :ret boolean?)
+
+(defn open-probs?
+  "Returns true if a vector of open probs that sums to one within `sum-accu`."
+  [x sum-accu]
+  (and (vector-open-prob? x)
+       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+
+(s/fdef open-probs?
+        :args (s/cat :x any?
+                     :sum-accu ::m/accu)
+        :ret boolean?)
+
+(defn roughly-probs?
+  "Returns true if a vector of roughly probs within `accu` that sums to one
+  within `sum-accu`."
+  [x accu sum-accu]
+  (and (vector-roughly-prob? x accu)
+       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+
+(s/fdef roughly-probs?
+        :args (s/cat :x any?
+                     :accu ::m/accu
+                     :sum-accu ::m/accu)
         :ret boolean?)
 
 ;;;VECTOR CONSTRUCTORS
@@ -276,6 +351,22 @@
 (s/fdef replace-nan
         :args (s/cat :replacement-number ::m/number :numbers ::m/numbers)
         :ret ::m/numbers)
+
+(defn round-roughly-vector-prob
+  "Rounds any probs that are roughly probs."
+  [v accu]
+  (mapv (fn [p]
+          (if (m/roughly-prob? p accu)
+            (cond (> p 1.0) 1.0
+                  (neg? p) 0.0
+                  :else p)
+            p))
+        v))
+
+(s/fdef round-roughly-vector-prob
+        :args (s/cat :v ::vector
+                     :accu ::m/accu)
+        :ret ::vector)
 
 ;;;VECTOR MATH
 (defn kahan-sum
