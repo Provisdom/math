@@ -738,6 +738,22 @@
                            (apache-mx/apache-matrix [[1.0 0.5]])
                            (apache-mx/apache-matrix [[1.0 0.5]]))))
 
+(deftest scalar-add-test
+  (is (spec-check apache-mx/scalar-add))
+  (is= (apache-mx/apache-matrix [[]])
+       (apache-mx/scalar-add (apache-mx/apache-matrix [[]]) 1.0))
+  (is= (apache-mx/apache-matrix [[2.0 1.5] [3.0 5.0]])
+       (apache-mx/scalar-add (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
+                             1.0)))
+
+(deftest scalar-multiply-test
+  (is (spec-check apache-mx/scalar-multiply))
+  (is= (apache-mx/apache-matrix [[]])
+       (apache-mx/scalar-multiply (apache-mx/apache-matrix [[]]) 2.0))
+  (is= (apache-mx/apache-matrix [[2.0 1.0] [4.0 8.0]])
+       (apache-mx/scalar-multiply (apache-mx/apache-matrix [[1.0 0.5] [2.0 4.0]])
+                                  2.0)))
+
 ;;;DECOMPOSITION
 (deftest inverse-test
   (is (spec-check apache-mx/inverse))

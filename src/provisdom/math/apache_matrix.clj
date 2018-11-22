@@ -829,6 +829,32 @@
                                  :apache-ms (s/* ::apache-matrix)))
         :ret (s/nilable ::apache-matrix))
 
+(defn scalar-add
+  "Apache Commons matrix addition to a scalar."
+  [apache-m number]
+  (if (zero? (rows apache-m))
+    apache-m
+    (.scalarAdd ^Array2DRowRealMatrix apache-m
+                (double number))))
+
+(s/fdef scalar-add
+        :args (s/cat :apache-m ::apache-matrix
+                     :number ::m/number)
+        :ret ::apache-matrix)
+
+(defn scalar-multiply
+  "Apache Commons matrix multiplication to a scalar."
+  [apache-m number]
+  (if (zero? (rows apache-m))
+    apache-m
+    (.scalarMultiply ^Array2DRowRealMatrix apache-m
+                     (double number))))
+
+(s/fdef scalar-multiply
+        :args (s/cat :apache-m ::apache-matrix
+                     :number ::m/number)
+        :ret ::apache-matrix)
+
 ;;;MATRIX DECOMPOSITION
 (s/def ::inverse (s/nilable ::square-apache-matrix))
 (defn inverse
