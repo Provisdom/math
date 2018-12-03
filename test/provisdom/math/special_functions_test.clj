@@ -13,6 +13,13 @@
 
 (ost/instrument)
 
+;;;LOG-SUM-EXP
+(deftest log-sum-exp-test
+  (is (spec-check special-fns/log-sum-exp))
+  (is= -1199.9999546011009 (special-fns/log-sum-exp [-1200.0 -1210.0]))
+  (is= 1210.0000453988991 (special-fns/log-sum-exp [1200.0 1210.0]))
+  (is= 1210.0 (special-fns/log-sum-exp [-1200.0 1210.0])))
+
 ;;;ERROR FUNCTIONS
 (deftest erf-test
   (is (spec-check special-fns/erf))

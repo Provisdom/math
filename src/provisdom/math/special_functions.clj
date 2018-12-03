@@ -49,6 +49,35 @@
    [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
+;;;LOG-SUM-EXP
+(defn log-sum-exp
+  "Special function for taking the log of the sum of the exponent of numbers
+  that are either very large or very small."
+  [numbers]
+  (if (empty? numbers)
+    0.0
+    (let [b (apply max numbers)]
+      (if (> b 700.0)
+        (+ b
+           (m/log (reduce +
+                          (map
+                            (fn [val]
+                              (m/exp (- val b)))
+                            numbers))))
+        (let [a (apply min numbers)]
+          (if (< a -700.0)
+            (+ a
+               (m/log (reduce +
+                              (map
+                                (fn [val]
+                                  (m/exp (- val a)))
+                                numbers))))
+            (m/log (reduce + (map m/exp numbers)))))))))
+
+(s/fdef log-sum-exp
+        :args (s/cat :v ::m/numbers)
+        :ret ::m/number)
+
 ;;;ERROR FUNCTIONS
 (defn erf
   "Returns the error function:
