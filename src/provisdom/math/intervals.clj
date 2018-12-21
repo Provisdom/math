@@ -62,14 +62,20 @@
 
 (s/def ::bounds
   (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-         (fn [{::keys [lower upper]}]
+         (fn [{::keys [lower upper open-lower? open-upper?]}]
            (or (and (m/nan? lower) (m/nan? upper))
-               (>= upper lower)))))
+               (> upper lower)
+               (and (== upper lower)
+                    (not open-lower?)
+                    (not open-upper?))))))
 
 (s/def ::bounds-num
   (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-         (fn [{::keys [lower upper]}]
-           (>= upper lower))))
+         (fn [{::keys [lower upper open-lower? open-upper?]}]
+           (or (> upper lower)
+               (and (== upper lower)
+                    (not open-lower?)
+                    (not open-upper?))))))
 
 (s/def ::vector-bounds
   (s/with-gen
@@ -137,16 +143,26 @@
                                 (fn [{:keys [lower upper]}]
                                   (or (and (m/nan? lower) (m/nan? upper))
                                       (>= upper lower))))
-                    :three (s/cat :interval ::interval
-                                  :open-lower? ::open-lower?
-                                  :open-upper? ::open-upper?)
+                    :three (s/and (s/cat :interval ::interval
+                                         :open-lower? ::open-lower?
+                                         :open-upper? ::open-upper?)
+                                  (fn [{:keys [interval open-lower? open-upper?]}]
+                                    (let [[lower upper] interval]
+                                      (or (and (m/nan? lower) (m/nan? upper))
+                                          (> upper lower)
+                                          (and (== upper lower)
+                                               (not open-lower?)
+                                               (not open-upper?))))))
                     :four (s/and (s/cat :lower ::lower
                                         :upper ::upper
                                         :open-lower? ::open-lower?
                                         :open-upper? ::open-upper?)
-                                 (fn [{:keys [lower upper]}]
+                                 (fn [{:keys [lower upper open-lower? open-upper?]}]
                                    (or (and (m/nan? lower) (m/nan? upper))
-                                       (>= upper lower)))))
+                                       (> upper lower)
+                                       (and (== upper lower)
+                                            (not open-lower?)
+                                            (not open-upper?))))))
         :ret ::bounds)
 
 (def bounds-num (bounds))
@@ -208,9 +224,10 @@
 
 (defn get-interval
   "Returns Interval from bounds."
-  [bounds]
-  [(::lower bounds)
-   (::upper bounds)])
+  [{::keys [lower upper open-lower? open-upper?]}]
+  (let [l (if open-lower? (m/next-up lower) lower)
+        u (if open-upper? (m/next-down upper) upper)]
+    [l u]))
 
 (s/fdef get-interval
         :args (s/cat :bounds ::bounds)
@@ -259,10 +276,10 @@
                                             vector-bounds))
         [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
                                             vector-bounds))]
-    (when-not (or (> lower upper)
-                  (and (= upper lower)
-                       open-lower?
-                       (not open-upper?)))
+    (when (or (< lower upper)
+              (and (== upper lower)
+                   (not open-lower?)
+                   (not open-upper?)))
       (bounds lower upper open-lower? open-upper?))))
 
 (s/fdef intersection

@@ -155,7 +155,7 @@
 
 (deftest get-interval-test
   (is (spec-check intervals/get-interval))
-  (is= [1.0 2.0]
+  (is= [1.0000000000000002 2.0]
        (intervals/get-interval (intervals/bounds 1.0 2.0 true false))))
 
 ;;;BOUNDS MANIPULATION
