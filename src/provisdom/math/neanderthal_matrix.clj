@@ -138,13 +138,13 @@
              projection (mx* q qt)
              cols (columns projection)
              identity (->identity-neanderthal-matrix cols)
-             annihilation (neanderthal/axpy -1.0 projection identity)
+             annihilator (neanderthal/axpy -1.0 projection identity)
              error (neanderthal/scal (/ 1.0 (rows b))
-                                     (mx* (transpose b) annihilation b))]
-         {:solution     solution
-          :projection   projection
-          :annihilation annihilation
-          :error        error})
+                                     (mx* (transpose b) annihilator b))]
+         {:solution    solution
+          :projection  projection
+          :annihilator annihilator
+          :error       error})
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
