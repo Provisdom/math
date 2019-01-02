@@ -49,8 +49,8 @@
                        provisdom.math.series-test
                        provisdom.math.special-functions-test
                        provisdom.math.tensor-test
-                       provisdom.math.vector-test
-                       }})
+                       provisdom.math.vector-test}})
+
 
 (deftask circle-deploy
          []
