@@ -1,13 +1,11 @@
-version: 2
+version: 2.1
 
 defaults: &defaults
-  working_directory: ~/repo
   docker:
-    - image: circleci/clojure:boot-2.7.2
-  environment:
-    JVM_OPTS: -Xmx3200m
-    BOOT_JVM_OPTIONS: "-Xms512m -Xmx1024m"
-    BOOT_WATCHERS_DISABLE: "yes"
+    - image: circleci/clojure:tools-deps-1.9.0.381
+
+orbs:
+  cache: compute/cache@0.0.3
 
 jobs:
   test:
@@ -15,37 +13,10 @@ jobs:
 
     steps:
       - checkout
-
-      - restore_cache:
-          key: project
-
-      - run: boot test
-
-      - save_cache:
-          paths:
-            - ~/.m2
-            - ~/.boot/cache/lib
-            - ~/.boot/cache/bin
-          key: project
-
-  deploy:
-    <<: *defaults
-    steps:
-      - checkout
-      - restore_cache:
-          key: project
-      - run: boot circle-deploy
+      - run: clojure -A:test
 
 workflows:
   version: 2
   ci-workflow:
     jobs:
       - test
-      - deploy:
-          context: clojars
-          requires:
-            - test
-          filters:
-            branches:
-              only:
-                - master
