@@ -127,8 +127,9 @@
 
 (defn lls-with-error
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns map
-  of solution, projection matrix, annihilation matrix, and the maximum
-  likelihood estimate for the error."
+  of solution, projection matrix, annihilator matrix, standard-squared-errors
+  (unbiased), and mean-squared-errors (maximum likelihood errors).
+  See https://en.wikipedia.org/wiki/Ordinary_least_squares."
   [a b]
   (try (let [qr (linear-algebra/qrf a)
              q (linear-algebra/org qr)
@@ -139,12 +140,16 @@
              cols (columns projection)
              identity (->identity-neanderthal-matrix cols)
              annihilator (neanderthal/axpy -1.0 projection identity)
-             error (neanderthal/scal (/ 1.0 (rows b))
-                                     (mx* (transpose b) annihilator b))]
-         {:solution    solution
-          :projection  projection
-          :annihilator annihilator
-          :error       error})
+             n (rows b)
+             p (columns a)
+             sum-squared-errors (mx* (transpose b) annihilator b)
+             mean-squared-errors (neanderthal/scal (/ 1.0 n) sum-squared-errors)
+             standard-squared-errors (neanderthal/scal (/ n (- n p)) mean-squared-errors)]
+         {:solution                solution
+          :projection              projection
+          :annihilator             annihilator
+          :mean-squared-errors     mean-squared-errors
+          :standard-squared-errors standard-squared-errors})
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
