@@ -1,9 +1,10 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2017.11.12-1"}
-           provisdom/utility-belt           {:git/url "https://github.com:Provisdom/utility-belt.git"
+           provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
                                              :sha     "81f142bec5b832ea52cfa7621e625b4d560f7a63"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.19.0"}
+           uncomplicate/neanderthal         {:mvn/version "0.19.0"
+                                             :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.6.1"}}
  :aliases {:test {:extra-paths ["test" "siderail"]
                   :extra-deps  {criterium                 {:mvn/version "0.4.4"}
