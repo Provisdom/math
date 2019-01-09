@@ -1,7 +1,7 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2017.11.12-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "ad23c99eb243ebe3a0e4d2d311403f5f72ee3c3e"}
+                                             :sha     "ad0f07c72c41856d84921291640f00a498b463b5"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
            uncomplicate/neanderthal         {:mvn/version "0.19.0"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
@@ -22,8 +22,11 @@
                                 "-n" "provisdom.math.core-test"
                                 "-n" "provisdom.math.derivatives-test"
                                 "-n" "provisdom.math.format-test"
+                                "-n" "provisdom.math.integrals-test"
+                                "-n" "provisdom.math.internal-splittable-random-test"
                                 "-n" "provisdom.math.intervals-test"
                                 "-n" "provisdom.math.matrix-test"
+                                "-n" "provisdom.math.neanderthal-matrix-test"
                                 "-n" "provisdom.math.random-test"
                                 "-n" "provisdom.math.series-test"
                                 "-n" "provisdom.math.special-functions-test"
