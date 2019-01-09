@@ -1,7 +1,7 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2017.11.12-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "a2b12842a38373385deba41d7ad49abe63d9a15e"}
+                                             :sha     "ad23c99eb243ebe3a0e4d2d311403f5f72ee3c3e"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
            uncomplicate/neanderthal         {:mvn/version "0.19.0"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
