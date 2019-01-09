@@ -5,13 +5,41 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.utility-belt.anomalies :as anomalies]
+    [provisdom.math.core :as m]
+    [provisdom.math.matrix :as mx]
     [uncomplicate.fluokitten.core :as fluokitten]
     [uncomplicate.neanderthal.core :as neanderthal]
     [uncomplicate.neanderthal.linalg :as linear-algebra]
     [uncomplicate.neanderthal.native :as native]))
 
-(declare neanderthal-rows)
+(declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix)
 
+(s/def ::neanderthal-matrix
+  (s/with-gen
+    neanderthal-matrix?
+    #(gen/fmap matrix->neanderthal-matrix (s/gen ::mx/matrix))))
+
+(s/def ::solution ::neanderthal-matrix)
+(s/def ::projection ::neanderthal-matrix)
+(s/def ::annihilator ::neanderthal-matrix)
+(s/def ::mean-squared-errors ::neanderthal-matrix)
+(s/def ::standard-squared-errors ::neanderthal-matrix)
+(s/def ::svd-left ::neanderthal-matrix)
+(s/def ::svd-right ::neanderthal-matrix)
+(s/def ::singular-values ::neanderthal-matrix)                  ;;diagonal-mx
+(s/def ::rank ::m/int-non-)
+
+;;;MATRIX TYPES
+(defn neanderthal-matrix?
+  "Returns true if a Neanderthal matrix."
+  [x]
+  (neanderthal/matrix? x))
+
+(s/fdef neanderthal-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+;;;CONVERSIONS
 (defn neanderthal-vector->vector
   ""
   [neanderthal-v]
@@ -145,14 +173,24 @@
              sum-squared-errors (mx* (transpose b) annihilator b)
              mean-squared-errors (neanderthal/scal (/ 1.0 n) sum-squared-errors)
              standard-squared-errors (neanderthal/scal (/ n (- n p)) mean-squared-errors)]
-         {:solution                solution
-          :projection              projection
-          :annihilator             annihilator
-          :mean-squared-errors     mean-squared-errors
-          :standard-squared-errors standard-squared-errors})
+         {::solution                solution
+          ::projection              projection
+          ::annihilator             annihilator
+          ::mean-squared-errors     mean-squared-errors
+          ::standard-squared-errors standard-squared-errors})
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
+
+(s/fdef lls-with-error
+        :args (s/cat :a ::neanderthal-matrix
+                     :b ::neanderthal-matrix)
+        :ret (s/or :anomaly ::anomalies/anomaly
+                   :sol (s/keys :req [::solution
+                                      ::projection
+                                      ::annihilator
+                                      ::mean-squared-errors
+                                      ::standard-squared-errors])))
 
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of a Neanderthal
