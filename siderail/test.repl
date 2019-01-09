@@ -1,0 +1,27 @@
+(require '[clojure.spec.alpha :as s]
+         '[clojure.test.check :as tc]
+         '[clojure.test.check.properties :as prop]
+         '[cognitect.transcriptor :as xr :refer (check!)]
+         '[orchestra.spec.test :as ost]
+         '[provisdom.math.apache-matrix :as apache-mx]
+         '[provisdom.math.matrix :as mx]
+         '[provisdom.math.tensor :as t])
+
+(defonce foo (ost/instrument))
+
+(def matrix-gen (s/gen ::mx/matrix))
+
+(defn test-xform
+  [mx]
+  (-> mx
+      apache-mx/apache-matrix
+      apache-mx/apache-matrix->matrix))
+
+(def shizz
+  (prop/for-all [mx matrix-gen]
+    (t/=== mx
+           (test-xform mx))))
+
+@(def result (tc/quick-check 100 shizz))
+
+(check! true? (:result result))

@@ -11,6 +11,7 @@
                                 org.clojure/test.check    {:mvn/version "0.10.0-alpha2"}
                                 provisdom/test            {:git/url "git@github.com:Provisdom/test.git"
                                                            :sha     "622511ac18147d70d427345dee3423616a929b12"}
+                                com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                 com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                            :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
                   :main-opts   ["-m" "cognitect.test-runner"

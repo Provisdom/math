@@ -14,10 +14,7 @@
 
 (declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix)
 
-(s/def ::neanderthal-matrix
-  (s/with-gen
-    neanderthal-matrix?
-    #(gen/fmap matrix->neanderthal-matrix (s/gen ::mx/matrix))))
+
 
 (s/def ::solution ::neanderthal-matrix)
 (s/def ::projection ::neanderthal-matrix)
@@ -38,6 +35,11 @@
 (s/fdef neanderthal-matrix?
         :args (s/cat :x any?)
         :ret boolean?)
+
+(s/def ::neanderthal-matrix
+  (s/with-gen
+    neanderthal-matrix?
+    #(gen/fmap matrix->neanderthal-matrix (s/gen ::mx/matrix))))
 
 ;;;CONVERSIONS
 (defn neanderthal-vector->vector

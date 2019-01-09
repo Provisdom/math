@@ -12,7 +12,7 @@
 
 (set! *warn-on-reflection* true)
 
-(ost/instrument)
+#_(ost/instrument)
 
 (deftest lls-with-error-test
   (is (spec-check neanderthal-mx/lls-with-error))
