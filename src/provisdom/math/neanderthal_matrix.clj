@@ -14,18 +14,6 @@
 
 (declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix)
 
-
-
-(s/def ::solution ::neanderthal-matrix)
-(s/def ::projection ::neanderthal-matrix)
-(s/def ::annihilator ::neanderthal-matrix)
-(s/def ::mean-squared-errors ::neanderthal-matrix)
-(s/def ::standard-squared-errors ::neanderthal-matrix)
-(s/def ::svd-left ::neanderthal-matrix)
-(s/def ::svd-right ::neanderthal-matrix)
-(s/def ::singular-values ::neanderthal-matrix)                  ;;diagonal-mx
-(s/def ::rank ::m/int-non-)
-
 ;;;MATRIX TYPES
 (defn neanderthal-matrix?
   "Returns true if a Neanderthal matrix."
@@ -155,6 +143,12 @@
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls!)})))
 
+(s/def ::solution ::neanderthal-matrix)
+(s/def ::projection ::neanderthal-matrix)
+(s/def ::annihilator ::neanderthal-matrix)
+(s/def ::mean-squared-errors ::neanderthal-matrix)
+(s/def ::standard-squared-errors ::neanderthal-matrix)
+
 (defn lls-with-error
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns map
   of solution, projection matrix, annihilator matrix, standard-squared-errors
@@ -193,6 +187,11 @@
                                       ::annihilator
                                       ::mean-squared-errors
                                       ::standard-squared-errors])))
+
+(s/def ::svd-left ::neanderthal-matrix)
+(s/def ::svd-right ::neanderthal-matrix)
+(s/def ::singular-values ::neanderthal-matrix)                  ;;diagonal-mx
+(s/def ::rank ::m/int-non-)
 
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of a Neanderthal
