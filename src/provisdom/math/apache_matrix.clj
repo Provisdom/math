@@ -578,14 +578,18 @@
   `first-bottom-row` is the bottom of where the slice will occur.
   `first-right-column` is the right edge of where the slice will occur."
   [apache-m first-bottom-row first-right-column]
-  {::top-left     (get-slices-as-matrix apache-m {::mx/row-indices    (range first-bottom-row)
-                                                  ::mx/column-indices (range first-right-column)})
-   ::bottom-left  (get-slices-as-matrix apache-m {::mx/exception-row-indices (range first-bottom-row)
-                                                  ::mx/column-indices        (range first-right-column)})
-   ::top-right    (get-slices-as-matrix apache-m {::mx/row-indices              (range first-bottom-row)
-                                                  ::mx/exception-column-indices (range first-right-column)})
-   ::bottom-right (get-slices-as-matrix apache-m {::mx/exception-row-indices    (range first-bottom-row)
-                                                  ::mx/exception-column-indices (range first-right-column)})})
+  {::top-left     (get-slices-as-matrix
+                    apache-m {::mx/row-indices    (range first-bottom-row)
+                              ::mx/column-indices (range first-right-column)})
+   ::bottom-left  (get-slices-as-matrix
+                    apache-m {::mx/exception-row-indices (range first-bottom-row)
+                              ::mx/column-indices        (range first-right-column)})
+   ::top-right    (get-slices-as-matrix
+                    apache-m {::mx/row-indices              (range first-bottom-row)
+                              ::mx/exception-column-indices (range first-right-column)})
+   ::bottom-right (get-slices-as-matrix
+                    apache-m {::mx/exception-row-indices    (range first-bottom-row)
+                              ::mx/exception-column-indices (range first-right-column)})})
 
 (s/fdef matrix-partition
         :args (s/cat :apache-m ::apache-matrix
@@ -875,6 +879,7 @@
 (s/def ::L (s/nilable ::lower-triangular-apache-matrix))
 (s/def ::U (s/nilable ::upper-triangular-apache-matrix))
 (s/def ::determinant ::m/number)
+
 (defn lu-decomposition-with-determinant-and-inverse
   "Returns a map containing
       `::L` -- the lower triangular factor Apache Commons matrix
@@ -929,6 +934,7 @@
 (s/def ::eigenvalues-matrix ::apache-matrix)
 (s/def ::eigenvectors ::square-apache-matrix)
 (s/def ::eigenvalues (s/nilable ::vector/vector))
+
 (defn eigen-decomposition
   "Computes the Eigendecomposition of a diagonalisable matrix.
    Returns a map containing:
@@ -977,8 +983,10 @@
   but [[cholesky-decomposition]] requires strict positivity."
   [positive-definite-apache-m]
   (if (zero? (rows positive-definite-apache-m))
-    {::cholesky-L positive-definite-apache-m ::cholesky-LT positive-definite-apache-m}
-    (try (let [r (CholeskyDecomposition. ^Array2DRowRealMatrix positive-definite-apache-m)]
+    {::cholesky-L  positive-definite-apache-m
+     ::cholesky-LT positive-definite-apache-m}
+    (try (let [r (CholeskyDecomposition.
+                   ^Array2DRowRealMatrix positive-definite-apache-m)]
            {::cholesky-L  (.getL r)
             ::cholesky-LT (.getLT r)})
          (catch Exception e
@@ -992,6 +1000,7 @@
                    :res (s/keys :req [::cholesky-L ::cholesky-LT])))
 
 (s/def ::rectangular-root ::apache-matrix)
+
 (defn rectangular-cholesky-decomposition
   "Calculates the rectangular Cholesky decomposition of a positive semidefinite
   Apache Commons matrix. The rectangular Cholesky decomposition of a real
@@ -1037,6 +1046,7 @@
 (s/def ::svd-left ::apache-matrix)
 (s/def ::singular-values ::diagonal-apache-matrix)
 (s/def ::svd-right ::apache-matrix)
+
 (defn sv-decomposition
   "Calculates the compact Singular Value Decomposition of an Apache Commons
   matrix. The Singular Value Decomposition of `apache-m` is a set of three
@@ -1089,10 +1099,12 @@
 (s/def ::Q ::apache-matrix)
 (s/def ::R ::apache-matrix)
 
-(s/def ::LLS-solution (s/or :apache-m ::apache-matrix
-                            :anomaly ::anomalies/anomaly))
+(s/def ::LLS-solution
+  (s/or :apache-m ::apache-matrix
+        :anomaly ::anomalies/anomaly))
 
 (s/def ::error (s/nilable ::symmetric-apache-matrix))
+
 (defn qr-decomposition-with-linear-least-squares-and-error-matrix
   "Returns a map containing:
     `::Q` -- orthogonal factors of `apache-m1`
