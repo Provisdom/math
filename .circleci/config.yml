@@ -2,7 +2,7 @@ version: 2.1
 
 defaults: &defaults
   docker:
-    - image: circleci/clojure:tools-deps-1.9.0.381
+    - image: computesoftware/java-neanderthal:c7fb0781c306c1af91545165411f0535d870cc3c-tools-deps
 
 orbs:
   cache: compute/cache@0.0.3
