@@ -1,7 +1,7 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2017.11.12-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "ad0f07c72c41856d84921291640f00a498b463b5"}
+                                             :sha     "77818c71a2ff0de13ced01d7e271b586036549cf"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
            uncomplicate/neanderthal         {:mvn/version "0.19.0"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
@@ -10,7 +10,7 @@
                   :extra-deps  {criterium                 {:mvn/version "0.4.4"}
                                 org.clojure/test.check    {:mvn/version "0.10.0-alpha2"}
                                 provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                           :sha     "622511ac18147d70d427345dee3423616a929b12"}
+                                                           :sha     "b5500027b6e42691be9a7bfe774db7bea206e124"}
                                 com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                 com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                            :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
