@@ -16,7 +16,7 @@
 
 (deftest lls-with-error-test
   (is (spec-check neanderthal-mx/lls-with-error))
-  (is (approx=
+  (is (data-approx=
         #::neanderthal-mx
             {:standard-squared-errors [[3.3684210526315392]]
              :mean-squared-errors     [[1.6842105263157696]]

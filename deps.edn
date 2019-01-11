@@ -1,16 +1,16 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2017.11.12-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "77818c71a2ff0de13ced01d7e271b586036549cf"}
+                                             :sha     "3d8a80fe67789a8fc4470fc6433e235662fcd526"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.19.0"
+           uncomplicate/neanderthal         {:mvn/version "0.20.4"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.6.1"}}
  :aliases {:test {:extra-paths ["test" "siderail"]
                   :extra-deps  {criterium                 {:mvn/version "0.4.4"}
                                 org.clojure/test.check    {:mvn/version "0.10.0-alpha2"}
                                 provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                           :sha     "b5500027b6e42691be9a7bfe774db7bea206e124"}
+                                                           :sha     "52b5b0b0f01b4b284ee81dd6673b4c01f1d78f9c"}
                                 com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                 com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                            :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}

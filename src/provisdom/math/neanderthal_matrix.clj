@@ -109,14 +109,26 @@
   (fluokitten/fmap f a))
 
 (defn lower-cholesky
-  "Lower * Upper = `a`"
-  [a]
+  "Lower * Upper = `neanderthal-mx`, using the symmetric view of a Neanderthal
+  matrix."
+  [neanderthal-mx]
   (try (let [a-sy (neanderthal/view-sy (neanderthal/copy a) {:uplo :lower})
              lower-tr (neanderthal/view-tr (:lu (linear-algebra/ptrf! a-sy)))]
          (native/dge lower-tr))
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No Cholesky Solution"
                            ::anomalies/fn       (var lower-cholesky)})))
+
+(defn inverse-triangular
+  "Inverts the triangular view of a Neanderthal matrix, and returns a
+  triangular-neanderthal-mx."
+  [neanderthal-mx]
+  (try (let [a-tr (neanderthal/view-tr (neanderthal/copy neanderthal-mx))
+             inv-a (linear-algebra/tri! a-tr)]
+         inv-a)
+       (catch Exception _ {::anomalies/category ::anomalies/no-solve
+                           ::anomalies/message  "No Inverse"
+                           ::anomalies/fn       (var inverse-triangular)})))
 
 (defn lls
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns
@@ -190,7 +202,7 @@
 
 (s/def ::svd-left ::neanderthal-matrix)
 (s/def ::svd-right ::neanderthal-matrix)
-(s/def ::singular-values ::neanderthal-matrix)                  ;;diagonal-mx
+(s/def ::singular-values ::neanderthal-matrix)              ;;diagonal-mx
 (s/def ::rank ::m/int-non-)
 
 (defn sv-decomposition
