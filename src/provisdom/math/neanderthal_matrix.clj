@@ -112,7 +112,7 @@
   "Lower * Upper = `neanderthal-mx`, using the symmetric view of a Neanderthal
   matrix."
   [neanderthal-mx]
-  (try (let [a-sy (neanderthal/view-sy (neanderthal/copy a) {:uplo :lower})
+  (try (let [a-sy (neanderthal/view-sy (neanderthal/copy neanderthal-mx) {:uplo :lower})
              lower-tr (neanderthal/view-tr (:lu (linear-algebra/ptrf! a-sy)))]
          (native/dge lower-tr))
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
