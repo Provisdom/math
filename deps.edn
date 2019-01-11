@@ -9,7 +9,7 @@
  :aliases {:test {:extra-paths ["test" "siderail"]
                   :extra-deps  {criterium                 {:mvn/version "0.4.4"}
                                 org.clojure/test.check    {:mvn/version "0.10.0-alpha2"}
-                                provisdom/test            {:git/url "git@github.com:Provisdom/test.git"
+                                provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
                                                            :sha     "622511ac18147d70d427345dee3423616a929b12"}
                                 com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                 com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
