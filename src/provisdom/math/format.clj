@@ -13,7 +13,8 @@
               #(gen/large-integer* {:min 1 :max 35})))
 
 (s/def ::max-digits ::digits)
-(s/def ::max-length ::m/long+)
+
+(s/def ::max-length ::m/int+)
 
 (s/def ::decimal-places
   (s/with-gen ::m/long-non-
@@ -46,7 +47,8 @@
   (format (str "%." decimal-places "f") (double finite)))
 
 (s/fdef format-as-float
-        :args (s/cat :finite ::m/finite :decimal-places ::decimal-places)
+        :args (s/cat :finite ::m/finite
+                     :decimal-places ::decimal-places)
         :ret string?)
 
 (defn format-as-exponential
@@ -82,7 +84,8 @@
 (defn format-number
   "Formats `number` into its best form."
   ([number max-length] (format-number number max-length {}))
-  ([number max-length {::keys [max-decimal-places max-digits]}]
+  ([number max-length
+    {::keys [max-decimal-places max-digits]}]
    (cond (m/nan? number) "NaN"
          (m/inf+? number) "Inf"
          (m/inf-? number) "-Inf"
