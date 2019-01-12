@@ -238,12 +238,32 @@
                            ::anomalies/fn       (var sv-decomposition)})))
 
 (defn singular-values
+  ""
   [neanderthal-m]
   (try (let [sol (linear-algebra/svd neanderthal-m false false true)
              n (min (columns neanderthal-m) (rows neanderthal-m))]
          (mapv (:sigma sol) (range n) (range n)))
-       (catch Exception ex {::anomalies/category ::anomalies/no-solve
-                            ::anomalies/message  "No SVD Solution"
-                            ::anomalies/fn       (var singular-values)
-                            ::ex ex})))
+       (catch Exception e {::anomalies/category ::anomalies/no-solve
+                           ::anomalies/message  (str (.getMessage e))
+                           ::anomalies/fn       (var singular-values)
+                           ::ex                 e})))
+
+(defn eigen-decomposition
+  "Can optionally not calculate the left and/or right eigenvectors."
+  ([a]
+   (eigen-decomposition a {::left-eigenvector?  true
+                          ::right-eigenvector? true}))
+  ([a {::keys [left-eigenvector? right-eigenvector?]}]
+   (try (let [left-eigenvector (when left-eigenvector? (native/dge (rows a) (columns a)))
+              right-eigenvector (when right-eigenvector? (native/dge (rows a) (columns a)))
+              eigenvalues (native/dge (columns a) 2)
+              qr-factors (neanderthal/copy a)
+              eigenvalues (linear-algebra/ev! qr-factors
+                                              eigenvalues
+                                              left-eigenvector
+                                              right-eigenvector)]
+          {::left-eigenvector  left-eigenvector
+           ::right-eigenvector right-eigenvector
+           ::eigenvalues       eigenvalues
+           ::qr-factors        qr-factors}))))
 
