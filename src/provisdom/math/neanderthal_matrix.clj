@@ -10,7 +10,8 @@
     [uncomplicate.fluokitten.core :as fluokitten]
     [uncomplicate.neanderthal.core :as neanderthal]
     [uncomplicate.neanderthal.linalg :as linear-algebra]
-    [uncomplicate.neanderthal.native :as native]))
+    [uncomplicate.neanderthal.native :as native]
+    [uncomplicate.neanderthal.real :as real]))
 
 (declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix)
 
@@ -224,7 +225,7 @@
         vectors
       `::rank` -- rank."
   [neanderthal-m]
-  (try (let [sol (linear-algebra/svd neanderthal-m true true)
+  (try (let [sol (linear-algebra/svd neanderthal-m true true false)
              svd-left (:u sol)
              svd-right (:vt sol)
              singular-values (:sigma sol)]
@@ -236,4 +237,13 @@
                            ::anomalies/message  "No SVD Solution"
                            ::anomalies/fn       (var sv-decomposition)})))
 
+(defn singular-values
+  [neanderthal-m]
+  (try (let [sol (linear-algebra/svd neanderthal-m false false true)
+             n (min (columns neanderthal-m) (rows neanderthal-m))]
+         (mapv (:sigma sol) (range n) (range n)))
+       (catch Exception ex {::anomalies/category ::anomalies/no-solve
+                            ::anomalies/message  "No SVD Solution"
+                            ::anomalies/fn       (var singular-values)
+                            ::ex ex})))
 
