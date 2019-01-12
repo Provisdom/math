@@ -663,7 +663,8 @@
 (defn double-array-variance
   "The variance of the elements in `dbl-array`."
   [dbl-array]
-  (- (double-array-second-moment dbl-array) (m/sq (double-array-mean dbl-array))))
+  (- (double-array-second-moment dbl-array)
+     (m/sq (double-array-mean dbl-array))))
 
 (s/fdef double-array-variance
         :args (s/cat :dbl-array ::double-array)
