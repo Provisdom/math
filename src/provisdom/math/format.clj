@@ -9,7 +9,7 @@
     [clojure.string :as str]))
 
 (s/def ::digits
-  (s/with-gen ::m/long+
+  (s/with-gen ::m/int+
               #(gen/large-integer* {:min 1 :max 35})))
 
 (s/def ::max-digits ::digits)
@@ -17,7 +17,7 @@
 (s/def ::max-length ::m/int+)
 
 (s/def ::decimal-places
-  (s/with-gen ::m/long-non-
+  (s/with-gen ::m/int-non-
               #(gen/large-integer* {:min 0 :max 35})))
 
 (s/def ::max-decimal-places ::decimal-places)
@@ -32,7 +32,9 @@
 (defn trim-number-as-string
   "Trims number of any unnecessary characters e.g. -0.3 and 0.30."
   [s]
-  (let [s (cond (str/starts-with? s "-0") (trim-number-as-string (str "-" (strings/trim-start s "-0")))
+  (let [s (cond (str/starts-with? s "-0") (trim-number-as-string
+                                            (str "-"
+                                                 (strings/trim-start s "-0")))
                 (str/includes? s ".") (strings/trim-end s "0")
                 :else s)]
     (strings/trim-start s "0")))
@@ -86,30 +88,32 @@
   ([number max-length] (format-number number max-length {}))
   ([number max-length
     {::keys [max-decimal-places max-digits]}]
-   (cond (m/nan? number) "NaN"
-         (m/inf+? number) "Inf"
-         (m/inf-? number) "-Inf"
-         :else (let [rounded-number (double (if max-decimal-places
-                                              (read-string (format-as-float number max-decimal-places))
-                                              number))
-                     rounded-number-as-string (if max-digits
-                                                (format-as-exponential rounded-number {::digits max-digits})
-                                                (str rounded-number))
-                     shortened-number (if max-digits
-                                        (read-string rounded-number-as-string)
-                                        rounded-number)
-                     new-max-length (min max-length (count rounded-number-as-string))
-                     standard-digits (count (str (m/round shortened-number :toward-zero)))
-                     want-exponential? (or (and (> standard-digits new-max-length)
-                                                (> standard-digits (+ 5.5 (* -0.5 (m/sgn shortened-number)))))
-                                           (< (m/abs shortened-number) 0.0001))]
-                 (loop [i (max new-max-length 1)]
-                   (let [s (if want-exponential?
-                             (format-as-exponential shortened-number {::digits i})
-                             (format-as-float shortened-number (dec i)))]
-                     (if (or (m/one? i) (<= (count s) new-max-length))
-                       s
-                       (recur (dec i)))))))))
+   (let [number (double number)]
+     (cond (m/nan? number) "NaN"
+           (m/inf+? number) "Inf"
+           (m/inf-? number) "-Inf"
+           :else (let [rounded-number (double
+                                        (if max-decimal-places
+                                          (read-string (format-as-float number max-decimal-places))
+                                          number))
+                       rounded-number-as-string (if max-digits
+                                                  (format-as-exponential rounded-number {::digits max-digits})
+                                                  (str rounded-number))
+                       shortened-number (double (if max-digits
+                                                  (read-string rounded-number-as-string)
+                                                  rounded-number))
+                       new-max-length (min max-length (count rounded-number-as-string))
+                       standard-digits (count (str (m/round shortened-number :toward-zero)))
+                       want-exponential? (or (and (> standard-digits new-max-length)
+                                                  (> standard-digits (+ 5.5 (* -0.5 (m/sgn shortened-number)))))
+                                             (< (m/abs shortened-number) 0.0001))]
+                   (loop [i (max new-max-length 1)]
+                     (let [s (if want-exponential?
+                               (format-as-exponential shortened-number {::digits i})
+                               (format-as-float shortened-number (dec i)))]
+                       (if (or (<= i 1) (<= (count s) new-max-length))
+                         s
+                         (recur (dec i))))))))))
 
 (s/fdef format-number
         :args (s/cat :number ::m/number

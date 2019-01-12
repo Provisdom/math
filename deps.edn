@@ -7,13 +7,13 @@
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.9.0"}}
  :aliases {:test {:extra-paths ["test" "siderail"]
-                  :extra-deps  {criterium                 {:mvn/version "0.4.4"}
-                                org.clojure/test.check    {:mvn/version "0.10.0-alpha2"}
-                                provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                           :sha     "52b5b0b0f01b4b284ee81dd6673b4c01f1d78f9c"}
+                  :extra-deps  {criterium                  {:mvn/version "0.4.4"}
+                                org.clojure/test.check     {:mvn/version "0.10.0-alpha2"}
+                                provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
+                                                            :sha     "52b5b0b0f01b4b284ee81dd6673b4c01f1d78f9c"}
                                 com.cognitect/transcriptor {:mvn/version "0.1.5"}
-                                com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                           :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+                                com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                            :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
                   :main-opts   ["-m" "cognitect.test-runner"
                                 "-n" "provisdom.math.apache-matrix-test"
                                 "-n" "provisdom.math.apache-vector-test"
