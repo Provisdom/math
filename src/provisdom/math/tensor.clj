@@ -374,7 +374,7 @@
                                  :tensor1 ::tensor
                                  :tensor2 ::tensor
                                  :tensor3 ::tensor
-                                 :more (s/* ::tensor)))
+                                 :more (s/+ ::tensor)))
         :ret any?)
 
 (defn- recursive-emap-kv
