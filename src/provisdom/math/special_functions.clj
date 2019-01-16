@@ -206,6 +206,15 @@
         :args (s/cat :p ::m/prob)
         :ret ::m/num)
 
+(defn logit-derivative
+  ""
+  [p]
+  (* (logit p) (- 1.0 (logit p))))
+
+(s/fdef logit-derivative
+  :args (s/cat :p ::m/prob)
+  :ret ::m/num)
+
 ;GAMMA FUNCTIONS
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t ^ (`a`- 1) × e ^ -t × dt).
