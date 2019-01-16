@@ -13,7 +13,8 @@
     [uncomplicate.neanderthal.native :as native]
     [uncomplicate.neanderthal.real :as real]))
 
-(declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix)
+(declare neanderthal-rows neanderthal-matrix? matrix->neanderthal-matrix
+         columns)
 
 ;;;MATRIX TYPES
 (defn neanderthal-matrix?
@@ -29,6 +30,20 @@
   (s/with-gen
     neanderthal-matrix?
     #(gen/fmap matrix->neanderthal-matrix (s/gen ::mx/matrix))))
+
+(defn empty-neanderthal-matrix?
+  "Returns true if an empty Neanderthal matrix."
+  [x]
+  (and (neanderthal-matrix? x) (zero? (columns x))))
+
+(s/fdef empty-neanderthal-matrix?
+        :args (s/cat :x any?)
+        :ret boolean?)
+
+(s/def ::empty-neanderthal-matrix
+  (s/with-gen
+    empty-neanderthal-matrix?
+    #(= (matrix->neanderthal-matrix [[]]) %)))
 
 ;;;CONVERSIONS
 (defn neanderthal-vector->vector
@@ -131,6 +146,8 @@
                            ::anomalies/message  "No Inverse"
                            ::anomalies/fn       (var inverse-triangular)})))
 
+(s/def ::solution ::neanderthal-matrix)
+
 (defn lls
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns
   solution."
@@ -142,6 +159,12 @@
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls)})))
+
+(s/fdef lls
+        :args (s/cat :a ::neanderthal-matrix
+                     :b ::neanderthal-matrix)
+        :ret (s/or :anomaly ::anomalies/anomaly
+                   :sol ::solution))
 
 (defn lls!
   "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  After
@@ -156,7 +179,12 @@
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls!)})))
 
-(s/def ::solution ::neanderthal-matrix)
+(s/fdef lls!
+        :args (s/cat :a ::neanderthal-matrix
+                     :b ::neanderthal-matrix)
+        :ret (s/or :anomaly ::anomalies/anomaly
+                   :sol ::solution))
+
 (s/def ::projection ::neanderthal-matrix)
 (s/def ::annihilator ::neanderthal-matrix)
 (s/def ::mean-squared-errors ::neanderthal-matrix)
@@ -238,7 +266,7 @@
                            ::anomalies/fn       (var sv-decomposition)})))
 
 (defn singular-values
-  ""
+  "About 5x faster than [[sv-decomposition]]."
   [neanderthal-m]
   (try (let [sol (linear-algebra/svd neanderthal-m false false true)
              n (min (columns neanderthal-m) (rows neanderthal-m))]
@@ -249,13 +277,16 @@
                            ::ex                 e})))
 
 (defn eigen-decomposition
-  "Can optionally not calculate the left and/or right eigenvectors."
+  "Can optionally not calculate the left and/or right eigenvectors.  About 2x
+  faster than [[sv-decomposition]]."
   ([a]
    (eigen-decomposition a {::left-eigenvector?  true
                           ::right-eigenvector? true}))
   ([a {::keys [left-eigenvector? right-eigenvector?]}]
-   (try (let [left-eigenvector (when left-eigenvector? (native/dge (rows a) (columns a)))
-              right-eigenvector (when right-eigenvector? (native/dge (rows a) (columns a)))
+   (try (let [left-eigenvector (when left-eigenvector?
+                                 (native/dge (rows a) (columns a)))
+              right-eigenvector (when right-eigenvector?
+                                  (native/dge (rows a) (columns a)))
               eigenvalues (native/dge (columns a) 2)
               qr-factors (neanderthal/copy a)
               eigenvalues (linear-algebra/ev! qr-factors

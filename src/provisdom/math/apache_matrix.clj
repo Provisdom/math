@@ -347,7 +347,7 @@
   (if (zero? size)
     (apache-matrix [[]])
     (loop [i 0]
-      (if (< i 100)
+      (when (< i 100)
         (let [m (apache-matrix
                   (mx/rnd-spectral-matrix!
                     (vec (take size (random/rnd-lazy!)))))]

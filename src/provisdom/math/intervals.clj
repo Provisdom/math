@@ -33,6 +33,22 @@
   (s/and (s/tuple ::m/finite+ ::m/finite+)
          (fn [[x1 x2]] (>= x2 x1))))
 
+(s/def ::prob-interval
+  (s/and (s/tuple ::m/prob ::m/prob)
+         (fn [[x1 x2]] (>= x2 x1))))
+
+(s/def ::open-prob-interval
+  (s/and (s/tuple ::m/open-prob ::m/open-prob)
+         (fn [[x1 x2]] (>= x2 x1))))
+
+(s/def ::finite+-interval
+  (s/and (s/tuple ::m/finite+ ::m/finite+)
+         (fn [[x1 x2]] (>= x2 x1))))
+
+(s/def ::finite-non--interval
+  (s/and (s/tuple ::m/finite-non- ::m/finite-non-)
+         (fn [[x1 x2]] (>= x2 x1))))
+
 (s/def ::int-interval
   (s/and (s/tuple ::m/int ::m/int)
          (fn [[x1 x2]] (>= x2 x1))))
@@ -168,6 +184,7 @@
 (def bounds-num (bounds))
 (def bounds-finite (bounds m/inf- m/inf+ true true))
 (def bounds-finite+ (bounds 0.0 m/inf+ true true))
+(def bounds-finite- (bounds m/inf- 0.0 true true))
 (def bounds-finite-non- (bounds 0.0 m/inf+ false true))
 (def bounds+ (bounds 0.0 m/inf+ true false))
 (def bounds-non- (bounds 0.0 m/inf+))
