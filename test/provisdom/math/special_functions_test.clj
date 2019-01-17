@@ -127,12 +127,26 @@
   (is= 0.5 (special-fns/logistic 0.0))
   (is= 0.10909682119561293 (special-fns/logistic -2.1)))
 
+(deftest logistic-derivative-test
+  (is (spec-check special-fns/logistic-derivative))
+  (is= 0.0 (special-fns/logistic-derivative m/inf-))
+  (is= 0.0 (special-fns/logistic-derivative m/inf+))
+  (is= 0.5 (special-fns/logistic-derivative 0.0))
+  (is= 0.12064725310092733 (special-fns/logistic-derivative -2.1)))
+
 (deftest logit-test
   (is (spec-check special-fns/logit))
   (is= m/inf- (special-fns/logit 0.0))
   (is= m/inf+ (special-fns/logit 1.0))
   (is= -0.4054651081081643 (special-fns/logit 0.4))
   (is= 0.0 (special-fns/logit 0.5)))
+
+(deftest logit-derivative-test
+  (is (spec-check special-fns/logit-derivative))
+  (is= m/inf+ (special-fns/logit-derivative 0.0))
+  (is= m/inf+ (special-fns/logit-derivative 1.0))
+  (is= 4.166666666666667 (special-fns/logit-derivative 0.4))
+  (is= 4.0 (special-fns/logit-derivative 0.5)))
 
 ;;;GAMMA
 (deftest gamma-test

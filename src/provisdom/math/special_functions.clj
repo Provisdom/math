@@ -194,6 +194,20 @@
         :args (s/cat :x ::m/num)
         :ret ::m/prob)
 
+(defn logistic-derivative
+  ""
+  [x]
+  (if (m/inf? x)
+    0.0
+    (let [ex (m/exp x)]
+      (if (m/inf+? ex)
+        0.0
+        (/ ex (inc (m/sq ex)))))))
+
+(s/fdef logistic-derivative
+        :args (s/cat :x ::m/num)
+        :ret ::m/prob)
+
 (defn logit
   ""
   [p]
@@ -209,11 +223,13 @@
 (defn logit-derivative
   ""
   [p]
-  (* (logit p) (- 1.0 (logit p))))
+  (if (or (zero? p) (m/one? p))
+    m/inf+
+    (+ (/ p) (/ (m/one- p)))))
 
 (s/fdef logit-derivative
-  :args (s/cat :p ::m/prob)
-  :ret ::m/num)
+        :args (s/cat :p ::m/prob)
+        :ret ::m/pos)
 
 ;GAMMA FUNCTIONS
 (defn gamma
@@ -231,7 +247,7 @@
         :ret ::m/non-inf-)
 
 (defn lower-gamma
-  "Returns the lower incomplete gamma function: 
+  "Returns the lower incomplete gamma function:
    integral[0, `x`] (t ^ (`a` - 1) × e ^ -t × dt)."
   [a x]
   (cond (zero? x) 0.0
@@ -249,7 +265,7 @@
         :ret ::m/nan-or-non-)
 
 (defn upper-gamma
-  "Returns the upper incomplete gamma function: 
+  "Returns the upper incomplete gamma function:
    integral[`x`, inf] (t ^ (`a` - 1) × e ^ -t × dt)."
   [a x]
   (cond (zero? x) (gamma a)
