@@ -56,7 +56,7 @@
   [numbers]
   (if (empty? numbers)
     0.0
-    (let [b (apply max numbers)]
+    (let [b (double (apply max numbers))]
       (if (> b 700.0)
         (+ b
            (m/log (reduce +
@@ -64,7 +64,7 @@
                             (fn [val]
                               (m/exp (- val b)))
                             numbers))))
-        (let [a (apply min numbers)]
+        (let [a (double (apply min numbers))]
           (if (< a -700.0)
             (+ a
                (m/log (reduce +
