@@ -185,10 +185,7 @@
 (defn logistic
   ""
   [x]
-  (condp = x
-    m/inf- 0.0
-    m/inf+ 1.0
-    (/ (inc (m/exp (- x))))))
+  (/ (inc (m/exp (- x)))))
 
 (s/fdef logistic
         :args (s/cat :x ::m/num)
@@ -197,12 +194,10 @@
 (defn logistic-derivative
   ""
   [x]
-  (if (m/inf? x)
-    0.0
-    (let [ex (m/exp x)]
-      (if (m/inf+? ex)
-        0.0
-        (/ ex (inc (m/sq ex)))))))
+  (let [ex (m/exp x)]
+    (if (m/inf+? ex)
+      0.0
+      (/ ex (m/sq (inc ex))))))
 
 (s/fdef logistic-derivative
         :args (s/cat :x ::m/num)

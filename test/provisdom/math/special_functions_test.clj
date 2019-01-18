@@ -131,8 +131,8 @@
   (is (spec-check special-fns/logistic-derivative))
   (is= 0.0 (special-fns/logistic-derivative m/inf-))
   (is= 0.0 (special-fns/logistic-derivative m/inf+))
-  (is= 0.5 (special-fns/logistic-derivative 0.0))
-  (is= 0.12064725310092733 (special-fns/logistic-derivative -2.1)))
+  (is= 0.25 (special-fns/logistic-derivative 0.0))
+  (is= 0.0971947048006254 (special-fns/logistic-derivative -2.1)))
 
 (deftest logit-test
   (is (spec-check special-fns/logit))
