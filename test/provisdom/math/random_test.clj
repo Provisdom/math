@@ -3,6 +3,7 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.random :as random]
+    [provisdom.math.core :as m]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
@@ -34,7 +35,9 @@
 (deftest rnd-test
   (is (spec-check random/rnd))
   (is= 0.11345034205715454 (random/rnd (random/rng 3)))
-  (is= -0.4619863177138184 (random/rnd (random/rng 3) [-5.0 35.0])))
+  (is= -0.4619863177138184 (random/rnd (random/rng 3) [-5.0 35.0]))
+  (is= -1.3897953327344593E308
+       (random/rnd (random/rng 3) [m/min-dbl m/max-dbl])))
 
 (deftest rnd-long-test
   (is (spec-check random/rnd-long))
