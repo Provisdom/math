@@ -154,8 +154,14 @@
   [a b]
   (try (let [cols (columns a)
              sol (linear-algebra/ls a b)
-             cols-sol (columns sol)]
-         (neanderthal/submatrix sol cols cols-sol))
+             cols-sol (columns sol)
+             solution (neanderthal/submatrix sol cols cols-sol)]
+         (if (every? #(< % 1e15)
+                     (flatten (neanderthal-matrix->matrix solution)))
+           solution
+           {::anomalies/category ::anomalies/no-solve
+            ::anomalies/message  "No LLS Solution"
+            ::anomalies/fn       (var lls)}))
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls)})))
@@ -173,8 +179,14 @@
   [a b]
   (try (let [cols (columns a)
              sol (linear-algebra/ls! a b)
-             cols-sol (columns sol)]
-         (neanderthal/submatrix sol cols cols-sol))
+             cols-sol (columns sol)
+             solution (neanderthal/submatrix sol cols cols-sol)]
+         (if (every? #(< % 1e15)
+                     (flatten (neanderthal-matrix->matrix solution)))
+           solution
+           {::anomalies/category ::anomalies/no-solve
+            ::anomalies/message  "No LLS Solution"
+            ::anomalies/fn       (var lls)}))
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls!)})))
@@ -210,11 +222,16 @@
              sum-squared-errors (mx* (transpose b) annihilator b)
              mean-squared-errors (neanderthal/scal (/ 1.0 n) sum-squared-errors)
              standard-squared-errors (neanderthal/scal (/ n (- n p)) mean-squared-errors)]
-         {::solution                solution
-          ::projection              projection
-          ::annihilator             annihilator
-          ::mean-squared-errors     mean-squared-errors
-          ::standard-squared-errors standard-squared-errors})
+         (if (every? #(< % 1e15)
+                     (flatten (neanderthal-matrix->matrix solution)))
+           {::solution                solution
+            ::projection              projection
+            ::annihilator             annihilator
+            ::mean-squared-errors     mean-squared-errors
+            ::standard-squared-errors standard-squared-errors}
+           {::anomalies/category ::anomalies/no-solve
+            ::anomalies/message  "No LLS Solution"
+            ::anomalies/fn       (var lls)}))
        (catch Exception _ {::anomalies/category ::anomalies/no-solve
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
@@ -281,7 +298,7 @@
   faster than [[sv-decomposition]]."
   ([a]
    (eigen-decomposition a {::left-eigenvector?  true
-                          ::right-eigenvector? true}))
+                           ::right-eigenvector? true}))
   ([a {::keys [left-eigenvector? right-eigenvector?]}]
    (try (let [left-eigenvector (when left-eigenvector?
                                  (native/dge (rows a) (columns a)))
