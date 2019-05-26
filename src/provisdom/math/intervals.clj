@@ -57,6 +57,10 @@
   (s/and (s/tuple ::m/int+ ::m/int+)
          (fn [[x1 x2]] (>= x2 x1))))
 
+(s/def ::int-non--interval
+  (s/and (s/tuple ::m/int-non- ::m/int-non-)
+         (fn [[x1 x2]] (>= x2 x1))))
+
 (s/def ::long-interval
   (s/and (s/tuple ::m/long ::m/long)
          (fn [[x1 x2]] (>= x2 x1))))
