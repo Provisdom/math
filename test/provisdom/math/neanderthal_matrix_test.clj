@@ -20,6 +20,7 @@
         #::neanderthal-mx
             {:standard-squared-errors [[3.3684210526315392]]
              :mean-squared-errors     [[1.6842105263157696]]
+             :condition               0.1538632682103783
              :annihilator             [[0.37969924812029987 -0.25187969924812054
                                         0.30075187969924816 -0.2857142857142859]
                                        [-0.25187969924812054 0.8007518796992481
@@ -40,7 +41,9 @@
         (apply hash-map
                (mapcat
                  (fn [[k v]]
-                   (let [m (neanderthal-mx/neanderthal-matrix->matrix v)]
+                   (let [m (if (neanderthal-mx/neanderthal-matrix? v)
+                             (neanderthal-mx/neanderthal-matrix->matrix v)
+                             v)]
                      [k m]))
                  (neanderthal-mx/lls-with-error
                    (neanderthal-mx/matrix->neanderthal-matrix

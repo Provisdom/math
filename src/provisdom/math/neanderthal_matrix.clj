@@ -213,6 +213,7 @@
              r1 (neanderthal/view-tr (:or qr) {:uplo :upper})
              qt (transpose q)
              solution (linear-algebra/sv! r1 (mx* qt b))
+             condition (linear-algebra/con r1)
              projection (mx* q qt)
              cols (columns projection)
              identity (->identity-neanderthal-matrix cols)
@@ -225,6 +226,7 @@
          (if (every? #(< % 1e15)
                      (flatten (neanderthal-matrix->matrix solution)))
            {::solution                solution
+            ::condition               condition
             ::projection              projection
             ::annihilator             annihilator
             ::mean-squared-errors     mean-squared-errors
