@@ -197,15 +197,17 @@
         :ret (s/or :anomaly ::anomalies/anomaly
                    :sol ::solution))
 
+(s/def ::condition-number ::m/non-)
 (s/def ::projection ::neanderthal-matrix)
 (s/def ::annihilator ::neanderthal-matrix)
 (s/def ::mean-squared-errors ::neanderthal-matrix)
 (s/def ::standard-squared-errors ::neanderthal-matrix)
 
 (defn lls-with-error
-  "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Returns map
-  of solution, projection matrix, annihilator matrix, standard-squared-errors
-  (unbiased), and mean-squared-errors (maximum likelihood errors).
+  "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Uses QR Decomp.
+   Returns map of solution, condition-number (of R), projection matrix,
+   annihilator matrix, mean-squared-errors (maximum likelihood errors), and
+   standard-squared-errors (unbiased).
   See https://en.wikipedia.org/wiki/Ordinary_least_squares."
   [a b]
   (try (let [qr (linear-algebra/qrf a)
@@ -213,7 +215,7 @@
              r1 (neanderthal/view-tr (:or qr) {:uplo :upper})
              qt (transpose q)
              solution (linear-algebra/sv! r1 (mx* qt b))
-             condition (linear-algebra/con r1)
+             condition-number (m/div 1.0 (linear-algebra/con r1))
              projection (mx* q qt)
              cols (columns projection)
              identity (->identity-neanderthal-matrix cols)
@@ -226,7 +228,7 @@
          (if (every? #(< % 1e15)
                      (flatten (neanderthal-matrix->matrix solution)))
            {::solution                solution
-            ::condition               condition
+            ::condition-number        condition-number
             ::projection              projection
             ::annihilator             annihilator
             ::mean-squared-errors     mean-squared-errors
@@ -242,7 +244,8 @@
         :args (s/cat :a ::neanderthal-matrix
                      :b ::neanderthal-matrix)
         :ret (s/or :anomaly ::anomalies/anomaly
-                   :sol (s/keys :req [::solution
+                   :sol (s/keys :req [::condition-number
+                                      ::solution
                                       ::projection
                                       ::annihilator
                                       ::mean-squared-errors
