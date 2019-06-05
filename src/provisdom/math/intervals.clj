@@ -113,7 +113,8 @@
   (and (>= number lower) (<= number upper)))
 
 (s/fdef in-interval?
-        :args (s/cat :interval ::interval :number ::m/number)
+        :args (s/cat :interval ::interval
+                     :number ::m/number)
         :ret boolean?)
 
 (defn in-interval-roughly?
@@ -126,6 +127,16 @@
                      :number ::m/number
                      :accu ::m/accu)
         :ret boolean?)
+
+(defn bound-by-interval
+  "Bounds a `number` to an interval."
+  [[lower upper] number]
+  (max lower (min upper number)))
+
+(s/fdef bound-by-interval
+        :args (s/cat :interval ::interval
+                     :number ::m/number)
+        :ret ::m/number)
 
 ;;;BOUNDS TEST
 (defn in-bounds?

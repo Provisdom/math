@@ -30,6 +30,13 @@
   (is (intervals/in-interval-roughly? [0.0 1.0] 1.001 0.001))
   (is-not (intervals/in-interval-roughly? [0.0 1.0] -0.5 0.001)))
 
+(deftest bound-by-interval-test
+  (is (spec-check intervals/bound-by-interval))
+  (is= 0.5 (intervals/bound-by-interval [0.0 1.0] 0.5))
+  (is= 0.0 (intervals/bound-by-interval [0.0 1.0] 0.0))
+  (is= 1.0 (intervals/bound-by-interval [0.0 1.0] 1.5))
+  (is= 0.0 (intervals/bound-by-interval [0.0 1.0] -0.5)))
+
 ;;;BOUNDS TEST
 (deftest in-bounds?-test
   (is (spec-check intervals/in-bounds?))
