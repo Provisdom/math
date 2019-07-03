@@ -236,7 +236,8 @@
            {::anomalies/category ::anomalies/no-solve
             ::anomalies/message  "No LLS Solution"
             ::anomalies/fn       (var lls)}))
-       (catch Exception _ {::anomalies/category ::anomalies/no-solve
+       (catch Exception e {::anomalies/category ::anomalies/no-solve
+                           ::anomalies/data     (.getMessage e)
                            ::anomalies/message  "No LLS Solution"
                            ::anomalies/fn       (var lls-with-error)})))
 
