@@ -3,7 +3,7 @@
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
                                              :sha     "48b5d531e08e309052ea7df12ae27077d961993a"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.24.0"
+           uncomplicate/neanderthal         {:mvn/version "0.25.3"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.9.1"}}
  :aliases {:test {:extra-paths ["test" "siderail"]

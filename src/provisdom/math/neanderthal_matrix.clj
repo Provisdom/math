@@ -71,7 +71,8 @@
 (defn matrix->neanderthal-matrix
   ""
   [m]
-  (native/dge m))
+  (let [nm (native/dge m)]
+    (neanderthal/trans nm)))
 
 (defn neanderthal-matrix->matrix
   ""
@@ -204,7 +205,7 @@
 (s/def ::standard-squared-errors ::neanderthal-matrix)
 
 (defn lls-with-error
-  "Linear Linear Squares, solving for 'x', where `a` × x = `b`.  Uses QR Decomp.
+  "Linear Least Squares, solving for 'x', where `a` × x = `b`.  Uses QR Decomp.
    Returns map of solution, condition-number (of R), projection matrix,
    annihilator matrix, mean-squared-errors (maximum likelihood errors), and
    standard-squared-errors (unbiased).
