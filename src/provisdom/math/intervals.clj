@@ -13,12 +13,18 @@
 
 (defmacro interval-spec
   ([spec] `(interval-spec ~spec ~spec))
-  ([lower upper]
+  ([lower upper & {:keys [compare-op]
+                   :or   {compare-op `>=}}]
    `(s/with-gen
       (s/and (s/tuple ~lower ~upper)
-             (fn [[~'x1 ~'x2]] (or (>= ~'x2 ~'x1)
+             (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
                                    (and (m/nan? ~'x1) (m/nan? ~'x2)))))
       #(gen/fmap (comp vec sort) (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
+
+(defmacro strict-interval-spec
+  ([spec] `(strict-interval-spec ~spec ~spec))
+  ([lower upper & opts]
+   `(interval-spec ~lower ~upper :compare-op > ~@opts)))
 
 (s/def ::interval (interval-spec ::m/number))
 
