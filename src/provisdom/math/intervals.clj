@@ -11,63 +11,43 @@
 (s/def ::size
   (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
+(defmacro interval-spec
+  ([spec] `(interval-spec ~spec ~spec))
+  ([lower upper]
+   `(s/and (s/tuple ~lower ~upper)
+           (fn [[~'x1 ~'x2]] (>= ~'x2 ~'x1)))))
+
 (s/def ::interval
   (s/and (s/tuple ::m/number ::m/number)
          (fn [[x1 x2]]
            (or (and (m/nan? x1) (m/nan? x2))
                (>= x2 x1)))))
 
-(s/def ::num-interval
-  (s/and (s/tuple ::m/num ::m/num)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::num-interval (interval-spec ::m/num))
 
-(s/def ::pos-interval
-  (s/and (s/tuple ::m/pos ::m/pos)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::pos-interval (interval-spec ::m/pos))
 
-(s/def ::finite-interval
-  (s/and (s/tuple ::m/finite ::m/finite)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::finite-interval (interval-spec ::m/finite))
 
-(s/def ::finite+-interval
-  (s/and (s/tuple ::m/finite+ ::m/finite+)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::finite+-interval (interval-spec ::m/finite+))
 
-(s/def ::prob-interval
-  (s/and (s/tuple ::m/prob ::m/prob)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::prob-interval (interval-spec ::m/prob))
 
-(s/def ::open-prob-interval
-  (s/and (s/tuple ::m/open-prob ::m/open-prob)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::open-prob-interval (interval-spec ::m/open-prob))
 
-(s/def ::finite+-interval
-  (s/and (s/tuple ::m/finite+ ::m/finite+)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::finite+-interval (interval-spec ::m/finite+))
 
-(s/def ::finite-non--interval
-  (s/and (s/tuple ::m/finite-non- ::m/finite-non-)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::finite-non--interval (interval-spec ::m/finite-non-))
 
-(s/def ::int-interval
-  (s/and (s/tuple ::m/int ::m/int)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::int-interval (interval-spec ::m/int))
 
-(s/def ::int+-interval
-  (s/and (s/tuple ::m/int+ ::m/int+)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::int+-interval (interval-spec ::m/int+))
 
-(s/def ::int-non--interval
-  (s/and (s/tuple ::m/int-non- ::m/int-non-)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::int-non--interval (interval-spec ::m/int-non-))
 
-(s/def ::long-interval
-  (s/and (s/tuple ::m/long ::m/long)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::long-interval (interval-spec ::m/long))
 
-(s/def ::long+-interval
-  (s/and (s/tuple ::m/long+ ::m/long+)
-         (fn [[x1 x2]] (>= x2 x1))))
+(s/def ::long+-interval (interval-spec ::m/long+))
 
 (defn long-interval-gen
   ""
@@ -113,9 +93,9 @@
   (and (>= number lower) (<= number upper)))
 
 (s/fdef in-interval?
-        :args (s/cat :interval ::interval
-                     :number ::m/number)
-        :ret boolean?)
+  :args (s/cat :interval ::interval
+               :number ::m/number)
+  :ret boolean?)
 
 (defn in-interval-roughly?
   "Tests whether `number` is roughly inside of the interval."
@@ -123,10 +103,10 @@
   (and (>= number (- lower accu)) (<= number (+ upper accu))))
 
 (s/fdef in-interval-roughly?
-        :args (s/cat :interval ::interval
-                     :number ::m/number
-                     :accu ::m/accu)
-        :ret boolean?)
+  :args (s/cat :interval ::interval
+               :number ::m/number
+               :accu ::m/accu)
+  :ret boolean?)
 
 (defn bound-by-interval
   "Bounds a `number` to an interval."
@@ -134,9 +114,9 @@
   (max lower (min upper number)))
 
 (s/fdef bound-by-interval
-        :args (s/cat :interval ::interval
-                     :number ::m/number)
-        :ret ::m/number)
+  :args (s/cat :interval ::interval
+               :number ::m/number)
+  :ret ::m/number)
 
 ;;;BOUNDS TEST
 (defn in-bounds?
@@ -150,8 +130,8 @@
          (<= number upper))))
 
 (s/fdef in-bounds?
-        :args (s/cat :bounds ::bounds :number ::m/number)
-        :ret boolean?)
+  :args (s/cat :bounds ::bounds :number ::m/number)
+  :ret boolean?)
 
 ;;;BOUNDS CONSTRUCTORS
 (defn bounds
@@ -168,33 +148,33 @@
     ::open-upper? open-upper?}))
 
 (s/fdef bounds
-        :args (s/or :zero (s/cat)
-                    :one (s/cat :interval ::interval)
-                    :two (s/and (s/cat :lower ::lower :upper ::upper)
-                                (fn [{:keys [lower upper]}]
-                                  (or (and (m/nan? lower) (m/nan? upper))
-                                      (>= upper lower))))
-                    :three (s/and (s/cat :interval ::interval
-                                         :open-lower? ::open-lower?
-                                         :open-upper? ::open-upper?)
-                                  (fn [{:keys [interval open-lower? open-upper?]}]
-                                    (let [[lower upper] interval]
-                                      (or (and (m/nan? lower) (m/nan? upper))
-                                          (> upper lower)
-                                          (and (== upper lower)
-                                               (not open-lower?)
-                                               (not open-upper?))))))
-                    :four (s/and (s/cat :lower ::lower
-                                        :upper ::upper
-                                        :open-lower? ::open-lower?
-                                        :open-upper? ::open-upper?)
-                                 (fn [{:keys [lower upper open-lower? open-upper?]}]
-                                   (or (and (m/nan? lower) (m/nan? upper))
-                                       (> upper lower)
-                                       (and (== upper lower)
-                                            (not open-lower?)
-                                            (not open-upper?))))))
-        :ret ::bounds)
+  :args (s/or :zero (s/cat)
+              :one (s/cat :interval ::interval)
+              :two (s/and (s/cat :lower ::lower :upper ::upper)
+                          (fn [{:keys [lower upper]}]
+                            (or (and (m/nan? lower) (m/nan? upper))
+                                (>= upper lower))))
+              :three (s/and (s/cat :interval ::interval
+                                   :open-lower? ::open-lower?
+                                   :open-upper? ::open-upper?)
+                            (fn [{:keys [interval open-lower? open-upper?]}]
+                              (let [[lower upper] interval]
+                                (or (and (m/nan? lower) (m/nan? upper))
+                                    (> upper lower)
+                                    (and (== upper lower)
+                                         (not open-lower?)
+                                         (not open-upper?))))))
+              :four (s/and (s/cat :lower ::lower
+                                  :upper ::upper
+                                  :open-lower? ::open-lower?
+                                  :open-upper? ::open-upper?)
+                           (fn [{:keys [lower upper open-lower? open-upper?]}]
+                             (or (and (m/nan? lower) (m/nan? upper))
+                                 (> upper lower)
+                                 (and (== upper lower)
+                                      (not open-lower?)
+                                      (not open-upper?))))))
+  :ret ::bounds)
 
 (def bounds-num (bounds))
 (def bounds-finite (bounds m/inf- m/inf+ true true))
@@ -215,8 +195,8 @@
   ([size bounds] (into [] (repeat size bounds))))
 
 (s/fdef vector-bounds
-        :args (s/cat :size ::size :bounds (s/? ::bounds))
-        :ret ::vector-bounds)
+  :args (s/cat :size ::size :bounds (s/? ::bounds))
+  :ret ::vector-bounds)
 
 (defn positive-definite-matrix-bounds
   "Returns a vector of bounds flattened for a symmetric positive matrix."
@@ -233,8 +213,8 @@
            (get-in m [r c])))))
 
 (s/fdef positive-definite-matrix-bounds
-        :args (s/cat :size ::size)
-        :ret ::vector-bounds)
+  :args (s/cat :size ::size)
+  :ret ::vector-bounds)
 
 (defn finite-positive-definite-matrix-bounds
   "Returns a vector of bounds flattened for a finite symmetric positive matrix."
@@ -251,8 +231,8 @@
            (get-in m [r c])))))
 
 (s/fdef finite-positive-definite-matrix-bounds
-        :args (s/cat :size ::size)
-        :ret ::vector-bounds)
+  :args (s/cat :size ::size)
+  :ret ::vector-bounds)
 
 (defn get-interval
   "Returns Interval from bounds."
@@ -262,8 +242,8 @@
     [l u]))
 
 (s/fdef get-interval
-        :args (s/cat :bounds ::bounds)
-        :ret ::interval)
+  :args (s/cat :bounds ::bounds)
+  :ret ::interval)
 
 ;;;BOUNDS MANIPULATION
 (defn- min-bound
@@ -297,9 +277,9 @@
      (vec (sort-by f vector-bounds)))))
 
 (s/fdef sort-bounds
-        :args (s/cat :vector-bounds ::vector-bounds
-                     :opts (s/? (s/keys :opt [::by-upper?])))
-        :ret ::vector-bounds)
+  :args (s/cat :vector-bounds ::vector-bounds
+               :opts (s/? (s/keys :opt [::by-upper?])))
+  :ret ::vector-bounds)
 
 (defn intersection
   "Returns the bounds intersection or nil."
@@ -315,8 +295,8 @@
       (bounds lower upper open-lower? open-upper?))))
 
 (s/fdef intersection
-        :args (s/cat :vector-bounds ::vector-bounds)
-        :ret (s/nilable ::bounds))
+  :args (s/cat :vector-bounds ::vector-bounds)
+  :ret (s/nilable ::bounds))
 
 (defn union
   "Returns a vector of non-overlapping bounds."
@@ -333,8 +313,8 @@
         (conj sep a)))))
 
 (s/fdef union
-        :args (s/cat :vector-bounds ::vector-bounds)
-        :ret ::vector-bounds)
+  :args (s/cat :vector-bounds ::vector-bounds)
+  :ret ::vector-bounds)
 
 (defn encompassing-bounds
   "Returns smallest bounds that encompass the bounds in `vector-bounds`."
@@ -350,9 +330,9 @@
     (bounds lower upper open-lower? open-upper?)))
 
 (s/fdef encompassing-bounds
-        :args (s/cat :vector-bounds (s/and ::vector-bounds
-                                           (fn [vb]
-                                             (pos? (count vb)))))
-        :ret ::bounds)
+  :args (s/cat :vector-bounds (s/and ::vector-bounds
+                                     (fn [vb]
+                                       (pos? (count vb)))))
+  :ret ::bounds)
   
 
