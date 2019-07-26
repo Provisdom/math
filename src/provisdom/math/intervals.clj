@@ -14,14 +14,13 @@
 (defmacro interval-spec
   ([spec] `(interval-spec ~spec ~spec))
   ([lower upper]
-   `(s/and (s/tuple ~lower ~upper)
-           (fn [[~'x1 ~'x2]] (>= ~'x2 ~'x1)))))
+   `(s/with-gen
+      (s/and (s/tuple ~lower ~upper)
+             (fn [[~'x1 ~'x2]] (or (>= ~'x2 ~'x1)
+                                   (and (m/nan? ~'x1) (m/nan? ~'x2)))))
+      #(gen/fmap (comp vec sort) (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
 
-(s/def ::interval
-  (s/and (s/tuple ::m/number ::m/number)
-         (fn [[x1 x2]]
-           (or (and (m/nan? x1) (m/nan? x2))
-               (>= x2 x1)))))
+(s/def ::interval (interval-spec ::m/number))
 
 (s/def ::num-interval (interval-spec ::m/num))
 
