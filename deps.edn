@@ -3,32 +3,18 @@
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
                                              :sha     "48b5d531e08e309052ea7df12ae27077d961993a"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.25.3"
+           uncomplicate/neanderthal         {:mvn/version "0.25.6"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.9.1"}}
- :aliases {:test {:extra-paths ["test" "siderail"]
-                  :extra-deps  {criterium                  {:mvn/version "0.4.5"}
-                                org.clojure/test.check     {:mvn/version "0.10.0-alpha2"}
-                                provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
-                                                            :sha     "c4ec89a9c72319b3b18287e02a61cc999332f67b"}
-                                com.cognitect/transcriptor {:mvn/version "0.1.5"}
-                                com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                            :sha     "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}}
-                  :main-opts   ["-m" "cognitect.test-runner"
-                                "-n" "provisdom.math.apache-matrix-test"
-                                "-n" "provisdom.math.apache-vector-test"
-                                "-n" "provisdom.math.arrays-test"
-                                "-n" "provisdom.math.combinatorics-test"
-                                "-n" "provisdom.math.core-test"
-                                "-n" "provisdom.math.derivatives-test"
-                                "-n" "provisdom.math.format-test"
-                                ;"-n" "provisdom.math.integrals-test"
-                                "-n" "provisdom.math.internal-splittable-random-test"
-                                "-n" "provisdom.math.intervals-test"
-                                "-n" "provisdom.math.matrix-test"
-                                "-n" "provisdom.math.neanderthal-matrix-test"
-                                "-n" "provisdom.math.random-test"
-                                "-n" "provisdom.math.series-test"
-                                "-n" "provisdom.math.special-functions-test"
-                                "-n" "provisdom.math.tensor-test"
-                                "-n" "provisdom.math.vector-test"]}}}
+ :aliases {:dev         {:extra-paths ["siderail"]}
+           :test        {:extra-paths ["test" "siderail"]
+                         :extra-deps  {criterium                  {:mvn/version "0.4.5"}
+                                       org.clojure/test.check     {:mvn/version "0.10.0-alpha2"}
+                                       provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
+                                                                   :sha     "7f403360348fbb603a6d2212c164afcb2a6035e6"}
+                                       com.cognitect/transcriptor {:mvn/version "0.1.5"}
+                                       com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                                   :sha     "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}}}
+           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-529"}
+                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
+                         :main-opts  ["-m" "kaocha.runner"]}}}
