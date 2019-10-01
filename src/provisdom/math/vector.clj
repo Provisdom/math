@@ -368,6 +368,26 @@
                      :accu ::m/accu)
         :ret ::vector)
 
+(defn rnd-shuffle-vector!
+  "Randomly shuffles vector."
+  [v]
+  (loop [v' (transient v)
+         n (count v')]
+    (let [i (max 0 (dec n))
+          j (random/rnd-long! [0 i])]
+      (if (zero? i)
+        (persistent! v')
+        (let [x (v' i)
+              y (v' j)]
+          (recur (-> v'
+                     (assoc! j x)
+                     (assoc! i y))
+                 (dec n)))))))
+
+(s/fdef rnd-shuffle-vector!
+        :args (s/cat :v ::vector)
+        :ret ::vector)
+
 ;;;VECTOR MATH
 (defn kahan-sum
   "Kahan Summation algorithm -- for greater floating-point summation accuracy,

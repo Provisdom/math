@@ -175,6 +175,16 @@
   (is= [0.7 0.7] (vector/round-roughly-vector-prob [0.7 0.7] 0.01))
   (is= [0.01 1.0] (vector/round-roughly-vector-prob [0.01 1.01] 0.01)))
 
+(deftest rnd-shuffle-vector!-test
+  (is (spec-check vector/rnd-shuffle-vector!))
+  (random/bind-seed 0
+    (is= [] (vector/rnd-shuffle-vector! [])))
+  (random/bind-seed 0
+    (is= [0.0 1.0] (vector/rnd-shuffle-vector! [0.0 1.0])))
+  (random/bind-seed 0
+    (is= [6.0 2.0 3.0 4.0 5.0 1.0 8.0 0.0 7.0]
+         (vector/rnd-shuffle-vector! [0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0]))))
+
 ;;;MATH
 (deftest kahan-sum-test
   (is (spec-check vector/kahan-sum))

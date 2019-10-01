@@ -3,18 +3,18 @@
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
                                              :sha     "48b5d531e08e309052ea7df12ae27077d961993a"}
            org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.25.6"
+           uncomplicate/neanderthal         {:mvn/version "0.26.1"
                                              :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
            uncomplicate/fluokitten          {:mvn/version "0.9.1"}}
  :aliases {:dev         {:extra-paths ["siderail"]}
            :test        {:extra-paths ["test" "siderail"]
                          :extra-deps  {criterium                  {:mvn/version "0.4.5"}
-                                       org.clojure/test.check     {:mvn/version "0.10.0-alpha2"}
+                                       org.clojure/test.check     {:mvn/version "0.10.0"}
                                        provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
                                                                    :sha     "7f403360348fbb603a6d2212c164afcb2a6035e6"}
                                        com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                        com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                    :sha     "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}}}
-           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-529"}
+           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-554"}
                                       lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
                          :main-opts  ["-m" "kaocha.runner"]}}}
