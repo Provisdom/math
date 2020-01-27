@@ -1143,11 +1143,11 @@
   :ret (s/tuple ::number ::number))
 
 (defn gcd
-  ""
-  [number1 number2]
-  (if (zero? number2)
-    number1
-    (recur number2 (mod' number1 number2))))
+  "Returns the Greatest Common Divisor (Denominator) of two longs."
+  [long1 long2]
+  (if (zero? long2)
+    long1
+    (recur long2 (mod' long1 long2))))
 
 (s/fdef gcd
   :args (s/cat :long1 ::long+
