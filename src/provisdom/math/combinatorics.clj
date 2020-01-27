@@ -6,9 +6,7 @@
     [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]
-    [clojure.core.reducers :as ccr])
-  (:import
-    [org.apache.commons.math3.util CombinatoricsUtils]))
+    [clojure.core.reducers :as ccr]))
 
 (declare log-choose-k-from-n)
 ;;;CONSTANTS
@@ -73,14 +71,33 @@
   `n`! / (`k`! × (`n` - `k`)!). `k` and `n` must be int, otherwise use
   [[log-choose-k-from-n]]."
   [k n]
-  (let [b (CombinatoricsUtils/binomialCoefficientDouble (int n) (int k))]
-    b))
+  (let [diff (- n k)]
+    (cond (or (zero? diff) (zero? k)) 1.0
+          (or (m/one? k) (m/one? diff)) (double n)
+          (> k (/ n 2)) (choose-k-from-n diff n)
+          :else (reduce (fn [acc i]
+                          (let [acc (* acc (/ (+ diff i) i))]
+                            (if (m/inf+? acc)
+                              (reduced acc)
+                              acc)))
+                        1.0
+                        (range 1 (inc k))))))
+
+(defn n-no-less-than-k?
+  [{:keys [k n]}]
+  (>= n k))
 
 (s/fdef choose-k-from-n
-        :args (s/and (s/cat :k ::m/int-non-
-                            :n ::m/int-non-)
-                     (fn [{:keys [k n]}]
-                       (>= n k)))
+        :args (s/with-gen
+                (s/and (s/cat :k ::m/int-non-
+                              :n ::m/int-non-)
+                       n-no-less-than-k?)
+                #(gen/bind
+                   (s/gen ::m/int-non-)
+                   (fn [k]
+                     (gen/fmap
+                       (fn [n] [k n])
+                       (s/gen (s/int-in k m/max-int))))))
         :ret ::m/num)
 
 (defn choose-k-from-n'

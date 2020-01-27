@@ -865,6 +865,10 @@
   (is (every? m/nan? (m/quot-and-mod' -4 m/inf-)))
   (is (every? m/nan? (m/quot-and-mod' 2 m/nan))))
 
+(deftest gcd-test
+  (is (spec-check m/gcd))
+  (is= 7 (m/gcd 271284701247 12467364728)))
+
 ;;;ANGLES
 (deftest reduce-angle'-test
   (is (spec-check m/reduce-angle'))
