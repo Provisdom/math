@@ -523,36 +523,55 @@
         rs (calc-fn row-indices exception-row-indices n-rows)
         cs (calc-fn column-indices exception-column-indices (columns apache-m))
         new-m (cond
-                (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) nil
-                (and (number? rs) (number? cs)) [[(get-entry apache-m rs cs)]]
-                (and (number? rs) (coll? cs)) (mx/row-matrix (let [row-vector (get-row apache-m rs)]
-                                                               (map (fn [c]
-                                                                      (get row-vector c))
-                                                                    cs)))
-                (and (number? rs) (true? cs)) (mx/row-matrix (get-row apache-m rs))
-                (and (coll? rs) (number? cs)) (mx/column-matrix (let [column-vector (get-column apache-m cs)]
-                                                                  (map (fn [r]
-                                                                         (get column-vector r))
-                                                                       rs)))
-                (and (coll? rs) (coll? cs)) (mapv (fn [row-vector]
-                                                    (reduce (fn [tot column]
-                                                              (conj tot (get row-vector column)))
-                                                            []
-                                                            cs))
-                                                  (map (fn [r]
-                                                         (get-row apache-m r))
-                                                       rs))
-                (and (coll? rs) (true? cs)) (mapv (fn [r]
-                                                    (get-row apache-m r))
-                                                  rs)
-                (and (true? rs) (number? cs)) (mx/column-matrix (get-column apache-m cs))
-                (and (true? rs) (coll? cs)) (mapv (fn [row]
-                                                    (reduce (fn [tot column]
-                                                              (conj tot (get-entry apache-m row column)))
-                                                            []
-                                                            cs))
-                                                  (range n-rows))
-                (and (true? rs) (true? cs)) apache-m)]
+                (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs)))
+                nil
+
+                (and (number? rs) (number? cs))
+                [[(get-entry apache-m rs cs)]]
+
+                (and (number? rs) (coll? cs))
+                (mx/row-matrix (let [row-vector (get-row apache-m rs)]
+                                 (map (fn [c]
+                                        (get row-vector c))
+                                      cs)))
+
+                (and (number? rs) (true? cs))
+                (mx/row-matrix (get-row apache-m rs))
+
+                (and (coll? rs) (number? cs))
+                (mx/column-matrix (let [column-vector (get-column apache-m cs)]
+                                    (map (fn [r]
+                                           (get column-vector r))
+                                         rs)))
+
+                (and (coll? rs) (coll? cs))
+                (mapv (fn [row-vector]
+                        (reduce (fn [tot column]
+                                  (conj tot (get row-vector column)))
+                                []
+                                cs))
+                      (map (fn [r]
+                             (get-row apache-m r))
+                           rs))
+
+                (and (coll? rs) (true? cs))
+                (mapv (fn [r]
+                        (get-row apache-m r))
+                      rs)
+
+                (and (true? rs) (number? cs))
+                (mx/column-matrix (get-column apache-m cs))
+
+                (and (true? rs) (coll? cs))
+                (mapv (fn [row]
+                        (reduce (fn [tot column]
+                                  (conj tot (get-entry apache-m row column)))
+                                []
+                                cs))
+                      (range n-rows))
+
+                (and (true? rs) (true? cs))
+                apache-m)]
     (if new-m
       (if (apache-matrix? new-m)
         new-m

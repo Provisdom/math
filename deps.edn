@@ -2,10 +2,7 @@
  :deps    {orchestra                        {:mvn/version "2019.02.06-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
                                              :sha     "48b5d531e08e309052ea7df12ae27077d961993a"}
-           org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
-           uncomplicate/neanderthal         {:mvn/version "0.26.1"
-                                             :exclusions  [org.jcuda/jcuda-natives org.jcuda/jcublas-natives]}
-           uncomplicate/fluokitten          {:mvn/version "0.9.1"}}
+           org.apache.commons/commons-math3 {:mvn/version "3.6.1"}}
  :aliases {:dev         {:extra-paths ["siderail"]}
            :test        {:extra-paths ["test" "siderail"]
                          :extra-deps  {criterium                  {:mvn/version "0.4.5"}
