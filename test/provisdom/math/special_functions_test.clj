@@ -153,7 +153,7 @@
   (is (spec-check special-fns/gamma))
   (is= 0.0 (special-fns/gamma m/inf-))
   (is= m/inf+ (special-fns/gamma m/inf+))
-  (is= 9.513507698668732 (special-fns/gamma 0.1))
+  (is= 9.51350769866873 (special-fns/gamma 0.1))
   (is= 1.0 (special-fns/gamma 1.0))
   (is= -4.626098277572806 (special-fns/gamma -2.1))
   ;;Math 0.951350769866873183629248717726540219255057862608837734305000
@@ -161,7 +161,7 @@
   ;;Math 1.298055332647557785681171179152811617784141170553946247921645
   (is= 1.298055332647558 (special-fns/gamma 0.7))
   ;;;Math -10.6862870211931935489730533569448077816983878506097317904937
-  (is= -10.686287021193193 (special-fns/gamma -0.1)))
+  (is= -10.686287021193191 (special-fns/gamma -0.1)))
 
 (deftest lower-gamma-test
   (is (spec-check special-fns/lower-gamma))
