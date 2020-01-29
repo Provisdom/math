@@ -9,7 +9,6 @@
     [orchestra.spec.test :as ost]))
 
 ;;145 seconds
-
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -20,7 +19,7 @@
   (is (tensor/tensor? []))
   (is-not (tensor/tensor? "A"))
   (is-not (tensor/tensor? ["A"]))
-  (is (tensor/tensor? [[] []]))                             ;notice tensors can have multiple zero dims
+  (is (tensor/tensor? [[] []])) ;notice tensors can have multiple zero dims
   (is (tensor/tensor? [[]]))
   (is-not (tensor/tensor? [[2] 2]))
   (is-not (tensor/tensor? [2 [2]]))
@@ -90,15 +89,15 @@
 (deftest rnd-tensor!-test
   (is (spec-check tensor/rnd-tensor!))
   (random/bind-seed 0
-                    (is= 0.8833108082136426 (tensor/rnd-tensor! [])))
+    (is= 0.8833108082136426 (tensor/rnd-tensor! [])))
   (random/bind-seed 0
-                    (is= [] (tensor/rnd-tensor! [0])))
+    (is= [] (tensor/rnd-tensor! [0])))
   (random/bind-seed 0
-                    (is= [[]] (tensor/rnd-tensor! [1 0])))
+    (is= [[]] (tensor/rnd-tensor! [1 0])))
   (random/bind-seed 0
-                    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
-                          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
-                         (tensor/rnd-tensor! [2 3]))))
+    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
+          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
+         (tensor/rnd-tensor! [2 3]))))
 
 ;;INFO
 (deftest first-number-test
@@ -333,10 +332,11 @@
         [0.26666666666666666 0.5333333333333333]]
        (tensor/normalize1 [[1.0 0.5] [2.0 4.0]]))
   (is= 0.9999999999999998
-       (apply + (tensor/normalize1 [2.1242141025912059120591205912509510259021590125
-                                    1.2398578935713571650983759872398572983
-                                    2.1351365731650631856238056287035
-                                    3.235729375209357203975])))
+       (apply + (tensor/normalize1
+                  [2.1242141025912059120591205912509510259021590125
+                   1.2398578935713571650983759872398572983
+                   2.1351365731650631856238056287035
+                   3.235729375209357203975])))
   (is= [[0.13333333333333333 0.06666666666666667]
         [0.26666666666666666 0.5333333333333333]]
        (tensor/normalize1 [[1.0 0.5] [2.0 4.0]]))
@@ -402,6 +402,8 @@
   (is= [[1 1] [1.01 1.01]]
        (tensor/roughly-distinct [[1 1] [1.01 1.01] [1.001 1.001]] 0.005))
   (is= [[1 1.01]]
-       (tensor/roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]] 0.05)))
+       (tensor/roughly-distinct
+         [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]]
+         0.05)))
 
 #_(ost/unstrument)

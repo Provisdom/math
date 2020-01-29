@@ -4,12 +4,12 @@
     [clojure.spec.gen.alpha :as gen]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.math.core :as m])
-  (:import
-    [org.apache.commons.math3.special Gamma Beta Erf]))
+    [provisdom.utility-belt.anomalies :as anomalies]
+    [provisdom.math.core :as m]
+    [provisdom.math.series :as series]))
 
 ;;;DECLARATIONS
-(declare regularized-gamma-p erfc log-beta)
+(declare regularized-gamma-p regularized-gamma-q log-gamma erfc log-beta)
 
 ;;;CONSTANTS
 (def ^:const euler-mascheroni-constant
@@ -56,6 +56,13 @@
    [1.0 3.754408661907416e+00 2.445134137142996e+00 3.224671290700398e-01
     7.784695709041462e-03]])
 
+(def ^:const delta-coefficients
+  [0.08333333333333333, -2.777777777777778E-5, 7.936507936507937E-8,
+   -5.952380952380953E-10, 8.417508417508329E-12, -1.917526917518546E-13,
+   6.410256405103255E-15, -2.955065141253382E-16, 1.7964371635940225E-17,
+   -1.3922896466162779E-18, 1.338028550140209E-19, -1.542460098679661E-20,
+   1.9770199298095743E-21, -2.3406566479399704E-22, 1.713480149663986E-23])
+
 ;;;LOG-SUM-EXP
 (defn log-sum-exp
   "Special function for taking the log of the sum of the exponent of numbers
@@ -90,12 +97,11 @@
   "Returns the error function:
   2 / (sqrt PI) × integral[0, `x`] (e ^ - (t ^ 2) × dt)."
   [x]
-  (let [x (double x)]
-    (cond (zero? x) 0.0
-          (m/inf+? x) 1.0
-          (m/inf-? x) -1.0
-          :else (* (m/sgn x)
-                   (regularized-gamma-p m/half (m/sq x))))))
+  (cond (zero? x) 0.0
+        (> x 6.0) 1.0
+        (< x -6.0) -1.0
+        :else (* (m/sgn x)
+                 (regularized-gamma-p 0.5 (m/sq x)))))
 
 (s/fdef erf
   :args (s/cat :x ::m/num)
@@ -142,7 +148,82 @@
   (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
         (m/roughly? -1.0 x m/dbl-close) m/inf-
         (zero? x) 0.0
-        :else (Erf/erfInv (double x))))
+        :else
+        (let [w (- (m/log (* (m/one- x) (inc x))))]
+          (cond
+            (m/inf+? w)
+            m/inf+
+
+            (< w 6.25)
+            (let [w (- w 3.125)
+                  p -3.64441206401782E-21
+                  p (+ -1.6850591381820166E-19 (* p w))
+                  p (+ 1.28584807152564E-18 (* p w))
+                  p (+ 1.1157877678025181E-17 (* p w))
+                  p (+ -1.333171662854621E-16 (* p w))
+                  p (+ 2.0972767875968562E-17 (* p w))
+                  p (+ 6.637638134358324E-15 (* p w))
+                  p (+ -4.054566272975207E-14 (* p w))
+                  p (+ -8.151934197605472E-14 (* p w))
+                  p (+ 2.6335093153082323E-12 (* p w))
+                  p (+ -1.2975133253453532E-11 (* p w))
+                  p (+ -5.415412054294628E-11 (* p w))
+                  p (+ 1.0512122733215323E-9 (* p w))
+                  p (+ -4.112633980346984E-9 (* p w))
+                  p (+ -2.9070369957882005E-8 (* p w))
+                  p (+ 4.2347877827932404E-7 (* p w))
+                  p (+ -1.3654692000834679E-6 (* p w))
+                  p (+ -1.3882523362786469E-5 (* p w))
+                  p (+ 1.8673420803405714E-4 (* p w))
+                  p (+ -7.40702534166267E-4 (* p w))
+                  p (+ -0.006033670871430149 (* p w))
+                  p (+ 0.24015818242558962 (* p w))
+                  p (+ 1.6536545626831027 (* p w))]
+              (* p x))
+
+            (< w 16.0)
+            (let [w (- (m/sqrt w) 3.25)
+                  p 2.2137376921775787E-9
+                  p (+ 9.075656193888539E-8 (* p w))
+                  p (+ -2.7517406297064545E-7 (* p w))
+                  p (+ 1.8239629214389228E-8 (* p w))
+                  p (+ 1.5027403968909828E-6 (* p w))
+                  p (+ -4.013867526981546E-6 (* p w))
+                  p (+ 2.9234449089955446E-6 (* p w))
+                  p (+ 1.2475304481671779E-5 (* p w))
+                  p (+ -4.7318229009055734E-5 (* p w))
+                  p (+ 6.828485145957318E-5 (* p w))
+                  p (+ 2.4031110387097894E-5 (* p w))
+                  p (+ -3.550375203628475E-4 (* p w))
+                  p (+ 9.532893797373805E-4 (* p w))
+                  p (+ -0.0016882755560235047 (* p w))
+                  p (+ 0.002491442096107851 (* p w))
+                  p (+ -0.003751208507569241 (* p w))
+                  p (+ 0.005370914553590064 (* p w))
+                  p (+ 1.0052589676941592 (* p w))
+                  p (+ 3.0838856104922208 (* p w))]
+              (* p x))
+
+            :else
+            (let [w (- (m/sqrt w) 5.0)
+                  p -2.7109920616438573E-11
+                  p (+ -2.555641816996525E-10 (* p w))
+                  p (+ 1.5076572693500548E-9 (* p w))
+                  p (+ -3.789465440126737E-9 (* p w))
+                  p (+ 7.61570120807834E-9 (* p w))
+                  p (+ -1.496002662714924E-8 (* p w))
+                  p (+ 2.914795345090108E-8 (* p w))
+                  p (+ -6.771199775845234E-8 (* p w))
+                  p (+ 2.2900482228026655E-7 (* p w))
+                  p (+ -9.9298272942317E-7 (* p w))
+                  p (+ 4.526062597223154E-6 (* p w))
+                  p (+ -1.968177810553167E-5 (* p w))
+                  p (+ 7.599527703001776E-5 (* p w))
+                  p (+ -2.1503011930044477E-4 (* p w))
+                  p (+ -1.3871931833623122E-4 (* p w))
+                  p (+ 1.0103004648645344 (* p w))
+                  p (+ 4.849906401408584 (* p w))]
+              (* p x))))))
 
 (s/fdef inv-erf
   :args (s/cat :x ::m/corr)
@@ -306,6 +387,10 @@
             (* t (/ x) (dec c))
             (* x c)))))))
 
+(defn- log-gamma-1p
+  [x]
+  (- (m/log (inc (inv-gamma1-pm1 x)))))
+
 (defn gamma
   "Returns the gamma function: integral[0, inf] (t ^ (`a`- 1) × e ^ -t × dt).
   Although gamma is defined for positive `a`, this function also allows for all
@@ -354,14 +439,10 @@
         (m/one? a) (m/one- (m/exp (- x)))
         (> x 1.0e150) 1.0
         (m/inf+? x) (gamma a)
-        :else (* (gamma a)
-                 (min 1.0
-                      (max 0.0
-                           (Gamma/regularizedGammaP (double a) (double x)))))))
+        :else (* (gamma a) (regularized-gamma-p a x))))
 
 (s/fdef lower-gamma
-  :args (s/cat :a ::m/pos
-               :x ::m/non-)
+  :args (s/cat :a ::m/pos :x ::m/non-)
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma
@@ -371,10 +452,7 @@
   (cond (zero? x) (gamma a)
         (m/one? a) (m/exp (- x))
         (> x 1.0e150) 0.0
-        :else (* (gamma a)
-                 (min 1.0
-                      (max 0.0
-                           (Gamma/regularizedGammaQ (double a) (double x)))))))
+        :else (* (gamma a) (regularized-gamma-q a x))))
 
 (s/fdef upper-gamma
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -398,12 +476,26 @@
   "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`). Equal
   to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
   [a x]
-  (cond (m/nan? a) m/nan
-        (zero? x) 0.0
+  (cond (zero? x) 0.0
         (> x 1.0e150) 1.0
-        :else (min 1.0
-                   (max 0.0
-                        (Gamma/regularizedGammaP (double a) (double x))))))
+        (>= x (inc (double a))) (m/one- (regularized-gamma-q a x))
+        :else (let [an (/ 1.0 a)
+                    [n sum] (loop [n 0.0
+                                   an an
+                                   sum an]
+                              (if (and (not (m/inf+? sum))
+                                       (> (m/abs (/ an sum)) 1e-14)
+                                       (< n m/max-int))
+                                (let [an (* an x (/ (+ a (inc n))))]
+                                  (recur (inc n) an (+ an sum)))
+                                [n sum]))]
+                (cond (>= n m/max-int) m/nan
+                      (m/inf+? sum) 1.0
+                      :else (min 1.0
+                                 (* sum
+                                    (m/exp (+ (* a (m/log x))
+                                              (- x)
+                                              (- (log-gamma a))))))))))
 
 (s/fdef regularized-gamma-p
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -411,14 +503,28 @@
 
 (defn regularized-gamma-q
   "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`). Equal
-  to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
+ to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
   [a x]
-  (cond (or (m/nan? a) (m/nan? x)) m/nan
-        (zero? x) 1.0
+  (cond (zero? x) 1.0
         (> x 1.0e150) 0.0
-        :else (min 1.0
-                   (max 0.0
-                        (Gamma/regularizedGammaQ (double a) (double x))))))
+        (< x (inc a)) (m/one- (regularized-gamma-p a x))
+        :else (let [a-term-series (map
+                                    (fn [n]
+                                      (+ (* 2.0 n) 1.0 x (- a)))
+                                    (range))
+                    b-term-series (map
+                                    (fn [n]
+                                      (* n (- a (double n))))
+                                    (drop 1 (range)))
+                    gcf (series/generalized-continued-fraction
+                          a-term-series b-term-series)
+                    sum (series/sum-convergent-series gcf)]
+                (if (anomalies/anomaly? sum)
+                  m/nan
+                  (min 1.0 (/ (m/exp (+ (* a (m/log x))
+                                        (- x)
+                                        (- (log-gamma a))))
+                              sum))))))
 
 (s/fdef regularized-gamma-q
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -427,9 +533,21 @@
 (defn log-gamma
   "Returns the log gamma of `a`."
   [a]
-  (if (m/inf+? a)
-    m/inf+
-    (Gamma/logGamma (double a))))
+  (cond (m/inf+? a) m/inf+
+        (< a 0.5) (- (log-gamma-1p a) (m/log a))
+        (<= a 2.5) (log-gamma-1p (dec a))
+        (<= a 8.0) (let [n (m/floor' (- a 1.5))
+                         prod (reduce (fn [acc i]
+                                        (* acc (- a (double i))))
+                                      1.0
+                                      (range 1 (inc n)))]
+                     (+ (log-gamma-1p (- a (double (inc n)))) (m/log prod)))
+        :else (let [sum (lanczos2 a)
+                    tmp (+ a 5.2421875)]
+                (+ (* (+ a 0.5) (m/log tmp))
+                   (- tmp)
+                   m/half-log-two-pi
+                   (m/log (/ sum a))))))
 
 (s/fdef log-gamma
   :args (s/cat :a ::m/pos)
@@ -499,7 +617,8 @@
                                                 inv-x
                                                 (- (/ 6.0)
                                                    (* inv2-x
-                                                      (+ (/ 3) (/ inv2-x 42.0)))))))
+                                                      (+ (/ 3)
+                                                         (/ inv2-x 42.0)))))))
                             :else (recur (inc x) (+ tot inv2-x)))))))))
 
 (s/fdef trigamma
@@ -564,10 +683,140 @@
   :args (s/cat :x ::m/pos :y ::m/pos)
   :ret ::m/nan-or-non-)
 
+(defn- delta-minus-delta-sum
+  [a b]
+  (let [h (/ a b)
+        p (/ h (inc h))
+        q (/ (inc h))
+        q2 (* q q)
+        dc (count delta-coefficients)
+        s (vec (take dc (iterate (fn [acc]
+                                   (+ 1.0 q (* q2 acc)))
+                                 1.0)))
+        sqrt-t (/ 10.0 b)
+        t (* sqrt-t sqrt-t)
+        w (* (get delta-coefficients (dec dc)) (get s (dec dc)))
+        res (reduce (fn [acc i]
+                      (+ (* (get delta-coefficients i) (get s i)) (* acc t)))
+                    w
+                    (range (- dc 2) -1 -1))]
+    (* res p (/ b))))
+
+(defn- sum-delta-minus-delta-sum
+  [p q]
+  (let [a (min p q)
+        b (max p q)
+        sqrt-t (/ 10.0 a)
+        t (* sqrt-t sqrt-t)
+        dc (count delta-coefficients)
+        res (reduce (fn [acc i]
+                      (+ (get delta-coefficients i) (* acc t)))
+                    (get delta-coefficients (dec dc))
+                    (range (- dc 2) -1 -1))]
+    (+ (/ res a) (delta-minus-delta-sum a b))))
+
+(defn- log-gamma-minus-log-gamma-sum
+  [a b]
+  (let [d (+ b a (- 0.5))
+        w (if (<= a b)
+            (delta-minus-delta-sum a b)
+            (delta-minus-delta-sum b a))
+        u (* d (m/log (inc (/ a b))))
+        v (* a (dec (m/log b)))]
+    (- w u v)))
+
+(defn- log-gamma-sum
+  [a b]
+  (let [x (+ a b (- 2.0))]
+    (cond (<= x 0.5) (log-gamma-1p (inc x))
+          (<= x 1.5) (+ (log-gamma-1p x) (m/log (inc x)))
+          :else (+ (log-gamma-1p (dec x)) (m/log (* x (inc x)))))))
+
 (defn log-beta
   "Returns the log-beta of `x` and `y`."
   [x y]
-  (Beta/logBeta (double x) (double y)))
+  (let [a (min x y)
+        b (max x y)]
+    (cond (>= a 10.0)
+          (let [prod1 (sum-delta-minus-delta-sum a b)
+                ared (/ a b)
+                prod2 (/ ared (inc ared))
+                bred (* (m/log prod2) (- 0.5 a))
+                v (* b (m/log (inc ared)))]
+            (+ (* -0.5 (m/log b))
+               0.9189385332046727
+               prod1
+               (- bred)
+               (- v)))
+
+          (and (> a 2.0) (> b 1000.0))
+          (let [n (m/floor' (dec a))
+                [ared prod] (loop [ared a
+                                   prod 1.0
+                                   i 0]
+                              (if (< i n)
+                                (recur (dec ared)
+                                       (* prod (dec ared) (/ (inc (/ ared b))))
+                                       (inc i))
+                                [ared prod]))]
+            (+ (m/log prod)
+               (* (- n) (m/log b))
+               (log-gamma ared)
+               (log-gamma-minus-log-gamma-sum ared b)))
+
+          (> a 2.0)
+          (let [[prod1 ared] (loop [prod1 1.0
+                                    ared a]
+                               (if (> ared 2.0)
+                                 (let [ared (dec ared)
+                                       prod2 (/ ared b)]
+                                   (recur (* prod1 prod2 (/ (inc prod2))) ared))
+                                 [prod1 ared]))]
+            (if (>= b 10.0)
+              (+ (m/log prod1)
+                 (log-gamma ared)
+                 (log-gamma-minus-log-gamma-sum ared b))
+              (let [[prod2 bred] (loop [prod2 1.0
+                                        bred b]
+                                   (if (> bred 2.0)
+                                     (recur (* prod2
+                                               (dec bred)
+                                               (/ (dec (+ ared bred))))
+                                            (dec bred))
+                                     [prod2 bred]))]
+                (+ (m/log prod1)
+                   (m/log prod2)
+                   (log-gamma ared)
+                   (log-gamma bred)
+                   (- (log-gamma-sum ared bred))))))
+
+          (< a 1.0)
+          (if (>= b 10.0)
+            (+ (log-gamma a)
+               (log-gamma-minus-log-gamma-sum a b))
+            (m/log (* (gamma a) (gamma b) (/ (gamma (+ a b))))))
+
+          (<= b 2.0)
+          (+ (log-gamma a)
+             (log-gamma b)
+             (- (log-gamma-sum a b)))
+
+          (>= b 10.0)
+          (+ (log-gamma a) (log-gamma-minus-log-gamma-sum a b))
+
+          :else
+          (let [[prod1 ared] (loop [prod1 1.0
+                                    ared b]
+                               (if (> ared 2.0)
+                                 (recur (* prod1
+                                           (dec ared)
+                                           (/ (dec (+ a ared))))
+                                        (dec ared))
+                                 [prod1 ared]))]
+            (+ (m/log prod1)
+               (log-gamma a)
+               (log-gamma ared)
+               (- (log-gamma-sum a ared)))))))
 
 (s/fdef log-beta
   :args (s/cat :x ::m/pos :y ::m/pos)
@@ -575,12 +824,45 @@
 
 (defn regularized-beta
   "Returns the regularized beta. Equal to incomplete beta function divided by
-  beta function. If Apache's solution doesn't converge, then NaN is returned."
+  beta function. If solution doesn't converge, then NaN is returned."
   [c x y]
   (cond (zero? c) 0.0
         (m/one? c) 1.0
-        :else (try (Beta/regularizedBeta c x y 1e-14 100000)
-                   (catch Exception _ m/nan))))
+
+        (and (> c (/ (inc x) (+ 2.0 x y)))
+             (<= (- 1.0 c) (/ (inc y) (+ 2.0 x y))))
+        (m/one- (regularized-beta (m/one- c) y x))
+
+        :else
+        (let [a-term-series (repeat 1.0)
+              b-term-series (map (fn [n]
+                                   (if (zero? (mod n 2))
+                                     (let [m (* n 0.5)
+                                           res (* m
+                                                  (- y m)
+                                                  c
+                                                  (/ (dec (+ x (* 2.0 m))))
+                                                  (/ (+ x (* 2.0 m))))]
+                                       res)
+                                     (let [m (* 0.5 (dec n))
+                                           res (* (- 1.0)
+                                                  (+ x m)
+                                                  (+ x y m)
+                                                  c
+                                                  (/ (+ x (* 2.0 m)))
+                                                  (/ (inc (+ x (* 2.0 m)))))]
+                                       res)))
+                                 (drop 1 (range)))
+              gcf (series/generalized-continued-fraction
+                    a-term-series b-term-series)
+              sum (series/sum-convergent-series gcf)]
+          (if (anomalies/anomaly? sum)
+            m/nan
+            (/ (m/exp (+ (* x (m/log c))
+                         (* y (m/log (m/one- c)))
+                         (- (m/log x))
+                         (- (log-beta x y))))
+               sum)))))
 
 (s/fdef regularized-beta
   :args (s/cat :c ::m/prob
@@ -590,8 +872,8 @@
 
 (defn incomplete-beta
   "Returns the lower beta:
-  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt. If Apache's
-  solution doesn't converge, then NaN is returned."
+  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt. If solution
+  doesn't converge, then NaN is returned."
   [c x y]
   (if (zero? c)
     0.0
@@ -601,4 +883,4 @@
   :args (s/cat :c ::m/prob
                :x ::m/finite+
                :y ::m/finite+)
-  :ret ::m/nan-or-finite)
+  :ret ::m/number)

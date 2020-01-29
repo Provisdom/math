@@ -7,18 +7,19 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]))
 
-;;11 SECONDS
+;;2 SECONDS
 
 (set! *warn-on-reflection* true)
 
-(ost/instrument)
+;(ost/instrument)
 
 ;;;LOG-SUM-EXP
 (deftest log-sum-exp-test
-  (is (spec-check special-fns/log-sum-exp))
-  (is= -1199.9999546011009 (special-fns/log-sum-exp [-1200.0 -1210.0]))
-  (is= 1210.0000453988991 (special-fns/log-sum-exp [1200.0 1210.0]))
-  (is= 1210.0 (special-fns/log-sum-exp [-1200.0 1210.0])))
+  (with-instrument `special-fns/log-sum-exp
+    (is (spec-check special-fns/log-sum-exp))
+    (is= -1199.9999546011009 (special-fns/log-sum-exp [-1200.0 -1210.0]))
+    (is= 1210.0000453988991 (special-fns/log-sum-exp [1200.0 1210.0]))
+    (is= 1210.0 (special-fns/log-sum-exp [-1200.0 1210.0]))))
 
 ;;;ERROR FUNCTIONS
 (deftest erf-test
@@ -172,18 +173,18 @@
   (is= 0.6671289163019205 (special-fns/lower-gamma 1 1.1))
   (is= 0.6321205588285577 (special-fns/lower-gamma 1 1))
   (is= 0.0 (special-fns/lower-gamma 1 0))
-  (is= 9.283972028379889 (special-fns/lower-gamma 0.1 1)))
+  (is= 9.283972028379884 (special-fns/lower-gamma 0.1 1)))
 
 (deftest upper-gamma-test
   (is (spec-check special-fns/upper-gamma))
   (is= m/inf+ (special-fns/upper-gamma m/inf+ 0.0))
-  (is= 9.513507698668732 (special-fns/upper-gamma 0.1 0.0))
+  (is= 9.51350769866873 (special-fns/upper-gamma 0.1 0.0))
   (is= 0.1224564282529819 (special-fns/upper-gamma 1.0 2.1))
   (is= 0.0 (special-fns/upper-gamma 0.1 m/inf+))
   (is= 0.33287108369807955 (special-fns/upper-gamma 1 1.1))
   (is= 0.36787944117144233 (special-fns/upper-gamma 1 1))
   (is= 1.0 (special-fns/upper-gamma 1 0))
-  (is= 0.22953567028884256 (special-fns/upper-gamma 0.1 1)))
+  (is= 0.22953567028884675 (special-fns/upper-gamma 0.1 1)))
 
 (deftest upper-gamma-derivative-x-test
   (is (spec-check special-fns/upper-gamma-derivative-x))
@@ -202,32 +203,36 @@
   (is (spec-check special-fns/regularized-gamma-p))
   (is= 0.0 (special-fns/regularized-gamma-p m/inf+ 0.0))
   (is= 0.0 (special-fns/regularized-gamma-p 0.1 0.0))
-  (is= 0.8775435717470181 (special-fns/regularized-gamma-p 1.0 2.1))
+  (is= 0.877543571747018 (special-fns/regularized-gamma-p 1.0 2.1))
   (is= 1.0 (special-fns/regularized-gamma-p 0.1 m/inf+))
   (is= 0.6671289163019202 (special-fns/regularized-gamma-p 1 1.1))
   (is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
   (is= 0.0 (special-fns/regularized-gamma-p 1 0))
-  (is= 0.9758726562736726 (special-fns/regularized-gamma-p 0.1 1)))
+  (is= 0.9758726562736721 (special-fns/regularized-gamma-p 0.1 1)))
 
 (deftest regularized-gamma-q-test
   (is (spec-check special-fns/regularized-gamma-q))
   (is= 1.0 (special-fns/regularized-gamma-q m/inf+ 0.0))
   (is= 1.0 (special-fns/regularized-gamma-q 0.1 0.0))
-  (is= 0.1224564282529819 (special-fns/regularized-gamma-q 1.0 2.1))
+  (is= 0.12245642825298193 (special-fns/regularized-gamma-q 1.0 2.1))
+  ;;;Math 2.20904969985854413727761295823203798477070873992E-5
+  (is= 2.209049699858546E-5 (special-fns/regularized-gamma-q 0.5 9.0))
   (is= 0.0 (special-fns/regularized-gamma-q 0.1 m/inf+))
   (is= 0.33287108369807983 (special-fns/regularized-gamma-q 1 1.1))
   (is= 0.3678794411714422 (special-fns/regularized-gamma-q 1 1))
   (is= 1.0 (special-fns/regularized-gamma-q 1 0))
-  (is= 0.02412734372632741 (special-fns/regularized-gamma-q 0.1 1)))
+  (is= 0.024127343726327855 (special-fns/regularized-gamma-q 0.1 1)))
 
 (deftest log-gamma-test
   (is (spec-check special-fns/log-gamma))
   (is= m/inf+ (special-fns/log-gamma m/inf+))
-  (is= 2.2527126517342055 (special-fns/log-gamma 0.1))
-  (is= 0.04543773854448518 (special-fns/log-gamma 2.1))
-  (is= -0.049872441259839764 (special-fns/log-gamma 1.1))
+  (is= 2.252712651734206 (special-fns/log-gamma 0.1))
+  ;;;Math 0.57236494292470008707
+  (is= 0.5723649429247001 (special-fns/log-gamma 0.5))
+  (is= 0.04543773854448517 (special-fns/log-gamma 2.1))
+  (is= -0.04987244125983987 (special-fns/log-gamma 1.1))
   (is= 0.0 (special-fns/log-gamma 1))
-  (is= 0.2608672465316666 (special-fns/log-gamma 0.7)))
+  (is= 0.26086724653166665 (special-fns/log-gamma 0.7)))
 
 (deftest log-gamma-derivative-test                          ;same as digamma
   (is (spec-check special-fns/log-gamma-derivative))
@@ -245,7 +250,7 @@
 (deftest gamma-derivative-test
   (is (spec-check special-fns/gamma-derivative))
   (is= m/inf+ (special-fns/gamma-derivative m/inf+))
-  (is= -99.16647290191278 (special-fns/gamma-derivative 0.1))
+  (is= -99.16647290191275 (special-fns/gamma-derivative 0.1))
   (is= -0.5772156677920671 (special-fns/gamma-derivative 1))
   (is= 0.5078972191920689 (special-fns/gamma-derivative 2.1))
   (is= -0.40313959152254936 (special-fns/gamma-derivative 1.1))
@@ -282,26 +287,26 @@
   (is= 0.0 (special-fns/multivariate-log-gamma m/inf+ 0))
   (is= 0.0 (special-fns/multivariate-log-gamma 0.1 0))
   (is= 0.0 (special-fns/multivariate-log-gamma 1.1 0))
-  (is= -0.049872441259839764 (special-fns/multivariate-log-gamma 1.1 1))
+  (is= -0.04987244125983987 (special-fns/multivariate-log-gamma 1.1 1))
   (is= 0.9207263597340951 (special-fns/multivariate-log-gamma 1.1 2)))
 
 ;;;BETA
 (deftest beta-test
   (is (spec-check special-fns/beta))
-  (is= 0.47619047619047616 (special-fns/beta 1.0 2.1))
+  (is= 0.47619047619047605 (special-fns/beta 1.0 2.1))
   (is (m/nan? (special-fns/beta 0.1 m/inf+)))
-  (is= 0.9090909090909091 (special-fns/beta 1 1.1))
-  (is= 0.9090909090909091 (special-fns/beta 1.1 1))
+  (is= 0.909090909090909 (special-fns/beta 1 1.1))
+  (is= 0.909090909090909 (special-fns/beta 1.1 1))
   (is= 1.0 (special-fns/beta 1 1))
   (is= 10.000000000000002 (special-fns/beta 0.1 1))
   (is= 10.000000000000002 (special-fns/beta 1 0.1)))
 
 (deftest log-beta-test
   (is (spec-check special-fns/log-beta))
-  (is= -0.7419373447293773 (special-fns/log-beta 1.0 2.1))
+  (is= -0.7419373447293776 (special-fns/log-beta 1.0 2.1))
   (is (m/nan? (special-fns/log-beta 0.1 m/inf+)))
-  (is= -0.09531017980432493 (special-fns/log-beta 1 1.1))
-  (is= -0.09531017980432493 (special-fns/log-beta 1.1 1))
+  (is= -0.09531017980432505 (special-fns/log-beta 1 1.1))
+  (is= -0.09531017980432505 (special-fns/log-beta 1.1 1))
   (is= 0.0 (special-fns/log-beta 1 1))
   (is= 2.302585092994046 (special-fns/log-beta 0.1 1))
   (is= 2.302585092994046 (special-fns/log-beta 1 0.1)))
@@ -312,24 +317,24 @@
   (is= 1.0 (special-fns/regularized-beta 1 1 1.1))
   (is= 1.0 (special-fns/regularized-beta 1 1.1 1))
   (is= 1.0 (special-fns/regularized-beta 1 1 1))
-  (is= 0.886568150565213 (special-fns/regularized-beta 0.3 0.1 1))
-  (is= 0.9330329915368075 (special-fns/regularized-beta 0.5 0.1 1))
+  (is= 0.8865681505652128 (special-fns/regularized-beta 0.3 0.1 1))
+  (is= 0.9330329915368074 (special-fns/regularized-beta 0.5 0.1 1))
   (is= 0.9649610951198176 (special-fns/regularized-beta 0.7 0.1 1))
   (is= 1.0 (special-fns/regularized-beta 1 1 0.1))
-  (is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))
+  (is= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5))
   (is= 0.0 (special-fns/regularized-beta 0 1 1)))
 
 (deftest incomplete-beta-test
   (is (spec-check special-fns/incomplete-beta))
-  (is= 0.36511512005514185 (special-fns/incomplete-beta 0.5 1.0 2.1))
-  (is= 0.9090909090909091 (special-fns/incomplete-beta 1 1 1.1))
-  (is= 0.9090909090909091 (special-fns/incomplete-beta 1 1.1 1))
+  (is= 0.3651151200551418 (special-fns/incomplete-beta 0.5 1.0 2.1))
+  (is= 0.909090909090909 (special-fns/incomplete-beta 1 1 1.1))
+  (is= 0.909090909090909 (special-fns/incomplete-beta 1 1.1 1))
   (is= 1.0 (special-fns/incomplete-beta 1 1 1))
-  (is= 8.865681505652132 (special-fns/incomplete-beta 0.3 0.1 1))
-  (is= 9.330329915368077 (special-fns/incomplete-beta 0.5 0.1 1))
+  (is= 8.865681505652129 (special-fns/incomplete-beta 0.3 0.1 1))
+  (is= 9.330329915368075 (special-fns/incomplete-beta 0.5 0.1 1))
   (is= 9.649610951198179 (special-fns/incomplete-beta 0.7 0.1 1))
   (is= 10.000000000000002 (special-fns/incomplete-beta 1 1 0.1))
-  (is= 1.5707963267948966 (special-fns/incomplete-beta 0.5 0.5 0.5))
+  (is= 1.570796326794897 (special-fns/incomplete-beta 0.5 0.5 0.5))
   (is= 0.0 (special-fns/incomplete-beta 0 1 1)))
 
 #_(ost/unstrument)

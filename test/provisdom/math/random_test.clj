@@ -8,7 +8,6 @@
     [orchestra.spec.test :as ost]))
 
 ;;20 seconds
-
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
@@ -122,24 +121,6 @@
 (deftest set-seed!$-test
   (is (spec-check random/set-seed!$)))
 
-;;;APACHE RANDOM NUMBER GENERATORS
-(deftest quasi-rnd-vector-lazy-test
-  (is (spec-check random/quasi-rnd-vector-lazy))
-  (is= '([0.0] [0.5] [0.75])
-       (take 3 (random/quasi-rnd-vector-lazy 1)))
-  (is= '([0.0 0.0] [0.5 0.5] [0.75 0.25])
-       (take 3 (random/quasi-rnd-vector-lazy 2))))
-
-(deftest secure-rnd-lazy-test
-  (is (spec-check random/secure-rnd-lazy))
-  (is= 0.26673862796330083 (first (random/secure-rnd-lazy 4)))
-  (is= 0.9214463212165593 (first (random/secure-rnd-lazy 0))))
-
-(deftest mersenne-rnd-lazy-test
-  (is (spec-check random/mersenne-rnd-lazy))
-  (is= 0.8335762378570932 (first (random/mersenne-rnd-lazy 4)))
-  (is= 0.15071724896777527 (first (random/mersenne-rnd-lazy 0))))
-
 #_(ost/unstrument)
 
 (comment
@@ -149,19 +130,19 @@
   (fact "multi sample indexed"
         (first (multi-sample-indexed
                  (fn [i r] [(+ (* 100 i) (first r)) (rest r)])
-                 (mersenne-random) 3))
+                 (random) 3))
         => '(0.8335762378570932 100.11249249636232 200.85024069792013)
         (first (multi-sample-indexed
-                 (with-meta (fn [i r] (+ (* 100 i) r)) {:r :rnd}) (mersenne-random)
+                 (with-meta (fn [i r] (+ (* 100 i) r)) {:r :rnd}) (random)
                  3))
         => '(0.8335762378570932 100.11249249636232 200.85024069792013)
         (first (multi-sample-indexed
                  (fn [i r] [(+ (* 100 i) (first r)) (rest r)])
-                 (mersenne-random) 3))
+                 (random) 3))
         => '(0.8335762378570932 100.11249249636232 200.85024069792013))
   (fact "fold random"
         (first (fold-random 1000 + (with-meta samplef {:r :rnd})
-                            (mersenne-random)))
+                            (random)))
         => 50653.13952160504
         (defn reducef [tot e]
           [(+ (first tot) e) (* (second tot) e 0.0285)])
@@ -171,17 +152,17 @@
                         (* (second tot1) (second tot2))]))
         (first (fold-random
                  1000 combinef reducef
-                 (with-meta samplef {:r :rnd}) (mersenne-random)))
+                 (with-meta samplef {:r :rnd}) (random)))
         => [50653.13952160504 39.987434644813305]
         (first (fold-random
                  300 4 combinef reducef
-                 (with-meta samplef {:r :rnd}) (mersenne-random)))
+                 (with-meta samplef {:r :rnd}) (random)))
         => [58986.355496151344 0.5303202033382911]
-        (first (fold-random 1000 + sample-lazy-fn (mersenne-random)))
+        (first (fold-random 1000 + sample-lazy-fn (random)))
         => 51685.727620165926
         (first (fold-random
-                 1000 combinef reducef sample-lazy-fn (mersenne-random)))
+                 1000 combinef reducef sample-lazy-fn (random)))
         => [51685.727620165926 2.6215627010170977E32]
         (first (fold-random
-                 300 4 combinef reducef sample-lazy-fn (mersenne-random)))
+                 300 4 combinef reducef sample-lazy-fn (random)))
         => [60626.00738574421 6.304745954380607E38]))
