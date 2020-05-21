@@ -1,7 +1,7 @@
 {:paths   ["src"]
  :deps    {orchestra                        {:mvn/version "2019.02.06-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "aa1092372d282f7e360955afc0513cdaf8e20af3"}}
+                                             :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
  :aliases {:dev         {:extra-paths ["siderail"]}
            :test        {:extra-paths ["test" "siderail"]
                          :extra-deps  {criterium                  {:mvn/version "0.4.5"}
