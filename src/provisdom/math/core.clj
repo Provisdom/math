@@ -7,7 +7,7 @@
     [orchestra.spec.test :as ost]))
 
 ;;;DECLARATIONS
-(declare nan? roughly-round? non-? non+? next-up next-down)
+(declare nan? roughly-round? non-? non+? next-up next-down ceil' floor')
 
 ;;;MATH CONSTANTS
 (def ^:const ^long sgl-digits 6)
@@ -125,10 +125,11 @@
                   [(gen/double* {:min tiny-dbl :NaN? false})
                    (gen/large-integer* {:min 1})])))
 
-(s/def ::nan-or-pos (s/spec #(or (nan? %) (pos? %))
-                            :gen #(gen/one-of
-                                    [(gen/double* {:min tiny-dbl})
-                                     (gen/large-integer* {:min 1})])))
+(s/def ::nan-or-pos
+  (s/spec #(or (nan? %) (pos? %))
+          :gen #(gen/one-of
+                  [(gen/double* {:min tiny-dbl})
+                   (gen/large-integer* {:min 1})])))
 
 (defn neg?
   "Returns true if `x` is a number that is negative."
@@ -192,6 +193,21 @@
                   [(gen/double* {:infinite? false :NaN? false})
                    (gen/large-integer)])))
 
+(defmacro finite-spec
+  [{m1  :min
+    m2  :max
+    :or {m1 min-dbl
+         m2 max-dbl}}]
+  ;;longs will sometimes get tossed out (prevents execution errors)
+  `(s/with-gen (s/and finite?
+                      (partial <= ~m1)
+                      (partial >= ~m2))
+               #(gen/one-of
+                  [(gen/double* {:min ~m1 :max ~m2 :NaN? false})
+                   (gen/large-integer*
+                     {:min (max min-long (floor' ~m1))
+                      :max (min max-long (ceil' ~m2))})])))
+
 (s/def ::nan-or-finite
   (s/spec #(or (nan? %) (finite? %))
           :gen #(gen/one-of
@@ -208,6 +224,17 @@
           :gen #(gen/one-of
                   [(gen/double* {:min tiny-dbl :infinite? false :NaN? false})
                    (gen/large-integer* {:min 1})])))
+
+(defmacro finite+-spec
+  [m2]
+  ;;longs will sometimes get tossed out (prevents execution errors)
+  `(s/with-gen (s/and finite+? (partial >= ~m2))
+               #(gen/one-of
+                  [(gen/double* {:min tiny-dbl :max ~m2 :NaN? false})
+                   (gen/large-integer*
+                     {:min 1
+                      :max (min max-long (ceil' ~m2))})])))
+
 (s/def ::nan-or-finite+
   (s/spec #(or (nan? %) (finite+? %))
           :gen #(gen/one-of
@@ -222,12 +249,16 @@
 (s/def ::finite-
   (s/spec finite-?
           :gen #(gen/one-of
-                  [(gen/double* {:max (- tiny-dbl) :infinite? false :NaN? false})
+                  [(gen/double* {:max       (- tiny-dbl)
+                                 :infinite? false
+                                 :NaN?      false})
                    (gen/large-integer* {:max -1})])))
+
 (s/def ::nan-or-finite-
   (s/spec #(or (nan? %) (finite-? %))
           :gen #(gen/one-of
-                  [(gen/double* {:max (- tiny-dbl) :infinite? false})
+                  [(gen/double* {:max       (- tiny-dbl)
+                                 :infinite? false})
                    (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
@@ -240,6 +271,17 @@
           :gen #(gen/one-of
                   [(gen/double* {:min 0.0 :infinite? false :NaN? false})
                    (gen/large-integer* {:min 0})])))
+
+(defmacro finite-non--spec
+  [m2]
+  ;;longs will sometimes get tossed out (prevents execution errors)
+  `(s/with-gen (s/and finite-non-? (partial >= ~m2))
+               #(gen/one-of
+                  [(gen/double* {:min 0.0 :max ~m2 :NaN? false})
+                   (gen/large-integer*
+                     {:min 0
+                      :max (min max-long (ceil' ~m2))})])))
+
 (s/def ::nan-or-finite-non-
   (s/spec #(or (nan? %) (finite-non-? %))
           :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
@@ -252,7 +294,9 @@
 
 (s/def ::finite-non+
   (s/spec finite-non+?
-          :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false :NaN? false})
+          :gen #(gen/one-of [(gen/double* {:max       0.0
+                                           :infinite? false
+                                           :NaN?      false})
                              (gen/large-integer* {:max 0})])))
 (s/def ::nan-or-finite-non+
   (s/spec #(or (nan? %) (finite-non+? %))
@@ -303,6 +347,17 @@
 (s/def ::long
   (s/spec long? :gen gen/large-integer))
 
+(defmacro long-spec
+  [{m1  :min
+    m2  :max
+    :or {m1 min-long
+         m2 max-long}}]
+  `(s/with-gen (s/and long?
+                      (partial <= ~m1)
+                      (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min ~m1 :max ~m2})))
+
 (defn long+?
   "Returns true if `x` is a long and is positive."
   [x]
@@ -310,6 +365,12 @@
 
 (s/def ::long+
   (s/spec long+? :gen #(s/gen (s/int-in 1 max-long))))
+
+(defmacro long+-spec
+  [m2]
+  `(s/with-gen (s/and long+? (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min 1 :max ~m2})))
 
 (defn long-?
   "Returns true if `x` is a long and is negative."
@@ -327,6 +388,12 @@
 (s/def ::long-non-
   (s/spec long-non-? :gen #(s/gen (s/int-in 0 max-long))))
 
+(defmacro long-non--spec
+  [m2]
+  `(s/with-gen (s/and long-non-? (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min 0 :max ~m2})))
+
 (defn long-non+?
   "Returns true if `x` is a long and is non-positive."
   [x]
@@ -343,6 +410,17 @@
 (s/def ::int
   (s/spec int? :gen gen/int))
 
+(defmacro int-spec
+  [{m1  :min
+    m2  :max
+    :or {m1 min-int
+         m2 max-int}}]
+  `(s/with-gen (s/and int?
+                      (partial <= ~m1)
+                      (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min ~m1 :max ~m2})))
+
 (defn int+?
   "Returns true if `x` is an int and is positive."
   [x]
@@ -350,6 +428,12 @@
 
 (s/def ::int+
   (s/spec int+? :gen #(s/gen (s/int-in 1 (inc max-int)))))
+
+(defmacro int+-spec
+  [m2]
+  `(s/with-gen (s/and int+? (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min 1 :max ~m2})))
 
 (defn int-?
   "Returns true if `x` is an int and is negative."
@@ -366,6 +450,12 @@
 
 (s/def ::int-non-
   (s/spec int-non-? :gen #(s/gen (s/int-in 0 (inc max-int)))))
+
+(defmacro int-non--spec
+  [m2]
+  `(s/with-gen (s/and int-non-? (partial >= ~m2))
+               #(gen/large-integer*
+                  {:min 0 :max ~m2})))
 
 (defn int-non+?
   "Returns true if `x` is an int and is non-positive."
