@@ -356,7 +356,8 @@
                       (partial <= ~m1)
                       (partial >= ~m2))
                #(gen/large-integer*
-                  {:min ~m1 :max ~m2})))
+                  {:min (max min-long (floor' ~m1))
+                   :max (min max-long (ceil' ~m2))})))
 
 (defn long+?
   "Returns true if `x` is a long and is positive."
@@ -370,7 +371,7 @@
   [m2]
   `(s/with-gen (s/and long+? (partial >= ~m2))
                #(gen/large-integer*
-                  {:min 1 :max ~m2})))
+                  {:min 1 :max (min max-long (ceil' ~m2))})))
 
 (defn long-?
   "Returns true if `x` is a long and is negative."
@@ -392,7 +393,7 @@
   [m2]
   `(s/with-gen (s/and long-non-? (partial >= ~m2))
                #(gen/large-integer*
-                  {:min 0 :max ~m2})))
+                  {:min 0 :max (min max-long (ceil' ~m2))})))
 
 (defn long-non+?
   "Returns true if `x` is a long and is non-positive."
@@ -419,7 +420,8 @@
                       (partial <= ~m1)
                       (partial >= ~m2))
                #(gen/large-integer*
-                  {:min ~m1 :max ~m2})))
+                  {:min (max min-int (floor' ~m1))
+                   :max (min max-int (ceil' ~m2))})))
 
 (defn int+?
   "Returns true if `x` is an int and is positive."
@@ -433,7 +435,7 @@
   [m2]
   `(s/with-gen (s/and int+? (partial >= ~m2))
                #(gen/large-integer*
-                  {:min 1 :max ~m2})))
+                  {:min 1 :max (min max-int (ceil' ~m2))})))
 
 (defn int-?
   "Returns true if `x` is an int and is negative."
@@ -455,7 +457,7 @@
   [m2]
   `(s/with-gen (s/and int-non-? (partial >= ~m2))
                #(gen/large-integer*
-                  {:min 0 :max ~m2})))
+                  {:min 0 :max (min max-int (ceil' ~m2))})))
 
 (defn int-non+?
   "Returns true if `x` is an int and is non-positive."
