@@ -14,3 +14,7 @@ pom.xml.asc
 project.clj
 .nrepl-history
 .cpcache
+.envrc
+.shadow-cljs
+node_modules
+out/

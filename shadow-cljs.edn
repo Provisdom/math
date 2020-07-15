@@ -1,0 +1,4 @@
+{:deps     {:aliases [:test-cljs :test]}
+ :builds   {:test-ci {:target    :karma
+                      :output-to "target/karma.js"}}
+ :nrepl  {:port 9997}}

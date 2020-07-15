@@ -1,11 +1,14 @@
 (ns provisdom.math.core-test
-  (:refer-clojure :exclude [pos? neg? int?])
+  #?(:cljs (:require-macros
+             [provisdom.test.core]))
   (:require
-    [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
-    [provisdom.math.core :as m]
+    [clojure.test :refer [deftest is are testing]]
+    [clojure.spec.alpha :as s]
     [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    [provisdom.test.core :refer [is-not] :as t]
+    [provisdom.math.core :as m]
+    #?(:clj  [orchestra.spec.test :as ost]
+       :cljs [orchestra-cljs.spec.test :as ost-spec])))
 
 ;;7 seconds
 

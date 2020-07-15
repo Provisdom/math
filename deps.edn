@@ -1,16 +1,19 @@
 {:paths   ["src"]
- :deps    {orchestra                        {:mvn/version "2019.02.06-1"}
+ :deps    {orchestra                        {:mvn/version "2020.07.12-1"}
            provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
- :aliases {:dev         {:extra-paths ["siderail"]}
-           :test        {:extra-paths ["test" "siderail"]
-                         :extra-deps  {criterium                  {:mvn/version "0.4.5"}
-                                       org.clojure/test.check     {:mvn/version "0.10.0"}
+                                             :sha     "361c1a2e8471718b98f01b032e81df27e106a210"}}
+ :aliases {:outdated  {:extra-deps {olical/depot {:mvn/version "2.0.1"}}
+                       :main-opts  ["-m" "depot.outdated.main"]}
+           :test        {:extra-paths ["test"]
+                         :extra-deps  {criterium                  {:mvn/version "0.4.6"}
+                                       org.clojure/test.check     {:mvn/version "1.1.0"}
                                        provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
-                                                                   :sha     "7f403360348fbb603a6d2212c164afcb2a6035e6"}
+                                                                   :sha     "e607de3d0f9414088f682c1b34a434dee5ad0b5e"}
                                        com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                        com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                                   :sha     "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}}}
-           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-554"}
+                                                                   :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
+           :test-cljs {:extra-deps  {thheller/shadow-cljs {:mvn/version "2.10.14"}}
+                       :extra-paths ["test"]}
+           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.641"}
                                       lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
                          :main-opts  ["-m" "kaocha.runner"]}}}
