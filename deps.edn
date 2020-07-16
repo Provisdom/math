@@ -11,7 +11,8 @@
                                                                    :sha     "e607de3d0f9414088f682c1b34a434dee5ad0b5e"}
                                        com.cognitect/transcriptor {:mvn/version "0.1.5"}
                                        com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                                   :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
+                                                                   :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}
+                         :main-opts ["-m" "cognitect.test-runner"]}
            :test-cljs {:extra-deps  {thheller/shadow-cljs {:mvn/version "2.10.14"}}
                        :extra-paths ["test"]}
            :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.641"}

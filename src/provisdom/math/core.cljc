@@ -1,5 +1,5 @@
 (ns provisdom.math.core
-  (:refer-clojure :exclude [pos? neg? int?])
+  (:refer-clojure :exclude [pos? neg? int? infinite?])
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -11,61 +11,74 @@
 (declare nan? roughly-round? non-? non+? next-up next-down ceil' floor')
 
 ;;;MATH CONSTANTS
-(def ^:const ^long sgl-digits 6)
-(def ^:const ^long dbl-digits 15)
-(def ^:const ^long long-digits 18)
-(def ^:const ^long quad-digits 33)
-(def ^:const ^double sgl-close 1e-6)
-(def ^:const ^double dbl-close 1e-15)
-(def ^:const ^double quad-close 1e-33)
+(def ^:const sgl-digits 6)
+(def ^:const dbl-digits 15)
+(def ^:const long-digits 18)
+(def ^:const quad-digits 33)
+(def ^:const sgl-close 1e-6)
+(def ^:const dbl-close 1e-15)
+(def ^:const quad-close 1e-33)
 (def ^:const half (/ 2))
-(def ^:const ^double E Math/E)
-(def ^:const ^double PI Math/PI)
-#?(:clj  (def ^:const ^double nan Double/NaN)
-   :cljs (def nan js/NaN))
-#?(:clj  (def ^:const ^double inf+ Double/POSITIVE_INFINITY)
-   :cljs (def inf+ js/Number.POSITIVE_INFINITY))
-#?(:clj  (def ^:const ^double inf- Double/NEGATIVE_INFINITY)
-   :cljs (def inf- js/Number.NEGATIVE_INFINITY))
-#?(:clj (def ^:const ^double max-dbl Double/MAX_VALUE))
-#?(:clj (def ^:const ^double tiny-dbl Double/MIN_VALUE))
-#?(:clj (def ^:const ^double min-dbl (- max-dbl)))
-#?(:clj  (def ^:const ^float max-sgl Float/MAX_VALUE)
-   :cljs (def max-sgl js/Number.MAX_VALUE))
-#?(:clj  (def ^:const ^float tiny-sgl Float/MIN_VALUE)
-   :cljs (def tiny-sgl js/Number.MIN_VALUE))
-#?(:clj  (def ^:const ^float min-sgl (- max-sgl))
-   :cljs (def min-sgl (- max-sgl)))
-#?(:clj (def ^:const ^long max-long Long/MAX_VALUE))
-#?(:cljs (def max-long 9223372036854775807))
-#?(:clj (def ^:const ^long min-long Long/MIN_VALUE))
-#?(:cljs (def min-long -9223372036854775808))
-#?(:clj (def ^:const ^long max-int Integer/MAX_VALUE))
-#?(:cljs (def max-int 2147483647))
-#?(:clj (def ^:const ^long min-int Integer/MIN_VALUE))
-#?(:cljs (def min-int -2147483648))
-(def ^:const ^double log-half (Math/log 0.5))               ;;since marked as const, should use Math/log
-(def ^:const ^double log-two (Math/log 2.0))
-(def ^:const ^double log-ten (Math/log 10.0))
-(def ^:const ^double log-pi (Math/log PI))
-(def ^:const ^double log-pi-squared (* 2.0 log-pi))
-(def ^:const ^double log-two-pi (+ log-two log-pi))
-(def ^:const ^double log-two-pi-e (+ (Math/log E) log-two-pi))
-(def ^:const ^double half-log-two-pi (* 0.5 log-two-pi))
-(def ^:const ^double two-pi (* 2.0 PI))
-(def ^:const ^double two-pi-e (* two-pi E))
-(def ^:const ^double pi-squared (* PI PI))
-(def ^:const ^double sqrt-two (Math/sqrt 2.0))
-(def ^:const ^double sqrt-half (/ sqrt-two))
-(def ^:const ^double sqrt-pi (Math/sqrt PI))
-(def ^:const ^double sqrt-two-pi (* sqrt-two sqrt-pi))
-(def ^:const ^double sqrt-half-pi (* sqrt-half sqrt-pi))
-(def ^:const ^double inv-pi (/ PI))
-(def ^:const ^double inv-sqrt-pi (/ sqrt-pi))
-(def ^:const ^double inv-sqrt-two (/ sqrt-two))
-(def ^:const ^double inv-two-pi (* 0.5 inv-pi))
-(def ^:const ^double inv-sqrt-two-pi (* inv-sqrt-two inv-sqrt-pi))
-(def ^:const ^double inv-log-two (/ log-two))
+(def ^:const E Math/E)
+(def ^:const PI Math/PI)
+(def ^:const nan
+  #?(:clj  Double/NaN
+     :cljs js/NaN))
+(def ^:const inf+
+  #?(:clj  Double/POSITIVE_INFINITY
+     :cljs js/Number.POSITIVE_INFINITY))
+(def ^:const inf-
+  #?(:clj  Double/NEGATIVE_INFINITY
+     :cljs js/Number.NEGATIVE_INFINITY))
+(def ^:const max-dbl
+  #?(:clj  Double/MAX_VALUE
+     :cljs js/Number.MAX_VALUE))
+(def ^:const tiny-dbl
+  #?(:clj  Double/MIN_VALUE
+     :cljs js/Number.MIN_VALUE))
+(def ^:const min-dbl (- max-dbl))
+(def ^:const max-sgl
+  #?(:clj  Float/MAX_VALUE
+     :cljs 3.4028235E38))
+(def ^:const tiny-sgl
+  #?(:clj  Float/MIN_VALUE
+     :cljs 1.4E-45))
+(def ^:const min-sgl (- max-sgl))
+(def ^:const max-long
+  #?(:clj  Long/MAX_VALUE
+     :cljs 9223372036854775807))
+(def ^:const min-long
+  #?(:clj  Long/MIN_VALUE
+     :cljs -9223372036854775808))
+(def ^:const max-int
+  #?(:clj  Integer/MAX_VALUE
+     :cljs 2147483647))
+(def ^:const min-int
+  #?(:clj  Integer/MIN_VALUE
+     :cljs -2147483648))
+;;since marked as const, should use Math/log
+(def ^:const log-half (Math/log 0.5))
+(def ^:const log-two (Math/log 2.0))
+(def ^:const log-ten (Math/log 10.0))
+(def ^:const log-pi (Math/log PI))
+(def ^:const log-pi-squared (* 2.0 log-pi))
+(def ^:const log-two-pi (+ log-two log-pi))
+(def ^:const log-two-pi-e (+ (Math/log E) log-two-pi))
+(def ^:const half-log-two-pi (* 0.5 log-two-pi))
+(def ^:const two-pi (* 2.0 PI))
+(def ^:const two-pi-e (* two-pi E))
+(def ^:const pi-squared (* PI PI))
+(def ^:const sqrt-two (Math/sqrt 2.0))
+(def ^:const sqrt-half (/ sqrt-two))
+(def ^:const sqrt-pi (Math/sqrt PI))
+(def ^:const sqrt-two-pi (* sqrt-two sqrt-pi))
+(def ^:const sqrt-half-pi (* sqrt-half sqrt-pi))
+(def ^:const inv-pi (/ PI))
+(def ^:const inv-sqrt-pi (/ sqrt-pi))
+(def ^:const inv-sqrt-two (/ sqrt-two))
+(def ^:const inv-two-pi (* 0.5 inv-pi))
+(def ^:const inv-sqrt-two-pi (* inv-sqrt-two inv-sqrt-pi))
+(def ^:const inv-log-two (/ log-two))
 
 ;;;TEST FOR NUMERIC TYPES
 (defn- long-range?
@@ -85,6 +98,11 @@
   [x]
   (and (<= x max-sgl) (>= x min-sgl)))
 
+(defn infinite?
+  [x]
+  #?(:clj  (Double/isInfinite ^double x)
+     :cljs (cljs.core/infinite? x)))
+
 (s/def ::number
   (s/spec number?
           :gen #(gen/one-of [(gen/double) (gen/large-integer)])))
@@ -94,7 +112,8 @@
   [x]
   (and (sequential? x) (every? number? x)))
 
-(def mdl 6)                                                 ;max-dim-length for generators
+;;max-dim-length for generators
+(def mdl 6)
 
 (s/def ::numbers
   (s/with-gen
@@ -134,16 +153,14 @@
 (s/def ::pos
   (s/spec pos?
           :gen #(gen/one-of
-                  [(gen/double* {:min  #?(:clj  tiny-dbl
-                                          :cljs tiny-sgl)
+                  [(gen/double* {:min  tiny-dbl
                                  :NaN? false})
                    (gen/large-integer* {:min 1})])))
 
 (s/def ::nan-or-pos
   (s/spec #(or (nan? %) (pos? %))
           :gen #(gen/one-of
-                  [(gen/double* {:min #?(:clj  tiny-dbl
-                                         :cljs tiny-sgl)})
+                  [(gen/double* {:min tiny-dbl})
                    (gen/large-integer* {:min 1})])))
 
 (defn neg?
@@ -154,16 +171,14 @@
 (s/def ::neg
   (s/spec neg?
           :gen #(gen/one-of
-                  [(gen/double* {:max  (- #?(:clj  tiny-dbl
-                                             :cljs tiny-sgl))
+                  [(gen/double* {:max  (- tiny-dbl)
                                  :NaN? false})
                    (gen/large-integer* {:max -1})])))
 
 (s/def ::nan-or-neg
   (s/spec #(or (nan? %) (neg? %))
           :gen #(gen/one-of
-                  [(gen/double* {:max (- #?(:clj  tiny-dbl
-                                            :cljs tiny-sgl))})
+                  [(gen/double* {:max (- tiny-dbl)})
                    (gen/large-integer* {:max -1})])))
 
 (defn non-?
@@ -203,8 +218,8 @@
 (defn finite?
   "Returns true if `x` is a finite number."
   [x]
-  #?(:cljs (js/isFinite? x)
-     :clj  (and (num? x) (not (Double/isInfinite (double x))))))
+  #?(:clj  (and (num? x) (not (infinite? x)))
+     :cljs (js/isFinite? x)))
 
 (s/def ::finite
   (s/spec finite?
@@ -237,14 +252,12 @@
 (defn finite+?
   "Returns true if `x` is a positive finite number."
   [x]
-  #?(:cljs (and (js/isFinite? x) (> x 0.0))
-     :clj  (and (pos? x) (not (Double/isInfinite ^double x)))))
+  (and (pos? x) (not (infinite? x))))
 
 (s/def ::finite+
   (s/spec finite+?
           :gen #(gen/one-of
-                  [(gen/double* {:min       #?(:clj  tiny-dbl
-                                               :cljs tiny-sgl)
+                  [(gen/double* {:min       tiny-dbl
                                  :infinite? false
                                  :NaN?      false})
                    (gen/large-integer* {:min 1})])))
@@ -263,22 +276,19 @@
 (s/def ::nan-or-finite+
   (s/spec #(or (nan? %) (finite+? %))
           :gen #(gen/one-of
-                  [(gen/double* {:min       #?(:clj  tiny-dbl
-                                               :cljs tiny-sgl)
+                  [(gen/double* {:min       tiny-dbl
                                  :infinite? false})
                    (gen/large-integer* {:min 1})])))
 
 (defn finite-?
   "Returns true if `x` is a negative finite number."
   [x]
-  #?(:cljs (and (js/isFinite? x) (< x 0.0))
-     :clj  (and (neg? x) (not (Double/isInfinite ^double x)))))
+  (and (neg? x) (not (infinite? x))))
 
 (s/def ::finite-
   (s/spec finite-?
           :gen #(gen/one-of
-                  [(gen/double* {:max       (- #?(:clj  tiny-dbl
-                                                  :cljs tiny-sgl))
+                  [(gen/double* {:max       (- tiny-dbl)
                                  :infinite? false
                                  :NaN?      false})
                    (gen/large-integer* {:max -1})])))
@@ -286,16 +296,14 @@
 (s/def ::nan-or-finite-
   (s/spec #(or (nan? %) (finite-? %))
           :gen #(gen/one-of
-                  [(gen/double* {:max       (- #?(:clj  tiny-dbl
-                                                  :cljs tiny-sgl))
+                  [(gen/double* {:max       (- tiny-dbl)
                                  :infinite? false})
                    (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
   "Returns true if `x` is a non-negative finite number."
   [x]
-  #?(:cljs (and (js/isFinite? x) (>= x 0.0))
-     :clj  (and (non-? x) (not (Double/isInfinite ^double x)))))
+  (and (non-? x) (not (infinite? x))))
 
 (s/def ::finite-non-
   (s/spec finite-non-?
@@ -322,8 +330,7 @@
 (defn finite-non+?
   "Returns true if `x` is a non-positive finite number."
   [x]
-  #?(:cljs (and (js/isFinite? x) (<= x 0.0))
-     :clj  (and (non+? x) (not (Double/isInfinite ^double x)))))
+  (and (non+? x) (not (infinite? x))))
 
 (s/def ::finite-non+
   (s/spec finite-non+?
@@ -342,10 +349,9 @@
 (defn double-finite?
   "Returns true if `x` is a double and finite."
   [x]
-  #?(:clj  (and (double? x)
-                (== x x)
-                (not (Double/isInfinite ^double x)))
-     :cljs false))
+  (and (double? x)
+       (== x x)
+       (not (infinite? x))))
 
 (s/def ::double-finite
   (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
@@ -353,11 +359,10 @@
 (defn single?
   "Returns true if `x` is a single."
   [x]
-  #?(:clj  (and (double? x)
-                (or (sgl-range? x)
-                    (not (== x x))
-                    (Double/isInfinite ^double x)))
-     :cljs (double? x)))
+  (and (double? x)
+       (or (sgl-range? x)
+           (not (== x x))
+           (infinite? x))))
 
 (s/def ::single
   (s/spec single? :gen #(gen/double)))
@@ -365,11 +370,7 @@
 (defn single-finite?
   "Returns true if `x` is a single and finite."
   [x]
-  #?(:clj  (and (double? x)
-                (or (sgl-range? x)
-                    (not (== x x))
-                    (Double/isInfinite ^double x)))
-     :cljs (js/isFinite? x)))
+  (and (double? x) (sgl-range? x)))
 
 (s/def ::single-finite
   (s/spec single-finite?

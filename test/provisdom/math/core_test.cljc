@@ -2,17 +2,17 @@
   #?(:cljs (:require-macros
              [provisdom.test.core]))
   (:require
-    [clojure.test :refer [deftest is are testing]]
+    [clojure.test :refer [deftest is are testing run-tests]]
     [clojure.spec.alpha :as s]
     [clojure.spec.test.alpha :as st]
-    [provisdom.test.core :refer [is-not] :as t]
+    [provisdom.test.core :refer [is-not is=] :as t]
     [provisdom.math.core :as m]
     #?(:clj  [orchestra.spec.test :as ost]
-       :cljs [orchestra-cljs.spec.test :as ost-spec])))
+       :cljs [orchestra-cljs.spec.test :as ost])))
 
 ;;7 seconds
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 (ost/instrument)
 
@@ -388,7 +388,7 @@
 
 ;;BASIC MATH TESTS
 (deftest ===-test
-  (is (spec-check m/===))
+  (is (spec-check `m/===))
   (is (m/=== m/nan))
   (is (m/=== m/nan m/nan))
   (is (m/=== m/nan m/nan m/nan))
@@ -396,7 +396,7 @@
   (is-not (m/=== 3 m/nan)))
 
 (deftest next-up-test
-  (is (spec-check m/next-up))
+  (is (spec-check `m/next-up))
   (is= 3.0000000000000004 (m/next-up 3))
   (is= -2.9999999999999996 (m/next-up -3))
   (is (m/nan? (m/next-up m/nan)))
@@ -405,7 +405,7 @@
   (is= -2.9999999999999996 (m/next-up -3.0)))
 
 (deftest next-down-test
-  (is (spec-check m/next-down))
+  (is (spec-check `m/next-down))
   (is= 2.9999999999999996 (m/next-down 3))
   (is= -3.0000000000000004 (m/next-down -3))
   (is (m/nan? (m/next-down m/nan)))
@@ -414,8 +414,9 @@
   (is= 2.9999999999999996 (m/next-down 3.0)))
 
 (deftest div-test
-  (is (spec-check m/div))
-  (is (ratio? (m/div 4)))
+  (is (spec-check `m/div))
+  #?(:clj (is (ratio? (m/div 4)))
+     :cljs (is= 0.25 (m/div 4)))
   (is= 0.25 (m/div 4.0))
   (is= 1 (m/div 3 3))
   (is= -1 (m/div -3 3))
@@ -429,7 +430,7 @@
   (is (m/nan? (m/div 0 0 m/nan))))
 
 (deftest one--test
-  (is (spec-check m/one-))
+  (is (spec-check `m/one-))
   (is= -2 (m/one- 3))
   (is= 0.0 (m/one- 3 -2))
   (is= -16.0 (m/one- 3 4 2 8))
@@ -440,7 +441,7 @@
   (is= 4.0 (m/one- -3.0)))
 
 (deftest sq'-test
-  (is (spec-check m/sq'))
+  (is (spec-check `m/sq'))
   (is= 9 (m/sq' 3))
   (is= 9 (m/sq' -3))
   (is (m/nan? (m/sq' m/nan)))
@@ -449,7 +450,7 @@
   (is= 9 (m/sq' -3.0)))
 
 (deftest cube'-test
-  (is (spec-check m/cube'))
+  (is (spec-check `m/cube'))
   (is= 27 (m/cube' 3))
   (is (m/nan? (m/cube' m/nan)))
   (is= m/inf+ (m/cube' m/inf+))
@@ -458,7 +459,7 @@
   (is= -27 (m/cube' -3.0)))
 
 (deftest sgn-test
-  (is (spec-check m/sgn))
+  (is (spec-check `m/sgn))
   (is= 1 (m/sgn 3))
   (is= -1 (m/sgn -3))
   (is (m/nan? (m/sgn m/nan)))
@@ -469,7 +470,7 @@
   (is= -1 (m/sgn -3.0)))
 
 (deftest log2-test
-  (is (spec-check m/log2))
+  (is (spec-check `m/log2))
   (is= 1.5849625007211563 (m/log2 3))
   (is= m/inf- (m/log2 0))
   (is= m/inf+ (m/log2 m/inf+))
@@ -479,7 +480,7 @@
   (is= -0.15200309344504997 (m/log2 0.9)))
 
 (deftest logn-test
-  (is (spec-check m/logn))
+  (is (spec-check `m/logn))
   (is= 1.0 (m/logn 3 3))
   (is= m/inf- (m/logn 0 3))
   (is= m/inf+ (m/logn m/inf+ 3))
@@ -493,7 +494,7 @@
   (is= -0.0 (m/logn 0.9 m/inf+)))
 
 (deftest abs'-test
-  (is (spec-check m/abs'))
+  (is (spec-check `m/abs'))
   (is= 3.3 (m/abs' -3.3))
   (is= 3 (m/abs' -3))
   (is= 300000000 (m/abs' 3.0E8))
@@ -504,7 +505,7 @@
   (is (m/nan? (m/abs' m/nan))))
 
 (deftest cbrt-test
-  (is (spec-check m/cbrt))
+  (is (spec-check `m/cbrt))
   (is= 0.0 (m/cbrt 0.0))
   (is= 1.0 (m/cbrt 1.0))
   (is= -1.0 (m/cbrt -1.0))
@@ -515,13 +516,13 @@
 
 ;;TRIGONOMETRY
 (deftest sin-test
-  (is (spec-check m/sin)))
+  (is (spec-check `m/sin)))
 
 (deftest asin-test
-  (is (spec-check m/asin)))
+  (is (spec-check `m/asin)))
 
 (deftest asinh-test
-  (is (spec-check m/asinh))
+  (is (spec-check `m/asinh))
   (is= 0.0 (m/asinh 0.0))
   (is= 0.48121182505960347 (m/asinh 0.5))
   (is= -0.8813735870195428 (m/asinh -1.0))
@@ -533,13 +534,13 @@
   (is (m/nan? (m/asinh m/nan))))
 
 (deftest cos-test
-  (is (spec-check m/cos)))
+  (is (spec-check `m/cos)))
 
 (deftest acos-test
-  (is (spec-check m/acos)))
+  (is (spec-check `m/acos)))
 
 (deftest acosh-test
-  (is (spec-check m/acosh))
+  (is (spec-check `m/acosh))
   (is (m/nan? (m/acosh 0.0)))
   (is= 0.0 (m/acosh 1.0))
   (is= 1.3169578969248166 (m/acosh 2.0))
@@ -547,16 +548,16 @@
   (is (m/nan? (m/acosh m/nan))))
 
 (deftest tan-test
-  (is (spec-check m/tan)))
+  (is (spec-check `m/tan)))
 
 (deftest atan-test
-  (is (spec-check m/atan)))
+  (is (spec-check `m/atan)))
 
 (deftest atan2-test
-  (is (spec-check m/atan2)))
+  (is (spec-check `m/atan2)))
 
 (deftest atanh-test
-  (is (spec-check m/atanh))
+  (is (spec-check `m/atanh))
   (is= 0.0 (m/atanh 0.0))
   (is= -0.2027325540540822 (m/atanh 0.5))
   (is= m/inf- (m/atanh -1.0))
@@ -565,11 +566,11 @@
   (is (m/nan? (m/atanh m/nan))))
 
 (deftest hypot-test
-  (is (spec-check m/hypot)))
+  (is (spec-check `m/hypot)))
 
 ;;ROUNDING
 (deftest round-test
-  (is (spec-check m/round))
+  (is (spec-check `m/round))
   (is= 1 (m/round 0.5 :up))
   (is= 2.342342342342342E22 (m/round 2.342342342342342E22 :up))
   (is (zero? (m/round -0.5 :up)))
@@ -584,20 +585,20 @@
   (is (m/nan? (m/round m/nan :up))))
 
 (deftest floor-test
-  (is (spec-check m/floor))
+  (is (spec-check `m/floor))
   (is (zero? (m/floor 0.4)))
   (is= 2.3423423423423425E26 (m/floor 234234234234234234234343242N))
-  (is= -1.0(m/floor -0.4))
+  (is= -1.0 (m/floor -0.4))
   (is= m/inf+ (m/floor m/inf+))
   (is= m/inf- (m/floor m/inf-))
   (is (m/nan? (m/floor m/nan))))
 
 (deftest floor'-test
-  (is (spec-check m/floor'))
+  (is (spec-check `m/floor'))
   (is= -1 (m/floor' -0.4)))
 
 (deftest ceil-test
-  (is (spec-check m/ceil))
+  (is (spec-check `m/ceil))
   (is= 1.0 (m/ceil 0.4))
   (is= 2.3423423423423425E26 (m/ceil 234234234234234234234343242N))
   (is (zero? (m/ceil -0.4)))
@@ -606,11 +607,11 @@
   (is (m/nan? (m/ceil m/nan))))
 
 (deftest ceil'-test
-  (is (spec-check m/ceil'))
+  (is (spec-check `m/ceil'))
   (is= 1 (m/ceil' 0.4)))
 
 (deftest roughly-floor-test
-  (is (spec-check m/roughly-floor))
+  (is (spec-check `m/roughly-floor))
   (is= 1.0 (m/roughly-floor 0.99 0.02))
   (is (zero? (m/roughly-floor 0.99 0.005)))
   (is= 2.3423423423423425E26 (m/roughly-floor 234234234234234234234343242N 0.02))
@@ -621,11 +622,11 @@
   (is (m/nan? (m/roughly-floor m/nan 0.02))))
 
 (deftest roughly-floor'-test
-  (is (spec-check m/roughly-floor'))
+  (is (spec-check `m/roughly-floor'))
   (is= 1 (m/roughly-floor' 0.99 0.02)))
 
 (deftest roughly-ceil-test
-  (is (spec-check m/roughly-ceil))
+  (is (spec-check `m/roughly-ceil))
   (is (zero? (m/roughly-ceil 0.01 0.02)))
   (is= 1.0 (m/roughly-ceil 0.01 0.005))
   (is= 2.3423423423423425E26 (m/roughly-ceil 234234234234234234234343242N 0.02))
@@ -636,11 +637,11 @@
   (is (m/nan? (m/roughly-ceil m/nan 0.02))))
 
 (deftest roughly-ceil'-test
-  (is (spec-check m/roughly-ceil'))
+  (is (spec-check `m/roughly-ceil'))
   (is= 1 (m/roughly-ceil' 0.01 0.005)))
 
 (deftest roughly?-test
-  (is (spec-check m/roughly?))
+  (is (spec-check `m/roughly?))
   (is-not (m/roughly? 0.01 0.02 0.005))
   (is (m/roughly? 0.01 0.02 0.01))
   (is (m/roughly? 0.01 0.02 0.02))
@@ -651,7 +652,7 @@
   (is-not (m/roughly? m/nan 0.02 0.01)))
 
 (deftest roughly-round?-test
-  (is (spec-check m/roughly-round?))
+  (is (spec-check `m/roughly-round?))
   (is (m/roughly-round? 0.01 0.02))
   (is-not (m/roughly-round? 0.01 0.005))
   (is (m/roughly-round? 2.3423423423423425E26 0.03))
@@ -661,7 +662,7 @@
   (is-not (m/roughly-round? m/nan 0.01)))
 
 (deftest roughly-round-non-?-test
-  (is (spec-check m/roughly-round-non-?))
+  (is (spec-check `m/roughly-round-non-?))
   (is (m/roughly-round-non-? 0 0.02))
   (is-not (m/roughly-round-non-? -0.01 0.02))
   (is (m/roughly-round-non-? 0.01 0.02))
@@ -674,7 +675,7 @@
   (is-not (m/roughly-round-non-? m/nan 0.01)))
 
 (deftest roughly-round-non+?-test
-  (is (spec-check m/roughly-round-non+?))
+  (is (spec-check `m/roughly-round-non+?))
   (is (m/roughly-round-non+? 0 0.02))
   (is-not (m/roughly-round-non+? 0.01 0.02))
   (is (m/roughly-round-non+? -0.01 0.02))
@@ -687,7 +688,7 @@
   (is-not (m/roughly-round-non+? m/nan 0.01)))
 
 (deftest roughly-round+?-test
-  (is (spec-check m/roughly-round+?))
+  (is (spec-check `m/roughly-round+?))
   (is-not (m/roughly-round+? 0 0.02))
   (is-not (m/roughly-round+? -0.01 0.02))
   (is (m/roughly-round+? 0.01 0.02))
@@ -700,7 +701,7 @@
   (is-not (m/roughly-round+? m/nan 0.01)))
 
 (deftest roughly-round-?-test
-  (is (spec-check m/roughly-round-?))
+  (is (spec-check `m/roughly-round-?))
   (is-not (m/roughly-round-? 0 0.02))
   (is-not (m/roughly-round-? 0.01 0.02))
   (is (m/roughly-round-? -0.01 0.02))
@@ -713,7 +714,7 @@
   (is-not (m/roughly-round-? m/nan 0.01)))
 
 (deftest roughly-non-?-test
-  (is (spec-check m/roughly-non-?))
+  (is (spec-check `m/roughly-non-?))
   (is-not (m/roughly-non-? -0.01 0.005))
   (is (m/roughly-non-? -0.02 0.02))
   (is (m/roughly-non-? 0.01 0.001))
@@ -724,7 +725,7 @@
   (is-not (m/roughly-non-? m/nan 0.01)))
 
 (deftest roughly-non+?-test
-  (is (spec-check m/roughly-non+?))
+  (is (spec-check `m/roughly-non+?))
   (is-not (m/roughly-non+? 0.01 0.005))
   (is (m/roughly-non+? 0.02 0.02))
   (is (m/roughly-non+? -0.01 0.001))
@@ -735,7 +736,7 @@
   (is-not (m/roughly-non+? m/nan 0.01)))
 
 (deftest roughly-prob?-test
-  (is (spec-check m/roughly-prob?))
+  (is (spec-check `m/roughly-prob?))
   (is (m/roughly-prob? 0.01 0.005))
   (is (m/roughly-prob? 0.02 0.02))
   (is-not (m/roughly-prob? -0.01 0.001))
@@ -748,7 +749,7 @@
   (is-not (m/roughly-prob? m/nan 0.01)))
 
 (deftest roughly-corr?-test
-  (is (spec-check m/roughly-corr?))
+  (is (spec-check `m/roughly-corr?))
   (is-not (m/roughly-corr? -1.01 0.005))
   (is (m/roughly-corr? -1.02 0.02))
   (is-not (m/roughly-corr? -1.01 0.001))
@@ -762,7 +763,7 @@
 
 ;;;QUOTIENTS
 (deftest quot'-test
-  (is (spec-check m/quot'))
+  (is (spec-check `m/quot'))
   (is= 1 (m/quot' 3 2))
   (is= -1 (m/quot' -3 2))
   (is= -1 (m/quot' 3 -2))
@@ -781,7 +782,7 @@
   (is (m/nan? (m/quot' 2 m/nan))))
 
 (deftest mod'-test
-  (is (spec-check m/mod'))
+  (is (spec-check `m/mod'))
   (is= 1 (m/mod' 3 2))
   (is= 1 (m/mod' -3 2))
   (is= -1 (m/mod' 3 -2))
@@ -800,7 +801,7 @@
   (is (m/nan? (m/mod' 2 m/nan))))
 
 (deftest rem'-test
-  (is (spec-check m/rem'))
+  (is (spec-check `m/rem'))
   (is= 1 (m/rem' 3 2))
   (is= -1 (m/rem' -3 2))
   (is= 1 (m/rem' 3 -2))
@@ -819,7 +820,7 @@
   (is (m/nan? (m/rem' 2 m/nan))))
 
 (deftest quot-and-rem'-test
-  (is (spec-check m/quot-and-rem'))
+  (is (spec-check `m/quot-and-rem'))
   (is= [4 0] (m/quot-and-rem' 16 4))
   (is= [1 1] (m/quot-and-rem' 3 2))
   (is= [-1 -1] (m/quot-and-rem' -3 2))
@@ -840,7 +841,7 @@
   (is (every? m/nan? (m/quot-and-rem' 2 m/nan))))
 
 (deftest quot-and-mod'-test
-  (is (spec-check m/quot-and-mod'))
+  (is (spec-check `m/quot-and-mod'))
   (is= [4 0] (m/quot-and-mod' 16 4))
   (is= [0 0] (m/quot-and-mod' 0 4))
   (is= [0 0] (m/quot-and-mod' 0 -4))
@@ -869,12 +870,12 @@
   (is (every? m/nan? (m/quot-and-mod' 2 m/nan))))
 
 (deftest gcd-test
-  (is (spec-check m/gcd))
+  (is (spec-check `m/gcd))
   (is= 7 (m/gcd 271284701247 12467364728)))
 
 ;;;ANGLES
 (deftest reduce-angle'-test
-  (is (spec-check m/reduce-angle'))
+  (is (spec-check `m/reduce-angle'))
   (is= 30.4 (m/reduce-angle' 30.4))
   (is= 350.2 (m/reduce-angle' -9.8))
   (is= 118 (m/reduce-angle' 478.0))
@@ -884,7 +885,7 @@
   (is (m/nan? (m/reduce-angle' m/inf-))))
 
 (deftest reduce-radians'-test
-  (is (spec-check m/reduce-radians'))
+  (is (spec-check `m/reduce-radians'))
   (is= 5.267258771281654 (m/reduce-radians' 30.4))
   (is (zero? (m/reduce-radians' m/two-pi)))
   (is= m/PI (m/reduce-radians' m/PI))
@@ -894,7 +895,7 @@
   (is (m/nan? (m/reduce-radians' m/inf-))))
 
 (deftest radians->angle'-test
-  (is (spec-check m/radians->angle'))
+  (is (spec-check `m/radians->angle'))
   (is (zero? (m/radians->angle' 0)))
   (is= 194.8056503444799 (m/radians->angle' 3.4))
   (is (zero? (m/radians->angle' m/two-pi)))
@@ -905,7 +906,7 @@
   (is= m/inf- (m/radians->angle' m/inf-)))
 
 (deftest angle->radians'-test
-  (is (spec-check m/angle->radians'))
+  (is (spec-check `m/angle->radians'))
   (is (zero? (m/angle->radians' 0)))
   (is= 0.059341194567807204 (m/angle->radians' 3.4))
   (is= 0.002777777777777778 (m/angle->radians' m/inv-two-pi))

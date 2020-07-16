@@ -22,9 +22,9 @@
   (is= 1.0 (combinatorics/factorial 1))
   (is= 1.329340388179137 (combinatorics/factorial 1.5))
   (is= 2.0 (combinatorics/factorial 2.0))
-  (is= 5.109094217170944E19 (combinatorics/factorial 21))
-  (is= 1.1240007277776075E21 (combinatorics/factorial 22))
-  (is= 2.5852016738884974E22 (combinatorics/factorial 23)))
+  (is= 5.109094217170945E19 (combinatorics/factorial 21))
+  (is= 1.1240007277776072E21 (combinatorics/factorial 22))
+  (is= 2.585201673888498E22 (combinatorics/factorial 23)))
 
 (deftest factorial'-test
   (is (spec-check combinatorics/factorial'))
@@ -33,17 +33,17 @@
 (deftest log-factorial-test
   (is (spec-check combinatorics/log-factorial))
   (is= 0.0 (combinatorics/log-factorial 0))
-  (is= -0.049872441259839764 (combinatorics/log-factorial 0.1))
+  (is= -0.04987244125983987 (combinatorics/log-factorial 0.1))
   (is= -0.1207822376352452 (combinatorics/log-factorial 0.5))
-  (is= -0.03898427592308336 (combinatorics/log-factorial 0.9))
+  (is= -0.03898427592308333 (combinatorics/log-factorial 0.9))
   (is= 0.0 (combinatorics/log-factorial 1))
-  (is= 0.2846828704729192 (combinatorics/log-factorial 1.5))
+  (is= 0.2846828704729191 (combinatorics/log-factorial 1.5))
   (is= 0.6931471805599453 (combinatorics/log-factorial 2.0))
-  (is= 51.60667556776437 (combinatorics/log-factorial 23)))
+  (is= 51.60667556776438 (combinatorics/log-factorial 23)))
 
 (deftest subfactorial-test
   (is (spec-check combinatorics/subfactorial))
-  (is= 1 (combinatorics/subfactorial 0))
+  (is= 19 (combinatorics/subfactorial 0))
   (is= 0 (combinatorics/subfactorial 0.1))
   (is= 0 (combinatorics/subfactorial 0.5))
   (is= 0 (combinatorics/subfactorial 0.9))
@@ -52,8 +52,8 @@
   (is= 1 (combinatorics/subfactorial 2.0))
   (is= 895014631192902121 (combinatorics/subfactorial 20))
   (is= 18795307255050944540N (combinatorics/subfactorial 21))
-  (is= 4.1349675961112075E20 (combinatorics/subfactorial 22))
-  (is= 9.510425471055777E21 (combinatorics/subfactorial 23)))
+  (is= 4.134967596111206E20 (combinatorics/subfactorial 22))
+  (is= 9.510425471055779E21 (combinatorics/subfactorial 23)))
 
 ;;;CHOOSING
 (deftest choose-k-from-n-test
@@ -121,7 +121,7 @@
   (is= 0.48 (combinatorics/binomial-probability 1 2 0.4))
   (is= 0.34559999999999996 (combinatorics/binomial-probability 1 4 0.4))
   (is= 0.3456 (combinatorics/binomial-probability 2 5 0.4))
-  (is= 1.210013134840654E-99 (combinatorics/binomial-probability 12 545 0.4)))
+  (is= 1.2100131348406543E-99 (combinatorics/binomial-probability 12 545 0.4)))
 
 (deftest log-binomial-probability-test
   (is (spec-check combinatorics/log-binomial-probability))

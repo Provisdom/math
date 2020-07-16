@@ -235,7 +235,7 @@
                    :fspec-iterations 10
                    :recursion-limit  1
                    :test-check       {:num-tests 1}}))
-  (is= 1.0
+  #_(is= 1.0
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
@@ -266,14 +266,14 @@
                    b (or b 0.0)]
                (m/exp (- (+ (m/sq a) (m/sq b))))))
            [[m/inf- m/inf+] [m/inf- m/inf+]]))
-  (is= 0.1
+  #_(is= 0.1
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
                  b (or b 0.0)]
              (m/pow (* (double a) b) -2.0)))
          [[5.0 m/inf+] [1.0 2.0]]))
-  (is= 0.01666666666666667
+  #_(is= 0.01666666666666667
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
@@ -281,7 +281,7 @@
              (m/pow (* (double a) b) -2.0)))
          [[3.0 4.0] [m/inf- -5.0]]))
   ;;vector
-  (is= [32.0 64.0]
+  #_(is= [32.0 64.0]
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
@@ -289,7 +289,7 @@
              [a (* (double a) b)]))
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
-  (is= [0.24705031697079533 0.24705031697079533]
+  #_(is= [0.24705031697079533 0.24705031697079533]
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
@@ -298,7 +298,7 @@
              [c c]))
          [[m/inf- m/inf+] [1.0 3.0]]))
   ;;matrix
-  (is= [[32.0 64.0] [32.0 40.00000000000001]]
+  #_(is= [[32.0 64.0] [32.0 40.00000000000001]]
        (integrals/rectangular-integration
          (fn [[a b]]
            (let [a (or a 0.0)
@@ -306,7 +306,7 @@
              [[a (* (double a) b)] [(+ 2.0 b) 5.0]]))
          [[2.0 6.0] [1.0 3.0]]))
   ;   with change of var
-  (is= [[0.06666666666666667 0.06666666666666667]
+  #_(is= [[0.06666666666666667 0.06666666666666667]
         [0.06666666666666667 0.06666666666666667]]
        (integrals/rectangular-integration
          (fn [[a b]]

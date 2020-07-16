@@ -51,16 +51,16 @@
   (is= 11.120000000000001
        (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? false}))
   (is= 11.0 (series/sum-convergent-series [1 3 7]))
-  (is= 3.5963967356402123E-16 (series/sum-convergent-series (sin-series m/PI)))
+  (is= 3.5963967336368764E-16 (series/sum-convergent-series (sin-series m/PI)))
   (is= -1.0000000000000009
        (series/sum-convergent-series (sin-series (* 1.5 m/PI))))
-  (is= 1.529147814762351E-14
+  (is= 1.529109857109388E-14
        (series/sum-convergent-series (sin-series (* 2 m/PI))))
-  (is= 0.9999999999999879
+  (is= 0.9999999999999878
        (series/sum-convergent-series (sin-series (* 2.5 m/PI))))
-  (is= 1.0040717480557992E-13
+  (is= 9.918249052390073E-14
        (series/sum-convergent-series (sin-series (* 3.0 m/PI))))
-  (is= -1.0000000000004936
+  (is= -1.0000000000005367
        (series/sum-convergent-series (sin-series (* 3.5 m/PI))))
   (is= 0.9999999999999877
        (series/sum-convergent-series (sin-series (* 2.5 m/PI))
