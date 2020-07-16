@@ -1,7 +1,6 @@
 {:paths     ["src"]
  :deps      {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
                                      :sha     "361c1a2e8471718b98f01b032e81df27e106a210"}}
- :mvn/repos {"cs-mvn" {:url "s3://cs-mvn/release"}}
  :aliases   {:outdated        {:extra-deps {olical/depot {:mvn/version "2.0.1"}}
                                :main-opts  ["-m" "depot.outdated.main"]}
              :test            {:extra-paths ["test"]
