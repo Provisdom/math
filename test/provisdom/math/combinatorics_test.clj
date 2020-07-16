@@ -43,7 +43,7 @@
 
 (deftest subfactorial-test
   (is (spec-check combinatorics/subfactorial))
-  (is= 19 (combinatorics/subfactorial 0))
+  (is= 1 (combinatorics/subfactorial 0))
   (is= 0 (combinatorics/subfactorial 0.1))
   (is= 0 (combinatorics/subfactorial 0.5))
   (is= 0 (combinatorics/subfactorial 0.9))
