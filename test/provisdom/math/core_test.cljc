@@ -117,7 +117,8 @@
 
 (deftest double-finite?-test
   (is-not (m/double-finite? "A"))
-  (is-not (m/double-finite? 0))
+  #?(:clj  (is-not (m/double-finite? 0))
+     :cljs (is (m/double-finite? 0)))
   (is (m/double-finite? 0.0))
   (is (m/double-finite? 3.3E300))
   (is (m/double-finite? -3.3E300))
@@ -127,7 +128,8 @@
 
 (deftest single?-test
   (is-not (m/single? "A"))
-  (is-not (m/single? 0))
+  #?(:clj  (is-not (m/single? 0))
+     :cljs (is (m/single? 0)))
   (is (m/single? 0.0))
   (is (m/single? 3.3E30))
   (is (m/single? -3.3E30))
@@ -139,7 +141,8 @@
 
 (deftest single-finite?-test
   (is-not (m/single-finite? "A"))
-  (is-not (m/single-finite? 0))
+  #?(:clj  (is-not (m/single-finite? 0))
+     :cljs (is (m/single-finite? 0)))
   (is (m/single-finite? 0.0))
   (is (m/single-finite? 3.3E30))
   (is (m/single-finite? -3.3E30))
@@ -151,7 +154,8 @@
 
 (deftest long?-test
   (is-not (m/long? 3.3))
-  (is (m/long? 3))
+  #?(:clj  (is (m/long? 3))
+     :cljs (is-not (m/long? 3)))
   (is-not (m/long? 3.0))
   (is-not (m/long? "A"))
   (is-not (m/long? 3.4E15))
@@ -161,7 +165,8 @@
 
 (deftest long+?-test
   (is-not (m/long+? 3.3))
-  (is (m/long+? 3))
+  #?(:clj  (is (m/long+? 3))
+     :cljs (is-not (m/long+? 3)))
   (is-not (m/long+? -3))
   (is-not (m/long+? 3.0))
   (is-not (m/long+? "A"))
@@ -173,7 +178,8 @@
 (deftest long-?-test
   (is-not (m/long-? 3.3))
   (is-not (m/long-? 3))
-  (is (m/long-? -3))
+  #?(:clj  (is (m/long-? -3))
+     :cljs (is-not (m/long-? -3)))
   (is-not (m/long-? 3.0))
   (is-not (m/long-? "A"))
   (is-not (m/long-? -3.4E15))
@@ -183,9 +189,11 @@
 
 (deftest long-non-?-test
   (is-not (m/long-non-? 3.3))
-  (is (m/long-non-? 3))
+  #?(:clj  (is (m/long-non-? 3))
+     :cljs (is-not (m/long-non-? 3)))
   (is-not (m/long-non-? -3))
-  (is (m/long-non-? 0))
+  #?(:clj  (is (m/long-non-? 0))
+     :cljs (is-not (m/long-non-? 0)))
   (is-not (m/long-non-? 3.0))
   (is-not (m/long-non-? "A"))
   (is-not (m/long-non-? 3.4E15))
@@ -196,7 +204,8 @@
 (deftest long-non+?-test
   (is-not (m/long-non+? 3.3))
   (is-not (m/long-non+? 3))
-  (is (m/long-non+? -3))
+  #?(:clj  (is (m/long-non+? -3))
+     :cljs (is-not (m/long-non+? -3)))
   (is (m/long-non+? 0))
   (is-not (m/long-non+? 3.0))
   (is-not (m/long-non+? "A"))
@@ -207,7 +216,8 @@
 
 (deftest int?-test
   (is-not (m/int? 3.3))
-  (is (m/int? 3))
+  #?(:clj  (is (m/int? 3))
+     :cljs (is-not (m/int? 3)))
   (is-not (m/int? 3.0))
   (is-not (m/int? "A"))
   (is-not (m/int? 3.4E15))
@@ -217,7 +227,8 @@
 
 (deftest int+?-test
   (is-not (m/int+? 3.3))
-  (is (m/int+? 3))
+  #?(:clj  (is (m/int+? 3))
+     :cljs (is-not (m/int+? 3)))
   (is-not (m/int+? -3))
   (is-not (m/int+? 3.0))
   (is-not (m/int+? "A"))
@@ -229,7 +240,8 @@
 (deftest int-?-test
   (is-not (m/int-? 3.3))
   (is-not (m/int-? 3))
-  (is (m/int-? -3))
+  #?(:clj  (is (m/int-? -3))
+     :cljs (is-not (m/int-? -3)))
   (is-not (m/int-? 3.0))
   (is-not (m/int-? "A"))
   (is-not (m/int-? -3.4E15))
@@ -239,9 +251,11 @@
 
 (deftest int-non-?-test
   (is-not (m/int-non-? 3.3))
-  (is (m/int-non-? 3))
+  #?(:clj  (is (m/int-non-? 3))
+     :cljs (is-not (m/int-non-? 3)))
   (is-not (m/int-non-? -3))
-  (is (m/int-non-? 0))
+  #?(:clj  (is (m/int-non-? 0))
+     :cljs (is-not (m/int-non-? 0)))
   (is-not (m/int-non-? 3.0))
   (is-not (m/int-non-? "A"))
   (is-not (m/int-non-? 3.4E15))
@@ -252,8 +266,10 @@
 (deftest int-non+?-test
   (is-not (m/int-non+? 3.3))
   (is-not (m/int-non+? 3))
-  (is (m/int-non+? -3))
-  (is (m/int-non+? 0))
+  #?(:clj  (is (m/int-non+? -3))
+     :cljs (is-not (m/int-non+? -3)))
+  #?(:clj  (is (m/int-non+? 0))
+     :cljs (is-not (m/int-non+? 0)))
   (is-not (m/int-non+? 3.0))
   (is-not (m/int-non+? "A"))
   (is-not (m/int-non+? 3.4E15))
@@ -415,7 +431,7 @@
 
 (deftest div-test
   (is (spec-check `m/div))
-  #?(:clj (is (ratio? (m/div 4)))
+  #?(:clj  (is (ratio? (m/div 4)))
      :cljs (is= 0.25 (m/div 4)))
   (is= 0.25 (m/div 4.0))
   (is= 1 (m/div 3 3))

@@ -219,7 +219,7 @@
   "Returns true if `x` is a finite number."
   [x]
   #?(:clj  (and (num? x) (not (infinite? x)))
-     :cljs (js/isFinite? x)))
+     :cljs (js/isFinite x)))
 
 (s/def ::finite
   (s/spec finite?
