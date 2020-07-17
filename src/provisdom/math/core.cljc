@@ -1,5 +1,5 @@
 (ns provisdom.math.core
-  (:refer-clojure :exclude [pos? neg? int? infinite?])
+  (:refer-clojure :exclude [pos? neg? int? infinite? ===])
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -8,7 +8,8 @@
        :cljs [orchestra-cljs.spec.test :as ost-spec])))
 
 ;;;DECLARATIONS
-(declare nan? roughly-round? non-? non+? next-up next-down ceil' floor')
+(declare
+  nan? roughly-round? non-? non+? ceil' floor' next-up next-down pow one-)
 
 ;;;MATH CONSTANTS
 (def ^:const sgl-digits 6)
@@ -560,7 +561,7 @@
   "Returns true if `x` is Inf+."
   [x]
   #?(:clj  (and (number? x)
-                (Double/isInfinite ^double x)
+                (infinite? x)
                 (pos? x))
      :cljs (= x inf+)))
 
@@ -575,7 +576,7 @@
 (defn inf-?
   "Returns true if `x` is Inf-."
   [x]
-  #?(:clj  (and (number? x) (Double/isInfinite (double x)) (neg? x))
+  #?(:clj  (and (number? x) (infinite? x) (neg? x))
      :cljs (= x inf-)))
 
 (s/def ::non-inf-
@@ -589,7 +590,7 @@
 (defn inf?
   "Returns true if `x` is Inf+ or Inf-."
   [x]
-  #?(:clj  (and (number? x) (Double/isInfinite (double x)))
+  #?(:clj  (and (number? x) (infinite? x))
      :cljs (or (= x inf+) (= x inf-))))
 
 (s/def ::inf
@@ -693,10 +694,37 @@
                            :more (s/* ::number)))
   :ret boolean?)
 
+#?(:cljs (defn- next-up-cljs
+                "see https://gist.github.com/Yaffle/4654250."
+                [x]
+                (cond (or (not= x x) (inf+? x)) x
+                      (inf-? x) min-dbl
+                      (= x max-dbl) inf+
+                      :else (let [epsilon (pow 2 -52)
+                                  max-value (* (- 2 epsilon) (pow 2 1023))
+                                  min-value (pow 2 -1022)
+                                  y (* x (if (neg? x)
+                                           (one- (/ epsilon 2))
+                                           (inc epsilon)))
+                                  y (cond (= y x) (if (pos? (* min-value epsilon))
+                                                    (+ x (* min-value epsilon))
+                                                    (+ x min-value))
+                                          (inf+? y) max-value
+                                          :else y)
+                                  b (+ x (/ (- y x) 2))
+                                  y (if (and (< x b) (< b y))
+                                      b
+                                      y)
+                                  c (/ (+ y x) 2)]
+                                 (cond (and (< x c) (< c y)) c
+                                       (zero? y) -0
+                                       :else y)))))
+
 (defn next-up
   "Returns `number` plus smallest amount to make a change."
   [number]
-  (Math/nextAfter (double number) inf+))
+  #?(:clj  (Math/nextAfter (double number) ^double inf+)
+     :cljs (next-up-cljs number)))
 
 (s/fdef next-up
   :args (s/cat :number ::number)
@@ -705,7 +733,8 @@
 (defn next-down
   "Returns `number` minus smallest amount to make a change."
   [number]
-  (Math/nextAfter (double number) inf-))
+  #?(:clj  (Math/nextAfter (double number) ^double inf-)
+     :cljs (- (next-up-cljs (- number)))))
 
 (s/fdef next-down
   :args (s/cat :number ::number)
