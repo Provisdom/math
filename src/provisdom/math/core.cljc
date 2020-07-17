@@ -694,37 +694,35 @@
                            :more (s/* ::number)))
   :ret boolean?)
 
-#?(:cljs (defn- next-up-cljs
-                "see https://gist.github.com/Yaffle/4654250."
-                [x]
-                (cond (or (not= x x) (inf+? x)) x
-                      (inf-? x) min-dbl
-                      (= x max-dbl) inf+
-                      :else (let [epsilon (pow 2 -52)
-                                  max-value (* (- 2 epsilon) (pow 2 1023))
-                                  min-value (pow 2 -1022)
-                                  y (* x (if (neg? x)
-                                           (one- (/ epsilon 2))
-                                           (inc epsilon)))
-                                  y (cond (= y x) (if (pos? (* min-value epsilon))
-                                                    (+ x (* min-value epsilon))
-                                                    (+ x min-value))
-                                          (inf+? y) max-value
-                                          :else y)
-                                  b (+ x (/ (- y x) 2))
-                                  y (if (and (< x b) (< b y))
-                                      b
-                                      y)
-                                  c (/ (+ y x) 2)]
-                                 (cond (and (< x c) (< c y)) c
-                                       (zero? y) -0
-                                       :else y)))))
-
 (defn next-up
-  "Returns `number` plus smallest amount to make a change."
+  "Returns `number` plus smallest amount to make a change. For cljs version, see 
+  https://gist.github.com/Yaffle/4654250."
   [number]
-  #?(:clj  (Math/nextAfter (double number) ^double inf+)
-     :cljs (next-up-cljs number)))
+  #?(:clj
+     (Math/nextAfter (double number) ^double inf+)
+     :cljs
+     (cond (or (not= number number) (inf+? number)) number
+           (inf-? number) min-dbl
+           (= number max-dbl) inf+
+           :else (let [epsilon (pow 2 -52)
+                       max-value (* (- 2 epsilon) (pow 2 1023))
+                       min-value (pow 2 -1022)
+                       y (* number (if (neg? number)
+                                     (one- (/ epsilon 2))
+                                     (inc epsilon)))
+                       y (cond (= y number) (if (pos? (* min-value epsilon))
+                                              (+ number (* min-value epsilon))
+                                              (+ number min-value))
+                               (inf+? y) max-value
+                               :else y)
+                       b (+ number (/ (- y number) 2))
+                       y (if (and (< number b) (< b y))
+                           b
+                           y)
+                       c (/ (+ y number) 2)]
+                      (cond (and (< number c) (< c y)) c
+                            (zero? y) -0
+                            :else y)))))
 
 (s/fdef next-up
   :args (s/cat :number ::number)
@@ -734,7 +732,7 @@
   "Returns `number` minus smallest amount to make a change."
   [number]
   #?(:clj  (Math/nextAfter (double number) ^double inf-)
-     :cljs (- (next-up-cljs (- number)))))
+     :cljs (- (next-up (- number)))))
 
 (s/fdef next-down
   :args (s/cat :number ::number)
@@ -766,7 +764,7 @@
 (defn one-
   "Returns (1 - `number`). Will always return a double if `numbers` is used."
   ([number] (inc (- number)))
-  ([number & numbers] (inc (- (apply + (double number) numbers)))))
+  ([number & numbers] (inc (- (reduce + (double number) numbers)))))
 
 (s/fdef one-
   :args (s/cat :number ::number :numbers (s/* ::number))
