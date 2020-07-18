@@ -2,8 +2,6 @@
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.utility-belt.strings :as strings]
     [provisdom.math.core :as m]
     [clojure.string :as str]))
@@ -94,7 +92,8 @@
            (m/inf-? number) "-Inf"
            :else (let [rounded-number (double
                                         (if max-decimal-places
-                                          (read-string (format-as-float number max-decimal-places))
+                                          (read-string
+                                            (format-as-float number max-decimal-places))
                                           number))
                        rounded-number-as-string (if max-digits
                                                   (format-as-exponential rounded-number {::digits max-digits})
@@ -105,7 +104,8 @@
                        new-max-length (min max-length (count rounded-number-as-string))
                        standard-digits (count (str (m/round shortened-number :toward-zero)))
                        want-exponential? (or (and (> standard-digits new-max-length)
-                                                  (> standard-digits (+ 5.5 (* -0.5 (m/sgn shortened-number)))))
+                                                  (> standard-digits
+                                                     (+ 5.5 (* -0.5 (m/sgn shortened-number)))))
                                              (< (m/abs shortened-number) 0.0001))]
                    (loop [i (max new-max-length 1)]
                      (let [s (if want-exponential?

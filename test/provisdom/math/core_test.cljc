@@ -7,14 +7,13 @@
     [clojure.spec.test.alpha :as st]
     [provisdom.test.core :refer [is-not is=] :as t]
     [provisdom.math.core :as m]
-    #?(:clj  [orchestra.spec.test :as ost]
-       :cljs [orchestra-cljs.spec.test :as ost])))
+    #?(:clj [orchestra.spec.test :as ost])))
 
 ;;7 seconds
 
 #?(:clj (set! *warn-on-reflection* true))
 
-(ost/instrument)
+#?(:clj (ost/instrument))
 
 ;;TYPE TESTS
 (deftest numbers?-test
@@ -488,7 +487,9 @@
 
 (deftest log2-test
   (is (spec-check m/log2))
-  (is= 1.5849625007211563 (m/log2 3))
+  (is= #?(:clj  1.5849625007211563
+          :cljs 1.584962500721156)
+       (m/log2 3))
   (is= m/inf- (m/log2 0))
   (is= m/inf+ (m/log2 m/inf+))
   (is (m/nan? (m/log2 m/nan)))
@@ -504,7 +505,9 @@
   (is (m/nan? (m/logn -3.0 3)))
   (is (m/nan? (m/logn m/nan 3)))
   (is= 0.0 (m/logn 1.0 3))
-  (is= -0.09590327428938458 (m/logn 0.9 3))
+  (is= #?(:clj  -0.09590327428938458
+          :cljs -0.0959032742893846)
+       (m/logn 0.9 3))
   (is= m/inf- (m/logn 0.9 1))
   (is= 0.15200309344504997 (m/logn 0.9 0.5))
   (is= 0.0 (m/logn 0.9 0))
@@ -807,7 +810,9 @@
   (is= 1 (m/mod' 3.0 2))
   (is= 1 (m/mod' 3 2.0))
   (is= 0.8799999999999999 (m/mod' 3 2.12))
-  (is (zero? (m/mod' 3.0E40 2.12)))
+  (is (= #?(:clj  0
+            :cljs 0.05396696041531257)
+         (m/mod' 3.0E40 2.12)))
   (is (m/nan? (m/mod' m/inf+ 3)))
   (is (m/nan? (m/mod' m/inf- 4)))
   (is (m/nan? (m/mod' m/nan 2)))
@@ -876,7 +881,9 @@
   (is= [1 1] (m/quot-and-mod' 3.0 2))
   (is= [1 1] (m/quot-and-mod' 3 2.0))
   (is= [1 0.8799999999999999] (m/quot-and-mod' 3 2.12))
-  (is= [1.4150943396226415E40 0] (m/quot-and-mod' 3.0E40 2.12))
+  (is= #?(:clj  [1.4150943396226415E40 0]
+          :cljs [1.4150943396226415E40 0.05396696041531257])
+       (m/quot-and-mod' 3.0E40 2.12))
   (is (every? m/nan? (m/quot-and-mod' m/inf+ 3)))
   (is (every? m/nan? (m/quot-and-mod' m/inf- 4)))
   (is (every? m/nan? (m/quot-and-mod' m/nan 2)))
@@ -906,7 +913,9 @@
   (is= 5.267258771281654 (m/reduce-radians' 30.4))
   (is (zero? (m/reduce-radians' m/two-pi)))
   (is= m/PI (m/reduce-radians' m/PI))
-  (is= 0.06552912132908517 (m/reduce-radians' -8399494))
+  (is= #?(:clj  0.06552912132908517
+          :cljs 0.06552912164624303)
+       (m/reduce-radians' -8399494))
   (is (m/nan? (m/reduce-radians' m/nan)))
   (is (m/nan? (m/reduce-radians' m/inf+)))
   (is (m/nan? (m/reduce-radians' m/inf-))))
@@ -914,10 +923,16 @@
 (deftest radians->angle'-test
   (is (spec-check m/radians->angle'))
   (is (zero? (m/radians->angle' 0)))
-  (is= 194.8056503444799 (m/radians->angle' 3.4))
+  (is= #?(:clj  194.8056503444799
+          :cljs 194.80565034447991)
+       (m/radians->angle' 3.4))
   (is (zero? (m/radians->angle' m/two-pi)))
-  (is= 165.1943496555201 (m/radians->angle' -3.4))
-  (is= 58.31007808870436 (m/radians->angle' 45))
+  (is= #?(:clj  165.1943496555201
+          :cljs 165.19434965552009)
+       (m/radians->angle' -3.4))
+  (is= #?(:clj  58.31007808870436
+          :cljs 58.31007808870481)
+       (m/radians->angle' 45))
   (is (m/nan? (m/radians->angle' m/nan)))
   (is= m/inf+ (m/radians->angle' m/inf+))
   (is= m/inf- (m/radians->angle' m/inf-)))

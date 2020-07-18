@@ -1,5 +1,5 @@
 (ns provisdom.math.core
-  (:refer-clojure :exclude [pos? neg? int? infinite? ===])
+  (:refer-clojure :exclude [pos? neg? int? infinite?])
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -720,9 +720,9 @@
                            b
                            y)
                        c (/ (+ y number) 2)]
-                      (cond (and (< number c) (< c y)) c
-                            (zero? y) -0
-                            :else y)))))
+                   (cond (and (< number c) (< c y)) c
+                         (zero? y) -0
+                         :else y)))))
 
 (s/fdef next-up
   :args (s/cat :number ::number)
@@ -1267,7 +1267,10 @@
       (if (or (inf? d) (nan? d))
         nan
         (maybe-long-able
-          (mod numerator divisor))))))
+          #?(:clj  (mod numerator divisor)
+             :cljs (if (= (sgn numerator) (sgn divisor))
+                     (js-mod numerator divisor)
+                     (mod numerator divisor))))))))
 
 (s/fdef mod'
   :args (s/cat :numerator ::number
@@ -1316,7 +1319,8 @@
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
-        q (if (and (not (zero? numerator)) (= (sgn numerator) (- (sgn m))))
+        q (if (and (not (zero? numerator))
+                   (= (sgn numerator) (- (sgn m))))
             (maybe-long-able (dec (double q)))
             q)]
     [q m]))
@@ -1388,7 +1392,8 @@
   [radians]
   (if (inf? radians)
     radians
-    (reduce-angle' (Math/toDegrees radians))))
+    (reduce-angle' #?(:clj  (Math/toDegrees radians)
+                      :cljs (* radians 180.0 inv-pi)))))
 
 (s/fdef radians->angle'
   :args (s/cat :radians ::number)
@@ -1403,7 +1408,10 @@
   [angle]
   (if (inf? angle)
     angle
-    (maybe-long-able (Math/toRadians (reduce-angle' angle)))))
+    (maybe-long-able #?(:clj  (Math/toRadians (reduce-angle' angle))
+                        :cljs (* (reduce-angle' angle)
+                                 PI
+                                 (/ 180.0))))))
 
 (s/fdef angle->radians'
   :args (s/cat :angle ::number)
