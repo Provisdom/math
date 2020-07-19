@@ -1,9 +1,8 @@
 (ns provisdom.math.intervals
+  #?(:cljs (:require-macros [provisdom.math.intervals]))
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]))
 
 (def mdl 6)
@@ -17,9 +16,11 @@
                    :or   {compare-op `>=}}]
    `(s/with-gen
       (s/and (s/tuple ~lower ~upper)
-             (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
-                                   (and (m/nan? ~'x1) (m/nan? ~'x2)))))
-      #(gen/fmap (comp vec sort) (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
+             (fn [[~'x1 ~'x2]]
+               (or (~compare-op ~'x2 ~'x1)
+                   (and (m/nan? ~'x1) (m/nan? ~'x2)))))
+      #(gen/fmap (comp vec sort)
+                 (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
 
 (defmacro strict-interval-spec
   ([spec] `(strict-interval-spec ~spec ~spec))
@@ -27,31 +28,18 @@
    `(interval-spec ~lower ~upper :compare-op > ~@opts)))
 
 (s/def ::interval (interval-spec ::m/number))
-
 (s/def ::num-interval (interval-spec ::m/num))
-
 (s/def ::pos-interval (interval-spec ::m/pos))
-
 (s/def ::finite-interval (interval-spec ::m/finite))
-
 (s/def ::finite+-interval (interval-spec ::m/finite+))
-
 (s/def ::prob-interval (interval-spec ::m/prob))
-
 (s/def ::open-prob-interval (interval-spec ::m/open-prob))
-
 (s/def ::finite+-interval (interval-spec ::m/finite+))
-
 (s/def ::finite-non--interval (interval-spec ::m/finite-non-))
-
 (s/def ::int-interval (interval-spec ::m/int))
-
 (s/def ::int+-interval (interval-spec ::m/int+))
-
 (s/def ::int-non--interval (interval-spec ::m/int-non-))
-
 (s/def ::long-interval (interval-spec ::m/long))
-
 (s/def ::long+-interval (interval-spec ::m/long+))
 
 (defn long-interval-gen
@@ -135,7 +123,8 @@
          (<= number upper))))
 
 (s/fdef in-bounds?
-  :args (s/cat :bounds ::bounds :number ::m/number)
+  :args (s/cat :bounds ::bounds
+               :number ::m/number)
   :ret boolean?)
 
 ;;;BOUNDS CONSTRUCTORS
@@ -200,7 +189,8 @@
   ([size bounds] (into [] (repeat size bounds))))
 
 (s/fdef vector-bounds
-  :args (s/cat :size ::size :bounds (s/? ::bounds))
+  :args (s/cat :size ::size
+               :bounds (s/? ::bounds))
   :ret ::vector-bounds)
 
 (defn positive-definite-matrix-bounds

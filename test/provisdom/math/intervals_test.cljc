@@ -1,17 +1,17 @@
 (ns provisdom.math.intervals-test
   (:require
-    [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
+    [clojure.test :refer [deftest is are testing run-tests]]
+    [clojure.spec.test.alpha]
+    [provisdom.test.core :refer [is-not is=]]
     [provisdom.math.intervals :as intervals]
     [provisdom.math.core :as m]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    #?(:clj [orchestra.spec.test :as ost])))
 
 ;;3 seconds
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
-(ost/instrument)
+#?(:clj (ost/instrument))
 
 ;;;INTERVAL TEST
 (deftest in-interval?-test

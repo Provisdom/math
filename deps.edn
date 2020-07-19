@@ -6,7 +6,7 @@
                                            criterium                 {:mvn/version "0.4.6"}
                                            org.clojure/test.check    {:mvn/version "1.1.0"}
                                            provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                                      :sha     "d6d818a006f9367ff209fedf3fb6be345a13d877"}
+                                                                      :sha     "ce443de2f550f6c69e217591489841e33a5d43d6"}
                                            com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                       :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
            :test-cljs       {:extra-deps {thheller/shadow-cljs {:mvn/version "2.10.15"}}}
