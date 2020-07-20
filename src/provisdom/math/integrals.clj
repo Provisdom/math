@@ -720,7 +720,7 @@
 (s/fdef change-of-variable
   :args (s/cat :num-interval ::intervals/num-interval)
   :ret (s/keys :req [::multiplicative-fn
-                     ::converter-fn :
+                     ::converter-fn
                      :intervals/finite-interval]))
 
 (defn- change-of-variable-for-integration
