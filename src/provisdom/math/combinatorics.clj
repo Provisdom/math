@@ -223,7 +223,8 @@
     (throw (ex-info "Not Implemented" {:fn (var generalized-hypergeometric)}))))
 
 ;;;UNORDERED COMBINATIONS
-(def mdl 3)                                                 ;max-dim-length for generators
+;;max-dim-length for generators
+(def mdl 3)
 
 (s/def ::items
   (s/with-gen
@@ -267,7 +268,8 @@
                                    j j]
                               (if (= j 1)
                                 [c j]
-                                (recur (assoc c (dec j) (dec (c j))) (dec j))))))))
+                                (recur (assoc c (dec j) (dec (c j)))
+                                       (dec j))))))))
           step (fn step [c j]
                  (cons (rseq (subvec c 1 (inc n)))
                        (lazy-seq

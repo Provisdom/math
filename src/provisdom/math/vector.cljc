@@ -1,23 +1,21 @@
 (ns provisdom.math.vector
   (:refer-clojure :exclude [vector?])
+  #?(:cljs (:require-macros [provisdom.math.vector :refer [vector-spec]]))
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
 (declare kahan-sum)
 
-(def mdl 6)                                                 ;max-dim-length for generators
+;;max-dim-length for generators
+(def mdl 6)
 
 (s/def ::size
   (s/with-gen ::m/int-non-
               #(gen/large-integer* {:min 0 :max mdl})))
-
-(s/def ::vector ::tensor/tensor1D)
 
 (s/def ::vector-2D
   (s/with-gen
@@ -37,46 +35,21 @@
                :max-count 3)
     #(gen/vector (s/gen ::m/number) 3)))
 
-(s/def ::vector-num
-  (s/with-gen
-    (s/coll-of ::m/num
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/num) 0 mdl)))
+(defmacro vector-spec
+  [pred min-count max-gen]
+  `(s/coll-of ~pred
+              :kind clojure.core/vector?
+              :into []
+              :min-count ~min-count
+              :max-gen ~max-gen))
 
-(s/def ::vector-finite
-  (s/with-gen
-    (s/coll-of ::m/finite
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/finite) 0 mdl)))
-
-(s/def ::vector-finite+
-  (s/with-gen
-    (s/coll-of ::m/finite+
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/finite+) 0 mdl)))
-
-(s/def ::vector-prob
-  (s/coll-of ::m/prob
-             :kind clojure.core/vector?
-             :into []
-             :gen-max mdl))
-
-(s/def ::vector-open-prob
-  (s/with-gen
-    (s/coll-of ::m/open-prob
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/open-prob) 0 mdl)))
-
-(s/def ::vector-long
-  (s/with-gen
-    (s/coll-of ::m/long
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/long) 0 mdl)))
+(s/def ::vector (vector-spec ::m/number 0 mdl))
+(s/def ::vector-num (vector-spec ::m/num 0 mdl))
+(s/def ::vector-finite (vector-spec ::m/finite 0 mdl))
+(s/def ::vector-finite+ (vector-spec ::m/finite+ 0 mdl))
+(s/def ::vector-prob (vector-spec ::m/prob 0 mdl))
+(s/def ::vector-open-prob (vector-spec ::m/open-prob 0 mdl))
+(s/def ::vector-long (vector-spec ::m/long 0 mdl))
 
 (s/def ::sparse-vector
   (s/with-gen
@@ -85,8 +58,10 @@
                           (gen/large-integer* {:min 0 :max mdl}))
                (fn [[i j]]
                  (gen/vector
-                   (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
-                              (s/gen ::m/number))
+                   (gen/tuple
+                     (gen/large-integer* {:min 0
+                                          :max (max 0 (dec (max i j)))})
+                     (s/gen ::m/number))
                    (min i j))))))
 
 (s/def ::index->number
@@ -319,9 +294,12 @@
       (and (empty? coll1) (empty? coll2)) coll2
       (zero? i) (if (empty? coll2)
                   (cons (first coll1) (concat-by-index (rest coll1) '() 0))
-                  (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
-      (neg? i) (cons (first coll2) (concat-by-index coll1 (rest coll2) (inc i)))
-      (pos? i) (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
+                  (cons (first coll2)
+                        (concat-by-index (rest coll1) (rest coll2) i)))
+      (neg? i) (cons (first coll2)
+                     (concat-by-index coll1 (rest coll2) (inc i)))
+      (pos? i) (cons (first coll1)
+                     (concat-by-index (rest coll1) coll2 (dec i))))))
 
 (s/fdef concat-by-index
   :args (s/cat :coll1 (s/coll-of any?)

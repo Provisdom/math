@@ -237,11 +237,13 @@
   (is= nil (mx/deserialize-upper-triangular-matrix [1.0 2.0]))
   (is= [[1.0 2.0] [0.0 3.0]]
        (mx/deserialize-upper-triangular-matrix [1.0 2.0 3.0]))
-  (is= [[7.0 1.0 2.0 4.0] [0.0 8.0 3.0 5.0] [0.0 0.0 9.0 6.0] [0.0 0.0 0.0 10.0]]
+  (is= [[7.0 1.0 2.0 4.0] [0.0 8.0 3.0 5.0]
+        [0.0 0.0 9.0 6.0] [0.0 0.0 0.0 10.0]]
        (mx/deserialize-upper-triangular-matrix
          [7.0 8.0 9.0 10.0] [1.0 2.0 3.0 4.0 5.0 6.0]
          {::mx/by-row? false}))
-  (is= [[7.0 1.0 2.0 3.0] [0.0 8.0 4.0 5.0] [0.0 0.0 9.0 6.0] [0.0 0.0 0.0 10.0]]
+  (is= [[7.0 1.0 2.0 3.0] [0.0 8.0 4.0 5.0]
+        [0.0 0.0 9.0 6.0] [0.0 0.0 0.0 10.0]]
        (mx/deserialize-upper-triangular-matrix
          [7.0 8.0 9.0 10.0] [1.0 2.0 3.0 4.0 5.0 6.0]
          {::mx/by-row? true}))
@@ -258,11 +260,13 @@
   (is= nil (mx/deserialize-lower-triangular-matrix [1.0 2.0]))
   (is= [[1.0 0.0] [2.0 3.0]]
        (mx/deserialize-lower-triangular-matrix [1.0 2.0 3.0]))
-  (is= [[7.0 0.0 0.0 0.0] [1.0 8.0 0.0 0.0] [2.0 4.0 9.0 0.0] [3.0 5.0 6.0 10.0]]
+  (is= [[7.0 0.0 0.0 0.0] [1.0 8.0 0.0 0.0]
+        [2.0 4.0 9.0 0.0] [3.0 5.0 6.0 10.0]]
        (mx/deserialize-lower-triangular-matrix
          [7.0 8.0 9.0 10.0] [1.0 2.0 3.0 4.0 5.0 6.0]
          {::mx/by-row? false}))
-  (is= [[7.0 0.0 0.0 0.0] [1.0 8.0 0.0 0.0] [2.0 3.0 9.0 0.0] [4.0 5.0 6.0 10.0]]
+  (is= [[7.0 0.0 0.0 0.0] [1.0 8.0 0.0 0.0]
+        [2.0 3.0 9.0 0.0] [4.0 5.0 6.0 10.0]]
        (mx/deserialize-lower-triangular-matrix
          [7.0 8.0 9.0 10.0] [1.0 2.0 3.0 4.0 5.0 6.0]
          {::mx/by-row? true}))
@@ -304,26 +308,26 @@
 (deftest rnd-matrix!-test
   (is (spec-check mx/rnd-matrix!))
   (random/bind-seed 0
-                    (is= [[]] (mx/rnd-matrix! 0 0)))
+    (is= [[]] (mx/rnd-matrix! 0 0)))
   (random/bind-seed 0
-                    (is= [[0.8833108082136426 0.026433771592597743]
-                          [0.10634669156721244 0.17386786595968284]]
-                         (mx/rnd-matrix! 2 2)))
-  (random/bind-seed 0
-                    (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
-                          [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
-                         (mx/rnd-matrix! 2 3))))
+    (is= [[0.8833108082136426 0.026433771592597743]
+          [0.10634669156721244 0.17386786595968284]]
+         (mx/rnd-matrix! 2 2)))
+  (random/bind-seed
+    0 (is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
+            [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
+           (mx/rnd-matrix! 2 3))))
 
 (deftest rnd-reflection-matrix!-test
   (is (spec-check mx/rnd-reflection-matrix!))
   (random/bind-seed 0
-                    (is= [[]] (mx/rnd-reflection-matrix! 0)))
+    (is= [[]] (mx/rnd-reflection-matrix! 0)))
   (random/bind-seed 0
-                    (is= [[-1.0]] (mx/rnd-reflection-matrix! 1)))
+    (is= [[-1.0]] (mx/rnd-reflection-matrix! 1)))
   (random/bind-seed 0
-                    (is= [[-0.9982104970725829 -0.059798022827738856]
-                          [-0.059798022827738856 0.998210497072583]]
-                         (mx/rnd-reflection-matrix! 2))))
+    (is= [[-0.9982104970725829 -0.059798022827738856]
+          [-0.059798022827738856 0.998210497072583]]
+         (mx/rnd-reflection-matrix! 2))))
 
 (deftest rnd-spectral-matrix!-test
   (is (spec-check mx/rnd-spectral-matrix!
@@ -333,13 +337,13 @@
                    :recursion-limit  1
                    :test-check       {:num-tests 300}}))
   (random/bind-seed 0
-                    (is= [[]] (mx/rnd-spectral-matrix! [])))
+    (is= [[]] (mx/rnd-spectral-matrix! [])))
   (random/bind-seed 0
-                    (is= [[2.0]] (mx/rnd-spectral-matrix! [2.0])))
+    (is= [[2.0]] (mx/rnd-spectral-matrix! [2.0])))
   (random/bind-seed 0
-                    (is= [[1.7925482077721386 -0.9782452422074177]
-                          [-0.9782452422074177 2.2074517922278627]]
-                         (mx/rnd-spectral-matrix! [1.0 3.0]))))
+    (is= [[1.7925482077721386 -0.9782452422074177]
+          [-0.9782452422074177 2.2074517922278627]]
+         (mx/rnd-spectral-matrix! [1.0 3.0]))))
 
 (deftest sparse->matrix-test
   (is (spec-check mx/sparse->matrix))

@@ -108,7 +108,8 @@
         arr2 (array/double-array2D-copy arr)
         _ (aset arr 0 0 0.0)]
     (is (array/double-array2D= arr (array/array2D :double [[0.0 2 3] [4 5 6]])))
-    (is (array/double-array2D= arr2 (array/array2D :double [[1 2 3] [4 5 6]])))))
+    (is (array/double-array2D=
+          arr2 (array/array2D :double [[1 2 3] [4 5 6]])))))
 
 (deftest double-array=-test
   (is (spec-check array/double-array=))
@@ -285,7 +286,8 @@
        (array/double-array-correlation (double-array [1 2 3])
                                        (double-array [3 6 5]))))
 
-;;;DOUBLE-ARRAYS -- TIME TESTS -- useful for huge vectors or repetitive computation.
+;;;DOUBLE-ARRAYS -- TIME TESTS
+;;; -- useful for huge vectors or repetitive computation.
 ;;Conversion time is slow.
 (comment
   ;; Perf comp between aget and aget-d

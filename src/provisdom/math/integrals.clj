@@ -36,7 +36,8 @@
 ;;;;    Write Clenshaw-Curtis and Fejer algos; see Wiki and 
 ;;;;see http://www.gnu.org/software/gsl/manual/html_node/ for more
 ;;;;    http://ab-initio.mit.edu/wiki/index.php/Cubature
-;;;;    extend to n-dim integration over functions that output vectors or matrices
+;;;;    extend to n-dim integration over functions that output vectors or
+;;;;     matrices
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
@@ -389,15 +390,20 @@
         unnormalized-nodes (map (partial unnormalize half-sum half-diff)
                                 nodes)
         mapped-nodes (mapv number->tensor unnormalized-nodes)
-        high-precision-values (tensor/multiply half-diff
-                                               (tensor/inner-product high-precision-weights mapped-nodes))
+        high-precision-values (tensor/multiply
+                                half-diff
+                                (tensor/inner-product
+                                  high-precision-weights mapped-nodes))
         low-precision-nodes (tensor/filter-kv (fn [idx _]
                                                 (odd? idx))
                                               mapped-nodes)
-        low-precision-values (tensor/multiply half-diff
-                                              (tensor/inner-product low-precision-weights low-precision-nodes))
-        error (tensor/emap m/abs
-                           (tensor/subtract low-precision-values high-precision-values))]
+        low-precision-values (tensor/multiply
+                               half-diff
+                               (tensor/inner-product
+                                 low-precision-weights low-precision-nodes))
+        error (tensor/emap
+                m/abs
+                (tensor/subtract low-precision-values high-precision-values))]
     {::error                 error
      ::high-precision-values high-precision-values}))
 
@@ -412,28 +418,40 @@
    `::rectangular-error`
    `::high-precision-value`
    `::one-dimension-errors`."
-  [v->tensor finite-intervals [low-precision-weights high-precision-weights nodes]]
+  [v->tensor
+   finite-intervals
+   [low-precision-weights high-precision-weights nodes]]
   (let [half-sums (mapv tensor/average finite-intervals)
         half-diffs (mapv (fn [[a b]]
                            (* 0.5 (- b a)))
                          finite-intervals)
         unnormalized-nodes (for [v (range (count finite-intervals))]
-                             (mapv (partial unnormalize (nth half-sums v) (nth half-diffs v))
-                                   nodes))
+                             (mapv
+                               (partial unnormalize
+                                        (nth half-sums v)
+                                        (nth half-diffs v))
+                               nodes))
         mapped-nodes (mapv v->tensor
-                           (tensor/to-tensor (apply combo/cartesian-product unnormalized-nodes)))
+                           (tensor/to-tensor
+                             (apply combo/cartesian-product
+                                    unnormalized-nodes)))
         multiplier (apply * half-diffs)
         dimensions (count finite-intervals)
-        f-low-precision #(tensor/inner-product low-precision-weights (vec (take-nth 2 (rest %))))
+        f-low-precision #(tensor/inner-product
+                           low-precision-weights (vec (take-nth 2 (rest %))))
         f-high-precision #(tensor/inner-product high-precision-weights %)
         f1dim (if (zero? dimensions)
                 [[]]
                 (mapv (fn [row]
                         (mapv (fn [column]
-                                (if (= row column) f-low-precision f-high-precision))
+                                (if (= row column)
+                                  f-low-precision
+                                  f-high-precision))
                               (range dimensions)))
                       (range dimensions)))
-        partitioned-nodes (tensor/partition-recursively (count high-precision-weights) mapped-nodes)
+        partitioned-nodes (tensor/partition-recursively
+                            (count high-precision-weights)
+                            mapped-nodes)
         reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef]
                                                         (ef tot))
                                                       partitioned-nodes
@@ -462,14 +480,16 @@
   (let [tolerance (adjust-accu-gk accu)
 
         {::keys [error high-precision-values]}
-        (get-error-and-high-precision-values number->tensor [a b] weights-and-nodes)]
+        (get-error-and-high-precision-values
+          number->tensor [a b] weights-and-nodes)]
     (loop [iter 1
            error-maps [{:uni-error       error
                         :high-values     high-precision-values
                         :finite-interval [a b]}]]
       (let [total-error (apply + (flatten (map :uni-error error-maps)))]
+        ;;using 'not' captures NaN
         (if (and (>= iter min-iter)
-                 (not (> total-error tolerance))) ;using 'not' captures NaN
+                 (not (> total-error tolerance)))
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
             {::anomalies/message  (str "Error contains NaN. Value: "
@@ -497,11 +517,11 @@
                    (get-error-and-high-precision-values
                      number->tensor [mn bn] weights-and-nodes)]
                   #_(async/thread
-                    :all
-                    [#(get-error-and-high-precision-values
-                        number->tensor [an mn] weights-and-nodes)
-                     #(get-error-and-high-precision-values
-                        number->tensor [mn bn] weights-and-nodes)])
+                      :all
+                      [#(get-error-and-high-precision-values
+                          number->tensor [an mn] weights-and-nodes)
+                       #(get-error-and-high-precision-values
+                          number->tensor [mn bn] weights-and-nodes)])
 
                   new-error-maps [{:uni-error       error1
                                    :high-values     high-precision-values1
@@ -533,10 +553,11 @@
     (apply max one-dimension-errors)))
 
 (s/def ::splitting-importance-fn
-  (s/with-gen (s/fspec :args (s/cat :rectangular-error ::rectangular-error
-                                    :one-dimension-errors ::one-dimension-errors)
-                       :ret ::m/number)
-              #(gen/return simple-splitting-importance-fn)))
+  (s/with-gen
+    (s/fspec :args (s/cat :rectangular-error ::rectangular-error
+                          :one-dimension-errors ::one-dimension-errors)
+             :ret ::m/number)
+    #(gen/return simple-splitting-importance-fn)))
 
 (s/def simple-splitting-importance-fn ::splitting-importance-fn)
 
@@ -587,53 +608,66 @@
                         :one-dim-errors       one-dimension-errors
                         :finite-intervals     finite-intervals}]]
       (let [total-error (apply + (map :rect-error error-maps))]
-        (if (and (>= iter min-iter) (not (> total-error tolerance))) ;using 'not' captures NaN
+        ;;using 'not' captures NaN
+        (if (and (>= iter min-iter) (not (> total-error tolerance)))
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
             {::anomalies/message  (str "Error contains NaN. Value: "
-                                       (apply tensor/add (map :high-values error-maps)))
+                                       (apply tensor/add
+                                              (map :high-values error-maps)))
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve})
           (if (>= iter max-iter)
-            {::anomalies/message  (str "Iteration limit reached.  Error: " total-error " Value: "
-                                       (apply tensor/add (map :high-values error-maps)))
+            {::anomalies/message  (str "Iteration limit reached.  Error: "
+                                       total-error
+                                       " Value: "
+                                       (apply tensor/add
+                                              (map :high-values error-maps)))
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
              ::anomalies/category ::anomalies/no-solve}
             (let [{intervals-n    :finite-intervals
                    one-dim-errors :one-dim-errors} (peek error-maps)
-                  dimensions (select-dimensions-fn one-dim-errors (< iter min-iter))
-                  dims-with-new-intervals (map #(let [[an bn] (nth intervals-n %)
-                                                      mn (* 0.5 (+ an bn))]
-                                                  [[% an mn] [% mn bn]])
-                                               dimensions)
+                  dimensions (select-dimensions-fn
+                               one-dim-errors (< iter min-iter))
+                  dims-with-new-intervals (map
+                                            #(let [[an bn] (nth intervals-n %)
+                                                   mn (* 0.5 (+ an bn))]
+                                               [[% an mn] [% mn bn]])
+                                            dimensions)
                   new-intervals (map (fn [dim-with-interval]
                                        (reduce (fn [tot [d an bn]]
                                                  (assoc tot d [an bn]))
                                                intervals-n
                                                dim-with-interval))
-                                     (apply combo/cartesian-product dims-with-new-intervals))
-                  new-fns (map (fn [intervals-local]
-                                 #(get-rectangular-errors-and-high-precision-value
-                                    v->tensor intervals-local weights-and-nodes))
-                               new-intervals)
-                  new-error-maps (mapv (fn [finite-intervals
-                                            {rect-error     ::rectangular-error
-                                             one-dim-errors ::one-dimension-errors
-                                             high-values    ::high-precision-values}]
-                                         {:splitting-importance (splitting-importance-fn rect-error one-dim-errors)
-                                          :rect-error           rect-error
-                                          :high-values          high-values
-                                          :one-dim-errors       one-dim-errors
-                                          :finite-intervals     finite-intervals})
-                                       new-intervals
-                                       new-fns
-                                       #_(async/thread :all new-fns))
-                  new-error-maps (into [] (sort-by (fn [m]
-                                                     (if (m/nan? (:splitting-importance m))
-                                                       m/inf+
-                                                       (:splitting-importance m)))
-                                                   (concat (pop error-maps) new-error-maps)))]
-              (recur (inc iter) new-error-maps))))))))
+                                     (apply combo/cartesian-product
+                                            dims-with-new-intervals))
+                  new-fns (map
+                            (fn [intervals-local]
+                              #(get-rectangular-errors-and-high-precision-value
+                                 v->tensor intervals-local weights-and-nodes))
+                            new-intervals)
+                  n-err-maps (mapv
+                               (fn [finite-intervals
+                                    {rect-error     ::rectangular-error
+                                     one-dim-errors ::one-dimension-errors
+                                     high-values    ::high-precision-values}]
+                                 {:splitting-importance (splitting-importance-fn
+                                                          rect-error
+                                                          one-dim-errors)
+                                  :rect-error           rect-error
+                                  :high-values          high-values
+                                  :one-dim-errors       one-dim-errors
+                                  :finite-intervals     finite-intervals})
+                               new-intervals
+                               new-fns
+                               #_(async/thread :all new-fns))
+                  n-err-maps (into [] (sort-by
+                                        (fn [m]
+                                          (if (m/nan? (:splitting-importance m))
+                                            m/inf+
+                                            (:splitting-importance m)))
+                                        (concat (pop error-maps) n-err-maps)))]
+              (recur (inc iter) n-err-maps))))))))
 
 (s/fdef rectangular-adaptive-quadrature
   :args (s/cat :v->tensor ::v->tensor
@@ -653,37 +687,47 @@
     `::intervals/finite-interval`."
   [[a b]]
   (cond
-    (and (m/inf-? a) (m/inf+? b)) {::multiplicative-fn         (fn [number]
-                                                                 (let [s (m/sq number)]
-                                                                   (m/div (inc s) (m/sq (m/one- s)))))
-                                   ::converter-fn              (fn [number]
-                                                                 (m/div number (m/one- (m/sq number))))
-                                   ::intervals/finite-interval [-1.0 1.0]}
-    (m/inf+? b) {::multiplicative-fn         (fn [number]
-                                               (m/div (m/sq number)))
-                 ::converter-fn              (fn [number]
-                                               (+ a (m/div (m/one- number) number)))
-                 ::intervals/finite-interval [0.0 1.0]}
-    (m/inf-? a) {::multiplicative-fn         (fn [number]
-                                               (m/div (m/sq number)))
-                 ::converter-fn              (fn [number]
-                                               (- b (m/div (m/one- number) number)))
-                 ::intervals/finite-interval [0.0 1.0]}
-    :else {::multiplicative-fn         (constantly 1.0)
-           ::converter-fn              identity
-           ::intervals/finite-interval [a b]}))
+    (and (m/inf-? a) (m/inf+? b))
+    {::multiplicative-fn         (fn [number]
+                                   (let [s (m/sq number)]
+                                     (m/div (inc s) (m/sq (m/one- s)))))
+     ::converter-fn              (fn [number]
+                                   (m/div number (m/one- (m/sq number))))
+     ::intervals/finite-interval [-1.0 1.0]}
+
+    (m/inf+? b)
+    {::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq number)))
+     ::converter-fn              (fn [number]
+                                   (+ a (m/div (m/one- number) number)))
+     ::intervals/finite-interval [0.0 1.0]}
+
+    (m/inf-? a)
+    {::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq number)))
+     ::converter-fn              (fn [number]
+                                   (- b (m/div (m/one- number) number)))
+     ::intervals/finite-interval [0.0 1.0]}
+
+    :else
+    {::multiplicative-fn         (constantly 1.0)
+     ::converter-fn              identity
+     ::intervals/finite-interval [a b]}))
 
 (s/def ::multiplicative-fn ::number->number)
 (s/def ::converter-fn ::number->number)
 
 (s/fdef change-of-variable
   :args (s/cat :num-interval ::intervals/num-interval)
-  :ret (s/keys :req [::multiplicative-fn ::converter-fn ::intervals/finite-interval]))
+  :ret (s/keys :req [::multiplicative-fn
+                     ::converter-fn :
+                     :intervals/finite-interval]))
 
 (defn- change-of-variable-for-integration
   "Returns the new function and new finite-interval as a tuple."
   [number->tensor [a b]]
-  (let [{:keys [::multiplicative-fn ::converter-fn ::intervals/finite-interval]} (change-of-variable [a b])]
+  (let [{:keys [::multiplicative-fn ::converter-fn
+                ::intervals/finite-interval]} (change-of-variable [a b])]
     [#(tensor/multiply (multiplicative-fn %) (number->tensor (converter-fn %)))
      finite-interval]))
 
@@ -738,8 +782,11 @@
    (let [points (cond points points
                       (some m/inf? [a b]) 15
                       :else 21)
-         [new-fn new-interval] (change-of-variable-for-integration number->tensor [a b])]
-     (adaptive-quadrature new-fn new-interval accu iter-interval (weights-and-nodes-gk points)))))
+         [new-fn
+          new-interval] (change-of-variable-for-integration
+                          number->tensor [a b])]
+     (adaptive-quadrature
+       new-fn new-interval accu iter-interval (weights-and-nodes-gk points)))))
 
 (s/fdef integration
   :args (s/cat :number->tensor ::number->tensor
@@ -764,18 +811,32 @@
     With more than 4 dimensions, use Monte Carlo simulation instead for speed.
     Very large absolute ranges (not infinite) can cause approximation errors due
       to limited rounded accuracy of the 'double' type."
-  ([v->tensor num-intervals] (rectangular-integration v->tensor num-intervals {}))
+  ([v->tensor num-intervals]
+   (rectangular-integration v->tensor num-intervals {}))
   ([v->tensor num-intervals {:keys [::points ::m/accu ::iter-interval]
                              :or   {points        15
                                     iter-interval [10 1000]}}]
    (let [dimensions (count num-intervals)
-         accu (cond accu accu
-                    (or (and (some m/inf? (flatten num-intervals)) (>= dimensions 3)) (>= dimensions 4)) m/sgl-close
-                    :else m/dbl-close)
-         [new-fn new-intervals] (change-of-variable-for-rectangular-integration v->tensor num-intervals)
+         accu (cond accu
+                    accu
+
+                    (or (and (some m/inf? (flatten num-intervals))
+                             (>= dimensions 3))
+                        (>= dimensions 4))
+                    m/sgl-close
+
+                    :else
+                    m/dbl-close)
+         [new-fn new-intervals] (change-of-variable-for-rectangular-integration
+                                  v->tensor num-intervals)
          weights-and-nodes (weights-and-nodes-gk points)]
      (rectangular-adaptive-quadrature
-       new-fn new-intervals accu iter-interval weights-and-nodes simple-splitting-importance-fn
+       new-fn
+       new-intervals
+       accu
+       iter-interval
+       weights-and-nodes
+       simple-splitting-importance-fn
        simple-select-dimensions-fn))))
 
 (s/fdef rectangular-integration
@@ -798,7 +859,8 @@
       for quadrature type)
     `::iter-interval` -- default per dimension is [10 1000]."
   ([number2->tensor outer-interval outer->inner-interval]
-   (non-rectangular-2D-integration number2->tensor outer-interval outer->inner-interval {}))
+   (non-rectangular-2D-integration
+     number2->tensor outer-interval outer->inner-interval {}))
   ([number2->tensor outer-interval outer->inner-interval
     {:keys [::points ::m/accu ::iter-interval]
      :or   {points        15
@@ -846,10 +908,20 @@
     `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted
       for quadrature type)
     `::iter-interval` -- default per dimension is [3 300]."
-  ([number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval]
+  ([number3->tensor
+    outer-interval
+    outer->middle-interval
+    outer+middle->inner-interval]
    (non-rectangular-3D-integration
-     number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval {}))
-  ([number3->tensor outer-interval outer->middle-interval outer+middle->inner-interval
+     number3->tensor
+     outer-interval
+     outer->middle-interval
+     outer+middle->inner-interval
+     {}))
+  ([number3->tensor
+    outer-interval
+    outer->middle-interval
+    outer+middle->inner-interval
     {:keys [::points ::m/accu ::iter-interval]
      :or   {points        15
             accu          m/sgl-close
@@ -863,7 +935,8 @@
                  (let [ret-inner (integration
                                    (fn [inner]
                                      (number3->tensor outer middle inner))
-                                   (outer+middle->inner-interval outer middle) props)]
+                                   (outer+middle->inner-interval outer middle)
+                                   props)]
                    (if (tensor/tensor? ret-inner) ret-inner m/nan)))
                (outer->middle-interval outer)
                props)]
@@ -908,12 +981,21 @@
     `::m/accu` -- default is m/*sgl-close* per dimension (accuracy is adjusted
       for quadrature type)
     `::iter-interval` -- default per dimension is [2 200]."
-  ([number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+  ([number4->tensor
+    outer-interval
+    outer->outer-middle-interval
+    outer+outer-middle->inner-middle-interval
     outer+outer-middle+inner-middle->inner-interval]
    (non-rectangular-4D-integration
-     number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+     number4->tensor
+     outer-interval
+     outer->outer-middle-interval
+     outer+outer-middle->inner-middle-interval
      outer+outer-middle+inner-middle->inner-interval {}))
-  ([number4->tensor outer-interval outer->outer-middle-interval outer+outer-middle->inner-middle-interval
+  ([number4->tensor
+    outer-interval
+    outer->outer-middle-interval
+    outer+outer-middle->inner-middle-interval
     outer+outer-middle+inner-middle->inner-interval
     {:keys [::points ::m/accu ::iter-interval]
      :or   {points        15
@@ -931,13 +1013,18 @@
                            (let [ret-inner
                                  (integration
                                    (fn [inner]
-                                     (number4->tensor outer outer-middle inner-middle inner))
-                                   (outer+outer-middle+inner-middle->inner-interval outer outer-middle inner-middle)
+                                     (number4->tensor
+                                       outer outer-middle inner-middle inner))
+                                   (outer+outer-middle+inner-middle->inner-interval
+                                     outer outer-middle inner-middle)
                                    props)]
                              (if (tensor/tensor? ret-inner) ret-inner m/nan)))
-                         (outer+outer-middle->inner-middle-interval outer outer-middle)
+                         (outer+outer-middle->inner-middle-interval
+                           outer outer-middle)
                          props)]
-                   (if (tensor/tensor? ret-inner-middle) ret-inner-middle m/nan)))
+                   (if (tensor/tensor? ret-inner-middle)
+                     ret-inner-middle
+                     m/nan)))
                (outer->outer-middle-interval outer)
                props)]
          (if (tensor/tensor? ret-outer-middle) ret-outer-middle m/nan)))

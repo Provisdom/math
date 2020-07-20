@@ -152,6 +152,8 @@
 
 (s/fdef sum-convergent-series
   :args (s/cat :term-series ::term-series
-               :opts (s/? (s/keys :opt [::kahan? ::converged-pred ::error-pred])))
+               :opts (s/? (s/keys :opt [::kahan?
+                                        ::converged-pred
+                                        ::error-pred])))
   :ret (s/or :anomaly ::anomalies/anomaly
              :number ::m/number))

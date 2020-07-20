@@ -613,7 +613,8 @@
                           (not (and (m/roughly-round?
                                       (+ a (* 0.5 (m/one- (dec p))))
                                       0.0)
-                                    (m/non+? (+ a (* 0.5 (m/one- (dec p)))))))))))
+                                    (m/non+?
+                                      (+ a (* 0.5 (m/one- (dec p)))))))))))
   :ret ::m/non-inf-)
 
 (defn multivariate-log-gamma

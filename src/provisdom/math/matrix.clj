@@ -11,18 +11,20 @@
     [provisdom.math.random :as random]))
 
 ;;;DECLARATIONS
-(declare column-matrix transpose diagonal deserialize-symmetric-matrix
-         deserialize-upper-triangular-matrix deserialize-lower-triangular-matrix
-         get-slices-as-matrix some-kv matrix? row-matrix? column-matrix?
-         square-matrix? symmetric-matrix? diagonal-matrix? diagonal-matrix
-         row-matrix rows columns size-of-symmetric-or-triangular-matrix
-         size-of-symmetric-or-triangular-matrix-without-diagonal
-         to-matrix symmetric-matrix-by-averaging constant-matrix mx* assoc-diagonal
-         ecount-of-symmetric-or-triangular-matrix
-         ecount-of-symmetric-or-triangular-matrix-without-diagonal
-         lower-triangular-matrix? upper-triangular-matrix?)
+(declare
+  column-matrix transpose diagonal deserialize-symmetric-matrix
+  deserialize-upper-triangular-matrix deserialize-lower-triangular-matrix
+  get-slices-as-matrix some-kv matrix? row-matrix? column-matrix?
+  square-matrix? symmetric-matrix? diagonal-matrix? diagonal-matrix
+  row-matrix rows columns size-of-symmetric-or-triangular-matrix
+  size-of-symmetric-or-triangular-matrix-without-diagonal
+  to-matrix symmetric-matrix-by-averaging constant-matrix mx* assoc-diagonal
+  ecount-of-symmetric-or-triangular-matrix
+  ecount-of-symmetric-or-triangular-matrix-without-diagonal
+  lower-triangular-matrix? upper-triangular-matrix?)
 
-(def mdl 6)                                                 ;max-dim-length for generators
+;;max-dim-length for generators
+(def mdl 6)
 
 (s/def ::by-row? boolean?)
 
@@ -75,9 +77,10 @@
                                [b c]
                                [c b])]
                    (gen/vector
-                     (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec c))})
-                                (gen/large-integer* {:min 0 :max (max 0 (dec b))})
-                                (s/gen ::m/number))
+                     (gen/tuple
+                       (gen/large-integer* {:min 0 :max (max 0 (dec c))})
+                       (gen/large-integer* {:min 0 :max (max 0 (dec b))})
+                       (s/gen ::m/number))
                      a))))))
 
 (s/def ::column->number
@@ -106,8 +109,8 @@
                x)))
 
 (s/fdef matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::matrix
   (s/with-gen
@@ -131,8 +134,8 @@
                x)))
 
 (s/fdef matrix-num?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::matrix-num
   (s/with-gen
@@ -156,8 +159,8 @@
                x)))
 
 (s/fdef matrix-finite?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::matrix-finite
   (s/with-gen
@@ -181,8 +184,8 @@
                x)))
 
 (s/fdef matrix-finite-non-?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::matrix-finite-non-
   (s/with-gen
@@ -206,8 +209,8 @@
                x)))
 
 (s/fdef matrix-prob?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::matrix-prob
   (s/with-gen
@@ -225,8 +228,8 @@
   (and (matrix? x) (empty? (get x 0))))
 
 (s/fdef empty-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::empty-matrix #(= [[]] %))
 
@@ -239,8 +242,8 @@
        (every? number? (first x))))
 
 (s/fdef row-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::row-matrix
   (s/with-gen
@@ -258,8 +261,8 @@
                    x))))
 
 (s/fdef column-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::column-matrix
   (s/with-gen
@@ -272,8 +275,8 @@
   (and (matrix? x) (every? zero? (flatten x))))
 
 (s/fdef zero-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::zero-matrix
   (s/with-gen
@@ -288,8 +291,8 @@
   (and (matrix? x) (= (rows x) (columns x))))
 
 (s/fdef square-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::square-matrix
   (s/with-gen
@@ -324,8 +327,8 @@
                       x))))
 
 (s/fdef diagonal-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::diagonal-matrix
   (s/with-gen
@@ -342,8 +345,8 @@
                       x))))
 
 (s/fdef upper-triangular-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::upper-triangular-matrix
   (s/with-gen
@@ -351,8 +354,9 @@
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i]
                  (gen/fmap deserialize-upper-triangular-matrix
-                           (gen/vector (s/gen ::m/number)
-                                       (ecount-of-symmetric-or-triangular-matrix i)))))))
+                           (gen/vector
+                             (s/gen ::m/number)
+                             (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 (defn lower-triangular-matrix?
   "Returns true if a lower triangular matrix (the entries above the main
@@ -364,8 +368,8 @@
                       x))))
 
 (s/fdef lower-triangular-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::lower-triangular-matrix
   (s/with-gen
@@ -373,8 +377,9 @@
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i]
                  (gen/fmap deserialize-lower-triangular-matrix
-                           (gen/vector (s/gen ::m/number)
-                                       (ecount-of-symmetric-or-triangular-matrix i)))))))
+                           (gen/vector
+                             (s/gen ::m/number)
+                             (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 (defn symmetric-matrix?
   "Returns true if a symmetric matrix."
@@ -382,8 +387,8 @@
   (and (square-matrix? x) (tensor/=== (transpose x) x)))
 
 (s/fdef symmetric-matrix?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (s/def ::symmetric-matrix
   (s/with-gen
@@ -391,8 +396,9 @@
     #(gen/bind (gen/large-integer* {:min 0 :max mdl})
                (fn [i]
                  (gen/fmap deserialize-symmetric-matrix
-                           (gen/vector (s/gen ::m/number)
-                                       (ecount-of-symmetric-or-triangular-matrix i)))))))
+                           (gen/vector
+                             (s/gen ::m/number)
+                             (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 ;;;MATRIX CONSTRUCTORS
 (defn to-matrix
@@ -420,10 +426,10 @@
            (transpose (mapv vec (partition rows coll)))))))))
 
 (s/fdef to-matrix
-        :args (s/cat :tensor ::tensor/tensor
-                     :rows ::rows
-                     :opts (s/? (s/keys :opt [::by-row?])))
-        :ret ::matrix)
+  :args (s/cat :tensor ::tensor/tensor
+               :rows ::rows
+               :opts (s/? (s/keys :opt [::by-row?])))
+  :ret ::matrix)
 
 (defn constant-matrix
   "Constructs a new matrix of `value`'s (or zeros (doubles)) with the given
@@ -435,10 +441,10 @@
      (vec (repeat rows (vec (repeat columns number)))))))
 
 (s/fdef constant-matrix
-        :args (s/cat :rows ::rows
-                     :columns ::columns
-                     :number (s/? ::m/number))
-        :ret ::matrix)
+  :args (s/cat :rows ::rows
+               :columns ::columns
+               :number (s/? ::m/number))
+  :ret ::matrix)
 
 (defn compute-matrix
   "Function `row+column->number` takes a `row` and `column` and returns a
@@ -453,12 +459,12 @@
           (range rows))))
 
 (s/fdef compute-matrix
-        :args (s/cat :rows ::rows
-                     :columns ::columns
-                     :row+column->number (s/fspec :args (s/cat :row ::row
-                                                               :column ::column)
-                                                  :ret ::m/number))
-        :ret ::matrix)
+  :args (s/cat :rows ::rows
+               :columns ::columns
+               :row+column->number (s/fspec :args (s/cat :row ::row
+                                                         :column ::column)
+                                            :ret ::m/number))
+  :ret ::matrix)
 
 (defn identity-matrix
   "Constructs an identity matrix with the given `size`."
@@ -466,8 +472,8 @@
   (compute-matrix size size (fn [row column] (if (= row column) 1.0 0.0))))
 
 (s/fdef identity-matrix
-        :args (s/cat :size ::vector/size)
-        :ret ::diagonal-matrix)
+  :args (s/cat :size ::vector/size)
+  :ret ::diagonal-matrix)
 
 (defn row-matrix
   "Returns a row matrix created from `numbers` or from `size` and
@@ -477,9 +483,9 @@
   ([size column->number] [(vector/compute-vector size column->number)]))
 
 (s/fdef row-matrix
-        :args (s/or :one (s/cat :numbers ::m/numbers)
-                    :two (s/cat :size ::vector/size :column->number ::column->number))
-        :ret ::row-matrix)
+  :args (s/or :one (s/cat :numbers ::m/numbers)
+              :two (s/cat :size ::vector/size :column->number ::column->number))
+  :ret ::row-matrix)
 
 (defn column-matrix
   "Returns a column matrix created from `numbers` or from `size` and
@@ -495,9 +501,9 @@
      (mapv vec (partition 1 (vector/compute-vector size row->number))))))
 
 (s/fdef column-matrix
-        :args (s/or :one (s/cat :numbers ::m/numbers)
-                    :two (s/cat :size ::vector/size :row->number ::row->number))
-        :ret ::column-matrix)
+  :args (s/or :one (s/cat :numbers ::m/numbers)
+              :two (s/cat :size ::vector/size :row->number ::row->number))
+  :ret ::column-matrix)
 
 (defn diagonal-matrix
   "Returns a diagonal matrix (a matrix with all elements not on the diagonal
@@ -524,13 +530,13 @@
                                     0.0)))))
 
 (s/fdef diagonal-matrix
-        :args (s/or :one (s/cat :diagonal-numbers ::m/numbers)
-                    :two (s/cat :size ::vector/size
-                                :index->number ::vector/index->number)
-                    :three (s/cat :rows ::rows
-                                  :columns ::columns
-                                  :index->number ::vector/index->number))
-        :ret ::diagonal-matrix)
+  :args (s/or :one (s/cat :diagonal-numbers ::m/numbers)
+              :two (s/cat :size ::vector/size
+                          :index->number ::vector/index->number)
+              :three (s/cat :rows ::rows
+                            :columns ::columns
+                            :index->number ::vector/index->number))
+  :ret ::diagonal-matrix)
 
 (defn- symmetric-row-fill
   [r c size numbers]
@@ -578,21 +584,25 @@
                  (symmetric-column-fill r c numbers))))]
      (when-not (m/nan? size) (compute-matrix size size f))))
   ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-of-symmetric-or-triangular-matrix-without-diagonal (count off-diagonal-numbers))
+   (let [size (size-of-symmetric-or-triangular-matrix-without-diagonal
+                (count off-diagonal-numbers))
          f (fn [r c]
              (cond (> r c) 0.0
                    (= r c) (get diagonal-numbers r 0.0)
                    :else (if by-row?
-                           (symmetric-without-diagonal-row-fill r c size off-diagonal-numbers)
-                           (symmetric-without-diagonal-column-fill r c off-diagonal-numbers))))]
+                           (symmetric-without-diagonal-row-fill
+                             r c size off-diagonal-numbers)
+                           (symmetric-without-diagonal-column-fill
+                             r c off-diagonal-numbers))))]
      (when-not (m/nan? size) (compute-matrix size size f)))))
 
 (s/fdef deserialize-upper-triangular-matrix
-        :args (s/or :one-two (s/cat :numbers ::m/numbers :opts (s/? (s/keys :opt [::by-row?])))
-                    :three (s/cat :diagonal-numbers ::m/numbers
-                                  :off-diagonal-numbers ::m/numbers
-                                  :opts (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::upper-triangular-matrix))
+  :args (s/or :one-two (s/cat :numbers ::m/numbers
+                              :opts (s/? (s/keys :opt [::by-row?])))
+              :three (s/cat :diagonal-numbers ::m/numbers
+                            :off-diagonal-numbers ::m/numbers
+                            :opts (s/keys :opt [::by-row?])))
+  :ret (s/nilable ::upper-triangular-matrix))
 
 (defn deserialize-lower-triangular-matrix
   "Returns a (square) lower triangular matrix (a matrix with all elements above
@@ -612,21 +622,25 @@
                  (symmetric-row-fill c r size numbers))))]
      (when-not (m/nan? size) (compute-matrix size size f))))
   ([diagonal-numbers off-diagonal-numbers {::keys [by-row?] :or {by-row? true}}]
-   (let [size (size-of-symmetric-or-triangular-matrix-without-diagonal (count off-diagonal-numbers))
+   (let [size (size-of-symmetric-or-triangular-matrix-without-diagonal
+                (count off-diagonal-numbers))
          f (fn [r c]
              (cond (< r c) 0.0
                    (= r c) (get diagonal-numbers r 0.0)
                    :else (if by-row?
-                           (symmetric-without-diagonal-column-fill c r off-diagonal-numbers)
-                           (symmetric-without-diagonal-row-fill c r size off-diagonal-numbers))))]
+                           (symmetric-without-diagonal-column-fill
+                             c r off-diagonal-numbers)
+                           (symmetric-without-diagonal-row-fill
+                             c r size off-diagonal-numbers))))]
      (when-not (m/nan? size) (compute-matrix size size f)))))
 
 (s/fdef deserialize-lower-triangular-matrix
-        :args (s/or :one-two (s/cat :numbers ::m/numbers :opts (s/? (s/keys :opt [::by-row?])))
-                    :three (s/cat :diagonal-numbers ::m/numbers
-                                  :off-diagonal-numbers ::m/numbers
-                                  :opts (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::lower-triangular-matrix))
+  :args (s/or :one-two (s/cat :numbers ::m/numbers
+                              :opts (s/? (s/keys :opt [::by-row?])))
+              :three (s/cat :diagonal-numbers ::m/numbers
+                            :off-diagonal-numbers ::m/numbers
+                            :opts (s/keys :opt [::by-row?])))
+  :ret (s/nilable ::lower-triangular-matrix))
 
 (defn deserialize-symmetric-matrix
   "Returns a symmetric matrix (a matrix with elements at r,c equal to elements
@@ -641,8 +655,8 @@
     (when-not (m/nan? size) (compute-matrix size size f))))
 
 (s/fdef deserialize-symmetric-matrix
-        :args (s/cat :numbers ::m/numbers)
-        :ret (s/nilable ::symmetric-matrix))
+  :args (s/cat :numbers ::m/numbers)
+  :ret (s/nilable ::symmetric-matrix))
 
 (defn toeplitz-matrix
   "Returns a toeplitz matrix (a matrix whose elements on any diagonal are the
@@ -658,20 +672,20 @@
                                      (get first-column (- r c) m/nan))))))
 
 (s/fdef toeplitz-matrix
-        :args (s/with-gen (s/and (s/cat :first-row ::vector/vector
-                                        :first-column ::vector/vector)
-                                 (fn [{:keys [first-row first-column]}]
-                                   (= (first first-row) (first first-column))))
-                          #(gen/fmap
-                             (fn [[fr fc]]
-                               (let [ffr (first fr)
-                                     fc (if ffr
-                                          (assoc fc 0 ffr)
-                                          fc)]
-                                 [fr fc]))
-                             (gen/tuple (s/gen ::vector/vector)
-                                        (s/gen ::vector/vector))))
-        :ret ::matrix)
+  :args (s/with-gen (s/and (s/cat :first-row ::vector/vector
+                                  :first-column ::vector/vector)
+                           (fn [{:keys [first-row first-column]}]
+                             (= (first first-row) (first first-column))))
+                    #(gen/fmap
+                       (fn [[fr fc]]
+                         (let [ffr (first fr)
+                               fc (if ffr
+                                    (assoc fc 0 ffr)
+                                    fc)]
+                           [fr fc]))
+                       (gen/tuple (s/gen ::vector/vector)
+                                  (s/gen ::vector/vector))))
+  :ret ::matrix)
 
 (def ^{:doc "See [[toeplitz-matrix]]"} diagonal-constant-matrix toeplitz-matrix)
 
@@ -688,8 +702,8 @@
                     (* (double (get v r)) (get v c)))))))))
 
 (s/fdef outer-product
-        :args (s/cat :v ::vector/vector)
-        :ret ::matrix)
+  :args (s/cat :v ::vector/vector)
+  :ret ::matrix)
 
 (defn rnd-matrix!
   "Returns matrix with random elements."
@@ -700,20 +714,21 @@
       (mapv vec (partition columns (take t (random/rnd-lazy!)))))))
 
 (s/fdef rnd-matrix!
-        :args (s/cat :rows ::rows :columns ::columns)
-        :ret ::matrix)
+  :args (s/cat :rows ::rows :columns ::columns)
+  :ret ::matrix)
 
 (defn rnd-reflection-matrix!
   "Returns a random Householder reflection matrix of `size`."
   [size]
-  (let [v (column-matrix (tensor/normalize (vec (take size (random/rnd-lazy!)))))]
+  (let [v (column-matrix
+            (tensor/normalize (vec (take size (random/rnd-lazy!)))))]
     (tensor/subtract (identity-matrix size)
                      (tensor/multiply (mx* v (transpose v))
                                       2.0))))
 
 (s/fdef rnd-reflection-matrix!
-        :args (s/cat :size ::vector/size)
-        :ret ::symmetric-matrix)
+  :args (s/cat :size ::vector/size)
+  :ret ::symmetric-matrix)
 
 (defn rnd-spectral-matrix!
   "Returns a random matrix with a particular `spectrum-vector`. The orthogonal
@@ -729,8 +744,8 @@
     (symmetric-matrix-by-averaging (mx* (mx* v-mat l-mat) (transpose v-mat)))))
 
 (s/fdef rnd-spectral-matrix!
-        :args (s/cat :spectrum-vector ::vector/vector)
-        :ret ::symmetric-matrix)
+  :args (s/cat :spectrum-vector ::vector/vector)
+  :ret ::symmetric-matrix)
 
 (defn sparse->matrix
   "Builds a matrix using a sparse representation and an existing matrix (often
@@ -749,9 +764,9 @@
                  sparse))))
 
 (s/fdef sparse->matrix
-        :args (s/cat :sparse ::sparse-matrix
-                     :m ::matrix)
-        :ret ::matrix)
+  :args (s/cat :sparse ::sparse-matrix
+               :m ::matrix)
+  :ret ::matrix)
 
 (defn sparse->symmetric-matrix
   "Builds a symmetric matrix using a sparse representation and an existing
@@ -769,9 +784,9 @@
                  sparse))))
 
 (s/fdef sparse->symmetric-matrix
-        :args (s/cat :sparse ::sparse-matrix
-                     :m ::symmetric-matrix)
-        :ret ::symmetric-matrix)
+  :args (s/cat :sparse ::sparse-matrix
+               :m ::symmetric-matrix)
+  :ret ::symmetric-matrix)
 
 ;;;MATRIX INFO
 (defn rows
@@ -782,8 +797,8 @@
     (count m)))
 
 (s/fdef rows
-        :args (s/cat :m ::matrix)
-        :ret ::rows)
+  :args (s/cat :m ::matrix)
+  :ret ::rows)
 
 (defn columns
   "Returns the number of columns."
@@ -791,8 +806,8 @@
   (count (first m)))
 
 (s/fdef columns
-        :args (s/cat :m ::matrix)
-        :ret ::columns)
+  :args (s/cat :m ::matrix)
+  :ret ::columns)
 
 (defn get-row
   "Gets a `row` of a matrix, as a vector."
@@ -800,11 +815,11 @@
   (vec (get m row)))
 
 (s/fdef get-row
-        :args (s/and (s/cat :m ::matrix
-                            :row ::row)
-                     (fn [{:keys [m row]}]
-                       (< row (rows m))))
-        :ret ::vector/vector)
+  :args (s/and (s/cat :m ::matrix
+                      :row ::row)
+               (fn [{:keys [m row]}]
+                 (< row (rows m))))
+  :ret ::vector/vector)
 
 (defn get-column
   "Gets a `column` of a matrix, as a vector."
@@ -815,11 +830,11 @@
       (vec col))))
 
 (s/fdef get-column
-        :args (s/and (s/cat :m ::matrix
-                            :column ::column)
-                     (fn [{:keys [m column]}]
-                       (< column (columns m))))
-        :ret ::vector/vector)
+  :args (s/and (s/cat :m ::matrix
+                      :column ::column)
+               (fn [{:keys [m column]}]
+                 (< column (columns m))))
+  :ret ::vector/vector)
 
 (defn diagonal
   "Returns the specified diagonal of a matrix as a vector. If `k`>0, returns a
@@ -846,9 +861,9 @@
          [])))))
 
 (s/fdef diagonal
-        :args (s/cat :m ::matrix
-                     :k (s/? ::m/int))
-        :ret ::vector/vector)
+  :args (s/cat :m ::matrix
+               :k (s/? ::m/int))
+  :ret ::vector/vector)
 
 (defn serialize-symmetric-or-triangular-matrix
   "Returns a vector that contains the upper (default) or lower half of the
@@ -869,9 +884,9 @@
               (get-in m [r c])))))))
 
 (s/fdef serialize-symmetric-or-triangular-matrix
-        :args (s/cat :m ::matrix
-                     :opts (s/? (s/keys :opt [::by-row?])))
-        :ret ::vector/vector)
+  :args (s/cat :m ::matrix
+               :opts (s/? (s/keys :opt [::by-row?])))
+  :ret ::vector/vector)
 
 (defn size-of-symmetric-or-triangular-matrix
   "Returns the size of the matrix given `ecount`. `ecount` is the number of
@@ -884,8 +899,8 @@
       m/nan)))
 
 (s/fdef size-of-symmetric-or-triangular-matrix
-        :args (s/cat :ecount ::m/int-non-)
-        :ret (s/or :nan ::m/nan :size ::vector/size))
+  :args (s/cat :ecount ::m/int-non-)
+  :ret (s/or :nan ::m/nan :size ::vector/size))
 
 (defn size-of-symmetric-or-triangular-matrix-without-diagonal
   "Returns the size of the matrix given `ecount`. `ecount` is the number of
@@ -897,8 +912,8 @@
       (m/maybe-long-able (inc (double size))))))
 
 (s/fdef size-of-symmetric-or-triangular-matrix-without-diagonal
-        :args (s/cat :ecount ::m/int-non-)
-        :ret (s/or :nan ::m/nan :size ::vector/size))
+  :args (s/cat :ecount ::m/int-non-)
+  :ret (s/or :nan ::m/nan :size ::vector/size))
 
 (defn ecount-of-symmetric-or-triangular-matrix
   "Returns the element count (`ecount`) for a symmetric or triangular matrix.
@@ -908,8 +923,8 @@
   (m/div (+ (m/sq' size) size) 2))
 
 (s/fdef ecount-of-symmetric-or-triangular-matrix
-        :args (s/cat :size ::vector/size)
-        :ret ::m/int-non-)
+  :args (s/cat :size ::vector/size)
+  :ret ::m/int-non-)
 
 (defn ecount-of-symmetric-or-triangular-matrix-without-diagonal
   "Returns the element count (`ecount`) for a symmetric or triangular matrix
@@ -919,8 +934,8 @@
   (m/div (- (m/sq' size) size) 2))
 
 (s/fdef ecount-of-symmetric-or-triangular-matrix-without-diagonal
-        :args (s/cat :size ::vector/size)
-        :ret ::m/int-non-)
+  :args (s/cat :size ::vector/size)
+  :ret ::m/int-non-)
 
 (defn trace
   "Calculates the trace of a square matrix (sum of elements on main diagonal)."
@@ -930,8 +945,8 @@
     (apply + (map double (diagonal square-m)))))
 
 (s/fdef trace
-        :args (s/cat :square-m ::square-matrix)
-        :ret ::m/number)
+  :args (s/cat :square-m ::square-matrix)
+  :ret ::m/number)
 
 (defn get-slices-as-matrix
   "Performs a slice on the matrix given by the options.
@@ -946,7 +961,11 @@
       indices to exclude.
     Exceptions override inclusions. Can be used to permute matrix through index
     sequence ordering."
-  [m {::keys [row-indices column-indices exception-row-indices exception-column-indices]}]
+  [m
+   {::keys [row-indices
+            column-indices
+            exception-row-indices
+            exception-column-indices]}]
   (let [calc-fn (fn [i except-i n]
                   (cond (and (not i) (not except-i)) true
                         (not except-i) (if (number? i)
@@ -961,9 +980,10 @@
                                         (if (< i n) i [])))
                         :else (let [indices (or i (range n))]
                                 (if (number? except-i)
-                                  (remove (fn [index]
-                                            (or (= except-i index) (>= index n)))
-                                          indices)
+                                  (remove
+                                    (fn [index]
+                                      (or (= except-i index) (>= index n)))
+                                    indices)
                                   (reduce
                                     (fn [tot e]
                                       (if (or (>= e n) (some #(= % e) except-i))
@@ -974,34 +994,55 @@
         rs (calc-fn row-indices exception-row-indices (rows m))
         cs (calc-fn column-indices exception-column-indices (columns m))]
     (cond
-      (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs))) [[]]
-      (and (number? rs) (number? cs)) [[(get-in m [rs cs])]]
-      (and (number? rs) (coll? cs)) (row-matrix (let [row-vector (get m rs)]
-                                                  (map #(get row-vector %) cs)))
-      (and (number? rs) (true? cs)) (row-matrix (get-row m rs))
-      (and (coll? rs) (number? cs)) (column-matrix (let [column-vector (get-column m cs)]
-                                                     (map #(nth column-vector %) rs)))
-      (and (coll? rs) (coll? cs)) (mapv (fn [row-vector]
-                                          (reduce (fn [tot column] (conj tot (get row-vector column)))
-                                                  []
-                                                  cs))
-                                        (map #(get m %) rs))
-      (and (coll? rs) (true? cs)) (mapv #(get m %) rs)
-      (and (true? rs) (number? cs)) (column-matrix (get-column m cs))
-      (and (true? rs) (coll? cs)) (mapv (fn [row-vector]
-                                          (reduce (fn [tot column] (conj tot (get row-vector column)))
-                                                  []
-                                                  cs))
-                                        m)
-      (and (true? rs) (true? cs)) m)))
+      (or (and (coll? rs) (empty? rs)) (and (coll? cs) (empty? cs)))
+      [[]]
+
+      (and (number? rs) (number? cs))
+      [[(get-in m [rs cs])]]
+
+      (and (number? rs) (coll? cs))
+      (row-matrix (let [row-vector (get m rs)]
+                    (map #(get row-vector %) cs)))
+
+      (and (number? rs) (true? cs))
+      (row-matrix (get-row m rs))
+
+      (and (coll? rs) (number? cs))
+      (column-matrix (let [column-vector (get-column m cs)]
+                       (map #(nth column-vector %) rs)))
+
+      (and (coll? rs) (coll? cs))
+      (mapv (fn [row-vector]
+              (reduce (fn [tot column]
+                        (conj tot (get row-vector column)))
+                      []
+                      cs))
+            (map #(get m %) rs))
+
+      (and (coll? rs) (true? cs))
+      (mapv #(get m %) rs)
+
+      (and (true? rs) (number? cs))
+      (column-matrix (get-column m cs))
+
+      (and (true? rs) (coll? cs))
+      (mapv (fn [row-vector]
+              (reduce (fn [tot column]
+                        (conj tot (get row-vector column)))
+                      []
+                      cs))
+            m)
+
+      (and (true? rs) (true? cs))
+      m)))
 
 (s/fdef get-slices-as-matrix
-        :args (s/cat :m ::matrix
-                     :opts (s/keys :opt [::row-indices
-                                         ::column-indices
-                                         ::exception-row-indices
-                                         ::exception-column-indices]))
-        :ret ::matrix)
+  :args (s/cat :m ::matrix
+               :opts (s/keys :opt [::row-indices
+                                   ::column-indices
+                                   ::exception-row-indices
+                                   ::exception-column-indices]))
+  :ret ::matrix)
 
 (defn filter-by-row
   "Returns a matrix. Function 'row-v->bool' takes a row-vector."
@@ -1012,10 +1053,10 @@
       (vec new-m))))
 
 (s/fdef filter-by-row
-        :args (s/cat :row-v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
-                                           :ret boolean?)
-                     :m ::matrix)
-        :ret ::matrix)
+  :args (s/cat :row-v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
+                                     :ret boolean?)
+               :m ::matrix)
+  :ret ::matrix)
 
 (defn filter-by-column
   "Returns a matrix. Function 'column-v->bool' takes a column-vector."
@@ -1026,10 +1067,10 @@
       (transpose (vec new-m)))))
 
 (s/fdef filter-by-column
-        :args (s/cat :column-v->bool (s/fspec :args (s/cat :column-vector ::vector/vector)
-                                              :ret boolean?)
-                     :m ::matrix)
-        :ret ::matrix)
+  :args (s/cat :col-v->bool (s/fspec :args (s/cat :col-vector ::vector/vector)
+                                     :ret boolean?)
+               :m ::matrix)
+  :ret ::matrix)
 
 (defn filter-symmetric-matrix
   "Takes and returns a symmetric matrix. 'v->bool' takes a row-vector or
@@ -1041,13 +1082,14 @@
                                 tot))
                             #{}
                             symmetric-m)]
-    (get-slices-as-matrix symmetric-m {::row-indices keep-set, ::column-indices keep-set})))
+    (get-slices-as-matrix symmetric-m {::row-indices    keep-set
+                                       ::column-indices keep-set})))
 
 (s/fdef filter-symmetric-matrix
-        :args (s/cat :v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
-                                       :ret boolean?)
-                     :symmetric-m ::symmetric-matrix)
-        :ret ::symmetric-matrix)
+  :args (s/cat :v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
+                                 :ret boolean?)
+               :symmetric-m ::symmetric-matrix)
+  :ret ::symmetric-matrix)
 
 (s/def ::top-left ::matrix)
 (s/def ::bottom-left ::matrix)
@@ -1061,18 +1103,22 @@
   where the slice will occur. `first-right-column` is the right edge of where
   the slice will occur."
   [m first-bottom-row first-right-column]
-  {::top-left     (get-slices-as-matrix m {::row-indices    (range first-bottom-row)
-                                           ::column-indices (range first-right-column)})
-   ::bottom-left  (get-slices-as-matrix m {::exception-row-indices (range first-bottom-row)
-                                           ::column-indices        (range first-right-column)})
-   ::top-right    (get-slices-as-matrix m {::row-indices              (range first-bottom-row)
-                                           ::exception-column-indices (range first-right-column)})
-   ::bottom-right (get-slices-as-matrix m {::exception-row-indices    (range first-bottom-row)
-                                           ::exception-column-indices (range first-right-column)})})
+  {::top-left     (get-slices-as-matrix
+                    m {::row-indices    (range first-bottom-row)
+                       ::column-indices (range first-right-column)})
+   ::bottom-left  (get-slices-as-matrix
+                    m {::exception-row-indices (range first-bottom-row)
+                       ::column-indices        (range first-right-column)})
+   ::top-right    (get-slices-as-matrix
+                    m {::row-indices              (range first-bottom-row)
+                       ::exception-column-indices (range first-right-column)})
+   ::bottom-right (get-slices-as-matrix
+                    m {::exception-row-indices    (range first-bottom-row)
+                       ::exception-column-indices (range first-right-column)})})
 
 (s/fdef matrix-partition
-        :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)
-        :ret (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
+  :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)
+  :ret (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
 
 (defn some-kv
   "Returns the first logical true value of (pred row column number) for any
@@ -1091,13 +1137,13 @@
              (recur (inc row))))))))
 
 (s/fdef some-kv
-        :args (s/cat :pred (s/fspec :args (s/cat :r ::row
-                                                 :c ::column
-                                                 :e ::m/number)
-                                    :ret boolean?)
-                     :m ::matrix
-                     :opts (s/? (s/keys :opt [::by-row?])))
-        :ret (s/nilable ::m/number))
+  :args (s/cat :pred (s/fspec :args (s/cat :r ::row
+                                           :c ::column
+                                           :e ::m/number)
+                              :ret boolean?)
+               :m ::matrix
+               :opts (s/? (s/keys :opt [::by-row?])))
+  :ret (s/nilable ::m/number))
 
 (defn ereduce-kv
   "Function `f` takes a result, row, column, and number(s). Reduces over 1, 2,
@@ -1148,47 +1194,48 @@
          (if (>= r nr)
            val
            (recur (inc r)
-                  (extensions/reduce-kv-ext g val (first s1) (first s2) (first s3))
+                  (extensions/reduce-kv-ext
+                    g val (first s1) (first s2) (first s3))
                   (rest s1)
                   (rest s2)
                   (rest s3))))))))
 
 (s/fdef ereduce-kv
-        :args (s/or :three (s/cat :f (s/fspec :args (s/cat :res any?
-                                                           :row ::row
-                                                           :column ::column
-                                                           :number ::m/number)
-                                              :ret any?)
-                                  :init any?
-                                  :m ::matrix)
-                    :four (s/and
-                            (s/cat :f (s/fspec :args (s/cat :res any?
-                                                            :row ::row
-                                                            :column ::column
-                                                            :number1 ::m/number
-                                                            :number2 ::m/number)
-                                               :ret any?)
-                                   :init any?
-                                   :m1 ::matrix
-                                   :m2 ::matrix)
-                            (fn [{:keys [m1 m2]}]
-                              (<= (columns m1) (columns m2))))
-                    :five (s/and
-                            (s/cat :f (s/fspec :args (s/cat :res any?
-                                                            :row ::row
-                                                            :column ::column
-                                                            :number1 ::m/number
-                                                            :number2 ::m/number
-                                                            :number3 ::m/number)
-                                               :ret any?)
-                                   :init any?
-                                   :m1 ::matrix
-                                   :m2 ::matrix
-                                   :m3 ::matrix)
-                            (fn [{:keys [m1 m2 m3]}]
-                              (and (<= (columns m1) (columns m2))
-                                   (<= (columns m1) (columns m3))))))
-        :ret any?)
+  :args (s/or :three (s/cat :f (s/fspec :args (s/cat :res any?
+                                                     :row ::row
+                                                     :column ::column
+                                                     :number ::m/number)
+                                        :ret any?)
+                            :init any?
+                            :m ::matrix)
+              :four (s/and
+                      (s/cat :f (s/fspec :args (s/cat :res any?
+                                                      :row ::row
+                                                      :column ::column
+                                                      :number1 ::m/number
+                                                      :number2 ::m/number)
+                                         :ret any?)
+                             :init any?
+                             :m1 ::matrix
+                             :m2 ::matrix)
+                      (fn [{:keys [m1 m2]}]
+                        (<= (columns m1) (columns m2))))
+              :five (s/and
+                      (s/cat :f (s/fspec :args (s/cat :res any?
+                                                      :row ::row
+                                                      :column ::column
+                                                      :number1 ::m/number
+                                                      :number2 ::m/number
+                                                      :number3 ::m/number)
+                                         :ret any?)
+                             :init any?
+                             :m1 ::matrix
+                             :m2 ::matrix
+                             :m3 ::matrix)
+                      (fn [{:keys [m1 m2 m3]}]
+                        (and (<= (columns m1) (columns m2))
+                             (<= (columns m1) (columns m3))))))
+  :ret any?)
 
 (defn matrix->sparse
   "Returns a sparse-matrix (i.e., a vector of tuples of [row column number]).
@@ -1204,9 +1251,9 @@
                m)))
 
 (s/fdef matrix->sparse
-        :args (s/cat :m ::matrix
-                     :number->bool (s/? ::number->bool))
-        :ret ::sparse-matrix)
+  :args (s/cat :m ::matrix
+               :number->bool (s/? ::number->bool))
+  :ret ::sparse-matrix)
 
 (defn symmetric-matrix->sparse
   "Returns a sparse-matrix (i.e., a vector of tuples of [row column number]).
@@ -1223,9 +1270,9 @@
                symmetric-m)))
 
 (s/fdef symmetric-matrix->sparse
-        :args (s/cat :symmetric-m ::symmetric-matrix
-                     :number->bool (s/? ::number->bool))
-        :ret ::sparse-matrix)
+  :args (s/cat :symmetric-m ::symmetric-matrix
+               :number->bool (s/? ::number->bool))
+  :ret ::sparse-matrix)
 
 ;;;MATRIX MANIPULATION
 (defn transpose
@@ -1236,19 +1283,25 @@
     (apply mapv vector m)))
 
 (s/fdef transpose
-        :args (s/cat :m ::matrix)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix)
+  :ret ::matrix)
 
 (defn assoc-row
   "Sets a row in a matrix using the specified numbers."
   [m row numbers]
-  (cond (and (zero? row) (empty-matrix? m)) (row-matrix numbers)
-        (and (= (count numbers) (columns m)) (<= row (rows m))) (assoc m row (vec numbers))
-        :else nil))
+  (cond (and (zero? row) (empty-matrix? m))
+        (row-matrix numbers)
+
+        (and (= (count numbers) (columns m))
+             (<= row (rows m)))
+        (assoc m row (vec numbers))
+
+        :else
+        nil))
 
 (s/fdef assoc-row
-        :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
-        :ret (s/nilable ::matrix))
+  :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
+  :ret (s/nilable ::matrix))
 
 (defn assoc-column
   "Sets a column in a matrix using the specified numbers."
@@ -1263,8 +1316,8 @@
         :else nil))
 
 (s/fdef assoc-column
-        :args (s/cat :m ::matrix :column ::column :numbers ::m/numbers)
-        :ret (s/nilable ::matrix))
+  :args (s/cat :m ::matrix :column ::column :numbers ::m/numbers)
+  :ret (s/nilable ::matrix))
 
 (defn assoc-diagonal
   "Sets a diagonal in a matrix using the specified numbers."
@@ -1279,8 +1332,8 @@
         :else nil))
 
 (s/fdef assoc-diagonal
-        :args (s/cat :m ::matrix :numbers ::m/numbers)
-        :ret (s/nilable ::matrix))
+  :args (s/cat :m ::matrix :numbers ::m/numbers)
+  :ret (s/nilable ::matrix))
 
 (defn insert-row
   "Inserts a row of `numbers` in a matrix at the specified `row`."
@@ -1293,8 +1346,8 @@
         :else nil))
 
 (s/fdef insert-row
-        :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
-        :ret (s/nilable ::matrix))
+  :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
+  :ret (s/nilable ::matrix))
 
 (defn insert-column
   "Inserts a column of `numbers` in a matrix at the specified `column`."
@@ -1302,17 +1355,18 @@
   (cond (and (zero? column) (empty-matrix? m)) (column-matrix numbers)
 
         (and (= (count numbers) (rows m)) (<= column (columns m)))
-        (vec (map-indexed (fn [row row-vector]
-                            (vector/insertv row-vector column (get numbers row 0.0)))
-                          m))
+        (vec (map-indexed
+               (fn [row row-vector]
+                 (vector/insertv row-vector column (get numbers row 0.0)))
+               m))
 
         :else nil))
 
 (s/fdef insert-column
-        :args (s/cat :m ::matrix
-                     :column ::column
-                     :numbers ::m/numbers)
-        :ret (s/nilable ::matrix))
+  :args (s/cat :m ::matrix
+               :column ::column
+               :numbers ::m/numbers)
+  :ret (s/nilable ::matrix))
 
 (defn remove-row
   "Removes a row in a matrix"
@@ -1323,9 +1377,9 @@
     m))
 
 (s/fdef remove-row
-        :args (s/cat :m ::matrix
-                     :row ::row)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix
+               :row ::row)
+  :ret ::matrix)
 
 (defn remove-column
   "Removes a column in a matrix"
@@ -1338,9 +1392,9 @@
     m))
 
 (s/fdef remove-column
-        :args (s/cat :m ::matrix
-                     :column ::column)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix
+               :column ::column)
+  :ret ::matrix)
 
 (defn update-row
   "Updates a `row` of matrix `m`, using function `column+number->number`, which
@@ -1351,12 +1405,12 @@
                     (vec (map-indexed column+number->number row-vector))))))
 
 (s/fdef update-row
-        :args (s/and (s/cat :m ::matrix
-                            :row ::row
-                            :column+number->number (s/fspec :args (s/cat :column ::column
-                                                                         :number ::m/number)
-                                                            :ret ::m/number)))
-        :ret (s/nilable ::matrix))
+  :args (s/and (s/cat :m ::matrix
+                      :row ::row
+                      :col+number->number (s/fspec :args (s/cat :col ::column
+                                                                :n ::m/number)
+                                                   :ret ::m/number)))
+  :ret (s/nilable ::matrix))
 
 (defn update-column
   "Updates a `column` of matrix `m`, using function `row+number->number`, which
@@ -1368,12 +1422,12 @@
                       m))))
 
 (s/fdef update-column
-        :args (s/and (s/cat :m ::matrix
-                            :column ::column
-                            :row+number->number (s/fspec :args (s/cat :row ::row
-                                                                      :number ::m/number)
-                                                         :ret ::m/number)))
-        :ret (s/nilable ::matrix))
+  :args (s/and (s/cat :m ::matrix
+                      :column ::column
+                      :row+number->number (s/fspec :args (s/cat :row ::row
+                                                                :n ::m/number)
+                                                   :ret ::m/number)))
+  :ret (s/nilable ::matrix))
 
 (defn update-diagonal
   "Updates the diagonal of matrix `m`, using function `row+number->number`,
@@ -1386,11 +1440,11 @@
                     m)))
 
 (s/fdef update-diagonal
-        :args (s/and (s/cat :m ::matrix
-                            :row+number->number (s/fspec :args (s/cat :row ::row
-                                                                      :number ::m/number)
-                                                         :ret ::m/number)))
-        :ret ::matrix)
+  :args (s/and (s/cat :m ::matrix
+                      :row+number->number (s/fspec :args (s/cat :row ::row
+                                                                :n ::m/number)
+                                                   :ret ::m/number)))
+  :ret ::matrix)
 
 (defn concat-rows
   "Appends rows from all the matrices after the first to the first. Each
@@ -1405,10 +1459,10 @@
          (vec (apply concat m ms)))))))
 
 (s/fdef concat-rows
-        :args (s/or :zero (s/cat)
-                    :one+ (s/cat :m ::matrix
-                                 :ms (s/* ::matrix)))
-        :ret (s/nilable ::matrix))
+  :args (s/or :zero (s/cat)
+              :one+ (s/cat :m ::matrix
+                           :ms (s/* ::matrix)))
+  :ret (s/nilable ::matrix))
 
 (defn concat-columns
   "Appends columns from all the matrices after the first to the first. Each
@@ -1421,10 +1475,10 @@
        (apply mapv (comp vec concat) m ms)))))
 
 (s/fdef concat-columns
-        :args (s/or :zero (s/cat)
-                    :one+ (s/cat :m ::matrix
-                                 :ms (s/* ::matrix)))
-        :ret (s/nilable ::matrix))
+  :args (s/or :zero (s/cat)
+              :one+ (s/cat :m ::matrix
+                           :ms (s/* ::matrix)))
+  :ret (s/nilable ::matrix))
 
 (defn merge-matrices
   "Returns a Matrix created by binding four matrices together. Matrices can be
@@ -1440,8 +1494,11 @@
     (when (and top bottom) (concat-rows top bottom))))
 
 (s/fdef merge-matrices
-        :args (s/cat :args (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
-        :ret (s/nilable ::matrix))
+  :args (s/cat :args (s/keys :req [::top-left
+                                   ::bottom-left
+                                   ::top-right
+                                   ::bottom-right]))
+  :ret (s/nilable ::matrix))
 
 (defn replace-submatrix
   "Returns a Matrix after substituting a `submatrix` at top-left location
@@ -1457,22 +1514,28 @@
                           (cond (and (>= r row-start)
                                      (< r tr)
                                      (>= c column-start)
-                                     (< c tc)) (get-in submatrix [(- r row-start) (- c column-start)])
+                                     (< c tc))
+                                (get-in submatrix
+                                        [(- r row-start) (- c column-start)])
+
                                 (and (m/non-? r)
                                      (< r nr)
                                      (m/non-? c)
-                                     (< c nc)) (get-in m [r c])
-                                :else 0.0)))))]
+                                     (< c nc))
+                                (get-in m [r c])
+
+                                :else
+                                0.0)))))]
     (if (matrix? ret)
       ret
       [[]])))
 
 (s/fdef replace-submatrix
-        :args (s/cat :m ::matrix
-                     :submatrix ::matrix
-                     :row-start ::row-start
-                     :column-start ::column-start)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix
+               :submatrix ::matrix
+               :row-start ::row-start
+               :column-start ::column-start)
+  :ret ::matrix)
 
 (defn symmetric-matrix-by-averaging
   "Returns a symmetric matrix where each element above or below the diagonal is
@@ -1483,12 +1546,14 @@
     (compute-matrix size size (fn [r c]
                                 (if (== c r)
                                   (get-in square-m [r c] 0.0)
-                                  (* 0.5 (+ (get-in square-m [r c] 0.0)
-                                            (double (get-in square-m [c r] 0.0)))))))))
+                                  (* 0.5
+                                     (+ (get-in square-m [r c] 0.0)
+                                        (double
+                                          (get-in square-m [c r] 0.0)))))))))
 
 (s/fdef symmetric-matrix-by-averaging
-        :args (s/cat :square-m ::square-matrix)
-        :ret ::symmetric-matrix)
+  :args (s/cat :square-m ::square-matrix)
+  :ret ::symmetric-matrix)
 
 ;;;MATRIX MATH
 (defn mx*
@@ -1513,11 +1578,11 @@
      (apply mx* m3 ms))))
 
 (s/fdef mx*
-        :args (s/or :one (s/cat :m ::matrix)
-                    :two+ (s/cat :m1 ::matrix
-                                 :m2 ::matrix
-                                 :ms (s/* ::matrix)))
-        :ret (s/nilable ::matrix))
+  :args (s/or :one (s/cat :m ::matrix)
+              :two+ (s/cat :m1 ::matrix
+                           :m2 ::matrix
+                           :ms (s/* ::matrix)))
+  :ret (s/nilable ::matrix))
 
 (defn kronecker-product
   "Generalization of the outer product."
@@ -1527,22 +1592,23 @@
    (if (or (empty-matrix? m1) (empty-matrix? m2))
      [[]]
      (vec (apply concat (mapv (fn [row]
-                                (apply concat-columns (mapv (fn [e]
-                                                              (tensor/multiply e m2))
-                                                            row)))
+                                (apply concat-columns
+                                       (mapv (fn [e]
+                                               (tensor/multiply e m2))
+                                             row)))
                               m1)))))
   ([m1 m2 & ms] (apply kronecker-product (kronecker-product m1 m2) ms)))
 
 (s/fdef kronecker-product
-        :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
-                    :two (s/cat :m1 ::matrix
-                                :m2 ::matrix)
-                    :three+ (s/cat :m1 ::matrix
-                                   :m2 ::matrix
-                                   :ms (s/with-gen
-                                         (s/+ ::matrix)
-                                         #(gen/vector (s/gen ::matrix) 1 2))))
-        :ret ::matrix)
+  :args (s/or :zero-or-one (s/cat :m (s/? ::matrix))
+              :two (s/cat :m1 ::matrix
+                          :m2 ::matrix)
+              :three+ (s/cat :m1 ::matrix
+                             :m2 ::matrix
+                             :ms (s/with-gen
+                                   (s/+ ::matrix)
+                                   #(gen/vector (s/gen ::matrix) 1 2))))
+  :ret ::matrix)
 
 ;;;MATRIX ROUNDING
 (defn- roughly-zero-fn
@@ -1562,8 +1628,8 @@
         m))
 
 (s/fdef round-roughly-zero-rows
-        :args (s/cat :m ::matrix :accu ::m/accu)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix :accu ::m/accu)
+  :ret ::matrix)
 
 (defn round-roughly-zero-columns
   "Returns a matrix after rounding any roughly-zero columns."
@@ -1571,5 +1637,5 @@
   (transpose (round-roughly-zero-rows (transpose m) accu)))
 
 (s/fdef round-roughly-zero-columns
-        :args (s/cat :m ::matrix :accu ::m/accu)
-        :ret ::matrix)
+  :args (s/cat :m ::matrix :accu ::m/accu)
+  :ret ::matrix)

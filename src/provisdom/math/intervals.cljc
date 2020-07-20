@@ -1,5 +1,5 @@
 (ns provisdom.math.intervals
-  #?(:cljs (:require-macros [provisdom.math.intervals]))
+  #?(:cljs (:require-macros [provisdom.math.intervals :refer [interval-spec]]))
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -279,10 +279,12 @@
 (defn intersection
   "Returns the bounds intersection or nil."
   [vector-bounds]
-  (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
-                                            vector-bounds))
-        [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
-                                            vector-bounds))]
+  (let [[lower
+         open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
+                                      vector-bounds))
+        [upper
+         open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
+                                      vector-bounds))]
     (when (or (< lower upper)
               (and (== upper lower)
                    (not open-lower?)
@@ -314,14 +316,16 @@
 (defn encompassing-bounds
   "Returns smallest bounds that encompass the bounds in `vector-bounds`."
   [vector-bounds]
-  (let [[lower open-lower?] (min-bound
-                              (map (fn [bounds]
-                                     (vector (::lower bounds) (::open-lower? bounds)))
-                                   vector-bounds))
-        [upper open-upper?] (max-bound
-                              (map (fn [bounds]
-                                     (vector (::upper bounds) (::open-upper? bounds)))
-                                   vector-bounds))]
+  (let [[lower
+         open-lower?] (min-bound
+                        (map (fn [bounds]
+                               (vector (::lower bounds) (::open-lower? bounds)))
+                             vector-bounds))
+        [upper
+         open-upper?] (max-bound
+                        (map (fn [bounds]
+                               (vector (::upper bounds) (::open-upper? bounds)))
+                             vector-bounds))]
     (bounds lower upper open-lower? open-upper?)))
 
 (s/fdef encompassing-bounds

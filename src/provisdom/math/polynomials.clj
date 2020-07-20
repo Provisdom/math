@@ -122,29 +122,40 @@
   necessary."
   ([degree derivative] (chebyshev-derivative-fn degree derivative {}))
   ([degree derivative {::keys [second-kind?] :or {second-kind? false}}]
-   (cond (zero? degree) (constantly 0.0)
-         (m/one? derivative) (if second-kind?
-                               (let [y (inc degree)]
-                                 #(if (m/one? (m/abs %))
-                                    (* (/ 3)
-                                       (m/pow (m/sgn %) y)
-                                       (- (m/cube y) y))
-                                    (/ (- (* y ((chebyshev-polynomial-fn y) %))
-                                          (* % ((chebyshev-polynomial-fn degree {::second-kind? true}) %)))
-                                       (dec (m/sq %)))))
-                               #(* degree ((chebyshev-polynomial-fn (dec degree) {::second-kind? true}) %)))
+   (cond (zero? degree)
+         (constantly 0.0)
+
+         (m/one? derivative)
+         (if second-kind?
+           (let [y (inc degree)]
+             #(if (m/one? (m/abs %))
+                (* (/ 3)
+                   (m/pow (m/sgn %) y)
+                   (- (m/cube y) y))
+                (/ (- (* y ((chebyshev-polynomial-fn y) %))
+                      (* % ((chebyshev-polynomial-fn
+                              degree {::second-kind? true}) %)))
+                   (dec (m/sq %)))))
+           #(* degree ((chebyshev-polynomial-fn
+                         (dec degree) {::second-kind? true}) %)))
+
          (and (= 2 derivative)
-              (not second-kind?)) #(if (m/one? (m/abs %))
-                                     (* (/ 3)
-                                        (m/pow (m/sgn %) degree)
-                                        (- (m/pow degree 4) (m/sq degree)))
-                                     (let [first-kind ((chebyshev-polynomial-fn degree) %)
-                                           second-kind ((chebyshev-polynomial-fn degree {::second-kind? true}) %)]
-                                       (* degree
-                                          (- (* (inc degree) first-kind) second-kind)
-                                          (/ (dec (m/sq %))))))
-         :else (derivatives/derivative-fn (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
-                                          {::derivatives/derivative derivative}))))
+              (not second-kind?))
+         #(if (m/one? (m/abs %))
+            (* (/ 3)
+               (m/pow (m/sgn %) degree)
+               (- (m/pow degree 4) (m/sq degree)))
+            (let [first-kind ((chebyshev-polynomial-fn degree) %)
+                  second-kind ((chebyshev-polynomial-fn
+                                 degree {::second-kind? true}) %)]
+              (* degree
+                 (- (* (inc degree) first-kind) second-kind)
+                 (/ (dec (m/sq %))))))
+
+         :else
+         (derivatives/derivative-fn
+           (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
+           {::derivatives/derivative derivative}))))
 
 (s/fdef chebyshev-derivative-fn
   :args (s/cat :degree ::degree
@@ -157,7 +168,8 @@
   chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...). Can optionally
   use first kind (default) or set `second-kind?` to true."
   ([chebyshev-factors]
-   (chebyshev-polynomial-factors-to-regular-polynomial-factors chebyshev-factors {}))
+   (chebyshev-polynomial-factors-to-regular-polynomial-factors
+     chebyshev-factors {}))
   ([chebyshev-factors {::keys [second-kind?] :or {second-kind? false}}]
    (let [n (count chebyshev-factors)]
      (map (fn [i]
@@ -210,7 +222,8 @@
 
 (s/fdef polynomial-fn
   :args (s/and (s/cat :end-degree ::end-degree
-                      :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                      :opts (s/? (s/keys :opt [::start-degree
+                                               ::chebyshev-kind])))
                (fn [{:keys [end-degree opts]}]
                  (let [{::keys [start-degree]} opts]
                    (or (not start-degree) (<= start-degree end-degree)))))
@@ -230,7 +243,8 @@
 
 (s/fdef polynomial-fns
   :args (s/and (s/cat :end-degree ::end-degree
-                      :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                      :opts (s/? (s/keys :opt [::start-degree
+                                               ::chebyshev-kind])))
                (fn [{:keys [end-degree opts]}]
                  (let [{::keys [start-degree]} opts]
                    (or (not start-degree) (<= start-degree end-degree)))))
@@ -283,7 +297,8 @@
 
 (s/fdef polynomial-2D-fn-by-degree
   :args (s/and (s/cat :end-degree ::end-degree
-                      :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                      :opts (s/? (s/keys :opt [::start-degree
+                                               ::chebyshev-kind])))
                (fn [{:keys [end-degree opts]}]
                  (let [{::keys [start-degree]} opts]
                    (or (not start-degree) (<= start-degree end-degree)))))
@@ -355,10 +370,12 @@
    (fn [v]
      (if (zero? end-degree)
        [1.0]
-       (vec (cons 1.0 (apply interleave
-                             (map (polynomial-fn end-degree {::start-degree   1
-                                                             ::chebyshev-kind chebyshev-kind})
-                                  v))))))))
+       (vec (cons 1.0 (apply
+                        interleave
+                        (map (polynomial-fn
+                               end-degree {::start-degree   1
+                                           ::chebyshev-kind chebyshev-kind})
+                             v))))))))
 
 (s/fdef polynomial-ND-fn-without-cross-terms
   :args (s/cat :end-degree ::end-degree

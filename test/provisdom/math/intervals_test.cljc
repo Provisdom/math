@@ -251,5 +251,6 @@
         ::intervals/upper       1.0
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
-                                       (intervals/bounds -3.0 1.0 false false)])))
+       (intervals/encompassing-bounds
+         [(intervals/bounds -3.0 -1.0 true true)
+          (intervals/bounds -3.0 1.0 false false)])))

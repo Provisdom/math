@@ -1,18 +1,18 @@
 (ns provisdom.math.vector-test
   (:require
-    [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
+    [clojure.test :refer [deftest is are testing run-tests]]
+    [clojure.spec.test.alpha]
+    [provisdom.test.core :refer [is-not is=]]
     [provisdom.math.vector :as vector]
-    [provisdom.math.random :as random]
     [provisdom.math.core :as m]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    [provisdom.math.random :as random]
+    #?(:clj [orchestra.spec.test :as ost])))
 
 ;;37 SECONDS
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
-(ost/instrument)
+#?(:clj (ost/instrument))
 
 ;;;TYPES
 (deftest vector?-test
@@ -98,12 +98,12 @@
 (deftest rnd-vector!-test
   (is (spec-check vector/rnd-vector!))
   (random/bind-seed 0
-                    (is= [] (vector/rnd-vector! 0)))
+    (is= [] (vector/rnd-vector! 0)))
   (random/bind-seed 0
-                    (is= [0.8833108082136426] (vector/rnd-vector! 1)))
+    (is= [0.8833108082136426] (vector/rnd-vector! 1)))
   (random/bind-seed 0
-                    (is= [0.8833108082136426 0.026433771592597743]
-                         (vector/rnd-vector! 2))))
+    (is= [0.8833108082136426 0.026433771592597743]
+         (vector/rnd-vector! 2))))
 
 (deftest sparse->vector-test
   (is (spec-check vector/sparse->vector))
@@ -217,7 +217,8 @@
   (is= [3.0] (vector/projection [3] [4]))
   (is= [3.19672131147541 3.836065573770492] (vector/projection [3 4] [5 6]))
   (is= [0.0 1.0 2.0 3.0 4.0] (vector/projection [0 1 2 3 4] [0 1 2 3 4]))
-  (is= [1.264367816091954 1.517241379310345 1.770114942528736 2.0229885057471266]
+  (is= [1.264367816091954 1.517241379310345
+        1.770114942528736 2.0229885057471266]
        (vector/projection [0 1 2 3] [5 6 7 8]))
   (is= [0.0 3.142857142857143 6.285714285714286 9.428571428571429]
        (vector/projection [5 6 7 8] [0 1 2 3])))

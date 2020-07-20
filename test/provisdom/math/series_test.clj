@@ -35,7 +35,8 @@
 (deftest generalized-continued-fraction-test
   (is (spec-check series/generalized-continued-fraction))
   (is= [1.0 0.6666666666666667 -0.09523809523809534 0.003284072249589487]
-       (series/generalized-continued-fraction [1.0 3.0 6.0 8.0] [2.0 3.0 2.0 6.0])))
+       (series/generalized-continued-fraction
+         [1.0 3.0 6.0 8.0] [2.0 3.0 2.0 6.0])))
 
 ;;;SUM CONVERGENT SERIES
 (defn sin-series

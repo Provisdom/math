@@ -17,7 +17,8 @@
 (ost/instrument)
 
 ;;COMPARE AGAINST THE FOLLOWING
-; Implements the adaptive quadrature described on page 511 of Numerical Analysis Kinkade et al.
+; Implements the adaptive quadrature described on page 511 of
+; Numerical Analysis Kinkade et al.
 ; ## License
 ; Copyright (C) 2014 Daniel Aaron Phelps
 ; Distributed under the Eclipse Public License, the same as Clojure.
@@ -67,9 +68,12 @@
       (>= k n) (throw (Exception. (str "Failure:  k >= n.  sigma = " sigma)))
       :else (+
               ;;From a to the midpoint
-              (adapt-quad-internal f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
+              (adapt-quad-internal
+                f delta eps n (inc k) sigma a h fa (f (+ a h)) fc S-left)
               ;;From the midpoint to b
-              (adapt-quad-internal f delta eps n (inc k) sigma (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
+              (adapt-quad-internal
+                f delta eps n (inc k) sigma
+                (+ a (* 2. h)) h fc (f (+ a (* 3.0 h))) fb S-right)))))
 
 (defn- adaptive-quadrature-test
   "Approximates the definite integral of `f` over [`a` `b`] with an error less
@@ -196,7 +200,8 @@
 
   ;;change of variable -- takes almost a minute to run this one
   ;!!!!this is getting a NaN value, presumably something to do with error = NaN
-  ;!!!!need to stop the integration upon a NaN I think -- same as below -- why NaN?
+  ;!!!!need to stop the integration upon a NaN I think --
+  ; same as below -- why NaN?
   (is= {::anomalies/message  "Error contains NaN. Value: -Infinity"
         ::anomalies/fn       #'provisdom.math.integrals/adaptive-quadrature
         ::anomalies/category ::anomalies/no-solve}
@@ -259,7 +264,8 @@
                    d (or d 0.0)]
                (+ (double a) b c d)))
            [[0.0 1.0] [0.0 1.0] [0.0 1.0] [0.0 1.0]]))
-  #_(is= 3.1415926535897944                                 ;slow-ish 3.141592653589793 PI
+  ;;slow-ish 3.141592653589793 PI
+  #_(is= 3.1415926535897944
          (integrals/rectangular-integration
            (fn [[a b]]
              (let [a (or a 0.0)

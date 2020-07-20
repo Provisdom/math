@@ -144,8 +144,8 @@
     (vec (concat m extra r))))
 
 (s/fdef convert-central-coefficients
-        :args (s/cat :m ::mx/matrix :no-zero? boolean?)
-        :ret ::mx/matrix)
+  :args (s/cat :m ::mx/matrix :no-zero? boolean?)
+  :ret ::mx/matrix)
 
 (defn- get-central-coefficients
   [deriv accuracy]
@@ -158,11 +158,11 @@
     (convert-central-coefficients (nth m (dec a)) (odd? deriv))))
 
 (s/fdef get-central-coefficients
-        :args (s/and (s/cat :deriv (s/int-in 1 5)
-                            :accuracy #{2 4 6 8})
-                     (fn [{:keys [deriv accuracy]}]
-                       (or (<= accuracy 6) (<= deriv 2))))
-        :ret ::coefficients)
+  :args (s/and (s/cat :deriv (s/int-in 1 5)
+                      :accuracy #{2 4 6 8})
+               (fn [{:keys [deriv accuracy]}]
+                 (or (<= accuracy 6) (<= deriv 2))))
+  :ret ::coefficients)
 
 (defn- get-forward-coefficients
   [deriv accuracy]
@@ -175,11 +175,11 @@
     (conj coefficient [0 (- (apply + (map second coefficient)))])))
 
 (s/fdef get-forward-coefficients
-        :args (s/and (s/cat :deriv (s/int-in 1 7)
-                            :accuracy (s/int-in 1 7))
-                     (fn [{:keys [deriv accuracy]}]
-                       (or (<= accuracy 5) (<= deriv 3))))
-        :ret ::coefficients)
+  :args (s/and (s/cat :deriv (s/int-in 1 7)
+                      :accuracy (s/int-in 1 7))
+               (fn [{:keys [deriv accuracy]}]
+                 (or (<= accuracy 5) (<= deriv 3))))
+  :ret ::coefficients)
 
 (defn- get-backward-coefficients
   "backward is like forward, except for odd derivatives the sign switches."
@@ -190,11 +190,11 @@
           coefficient)))
 
 (s/fdef get-backward-coefficients
-        :args (s/and (s/cat :deriv (s/int-in 1 7)
-                            :accuracy (s/int-in 1 7))
-                     (fn [{:keys [deriv accuracy]}]
-                       (or (<= accuracy 5) (<= deriv 3))))
-        :ret ::coefficients)
+  :args (s/and (s/cat :deriv (s/int-in 1 7)
+                      :accuracy (s/int-in 1 7))
+               (fn [{:keys [deriv accuracy]}]
+                 (or (<= accuracy 5) (<= deriv 3))))
+  :ret ::coefficients)
 
 (defn derivative-fn
   "Returns a numerical derivative function. Function `number->number` takes and
@@ -215,38 +215,38 @@
   ([number->number {::keys [derivative h type accuracy]
                     :or    {derivative 1
                             type       :central}}]
-   (let [derivative (int derivative)
+   (let [deriv (int derivative)
          accuracy (when accuracy (int accuracy))
          h (when h (double h))]
-     (cond (zero? derivative) number->number
-           (> derivative 4) (let [exc (- derivative 4)
-                                  x (if h
-                                      (/ h (/ m/sgl-close 10))
-                                      1.0)]
-                              (derivative-fn
-                                (derivative-fn
-                                  number->number
-                                  {::derivative exc
-                                   ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
-                                   ::type       type})
-                                {::derivative 4
-                                 ::h          (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
-                                 ::type       type}))
+     (cond (zero? deriv) number->number
+           (> deriv 4) (let [exc (- deriv 4)
+                             x (if h
+                                 (/ h (/ m/sgl-close 10))
+                                 1.0)]
+                         (derivative-fn
+                           (derivative-fn
+                             number->number
+                             {::derivative exc
+                              ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
+                              ::type       type})
+                           {::derivative 4
+                            ::h          (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
+                            ::type       type}))
            :else (let [h (cond h h
-                               (m/one? derivative) m/sgl-close
+                               (m/one? deriv) m/sgl-close
                                :else (/ m/sgl-close 10))
                        accuracy (cond accuracy accuracy
-                                      (<= derivative 2) 2
-                                      (and (== derivative 4) (not= type :central)) 5
+                                      (<= deriv 2) 2
+                                      (and (== deriv 4) (not= type :central)) 5
                                       :else 6)
                        coefficient-fn (condp = type
                                         :central get-central-coefficients
                                         :forward get-forward-coefficients
                                         :backward get-backward-coefficients)
                        multiplier (/ h)
-                       dx (m/pow h (/ derivative))
+                       dx (m/pow h (/ deriv))
                        coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
-                                        (coefficient-fn derivative accuracy))]
+                                        (coefficient-fn deriv accuracy))]
                    (fn [v]
                      (* multiplier
                         (apply + (map #(let [[e1 e2] %]
@@ -254,21 +254,28 @@
                                       coefficient)))))))))
 
 (s/fdef derivative-fn
-        :args (s/cat :number->number ::number->number
-                     :opts (s/? (s/and
-                                  (s/keys :opt [::derivative ::h ::type ::accuracy])
-                                  (fn [v]
-                                    (let [d (get v ::derivative 1)
-                                          t (get v ::type :central)
-                                          a (get v ::accuracy (cond (<= d 2) 2
-                                                                    (and (== d 4) (not= t :central)) 5
-                                                                    :else 6))]
-                                      (if (= t :central)
-                                        (and (even? a)
-                                             (or (and (<= d 2) (<= a 8)) (<= a 6)))
-                                        (and (<= a 6)
-                                             (or (<= d 3) (<= a 5)))))))))
-        :ret ::number->number)
+  :args (s/cat :number->number ::number->number
+               :opts (s/? (s/and
+                            (s/keys :opt [::derivative ::h ::type ::accuracy])
+                            (fn [v]
+                              (let [d (get v ::derivative 1)
+                                    t (get v ::type :central)
+                                    a (get v ::accuracy
+                                           (cond (<= d 2)
+                                                 2
+
+                                                 (and (== d 4)
+                                                      (not= t :central))
+                                                 5
+
+                                                 :else
+                                                 6))]
+                                (if (= t :central)
+                                  (and (even? a)
+                                       (or (and (<= d 2) (<= a 8)) (<= a 6)))
+                                  (and (<= a 6)
+                                       (or (<= d 3) (<= a 5)))))))))
+  :ret ::number->number)
 
 (defn gradient-fn
   "Returns a numerical gradient function. Function `v->number` takes a vector
@@ -305,15 +312,15 @@
            v))))))
 
 (s/fdef gradient-fn
-        :args (s/cat :v->number ::v->number
-                     :opts (s/? (s/and
-                                  (s/keys :opt [::h ::type ::accuracy])
-                                  (fn [v] (let [t (get v ::type :central)
-                                                a (get v ::accuracy 2)]
-                                            (if (= t :central)
-                                              (and (even? a) (<= a 8))
-                                              (<= a 6)))))))
-        :ret ::v->v)
+  :args (s/cat :v->number ::v->number
+               :opts (s/? (s/and
+                            (s/keys :opt [::h ::type ::accuracy])
+                            (fn [v] (let [t (get v ::type :central)
+                                          a (get v ::accuracy 2)]
+                                      (if (= t :central)
+                                        (and (even? a) (<= a 8))
+                                        (<= a 6)))))))
+  :ret ::v->v)
 
 (defn jacobian-fn
   "Returns a numerical jacobian function. Function `v->v` takes a vector and
@@ -349,24 +356,25 @@
                        (fn [i e]
                          (apply tensor/add
                                 (mapv #(let [[e1 e2] %]
-                                         (tensor/multiply e2
-                                                          multiplier
-                                                          (v->v (assoc v i (+ e e1)))))
+                                         (tensor/multiply
+                                           e2
+                                           multiplier
+                                           (v->v (assoc v i (+ e e1)))))
                                       coefficient)))
                        v))]
              m)))))))
 
 (s/fdef jacobian-fn
-        :args (s/cat :v->v ::v->v
-                     :opts (s/? (s/and
-                                  (s/keys :opt [::h ::type ::accuracy])
-                                  (fn [v]
-                                    (let [t (get v ::type :central)
-                                          a (get v ::accuracy 2)]
-                                      (if (= t :central)
-                                        (and (even? a) (<= a 8))
-                                        (<= a 6)))))))
-        :ret ::v->m)
+  :args (s/cat :v->v ::v->v
+               :opts (s/? (s/and
+                            (s/keys :opt [::h ::type ::accuracy])
+                            (fn [v]
+                              (let [t (get v ::type :central)
+                                    a (get v ::accuracy 2)]
+                                (if (= t :central)
+                                  (and (even? a) (<= a 8))
+                                  (<= a 6)))))))
+  :ret ::v->m)
 
 (defn- joint-central-derivative
   [v->number v row column dx multiplier]
@@ -385,13 +393,13 @@
             (v->number e-+))))))
 
 (s/fdef joint-central-derivative
-        :args (s/cat :v->number ::v->number
-                     :v ::vector/vector
-                     :row ::mx/row
-                     :column ::mx/column
-                     :dx ::dx
-                     :multiplier ::multiplier)
-        :ret ::m/number)
+  :args (s/cat :v->number ::v->number
+               :v ::vector/vector
+               :row ::mx/row
+               :column ::mx/column
+               :dx ::dx
+               :multiplier ::multiplier)
+  :ret ::m/number)
 
 (defn hessian-fn
   "Returns a numerical Hessian function. Function `v->number` takes a vector and
@@ -415,7 +423,7 @@
          ((jacobian-fn (gradient-fn v->number {::h        (m/sqrt h)
                                                ::type     type
                                                ::accuracy accuracy}))
-           v)))
+          v)))
      (let [multiplier (/ h)
            dx (m/sqrt h)
            coefficient (map (fn [central-coefficient]
@@ -436,23 +444,29 @@
 
                      (== row column)
                      (* multiplier
-                        (apply + (map (fn [coeff]
-                                        (let [[e1 e2] coeff]
-                                          (* (v->number (assoc v row (+ (get v row) e1))) e2)))
-                                      coefficient)))
+                        (reduce (fn [acc coeff]
+                                  (let [[e1 e2] coeff]
+                                    (+ acc
+                                       (* (v->number
+                                            (assoc v row (+ (get v row) e1)))
+                                          e2))))
+                                0.0
+                                coefficient))
 
-                     :else (joint-central-derivative v->number v row column dx multiplier))))))))))))
+                     :else (joint-central-derivative
+                             v->number v row column dx multiplier))))))))))))
 
 (s/fdef hessian-fn
-        :args (s/cat :v->number ::v->number
-                     :opts (s/? (s/and
-                                  (s/keys :opt [::h ::type ::accuracy])
-                                  (fn [v] (let [t (get v ::type :joint-central)
-                                                a (get v ::accuracy 2)]
-                                            (cond (= t :joint-central) (== a 2)
-                                                  (= t :central) (and (even? a) (<= a 8))
-                                                  :else (<= a 6)))))))
-        :ret ::v->symmetric-m)
+  :args (s/cat :v->number ::v->number
+               :opts (s/? (s/and
+                            (s/keys :opt [::h ::type ::accuracy])
+                            (fn [v] (let [t (get v ::type :joint-central)
+                                          a (get v ::accuracy 2)]
+                                      (cond (= t :joint-central) (== a 2)
+                                            (= t :central) (and (even? a)
+                                                                (<= a 8))
+                                            :else (<= a 6)))))))
+  :ret ::v->symmetric-m)
 
 (defn partial-derivative-x-of-fxy
   ([fxy] (partial-derivative-x-of-fxy fxy {}))
@@ -462,12 +476,12 @@
         (fn [x-local]
           (fxy x-local y))
         {::h h})
-       x))))
+      x))))
 
 (s/fdef partial-derivative-x-of-fxy
-        :args (s/cat :fxy ::fxy
-                     :opts (s/? (s/keys :opt [::h])))
-        :ret ::fxy)
+  :args (s/cat :fxy ::fxy
+               :opts (s/? (s/keys :opt [::h])))
+  :ret ::fxy)
 
 (defn partial-derivative-y-of-fxy
   ([fxy] (partial-derivative-y-of-fxy fxy {}))
@@ -477,12 +491,12 @@
         (fn [y-local]
           (fxy x y-local))
         {::h h})
-       y))))
+      y))))
 
 (s/fdef partial-derivative-y-of-fxy
-        :args (s/cat :fxy ::fxy
-                     :opts (s/? (s/keys :opt [::h])))
-        :ret ::fxy)
+  :args (s/cat :fxy ::fxy
+               :opts (s/? (s/keys :opt [::h])))
+  :ret ::fxy)
 
 (defn second-partial-derivative-xx-of-fxy
   ([fxy] (second-partial-derivative-xx-of-fxy fxy {}))
@@ -492,12 +506,12 @@
         (fn [x-local]
           (fxy x-local y))
         {::derivative 2 ::h h})
-       x))))
+      x))))
 
 (s/fdef second-partial-derivative-xx-of-fxy
-        :args (s/cat :fxy ::fxy
-                     :opts (s/? (s/keys :opt [::h])))
-        :ret ::fxy)
+  :args (s/cat :fxy ::fxy
+               :opts (s/? (s/keys :opt [::h])))
+  :ret ::fxy)
 
 (defn second-partial-derivative-yy-of-fxy
   ([fxy] (second-partial-derivative-yy-of-fxy fxy {}))
@@ -507,12 +521,12 @@
         (fn [y-local]
           (fxy x y-local))
         {::derivative 2 ::h h})
-       y))))
+      y))))
 
 (s/fdef second-partial-derivative-yy-of-fxy
-        :args (s/cat :fxy ::fxy
-                     :opts (s/? (s/keys :opt [::h])))
-        :ret ::fxy)
+  :args (s/cat :fxy ::fxy
+               :opts (s/? (s/keys :opt [::h])))
+  :ret ::fxy)
 
 (defn second-partial-derivative-xy-of-fxy
   ([fxy] (second-partial-derivative-xy-of-fxy fxy {}))
@@ -531,6 +545,6 @@
        (/ h)))))
 
 (s/fdef second-partial-derivative-xy-of-fxy
-        :args (s/cat :fxy ::fxy
-                     :opts (s/? (s/keys :opt [::h])))
-        :ret ::fxy)
+  :args (s/cat :fxy ::fxy
+               :opts (s/? (s/keys :opt [::h])))
+  :ret ::fxy)

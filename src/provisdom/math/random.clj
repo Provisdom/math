@@ -36,9 +36,9 @@
    (m/floor' (+ lower (* (- (inc (double upper)) lower) rnd)))))
 
 (s/fdef random-long
-        :args (s/cat :rnd ::rnd
-                     :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :rnd ::rnd
+               :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn random-bool
   "Returns a random boolean."
@@ -46,8 +46,8 @@
   (<= rnd 0.5))
 
 (s/fdef random-bool
-        :args (s/cat :rnd ::rnd)
-        :ret boolean?)
+  :args (s/cat :rnd ::rnd)
+  :ret boolean?)
 
 (defn random-normal
   "Returns a value drawn from a standard Normal distribution."
@@ -55,8 +55,8 @@
   (special-fns/inv-cdf-standard-normal rnd))
 
 (s/fdef random-normal
-        :args (s/cat :rnd ::rnd)
-        :ret ::m/num)
+  :args (s/cat :rnd ::rnd)
+  :ret ::m/num)
 
 ;;;IMMUTABLE RNG
 (defn rng
@@ -65,8 +65,8 @@
   (split/make-java-util-splittable-random seed))
 
 (s/fdef rng
-        :args (s/cat :seed ::seed)
-        :ret ::rng)
+  :args (s/cat :seed ::seed)
+  :ret ::rng)
 
 (defn rnd
   "Returns a random finite within the given interval (or [0, 1] by default)."
@@ -78,9 +78,9 @@
        (+ lower (* diff (split/rand-double rng)))))))
 
 (s/fdef rnd
-        :args (s/cat :rng ::rng
-                     :interval (s/? ::intervals/finite-interval))
-        :ret ::m/finite)
+  :args (s/cat :rng ::rng
+               :interval (s/? ::intervals/finite-interval))
+  :ret ::m/finite)
 
 (defn rnd-long
   "Returns a random long within the given interval (or any long by default)."
@@ -91,9 +91,9 @@
                    (rnd rng))))))
 
 (s/fdef rnd-long
-        :args (s/cat :rng ::rng
-                     :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :rng ::rng
+               :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn rnd-bool
   "Returns a random boolean."
@@ -101,8 +101,8 @@
   (random-bool (rnd rng)))
 
 (s/fdef rnd-bool
-        :args (s/cat :rng ::rng)
-        :ret boolean?)
+  :args (s/cat :rng ::rng)
+  :ret boolean?)
 
 (defn rnd-normal
   "Returns a value randomly drawn from a standard Normal distribution."
@@ -110,8 +110,8 @@
   (random-normal (rnd rng)))
 
 (s/fdef rnd-normal
-        :args (s/cat :rng ::rng)
-        :ret ::m/num)
+  :args (s/cat :rng ::rng)
+  :ret ::m/num)
 
 (defn rng-lazy
   "Returns a lazy sequence of RNG where each iteration is split from the
@@ -120,8 +120,8 @@
   (iterate (comp first split/split) rng))
 
 (s/fdef rng-lazy
-        :args (s/cat :rng ::rng)
-        :ret (s/every ::rng))
+  :args (s/cat :rng ::rng)
+  :ret (s/every ::rng))
 
 (defn rnd-lazy
   "Returns a lazy seq of random rnds."
@@ -129,8 +129,8 @@
   (map split/rand-double (rng-lazy rng)))
 
 (s/fdef rnd-lazy
-        :args (s/cat :rng ::rng)
-        :ret ::rnd-lazy)
+  :args (s/cat :rng ::rng)
+  :ret ::rnd-lazy)
 
 (defn rnd-long-lazy
   "Returns a lazy seq of random longs."
@@ -138,8 +138,8 @@
   (map split/rand-long (rng-lazy rng)))
 
 (s/fdef rnd-long-lazy
-        :args (s/cat :rng ::rng)
-        :ret (s/every ::m/long))
+  :args (s/cat :rng ::rng)
+  :ret (s/every ::m/long))
 
 ;;;BOUND RNG
 (defn rng!
@@ -148,8 +148,8 @@
   (*rng-gen*))
 
 (s/fdef rng!
-        :args (s/cat)
-        :ret ::rng)
+  :args (s/cat)
+  :ret ::rng)
 
 (defn rng-gen
   "Returns a function that will generate random numbers from the bound or other
@@ -172,8 +172,8 @@
   ([[lower upper]] (rnd (rng!) [lower upper])))
 
 (s/fdef rnd!
-        :args (s/cat :interval (s/? ::intervals/finite-interval))
-        :ret ::m/finite)
+  :args (s/cat :interval (s/? ::intervals/finite-interval))
+  :ret ::m/finite)
 
 (defn rnd-long!
   "Returns a random long within the given interval (or any long by default)."
@@ -181,8 +181,8 @@
   ([[lower upper]] (rnd-long (rng!) [lower upper])))
 
 (s/fdef rnd-long!
-        :args (s/cat :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn rnd-bool!
   "Returns a random boolean."
@@ -190,8 +190,8 @@
   (rnd-bool (rng!)))
 
 (s/fdef rnd-bool!
-        :args (s/cat)
-        :ret boolean?)
+  :args (s/cat)
+  :ret boolean?)
 
 (defn rnd-normal!
   "Returns a value randomly drawn from a standard Normal distribution."
@@ -199,8 +199,8 @@
   (rnd-normal (rng!)))
 
 (s/fdef rnd-normal!
-        :args (s/cat)
-        :ret ::m/num)
+  :args (s/cat)
+  :ret ::m/num)
 
 (defn rng-lazy!
   "Returns a lazy sequence of RNG where each iteration is split from the
@@ -209,8 +209,8 @@
   (rng-lazy (rng!)))
 
 (s/fdef rng-lazy!
-        :args (s/cat)
-        :ret (s/every ::rng))
+  :args (s/cat)
+  :ret (s/every ::rng))
 
 (defn rnd-lazy!
   "Returns a lazy seq of random doubles."
@@ -218,8 +218,8 @@
   (rnd-lazy (rng!)))
 
 (s/fdef rnd-lazy!
-        :args (s/cat)
-        :ret ::rnd-lazy)
+  :args (s/cat)
+  :ret ::rnd-lazy)
 
 (defn rnd-long-lazy!
   "Returns a lazy seq of random longs."
@@ -227,8 +227,8 @@
   (rnd-long-lazy (rng!)))
 
 (s/fdef rnd-long-lazy!
-        :args (s/cat)
-        :ret (s/every ::m/long))
+  :args (s/cat)
+  :ret (s/every ::m/long))
 
 ;;;USE CLOCK
 (defn rng$
@@ -237,8 +237,8 @@
   (split/next-rng))
 
 (s/fdef rng$
-        :args (s/cat)
-        :ret ::rng)
+  :args (s/cat)
+  :ret ::rng)
 
 (defn seed$
   "Returns a new seed from the current clock time."
@@ -246,8 +246,8 @@
   (rnd-long (rng$)))
 
 (s/fdef seed$
-        :args (s/cat)
-        :ret ::seed)
+  :args (s/cat)
+  :ret ::seed)
 
 (defn set-seed!$
   "Sets the RNG generator to the current clock time."
@@ -255,9 +255,10 @@
   (set-seed! (System/currentTimeMillis)))
 
 ;; TODO: Is there a better way to set the default value for *rng-gen*?
-;; This is needed due to a circular dependency on functions when initially compiled.
-;; You will get an "Attempting to call unbound fn" error if you try to directly set
-;; *rng-gen* to `(rng-gen)`.
+;; This is needed due to a circular dependency on functions when initially
+;; compiled.
+;; You will get an "Attempting to call unbound fn" error if you try to directly
+;; set *rng-gen* to `(rng-gen)`.
 (set-seed!$)
 
 ;;;MACROS
@@ -275,71 +276,3 @@
   `(do
      (set-seed! ~seed)
      ~@body))
-
-(comment "Not sure if any of the following will be useful in the future..."
-
-         (defn split-random-lazy
-           "Returns tuple of a lazy-seq of `rnd-lazy` and a `rnd-lazy`.
-           Useful for parallelization.
-           There is an extremely tiny chance (2^-64 perhaps) of non-randomness per split."
-           [rnd-lazy]
-           [(map #(mersenne-rnd-lazy (rnd-long %)) (rest rnd-lazy))
-            (mersenne-rnd-lazy (rnd-long (first rnd-lazy)))])
-
-         (defn split-random
-           "Returns tuple of rnd-lazy.
-           Useful for parallelization.
-           There is an extremely tiny chance (2^-64 perhaps) of non-randomness per split."
-           [rnd-lazy]
-           [(rest rnd-lazy) (mersenne-rnd-lazy (rnd-long (first rnd-lazy)))])
-
-         (defn multi-sample
-           "Returns tuple of [sampled-values rnd-lazy].
-         Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)."
-           [samplef rnd-lazy ^long ntake]
-           (if-not (= :rnd (:r (meta samplef)))
-             (let [s (take ntake (iterate #(samplef (second %)) (samplef rnd-lazy)))]
-               [(map first s) (second (last s))])
-             [(map samplef (take ntake rnd-lazy))
-              (drop ntake rnd-lazy)]))
-
-         (defn multi-sample-indexed
-           "Returns tuple of [sampled-values rnd-lazy].
-           `samplef` should be function of index and either rnd or rnd-lazy.
-           Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
-           [samplef rnd-lazy ^long ntake]
-           (if-not (= :rnd (:r (meta samplef)))
-             (loop [coll []
-                    r rnd-lazy
-                    i 0]
-               (if (>= i ntake)
-                 [coll r]
-                 (let [[s laz] (samplef i r)]
-                   (recur (conj coll s) laz (inc i)))))
-             [(map-indexed samplef (take ntake rnd-lazy))
-              (drop ntake rnd-lazy)]))
-
-         (defn fold-random
-           "Returns tuple of value and rnd-lazy.
-           This fn is an extension of 'fold' in core.reducers for folding rnd-lazy or rnd.
-           Reduces a collection using a (potentially parallel) reduce-combine strategy.
-           The collection is partitioned into groups of approximately chunk-size (default 512), each of which is reduced
-           with reducef (with a seed value obtained by calling (combinef) with no arguments).
-           For rnd-lazy, the reducef should take the result and first part of the tuple from the samplef.
-           The results of these reductions are then reduced with combinef (default reducef).
-           combinef must be associative, and, when called with no arguments, (combinef) must produce its identity element.
-           These operations may be performed in parallel, but the results will preserve order.
-           Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
-           ([^long min-runs reducef samplef rnd-lazy]
-            (fold-random min-runs reducef reducef samplef rnd-lazy))
-           ([min-runs combinef reducef samplef rnd-lazy]
-            (let [chunk-size 512]
-              (fold-random chunk-size (m/ceil (/ min-runs chunk-size)) combinef reducef samplef rnd-lazy)))
-           ([chunk-size chunks combinef reducef samplef rnd-lazy]
-            (let [runs (* chunk-size chunks)]
-              (if (= :rnd (:r (meta samplef)))
-                [(reducers/fold chunk-size combinef #(reducef %1 (samplef %2)) (take runs rnd-lazy))
-                 (drop runs rnd-lazy)]
-                (let [[lazies laz] (split-random-lazy rnd-lazy)]
-                  [(reducers/fold chunk-size combinef #(reducef %1 (first (samplef %2))) (take runs lazies))
-                   laz]))))))
