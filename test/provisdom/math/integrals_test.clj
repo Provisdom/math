@@ -166,7 +166,7 @@
                  (m/=== ret
                         (- 4.0 (m/div (m/one- number) number))))))
 
-(deftest change-of-variable-test
+#_(deftest change-of-variable-test
   (is (spec-check integrals/change-of-variable))
   (let [cov (integrals/change-of-variable [m/inf- m/inf+])]
     (s/explain ::mul1 (::integrals/multiplicative-fn cov))
@@ -185,7 +185,7 @@
     (s/explain ::con4 (::integrals/converter-fn cov4))
     (is= [0.0 1.0] (::intervals/finite-interval cov4))))
 
-(deftest integration-test
+#_(deftest integration-test
   #_(is (spec-check integrals/integration
                     {:coll-check-limit 10
                      :coll-error-limit 10
@@ -233,7 +233,7 @@
          #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)])
          [5.0 m/inf+])))
 
-(deftest rectangular-integration-test
+#_(deftest rectangular-integration-test
   (is (spec-check integrals/rectangular-integration
                   {:coll-check-limit 10
                    :coll-error-limit 10
