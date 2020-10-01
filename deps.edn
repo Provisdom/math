@@ -1,10 +1,10 @@
 {:paths   ["src"]
- :deps    {orchestra                        {:mvn/version "2019.02.06-1"}
-           provisdom/utility-belt           {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                             :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
+ :deps    {orchestra/orchestra    {:mvn/version "2019.02.06-1"}
+           provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
+                                   :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
  :aliases {:dev         {:extra-paths ["siderail"]}
            :test        {:extra-paths ["test" "siderail"]
-                         :extra-deps  {criterium                  {:mvn/version "0.4.5"}
+                         :extra-deps  {criterium/criterium        {:mvn/version "0.4.5"}
                                        org.clojure/test.check     {:mvn/version "0.10.0"}
                                        provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
                                                                    :sha     "7f403360348fbb603a6d2212c164afcb2a6035e6"}
