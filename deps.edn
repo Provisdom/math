@@ -1,15 +1,15 @@
 {:paths   ["src"]
  :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                   :sha     "718cdce35926c33d1e5a77565c95d695ceea87c1"}}
+                                   :sha     "9e91b311d1024628ef882290d93eff1b886b7eeb"}}
  :aliases {:test            {:extra-paths ["test"]
-                             :extra-deps  {orchestra                 {:mvn/version "2020.07.12-1"}
-                                           criterium                 {:mvn/version "0.4.6"}
+                             :extra-deps  {orchestra/orchestra                 {:mvn/version "2020.09.18-1"}
+                                           criterium/criterium                 {:mvn/version "0.4.6"}
                                            org.clojure/test.check    {:mvn/version "1.1.0"}
                                            provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                                      :sha     "ce443de2f550f6c69e217591489841e33a5d43d6"}
+                                                                      :sha     "0727c0746a455b105461cdcb36cc0ddbbac8d7ad"}
                                            com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                                      :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}}
-           :test-cljs       {:extra-deps {thheller/shadow-cljs {:mvn/version "2.10.15"}}}
-           :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.641"}
-                                          lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
+                                                                      :sha     "b6b3193fcc42659d7e46ecd1884a228993441182"}}}
+           :test-cljs       {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.8"}}}
+           :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.732"}
+                                          lambdaisland/kaocha-junit-xml {:mvn/version "0.0.76"}}
                              :main-opts  ["-m" "cognitect.test-runner"]}}}
