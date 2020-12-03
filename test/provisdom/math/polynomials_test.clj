@@ -215,7 +215,8 @@
     (is (spec-check poly/polynomial-ND-fn
                     {:fspec-iterations 1
                      :num-tests        5})))
-  #_(with-instrument (st/instrumentable-syms)
+  ;;super slow with full instrumentation
+  (with-instrument `poly/polynomial-ND-fn  #_(st/instrumentable-syms)
     (is= [1.0 2.0 3.0 4.0 4.0 6.0 8.0 9.0 12.0 16.0 12.0 16.0 18.0 24.0 32.0 36.0
           48.0 36.0 48.0 64.0 72.0 96.0 144.0 144.0 192.0 288.0 576.0]
          ((poly/polynomial-ND-fn 2) [2.0 3.0 4.0]))))

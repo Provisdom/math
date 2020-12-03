@@ -3,9 +3,7 @@
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
     [provisdom.math.core :as m]
-    [provisdom.math.special-functions :as special-fns]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    [provisdom.math.special-functions :as special-fns]))
 
 ;;2 SECONDS
 
