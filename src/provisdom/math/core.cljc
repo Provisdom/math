@@ -334,6 +334,7 @@
                                      :infinite? false
                                      :NaN?      false})
                        (gen/large-integer* {:max 0})])))
+
 (s/def ::nan-or-finite-non+
   (s/spec #(or (nan? %) (finite-non+? %))
     :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
@@ -351,6 +352,17 @@
 
 (s/def ::double-finite
   (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
+
+(defn double-finite+?
+  "Returns true if `x` is a double and finite+."
+  [x]
+  (and (finite+? x) (double? x)))
+
+(s/def ::double-finite+
+  (s/spec double-finite+?
+    :gen #(gen/double* {:infinite? false
+                        :min tiny-dbl
+                        :NaN? false})))
 
 (defn single?
   "Returns true if `x` is a single."
