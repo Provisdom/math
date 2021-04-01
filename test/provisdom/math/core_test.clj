@@ -122,6 +122,16 @@
   (is-not (m/double-finite? m/inf-))
   (is-not (m/double-finite? m/nan)))
 
+(deftest double-finite+?-test
+  (is-not (m/double-finite? "A"))
+  (is-not (m/double-finite? 0))
+  (is-not (m/double-finite? 0.0))
+  (is (m/double-finite? 3.3E300))
+  (is-not (m/double-finite? -3.3E300))
+  (is-not (m/double-finite? m/inf+))
+  (is-not (m/double-finite? m/inf-))
+  (is-not (m/double-finite? m/nan)))
+
 (deftest single?-test
   (is-not (m/single? "A"))
   (is-not (m/single? 0))
