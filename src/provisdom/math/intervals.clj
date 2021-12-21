@@ -17,14 +17,16 @@
                    :or   {compare-op `>=}}]
    `(s/with-gen
       (s/and (s/tuple ~lower ~upper)
-             (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
-                                   (and (m/nan? ~'x1) (m/nan? ~'x2)))))
+        (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
+                            (and (m/nan? ~'x1) (m/nan? ~'x2)))))
       #(gen/fmap (comp vec sort) (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
 
 (defmacro strict-interval-spec
   ([spec] `(strict-interval-spec ~spec ~spec))
   ([lower upper & opts]
    `(interval-spec ~lower ~upper :compare-op > ~@opts)))
+
+(s/def ::strict-interval (strict-interval-spec ::m/number))
 
 (s/def ::interval (interval-spec ::m/number))
 
@@ -58,7 +60,7 @@
   ""
   [min max]
   (gen/tuple (gen/large-integer* {:min min :max max})
-             (gen/large-integer* {:min min :max max})))
+    (gen/large-integer* {:min min :max max})))
 
 (s/def ::lower ::m/number)
 (s/def ::upper ::m/number)
@@ -67,26 +69,26 @@
 
 (s/def ::bounds
   (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-         (fn [{::keys [lower upper open-lower? open-upper?]}]
-           (or (and (m/nan? lower) (m/nan? upper))
-               (> upper lower)
-               (and (== upper lower)
-                    (not open-lower?)
-                    (not open-upper?))))))
+    (fn [{::keys [lower upper open-lower? open-upper?]}]
+      (or (and (m/nan? lower) (m/nan? upper))
+        (> upper lower)
+        (and (== upper lower)
+          (not open-lower?)
+          (not open-upper?))))))
 
 (s/def ::bounds-num
   (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-         (fn [{::keys [lower upper open-lower? open-upper?]}]
-           (or (> upper lower)
-               (and (== upper lower)
-                    (not open-lower?)
-                    (not open-upper?))))))
+    (fn [{::keys [lower upper open-lower? open-upper?]}]
+      (or (> upper lower)
+        (and (== upper lower)
+          (not open-lower?)
+          (not open-upper?))))))
 
 (s/def ::vector-bounds
   (s/with-gen
     (s/coll-of ::bounds
-               :kind vector?
-               :into [])
+      :kind vector?
+      :into [])
     #(gen/vector (s/gen ::bounds) 0 mdl)))
 
 (s/def ::by-upper? boolean?)
@@ -99,18 +101,18 @@
 
 (s/fdef in-interval?
   :args (s/cat :interval ::interval
-               :number ::m/number)
+          :number ::m/number)
   :ret boolean?)
 
 (defn in-interval-roughly?
-  "Tests whether `number` is roughly inside of the interval."
+  "Tests whether `number` is roughly inside the interval."
   [[lower upper] number accu]
   (and (>= number (- lower accu)) (<= number (+ upper accu))))
 
 (s/fdef in-interval-roughly?
   :args (s/cat :interval ::interval
-               :number ::m/number
-               :accu ::m/accu)
+          :number ::m/number
+          :accu ::m/accu)
   :ret boolean?)
 
 (defn bound-by-interval
@@ -120,19 +122,31 @@
 
 (s/fdef bound-by-interval
   :args (s/cat :interval ::interval
-               :number ::m/number)
+          :number ::m/number)
   :ret ::m/number)
+
+(defn bound-by-strict-interval
+  "Bounds a `number` to a strict interval."
+  [[lower upper] number]
+  (cond (>= number upper) (m/next-down upper)
+        (<= number lower) (m/next-up lower)
+        :else number))
+
+(s/fdef bound-by-strict-interval
+  :args (s/cat :strict-interval ::strict-interval
+          :number ::m/number)
+  :ret ::m/nan-or-finite)
 
 ;;;BOUNDS TEST
 (defn in-bounds?
-  "Tests whether `number` is inside of the bounds."
+  "Tests whether `number` is inside the bounds."
   [{::keys [lower upper open-lower? open-upper?]} number]
   (and (if open-lower?
          (> number lower)
          (>= number lower))
-       (if open-upper?
-         (< number upper)
-         (<= number upper))))
+    (if open-upper?
+      (< number upper)
+      (<= number upper))))
 
 (s/fdef in-bounds?
   :args (s/cat :bounds ::bounds :number ::m/number)
@@ -154,31 +168,31 @@
 
 (s/fdef bounds
   :args (s/or :zero (s/cat)
-              :one (s/cat :interval ::interval)
-              :two (s/and (s/cat :lower ::lower :upper ::upper)
-                          (fn [{:keys [lower upper]}]
-                            (or (and (m/nan? lower) (m/nan? upper))
-                                (>= upper lower))))
-              :three (s/and (s/cat :interval ::interval
-                                   :open-lower? ::open-lower?
-                                   :open-upper? ::open-upper?)
-                            (fn [{:keys [interval open-lower? open-upper?]}]
-                              (let [[lower upper] interval]
-                                (or (and (m/nan? lower) (m/nan? upper))
-                                    (> upper lower)
-                                    (and (== upper lower)
-                                         (not open-lower?)
-                                         (not open-upper?))))))
-              :four (s/and (s/cat :lower ::lower
-                                  :upper ::upper
-                                  :open-lower? ::open-lower?
-                                  :open-upper? ::open-upper?)
-                           (fn [{:keys [lower upper open-lower? open-upper?]}]
-                             (or (and (m/nan? lower) (m/nan? upper))
-                                 (> upper lower)
-                                 (and (== upper lower)
-                                      (not open-lower?)
-                                      (not open-upper?))))))
+          :one (s/cat :interval ::interval)
+          :two (s/and (s/cat :lower ::lower :upper ::upper)
+                 (fn [{:keys [lower upper]}]
+                   (or (and (m/nan? lower) (m/nan? upper))
+                     (>= upper lower))))
+          :three (s/and (s/cat :interval ::interval
+                          :open-lower? ::open-lower?
+                          :open-upper? ::open-upper?)
+                   (fn [{:keys [interval open-lower? open-upper?]}]
+                     (let [[lower upper] interval]
+                       (or (and (m/nan? lower) (m/nan? upper))
+                         (> upper lower)
+                         (and (== upper lower)
+                           (not open-lower?)
+                           (not open-upper?))))))
+          :four (s/and (s/cat :lower ::lower
+                         :upper ::upper
+                         :open-lower? ::open-lower?
+                         :open-upper? ::open-upper?)
+                  (fn [{:keys [lower upper open-lower? open-upper?]}]
+                    (or (and (m/nan? lower) (m/nan? upper))
+                      (> upper lower)
+                      (and (== upper lower)
+                        (not open-lower?)
+                        (not open-upper?))))))
   :ret ::bounds)
 
 (def bounds-num (bounds))
@@ -211,8 +225,8 @@
             (mapv (fn [row]
                     (mapv (fn [column]
                             (if (== row column) bounds+ (bounds)))
-                          (range size)))
-                  (range size)))]
+                      (range size)))
+              (range size)))]
     (vec (for [r (range size)
                c (range r size)]
            (get-in m [r c])))))
@@ -229,8 +243,8 @@
             (mapv (fn [row]
                     (mapv (fn [column]
                             (if (== row column) bounds-finite+ bounds-finite))
-                          (range size)))
-                  (range size)))]
+                      (range size)))
+              (range size)))]
     (vec (for [r (range size)
                c (range r size)]
            (get-in m [r c])))))
@@ -257,8 +271,8 @@
             (cond (< bound bound2) [bound open-bound?]
                   (< bound2 bound) [bound2 open-bound2?]
                   :else [bound (and open-bound? open-bound2?)]))
-          [m/inf+ false]
-          bound-coll))
+    [m/inf+ false]
+    bound-coll))
 
 (defn- max-bound
   [bound-coll]
@@ -266,8 +280,8 @@
             (cond (> bound bound2) [bound open-bound?]
                   (> bound2 bound) [bound2 open-bound2?]
                   :else [bound (and open-bound? open-bound2?)]))
-          [m/inf- false]
-          bound-coll))
+    [m/inf- false]
+    bound-coll))
 
 (defn sort-bounds
   "Returns a vector of bounds sorted by lower bound first (by default) or upper
@@ -283,20 +297,20 @@
 
 (s/fdef sort-bounds
   :args (s/cat :vector-bounds ::vector-bounds
-               :opts (s/? (s/keys :opt [::by-upper?])))
+          :opts (s/? (s/keys :opt [::by-upper?])))
   :ret ::vector-bounds)
 
 (defn intersection
   "Returns the bounds intersection or nil."
   [vector-bounds]
   (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
-                                            vector-bounds))
+                                         vector-bounds))
         [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
-                                            vector-bounds))]
+                                         vector-bounds))]
     (when (or (< lower upper)
-              (and (== upper lower)
-                   (not open-lower?)
-                   (not open-upper?)))
+            (and (== upper lower)
+              (not open-lower?)
+              (not open-upper?)))
       (bounds lower upper open-lower? open-upper?))))
 
 (s/fdef intersection
@@ -327,17 +341,17 @@
   (let [[lower open-lower?] (min-bound
                               (map (fn [bounds]
                                      (vector (::lower bounds) (::open-lower? bounds)))
-                                   vector-bounds))
+                                vector-bounds))
         [upper open-upper?] (max-bound
                               (map (fn [bounds]
                                      (vector (::upper bounds) (::open-upper? bounds)))
-                                   vector-bounds))]
+                                vector-bounds))]
     (bounds lower upper open-lower? open-upper?)))
 
 (s/fdef encompassing-bounds
   :args (s/cat :vector-bounds (s/and ::vector-bounds
-                                     (fn [vb]
-                                       (pos? (count vb)))))
+                                (fn [vb]
+                                  (pos? (count vb)))))
   :ret ::bounds)
   
 

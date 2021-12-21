@@ -1,11 +1,11 @@
 (ns provisdom.math.intervals-test
   (:require
+    [clojure.spec.test.alpha :as st]
     [clojure.test :refer :all]
+    [orchestra.spec.test :as ost]
     [provisdom.test.core :refer :all]
     [provisdom.math.intervals :as intervals]
-    [provisdom.math.core :as m]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    [provisdom.math.core :as m]))
 
 ;;3 seconds
 
@@ -37,6 +37,13 @@
   (is= 1.0 (intervals/bound-by-interval [0.0 1.0] 1.5))
   (is= 0.0 (intervals/bound-by-interval [0.0 1.0] -0.5)))
 
+(deftest bound-by-strict-interval-test
+  (is (spec-check intervals/bound-by-strict-interval))
+  (is= 0.5 (intervals/bound-by-strict-interval [0.0 1.0] 0.5))
+  (is= 4.9E-324 (intervals/bound-by-strict-interval [0.0 1.0] 0.0))
+  (is= (m/one- 1e-16) (intervals/bound-by-strict-interval [0.0 1.0] 1.5))
+  (is= 4.9E-324 (intervals/bound-by-strict-interval [0.0 1.0] -0.5)))
+
 ;;;BOUNDS TEST
 (deftest in-bounds?-test
   (is (spec-check intervals/in-bounds?))
@@ -44,7 +51,7 @@
                              ::intervals/upper       1.0
                              ::intervals/open-lower? true
                              ::intervals/open-upper? false}
-                            0.5))
+        0.5))
   (is-not (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) 0.0))
   (is (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) 1.0))
   (is-not (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) -0.5)))
@@ -56,52 +63,52 @@
         ::intervals/upper       1.0
         ::intervals/open-lower? true
         ::intervals/open-upper? false}
-       (intervals/bounds 0.0 1.0 true false))
+    (intervals/bounds 0.0 1.0 true false))
   (is= {::intervals/lower       m/inf-
         ::intervals/upper       m/inf+
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       (intervals/bounds))
+    (intervals/bounds))
   (is= {::intervals/lower       -1.0
         ::intervals/upper       1.0
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       (intervals/bounds -1.0 1.0))
+    (intervals/bounds -1.0 1.0))
   (is= {::intervals/lower       -1.0
         ::intervals/upper       1.0
         ::intervals/open-lower? true
         ::intervals/open-upper? true}
-       (intervals/bounds -1.0 1.0 true true))
+    (intervals/bounds -1.0 1.0 true true))
   (is= {::intervals/lower       m/inf-
         ::intervals/upper       m/inf+
         ::intervals/open-lower? true
         ::intervals/open-upper? true}
-       intervals/bounds-finite)
+    intervals/bounds-finite)
   (is= {::intervals/lower       0.0
         ::intervals/upper       m/inf+
         ::intervals/open-lower? true
         ::intervals/open-upper? false}
-       intervals/bounds+)
+    intervals/bounds+)
   (is= {::intervals/lower       0.0
         ::intervals/upper       m/inf+
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       intervals/bounds-non-)
+    intervals/bounds-non-)
   (is= {::intervals/lower       0.0
         ::intervals/upper       1.0
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       intervals/bounds-prob)
+    intervals/bounds-prob)
   (is= {::intervals/lower       0.0
         ::intervals/upper       1.0
         ::intervals/open-lower? true
         ::intervals/open-upper? true}
-       intervals/bounds-open-prob)
+    intervals/bounds-open-prob)
   (is= {::intervals/lower       0
         ::intervals/upper       m/max-long
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       intervals/bounds-long-non-))
+    intervals/bounds-long-non-))
 
 (deftest vector-bounds-test
   (is (spec-check intervals/vector-bounds))
@@ -117,7 +124,7 @@
          ::intervals/upper       m/inf+
          ::intervals/open-lower? false
          ::intervals/open-upper? false}]
-       (intervals/vector-bounds 3))
+    (intervals/vector-bounds 3))
   (is= [{::intervals/lower       0.0
          ::intervals/upper       m/inf+
          ::intervals/open-lower? true
@@ -126,7 +133,7 @@
          ::intervals/upper       m/inf+
          ::intervals/open-lower? true
          ::intervals/open-upper? false}]
-       (intervals/vector-bounds 2 intervals/bounds+)))
+    (intervals/vector-bounds 2 intervals/bounds+)))
 
 (deftest positive-definite-matrix-bounds-test
   (is (spec-check intervals/positive-definite-matrix-bounds))
@@ -142,7 +149,7 @@
          ::intervals/upper       m/inf+
          ::intervals/open-lower? true
          ::intervals/open-upper? false}]
-       (intervals/positive-definite-matrix-bounds 2)))
+    (intervals/positive-definite-matrix-bounds 2)))
 
 (deftest finite-positive-definite-matrix-bounds-test
   (is (spec-check intervals/finite-positive-definite-matrix-bounds))
@@ -158,12 +165,12 @@
          ::intervals/upper       m/inf+
          ::intervals/open-lower? true
          ::intervals/open-upper? true}]
-       (intervals/finite-positive-definite-matrix-bounds 2)))
+    (intervals/finite-positive-definite-matrix-bounds 2)))
 
 (deftest get-interval-test
   (is (spec-check intervals/get-interval))
   (is= [1.0000000000000002 2.0]
-       (intervals/get-interval (intervals/bounds 1.0 2.0 true false))))
+    (intervals/get-interval (intervals/bounds 1.0 2.0 true false))))
 
 ;;;BOUNDS MANIPULATION
 (deftest sort-bounds-test
@@ -176,8 +183,8 @@
          ::intervals/open-lower? false
          ::intervals/open-upper? false
          ::intervals/upper       1.0}]
-       (intervals/sort-bounds [(intervals/bounds -1.0 1.0)
-                               (intervals/bounds -2.0 0.0 true true)]))
+    (intervals/sort-bounds [(intervals/bounds -1.0 1.0)
+                            (intervals/bounds -2.0 0.0 true true)]))
   (is= [{::intervals/lower       -1.0
          ::intervals/open-lower? false
          ::intervals/open-upper? false
@@ -186,9 +193,9 @@
          ::intervals/open-lower? true
          ::intervals/open-upper? true
          ::intervals/upper       0.0}]
-       (intervals/sort-bounds [(intervals/bounds -1.0 1.0)
-                               (intervals/bounds -2.0 0.0 true true)]
-                              {::intervals/by-upper? true})))
+    (intervals/sort-bounds [(intervals/bounds -1.0 1.0)
+                            (intervals/bounds -2.0 0.0 true true)]
+      {::intervals/by-upper? true})))
 
 (deftest intersection-test
   (is (spec-check intervals/intersection))
@@ -196,17 +203,17 @@
         ::intervals/upper       0.0
         ::intervals/open-lower? false
         ::intervals/open-upper? true}
-       (intervals/intersection [(intervals/bounds -1.0 1.0)
-                                (intervals/bounds -2.0 0.0 true true)]))
+    (intervals/intersection [(intervals/bounds -1.0 1.0)
+                             (intervals/bounds -2.0 0.0 true true)]))
   (is= nil
-       (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
-                                (intervals/bounds 1.0 3.0)]))
+    (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
+                             (intervals/bounds 1.0 3.0)]))
   (is= {::intervals/lower       -3.0
         ::intervals/upper       -1.0
         ::intervals/open-lower? false
         ::intervals/open-upper? true}
-       (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
-                                (intervals/bounds -3.0 1.0 false false)])))
+    (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
+                             (intervals/bounds -3.0 1.0 false false)])))
 
 (deftest union-test
   (is (spec-check intervals/union))
@@ -214,8 +221,8 @@
          ::intervals/open-lower? false
          ::intervals/open-upper? true
          ::intervals/upper       0.0}]
-       (intervals/union [(intervals/bounds -1.0 1.0)
-                         (intervals/bounds -2.0 0.0 true true)]))
+    (intervals/union [(intervals/bounds -1.0 1.0)
+                      (intervals/bounds -2.0 0.0 true true)]))
   (is= [{::intervals/lower       -3.0
          ::intervals/open-lower? true
          ::intervals/open-upper? true
@@ -224,14 +231,14 @@
          ::intervals/open-lower? false
          ::intervals/open-upper? false
          ::intervals/upper       3.0}]
-       (intervals/union [(intervals/bounds -3.0 -1.0 true true)
-                         (intervals/bounds 1.0 3.0)]))
+    (intervals/union [(intervals/bounds -3.0 -1.0 true true)
+                      (intervals/bounds 1.0 3.0)]))
   (is= [{::intervals/lower       -3.0
          ::intervals/open-lower? false
          ::intervals/open-upper? true
          ::intervals/upper       -1.0}]
-       (intervals/union [(intervals/bounds -3.0 -1.0 true true)
-                         (intervals/bounds -3.0 1.0 false false)])))
+    (intervals/union [(intervals/bounds -3.0 -1.0 true true)
+                      (intervals/bounds -3.0 1.0 false false)])))
 
 (deftest encompassing-bounds-test
   (is (spec-check intervals/encompassing-bounds))
@@ -239,17 +246,17 @@
         ::intervals/upper       1.0
         ::intervals/open-lower? true
         ::intervals/open-upper? false}
-       (intervals/encompassing-bounds [(intervals/bounds -1.0 1.0)
-                                       (intervals/bounds -2.0 0.0 true true)]))
+    (intervals/encompassing-bounds [(intervals/bounds -1.0 1.0)
+                                    (intervals/bounds -2.0 0.0 true true)]))
   (is= {::intervals/lower       -3.0
         ::intervals/upper       3.0
         ::intervals/open-lower? true
         ::intervals/open-upper? false}
-       (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
-                                       (intervals/bounds 1.0 3.0)]))
+    (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
+                                    (intervals/bounds 1.0 3.0)]))
   (is= {::intervals/lower       -3.0
         ::intervals/upper       1.0
         ::intervals/open-lower? false
         ::intervals/open-upper? false}
-       (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
-                                       (intervals/bounds -3.0 1.0 false false)])))
+    (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
+                                    (intervals/bounds -3.0 1.0 false false)])))
