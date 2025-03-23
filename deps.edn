@@ -3,6 +3,7 @@
            provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
                                    :sha     "9e2e816051d400e1eb6e5205414021dbfaed4b6b"}}
  :aliases {:dev         {:extra-paths ["siderail"]}
+           :local       {:override-deps {provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test        {:extra-paths ["test" "siderail"]
                          :extra-deps  {criterium/criterium        {:mvn/version "0.4.6"}
                                        org.clojure/test.check     {:mvn/version "1.1.1"}
