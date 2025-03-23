@@ -2,9 +2,7 @@
   (:refer-clojure :exclude [pos? neg? int? abs])
   (:require
     [clojure.spec.alpha :as s]
-    [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]))
+    [clojure.spec.gen.alpha :as gen]))
 
 ;;;DECLARATIONS
 (declare nan? roughly-round? non-? non+? next-up next-down ceil' floor')
