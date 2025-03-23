@@ -1,3 +1,12 @@
 #kaocha/v1
-    {:tests [{:kaocha.filter/skip ["provisdom.math.integrals-test"]}]
-     :kaocha.plugin.profiling/count 10}
+        {:tests                                          [{:kaocha.filter/skip ["provisdom.math.integrals-test"]}]
+         :reporter                                       #profile {:default kaocha.report/dots
+                                                                   :ci      kaocha.report/documentation}
+         :color?                                         #profile {:default true :ci false}
+         :plugins                                        #profile {:default []
+                                                                   :ci      [:kaocha.plugin/print-invocations
+                                                                             :kaocha.plugin/profiling
+                                                                             :kaocha.plugin/junit-xml]}
+         :kaocha.plugin.profiling/count                  10
+         :kaocha.plugin.junit-xml/target-file            "reports/junit.xml"
+         :kaocha.plugin.junit-xml/add-location-metadata? true}

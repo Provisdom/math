@@ -1,9 +1,6 @@
 (ns provisdom.math.series
   (:require
     [clojure.spec.alpha :as s]
-    [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]))
 

@@ -1,17 +1,14 @@
 {:paths   ["src"]
- :deps    {orchestra/orchestra    {:mvn/version "2021.01.01-1"}
-           provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
+ :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
                                    :sha     "9e2e816051d400e1eb6e5205414021dbfaed4b6b"}}
- :aliases {:dev         {:extra-paths ["siderail"]}
-           :local       {:override-deps {provisdom/utility-belt {:local/root "../utility-belt"}}}
-           :test        {:extra-paths ["test" "siderail"]
-                         :extra-deps  {criterium/criterium        {:mvn/version "0.4.6"}
-                                       org.clojure/test.check     {:mvn/version "1.1.1"}
-                                       provisdom/test             {:git/url "https://github.com/Provisdom/test.git"
-                                                                   :sha     "7f403360348fbb603a6d2212c164afcb2a6035e6"}
-                                       com.cognitect/transcriptor {:mvn/version "0.1.5"}
-                                       com.cognitect/test-runner  {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                                   :sha     "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}}}
-           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.60.972"}
-                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0.76"}}
-                         :main-opts  ["-m" "kaocha.runner"]}}}
+ :aliases {:dev             {:extra-paths ["siderail"]}
+           :local           {:override-deps {provisdom/utility-belt {:local/root "../utility-belt"}}}
+           :test            {:extra-paths ["test" "siderail"]
+                             :extra-deps  {criterium/criterium    {:mvn/version "0.4.6"}
+                                           org.clojure/test.check {:mvn/version "1.1.1"}
+                                           orchestra/orchestra    {:mvn/version "2021.01.01-1"}
+                                           provisdom/test         {:git/url "https://github.com/Provisdom/test.git"
+                                                                   :sha     "ec0b531bf0e5a8b5897a8dde332bd08d478578f4"}}}
+           :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
+                                          lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
+                             :main-opts  ["-m" "kaocha.runner"]}}}
