@@ -2,8 +2,6 @@
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]))
 
 (def mdl 6)
@@ -84,6 +82,16 @@
           (not open-lower?)
           (not open-upper?))))))
 
+(s/def ::bounds-finite
+  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
+    (fn [{::keys [lower upper open-lower? open-upper?]}]
+      (and (m/finite? lower)
+        (m/finite? upper)
+        (or (> upper lower)
+          (and (== upper lower)
+            (not open-lower?)
+            (not open-upper?)))))))
+
 (s/def ::vector-bounds
   (s/with-gen
     (s/coll-of ::bounds
@@ -95,7 +103,7 @@
 
 ;;INTERVALS
 (defn in-interval?
-  "Tests whether `number` is inside of the interval."
+  "Tests whether `number` is inside the interval."
   [[lower upper] number]
   (and (>= number lower) (<= number upper)))
 
@@ -303,9 +311,11 @@
 (defn intersection
   "Returns the bounds intersection or nil."
   [vector-bounds]
-  (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
+  (let [[lower open-lower?] (max-bound (map
+                                         #(vector (::lower %) (::open-lower? %))
                                          vector-bounds))
-        [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
+        [upper open-upper?] (min-bound (map
+                                         #(vector (::upper %) (::open-upper? %))
                                          vector-bounds))]
     (when (or (< lower upper)
             (and (== upper lower)
@@ -340,11 +350,13 @@
   [vector-bounds]
   (let [[lower open-lower?] (min-bound
                               (map (fn [bounds]
-                                     (vector (::lower bounds) (::open-lower? bounds)))
+                                     (vector (::lower bounds)
+                                       (::open-lower? bounds)))
                                 vector-bounds))
         [upper open-upper?] (max-bound
                               (map (fn [bounds]
-                                     (vector (::upper bounds) (::open-upper? bounds)))
+                                     (vector (::upper bounds)
+                                       (::open-upper? bounds)))
                                 vector-bounds))]
     (bounds lower upper open-lower? open-upper?)))
 

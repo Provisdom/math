@@ -3,8 +3,6 @@
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
@@ -51,6 +49,40 @@
                :into [])
     #(gen/vector (s/gen ::m/finite) 0 mdl)))
 
+(defmacro vector-of-spec
+  [{d?        :distinct?
+    min-count :min-count
+    pred     :pred
+    :or       {d?        false
+               pred     ::m/number
+               min-count 0}}]
+  `(s/with-gen
+     (s/coll-of ~pred
+                :distinct? ~d?
+                :into []
+                :kind clojure.core/vector?
+                :min-count ~min-count)
+     #((if ~d? gen/vector-distinct gen/vector)
+       (s/gen ~pred) ~min-count (+ ~min-count mdl))))
+
+(defmacro vector-finite-spec
+  [{d?        :distinct?
+    m1        :min
+    m2        :max
+    min-count :min-count
+    :or       {d?        false
+               m1        m/min-dbl
+               m2        m/max-dbl
+               min-count 0}}]
+  `(s/with-gen
+     (s/coll-of ::m/finite
+                :distinct? ~d?
+                :into []
+                :kind clojure.core/vector?
+                :min-count ~min-count)
+     #((if ~d? gen/vector-distinct gen/vector)
+       (m/finite-spec {:min m1 :max m2}) ~min-count (+ ~min-count mdl))))
+
 (s/def ::vector-finite+
   (s/with-gen
     (s/coll-of ::m/finite+
@@ -65,20 +97,6 @@
                :into [])
     #(gen/vector (s/gen ::m/prob) 0 mdl)))
 
-(s/def ::vector-open-prob
-  (s/with-gen
-    (s/coll-of ::m/open-prob
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/open-prob) 0 mdl)))
-
-(s/def ::vector-long
-  (s/with-gen
-    (s/coll-of ::m/long
-               :kind clojure.core/vector?
-               :into [])
-    #(gen/vector (s/gen ::m/long) 0 mdl)))
-
 (s/def ::sparse-vector
   (s/with-gen
     (s/coll-of (s/tuple ::m/int-non- ::m/number))
@@ -86,8 +104,9 @@
                           (gen/large-integer* {:min 0 :max mdl}))
                (fn [[i j]]
                  (gen/vector
-                   (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
-                              (s/gen ::m/number))
+                   (gen/tuple
+                     (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
+                     (s/gen ::m/number))
                    (min i j))))))
 
 (s/def ::index->number
@@ -251,7 +270,7 @@
 
 (defn filter-kv
   "Returns a vector of the items in `v` for which function `index+number->bool`
-  returns true. `index+number->bool` must be free of side-effects."
+  returns true. `index+number->bool` must be free of side effects."
   [index+number->bool v]
   (persistent!
     (reduce-kv (fn [tot index number]
@@ -318,11 +337,16 @@
   (lazy-seq
     (cond
       (and (empty? coll1) (empty? coll2)) coll2
-      (zero? i) (if (empty? coll2)
-                  (cons (first coll1) (concat-by-index (rest coll1) '() 0))
-                  (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
+
+      (zero? i)
+      (if (empty? coll2)
+        (cons (first coll1) (concat-by-index (rest coll1) '() 0))
+        (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
+
       (neg? i) (cons (first coll2) (concat-by-index coll1 (rest coll2) (inc i)))
-      (pos? i) (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
+
+      (pos? i)
+      (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
 
 (s/fdef concat-by-index
         :args (s/cat :coll1 (s/coll-of any?)

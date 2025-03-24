@@ -2,13 +2,11 @@
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
+    [clojure.core.reducers :as reducers]
     [provisdom.math.core :as m]
-    [provisdom.math.intervals :as intervals]
-    [provisdom.math.special-functions :as special-fns]
     [provisdom.math.internal-splittable-random :as split]
-    [clojure.core.reducers :as reducers]))
+    [provisdom.math.intervals :as intervals]
+    [provisdom.math.special-functions :as special-fns]))
 
 (def mdl 6)
 
@@ -255,9 +253,9 @@
   (set-seed! (System/currentTimeMillis)))
 
 ;; TODO: Is there a better way to set the default value for *rng-gen*?
-;; This is needed due to a circular dependency on functions when initially compiled.
-;; You will get an "Attempting to call unbound fn" error if you try to directly set
-;; *rng-gen* to `(rng-gen)`.
+;; This is needed due to a circular dependency on functions when initially
+;; compiled. You will get an "Attempting to call unbound fn" error if you try to
+;; directly set *rng-gen* to `(rng-gen)`.
 (set-seed!$)
 
 ;;;MACROS
