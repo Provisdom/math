@@ -1,6 +1,6 @@
 {:paths   ["src"]
  :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                   :sha     "9e2e816051d400e1eb6e5205414021dbfaed4b6b"}}
+                                   :sha     "efdbcff8a2f15fe20d5b969655f19fbf7f42b680"}}
  :aliases {:dev             {:extra-paths ["siderail"]}
            :local           {:override-deps {provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test" "siderail"]
