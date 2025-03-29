@@ -85,8 +85,7 @@
 (defn format-number
   "Formats `number` into its best form."
   ([number max-length] (format-number number max-length {}))
-  ([number max-length
-    {::keys [max-decimal-places max-digits]}]
+  ([number max-length {::keys [max-decimal-places max-digits]}]
    (let [number (double number)]
      (cond
        (m/nan? number) "NaN"

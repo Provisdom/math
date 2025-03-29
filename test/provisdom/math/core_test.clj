@@ -514,7 +514,6 @@
   (with-instrument `m/===
     (is (spec-check m/===)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/===))
     (is (m/=== m/nan))
     (is (m/=== m/nan m/nan))
     (is (m/=== m/nan m/nan m/nan))
@@ -525,7 +524,6 @@
   (with-instrument `m/next-up
     (is (spec-check m/next-up)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/next-up))
     (is= 3.0000000000000004 (m/next-up 3))
     (is= -2.9999999999999996 (m/next-up -3))
     (is (m/nan? (m/next-up m/nan)))
@@ -537,7 +535,6 @@
   (with-instrument `m/next-down
     (is (spec-check m/next-down)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/next-down))
     (is= 2.9999999999999996 (m/next-down 3))
     (is= -3.0000000000000004 (m/next-down -3))
     (is (m/nan? (m/next-down m/nan)))
@@ -549,7 +546,6 @@
   (with-instrument `m/div
     (is (spec-check m/div)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/div))
     (is (ratio? (m/div 4)))
     (is= 0.25 (m/div 4.0))
     (is= 1 (m/div 3 3))
@@ -567,7 +563,6 @@
   (with-instrument `m/one-
     (is (spec-check m/one-)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/one-))
     (is= -2 (m/one- 3))
     (is= 0.0 (m/one- 3 -2))
     (is= -16.0 (m/one- 3 4 2 8))
@@ -581,7 +576,6 @@
   (with-instrument `m/sq'
     (is (spec-check m/sq')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/sq'))
     (is= 9 (m/sq' 3))
     (is= 9 (m/sq' -3))
     (is (m/nan? (m/sq' m/nan)))
@@ -593,7 +587,6 @@
   (with-instrument `m/cube'
     (is (spec-check m/cube')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/cube'))
     (is= 27 (m/cube' 3))
     (is (m/nan? (m/cube' m/nan)))
     (is= m/inf+ (m/cube' m/inf+))
@@ -605,7 +598,6 @@
   (with-instrument `m/sgn
     (is (spec-check m/sgn)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/sgn))
     (is= 1 (m/sgn 3))
     (is= -1 (m/sgn -3))
     (is (m/nan? (m/sgn m/nan)))
@@ -619,7 +611,6 @@
   (with-instrument `m/log2
     (is (spec-check m/log2)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/log2))
     (is= 1.5849625007211563 (m/log2 3))
     (is= m/inf- (m/log2 0))
     (is= m/inf+ (m/log2 m/inf+))
@@ -632,7 +623,6 @@
   (with-instrument `m/logn
     (is (spec-check m/logn)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/logn))
     (is= 1.0 (m/logn 3 3))
     (is= m/inf- (m/logn 0 3))
     (is= m/inf+ (m/logn m/inf+ 3))
@@ -649,7 +639,6 @@
   (with-instrument `m/abs'
     (is (spec-check m/abs')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/abs'))
     (is= 3.3 (m/abs' -3.3))
     (is= 3 (m/abs' -3))
     (is= 300000000 (m/abs' 3.0E8))
@@ -663,7 +652,6 @@
   (with-instrument `m/cbrt
     (is (spec-check m/cbrt)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/cbrt))
     (is= 0.0 (m/cbrt 0.0))
     (is= 1.0 (m/cbrt 1.0))
     (is= -1.0 (m/cbrt -1.0))
@@ -675,21 +663,16 @@
 ;;TRIGONOMETRY
 (deftest sin-test
   (with-instrument `m/sin
-    (is (spec-check m/sin)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/sin))))
 
 (deftest asin-test
   (with-instrument `m/asin
-    (is (spec-check m/asin)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/asin))))
 
 (deftest asinh-test
   (with-instrument `m/asinh
     (is (spec-check m/asinh)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/asinh))
     (is= 0.0 (m/asinh 0.0))
     (is= 0.48121182505960347 (m/asinh 0.5))
     (is= -0.8813735870195428 (m/asinh -1.0))
@@ -702,21 +685,16 @@
 
 (deftest cos-test
   (with-instrument `m/cos
-    (is (spec-check m/cos)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/cos))))
 
 (deftest acos-test
   (with-instrument `m/acos
-    (is (spec-check m/acos)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/acos))))
 
 (deftest acosh-test
   (with-instrument `m/acosh
     (is (spec-check m/acosh)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/acosh))
     (is (m/nan? (m/acosh 0.0)))
     (is= 0.0 (m/acosh 1.0))
     (is= 1.3169578969248166 (m/acosh 2.0))
@@ -725,27 +703,20 @@
 
 (deftest tan-test
   (with-instrument `m/tan
-    (is (spec-check m/tan)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/tan))))
 
 (deftest atan-test
   (with-instrument `m/atan
-    (is (spec-check m/atan)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/atan))))
 
 (deftest atan2-test
   (with-instrument `m/atan2
-    (is (spec-check m/atan2)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/atan2))))
 
 (deftest atanh-test
   (with-instrument `m/atanh
     (is (spec-check m/atanh)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/atanh))
     (is= 0.0 (m/atanh 0.0))
     (is= -0.2027325540540822 (m/atanh 0.5))
     (is= m/inf- (m/atanh -1.0))
@@ -755,8 +726,6 @@
 
 (deftest hypot-test
   (with-instrument `m/hypot
-    (is (spec-check m/hypot)))
-  (with-instrument (st/instrumentable-syms)
     (is (spec-check m/hypot))))
 
 ;;ROUNDING
@@ -764,7 +733,6 @@
   (with-instrument `m/round
     (is (spec-check m/round)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/round))
     (is= 1 (m/round 0.5 :up))
     (is= 2.342342342342342E22 (m/round 2.342342342342342E22 :up))
     (is (zero? (m/round -0.5 :up)))
@@ -778,11 +746,37 @@
     (is= m/inf- (m/round m/inf- :up))
     (is (m/nan? (m/round m/nan :up)))))
 
+(deftest round-significant-test
+  (with-instrument `m/round-significant
+    (is (spec-check m/round-significant)))
+  (with-instrument (st/instrumentable-syms)
+    (is= 120.0 (m/round-significant 123.45 2 :down))
+    (is= 123.5 (m/round-significant 123.45 4 :up))
+    (is= 123.4 (m/round-significant 123.45 4 :down))
+    (is= 123.4 (m/round-significant 123.45 4 :toward-zero))
+    (is= 123.5 (m/round-significant 123.45 4 :away-from-zero))
+    (is= -120.0 (m/round-significant -123.45 2 :down))
+    (is= -123.4 (m/round-significant -123.45 4 :up))
+    (is= -123.5 (m/round-significant -123.45 4 :down))
+    (is= -123.4 (m/round-significant -123.45 4 :toward-zero))
+    (is= -123.5 (m/round-significant -123.45 4 :away-from-zero))
+    (is= -123.45 (m/round-significant -123.45 10 :toward-zero))
+    (is= m/inf+ (m/round-significant m/max-dbl 10 :down))
+    (is= 1.79769313E308 (m/round-significant m/max-dbl 9 :down))
+    (is= -1.79769313E308 (m/round-significant m/min-dbl 9 :up))
+    (is= m/inf- (m/round-significant m/min-dbl 10 :up))
+    (is= m/inf+ (m/round-significant m/inf+ 10 :up))
+    (is= m/inf- (m/round-significant m/inf- 1 :up))
+    (is (m/nan? (m/round-significant m/nan 5 :up)))
+    ;;notice these stay tiny-dbl -- due to double limitations
+    ;; (i.e., 5.0E-324 = 4.9E-324)
+    (is= m/tiny-dbl (m/round-significant m/tiny-dbl 1 :up))
+    (is= (- m/tiny-dbl) (m/round-significant (- m/tiny-dbl) 1 :down))))
+
 (deftest floor-test
   (with-instrument `m/floor
     (is (spec-check m/floor)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/floor))
     (is (zero? (m/floor 0.4)))
     (is= 2.3423423423423425E26 (m/floor 234234234234234234234343242N))
     (is= -1.0 (m/floor -0.4))
@@ -794,14 +788,12 @@
   (with-instrument `m/floor'
     (is (spec-check m/floor')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/floor'))
     (is= -1 (m/floor' -0.4))))
 
 (deftest ceil-test
   (with-instrument `m/ceil
     (is (spec-check m/ceil)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/ceil))
     (is= 1.0 (m/ceil 0.4))
     (is= 2.3423423423423425E26 (m/ceil 234234234234234234234343242N))
     (is (zero? (m/ceil -0.4)))
@@ -813,18 +805,16 @@
   (with-instrument `m/ceil'
     (is (spec-check m/ceil')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/ceil'))
     (is= 1 (m/ceil' 0.4))))
 
 (deftest roughly-floor-test
   (with-instrument `m/roughly-floor
     (is (spec-check m/roughly-floor)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-floor))
     (is= 1.0 (m/roughly-floor 0.99 0.02))
     (is (zero? (m/roughly-floor 0.99 0.005)))
     (is= 2.3423423423423425E26
-      (m/roughly-floor 234234234234234234234343242N 0.02))
+         (m/roughly-floor 234234234234234234234343242N 0.02))
     (is= 2.3423423423423425E26 (m/roughly-floor 2.3423423423423425E26 0.02))
     (is (zero? (m/roughly-floor -0.01 0.02)))
     (is= m/inf+ (m/roughly-floor m/inf+ 0.02))
@@ -835,18 +825,16 @@
   (with-instrument `m/roughly-floor'
     (is (spec-check m/roughly-floor')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-floor'))
     (is= 1 (m/roughly-floor' 0.99 0.02))))
 
 (deftest roughly-ceil-test
   (with-instrument `m/roughly-ceil
     (is (spec-check m/roughly-ceil)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-ceil))
     (is (zero? (m/roughly-ceil 0.01 0.02)))
     (is= 1.0 (m/roughly-ceil 0.01 0.005))
     (is= 2.3423423423423425E26
-      (m/roughly-ceil 234234234234234234234343242N 0.02))
+         (m/roughly-ceil 234234234234234234234343242N 0.02))
     (is= 2.3423423423423425E26 (m/roughly-ceil 2.3423423423423425E26 0.02))
     (is= -1.0 (m/roughly-ceil -0.99 0.02))
     (is= m/inf+ (m/roughly-ceil m/inf+ 0.02))
@@ -857,14 +845,12 @@
   (with-instrument `m/roughly-ceil'
     (is (spec-check m/roughly-ceil')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-ceil'))
     (is= 1 (m/roughly-ceil' 0.01 0.005))))
 
 (deftest roughly?-test
   (with-instrument `m/roughly?
     (is (spec-check m/roughly?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly?))
     (is-not (m/roughly? 0.01 0.02 0.005))
     (is (m/roughly? 0.01 0.02 0.01))
     (is (m/roughly? 0.01 0.02 0.02))
@@ -878,7 +864,6 @@
   (with-instrument `m/roughly-round?
     (is (spec-check m/roughly-round?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-round?))
     (is (m/roughly-round? 0.01 0.02))
     (is-not (m/roughly-round? 0.01 0.005))
     (is (m/roughly-round? 2.3423423423423425E26 0.03))
@@ -891,7 +876,6 @@
   (with-instrument `m/roughly-round-non-?
     (is (spec-check m/roughly-round-non-?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-round-non-?))
     (is (m/roughly-round-non-? 0 0.02))
     (is-not (m/roughly-round-non-? -0.01 0.02))
     (is (m/roughly-round-non-? 0.01 0.02))
@@ -907,7 +891,6 @@
   (with-instrument `m/roughly-round-non+?
     (is (spec-check m/roughly-round-non+?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-round-non+?))
     (is (m/roughly-round-non+? 0 0.02))
     (is-not (m/roughly-round-non+? 0.01 0.02))
     (is (m/roughly-round-non+? -0.01 0.02))
@@ -923,7 +906,6 @@
   (with-instrument `m/roughly-round+?
     (is (spec-check m/roughly-round+?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-round+?))
     (is-not (m/roughly-round+? 0 0.02))
     (is-not (m/roughly-round+? -0.01 0.02))
     (is (m/roughly-round+? 0.01 0.02))
@@ -939,7 +921,6 @@
   (with-instrument `m/roughly-round-?
     (is (spec-check m/roughly-round-?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-round-?))
     (is-not (m/roughly-round-? 0 0.02))
     (is-not (m/roughly-round-? 0.01 0.02))
     (is (m/roughly-round-? -0.01 0.02))
@@ -955,7 +936,6 @@
   (with-instrument `m/roughly-non-?
     (is (spec-check m/roughly-non-?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-non-?))
     (is-not (m/roughly-non-? -0.01 0.005))
     (is (m/roughly-non-? -0.02 0.02))
     (is (m/roughly-non-? 0.01 0.001))
@@ -969,7 +949,6 @@
   (with-instrument `m/roughly-non+?
     (is (spec-check m/roughly-non+?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-non+?))
     (is-not (m/roughly-non+? 0.01 0.005))
     (is (m/roughly-non+? 0.02 0.02))
     (is (m/roughly-non+? -0.01 0.001))
@@ -983,7 +962,6 @@
   (with-instrument `m/roughly-prob?
     (is (spec-check m/roughly-prob?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-prob?))
     (is (m/roughly-prob? 0.01 0.005))
     (is (m/roughly-prob? 0.02 0.02))
     (is-not (m/roughly-prob? -0.01 0.001))
@@ -999,7 +977,6 @@
   (with-instrument `m/roughly-corr?
     (is (spec-check m/roughly-corr?)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/roughly-corr?))
     (is-not (m/roughly-corr? -1.01 0.005))
     (is (m/roughly-corr? -1.02 0.02))
     (is-not (m/roughly-corr? -1.01 0.001))
@@ -1016,7 +993,6 @@
   (with-instrument `m/quot'
     (is (spec-check m/quot')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/quot'))
     (is= 1 (m/quot' 3 2))
     (is= -1 (m/quot' -3 2))
     (is= -1 (m/quot' 3 -2))
@@ -1038,7 +1014,6 @@
   (with-instrument `m/mod'
     (is (spec-check m/mod')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/mod'))
     (is= 1 (m/mod' 3 2))
     (is= 1 (m/mod' -3 2))
     (is= -1 (m/mod' 3 -2))
@@ -1060,7 +1035,6 @@
   (with-instrument `m/rem'
     (is (spec-check m/rem')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/rem'))
     (is= 1 (m/rem' 3 2))
     (is= -1 (m/rem' -3 2))
     (is= 1 (m/rem' 3 -2))
@@ -1082,7 +1056,6 @@
   (with-instrument `m/quot-and-rem'
     (is (spec-check m/quot-and-rem')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/quot-and-rem'))
     (is= [4 0] (m/quot-and-rem' 16 4))
     (is= [1 1] (m/quot-and-rem' 3 2))
     (is= [-1 -1] (m/quot-and-rem' -3 2))
@@ -1106,7 +1079,6 @@
   (with-instrument `m/quot-and-mod'
     (is (spec-check m/quot-and-mod')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/quot-and-mod'))
     (is= [4 0] (m/quot-and-mod' 16 4))
     (is= [0 0] (m/quot-and-mod' 0 4))
     (is= [0 0] (m/quot-and-mod' 0 -4))
@@ -1138,7 +1110,6 @@
   (with-instrument `m/gcd
     (is (spec-check m/gcd)))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/gcd))
     (is= 7 (m/gcd 271284701247 12467364728))))
 
 ;;;ANGLES
@@ -1146,7 +1117,6 @@
   (with-instrument `m/reduce-angle'
     (is (spec-check m/reduce-angle')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/reduce-angle'))
     (is= 30.4 (m/reduce-angle' 30.4))
     (is= 350.2 (m/reduce-angle' -9.8))
     (is= 118 (m/reduce-angle' 478.0))
@@ -1159,7 +1129,6 @@
   (with-instrument `m/reduce-radians'
     (is (spec-check m/reduce-radians')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/reduce-radians'))
     (is= 5.267258771281654 (m/reduce-radians' 30.4))
     (is (zero? (m/reduce-radians' m/two-pi)))
     (is= m/PI (m/reduce-radians' m/PI))
@@ -1172,7 +1141,6 @@
   (with-instrument `m/radians->angle'
     (is (spec-check m/radians->angle')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/radians->angle'))
     (is (zero? (m/radians->angle' 0)))
     (is= 194.8056503444799 (m/radians->angle' 3.4))
     (is (zero? (m/radians->angle' m/two-pi)))
@@ -1186,7 +1154,6 @@
   (with-instrument `m/angle->radians'
     (is (spec-check m/angle->radians')))
   (with-instrument (st/instrumentable-syms)
-    (is (spec-check m/angle->radians'))
     (is (zero? (m/angle->radians' 0)))
     (is= 0.059341194567807204 (m/angle->radians' 3.4))
     (is= 0.002777777777777778 (m/angle->radians' m/inv-two-pi))
