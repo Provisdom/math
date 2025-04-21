@@ -52,9 +52,9 @@
 (defmacro vector-of-spec
   [{d?        :distinct?
     min-count :min-count
-    pred     :pred
+    pred      :pred
     :or       {d?        false
-               pred     ::m/number
+               pred      ::m/number
                min-count 0}}]
   `(s/with-gen
      (s/coll-of ~pred
@@ -62,8 +62,11 @@
                 :into []
                 :kind clojure.core/vector?
                 :min-count ~min-count)
-     #((if ~d? gen/vector-distinct gen/vector)
-       (s/gen ~pred) ~min-count (+ ~min-count mdl))))
+     #(if ~d?
+        (gen/vector-distinct (s/gen ~pred)
+                             {:max-elements (+ ~min-count mdl)
+                              :min-elements ~min-count})
+        (gen/vector (s/gen ~pred) ~min-count (+ ~min-count mdl)))))
 
 (defmacro vector-finite-spec
   [{d?        :distinct?
@@ -139,8 +142,8 @@
   (and (m/numbers? x) (clojure.core/vector? x)))
 
 (s/fdef vector?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (defn vector-prob?
   "Returns true if a vector of probs only."
@@ -149,8 +152,8 @@
        (every? m/prob? x)))
 
 (s/fdef vector-prob?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (defn vector-open-prob?
   "Returns true if a vector of open probs only."
@@ -159,8 +162,8 @@
        (every? m/open-prob? x)))
 
 (s/fdef vector-open-prob?
-        :args (s/cat :x any?)
-        :ret boolean?)
+  :args (s/cat :x any?)
+  :ret boolean?)
 
 (defn vector-roughly-prob?
   "Returns true if a vector of roughly probs only."
@@ -171,9 +174,9 @@
                x)))
 
 (s/fdef vector-roughly-prob?
-        :args (s/cat :x any?
-                     :accu ::m/accu)
-        :ret boolean?)
+  :args (s/cat :x any?
+               :accu ::m/accu)
+  :ret boolean?)
 
 (defn probs?
   "Returns true if a vector of probs that sums to one within `sum-accu`."
@@ -182,9 +185,9 @@
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef probs?
-        :args (s/cat :x any?
-                     :sum-accu ::m/accu)
-        :ret boolean?)
+  :args (s/cat :x any?
+               :sum-accu ::m/accu)
+  :ret boolean?)
 
 (defn open-probs?
   "Returns true if a vector of open probs that sums to one within `sum-accu`."
@@ -193,9 +196,9 @@
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef open-probs?
-        :args (s/cat :x any?
-                     :sum-accu ::m/accu)
-        :ret boolean?)
+  :args (s/cat :x any?
+               :sum-accu ::m/accu)
+  :ret boolean?)
 
 (defn roughly-probs?
   "Returns true if a vector of roughly probs within `accu` that sums to one
@@ -205,10 +208,10 @@
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef roughly-probs?
-        :args (s/cat :x any?
-                     :accu ::m/accu
-                     :sum-accu ::m/accu)
-        :ret boolean?)
+  :args (s/cat :x any?
+               :accu ::m/accu
+               :sum-accu ::m/accu)
+  :ret boolean?)
 
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
@@ -222,8 +225,8 @@
     ret))
 
 (s/fdef to-vector
-        :args (s/cat :x any?)
-        :ret (s/nilable ::vector))
+  :args (s/cat :x any?)
+  :ret (s/nilable ::vector))
 
 (defn compute-vector
   "Function `index->number` takes an `index` and returns a number."
@@ -231,8 +234,8 @@
   (mapv index->number (range 0 size)))
 
 (s/fdef compute-vector
-        :args (s/cat :size ::size :index->number ::index->number)
-        :ret ::vector)
+  :args (s/cat :size ::size :index->number ::index->number)
+  :ret ::vector)
 
 (defn compute-coll
   "Function `index->any` takes an `index`."
@@ -240,10 +243,10 @@
   (map index->any (range 0 size)))
 
 (s/fdef compute-coll
-        :args (s/cat :size ::size
-                     :index->any (s/fspec :args (s/cat :index ::tensor/index)
-                                          :ret any?))
-        :ret coll?)
+  :args (s/cat :size ::size
+               :index->any (s/fspec :args (s/cat :index ::tensor/index)
+                                    :ret any?))
+  :ret coll?)
 
 (defn rnd-vector!
   "Returns vector `v` of `size` with random doubles."
@@ -251,8 +254,8 @@
   (vec (take size (random/rnd-lazy!))))
 
 (s/fdef rnd-vector!
-        :args (s/cat :size ::size)
-        :ret ::vector)
+  :args (s/cat :size ::size)
+  :ret ::vector)
 
 (defn sparse->vector
   "Builds a vector using a sparse representation and an existing vector `v`
@@ -264,12 +267,12 @@
                    (if (or (>= i s) (neg? i))
                      new-v
                      (assoc new-v i x)))
-                 v
-                 sparse))))
+           v
+           sparse))))
 
 (s/fdef sparse->vector
-        :args (s/cat :sparse ::sparse-vector :v ::vector)
-        :ret ::vector)
+  :args (s/cat :sparse ::sparse-vector :v ::vector)
+  :ret ::vector)
 
 ;;;VECTOR INFO
 (defn indexes-of
@@ -280,8 +283,8 @@
                      v)))
 
 (s/fdef indexes-of
-        :args (s/cat :number ::m/number :v ::vector)
-        :ret ::vector)
+  :args (s/cat :number ::m/number :v ::vector)
+  :ret ::vector)
 
 (defn filter-kv
   "Returns a vector of the items in `v` for which function `index+number->bool`
@@ -292,12 +295,12 @@
                  (if (index+number->bool index number)
                    (conj! tot number)
                    tot))
-               (transient [])
-               v)))
+      (transient [])
+      v)))
 
 (s/fdef filter-kv
-        :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
-        :ret ::vector)
+  :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
+  :ret ::vector)
 
 (defn some-kv
   "Returns the first logical true value of function `index+number->bool` for any
@@ -313,8 +316,8 @@
             (recur (inc i) (next s))))))))
 
 (s/fdef some-kv
-        :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
-        :ret (s/nilable ::m/number))
+  :args (s/cat :index+number->bool ::index+number->bool :v ::vector)
+  :ret (s/nilable ::m/number))
 
 ;;;VECTOR MANIPULATION
 (defn insertv
@@ -326,10 +329,10 @@
       (vec (concat f [number] l)))))
 
 (s/fdef insertv
-        :args (s/cat :v ::vector
-                     :index ::tensor/index
-                     :number ::m/number)
-        :ret (s/nilable ::vector))
+  :args (s/cat :v ::vector
+               :index ::tensor/index
+               :number ::m/number)
+  :ret (s/nilable ::vector))
 
 (defn removev
   "Returns a vector with the value in the index removed."
@@ -341,8 +344,8 @@
     v))
 
 (s/fdef removev
-        :args (s/cat :v ::vector :index ::tensor/index)
-        :ret ::vector)
+  :args (s/cat :v ::vector :index ::tensor/index)
+  :ret ::vector)
 
 (defn concat-by-index
   "Returns a lazy sequence constructed by concatenating two collections, `coll1`
@@ -364,11 +367,11 @@
       (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
 
 (s/fdef concat-by-index
-        :args (s/cat :coll1 (s/coll-of any?)
-                     :coll2 (s/coll-of any?)
-                     :i (s/with-gen ::m/int
-                                    #(gen/large-integer* {:min (- mdl) :max mdl})))
-        :ret coll?)
+  :args (s/cat :coll1 (s/coll-of any?)
+               :coll2 (s/coll-of any?)
+               :i (s/with-gen ::m/int
+                              #(gen/large-integer* {:min (- mdl) :max mdl})))
+  :ret coll?)
 
 (defn replace-nan
   "Takes a collection of `numbers` and returns the collection with any NaN
@@ -380,7 +383,7 @@
               (if (m/nan? (nth v i))
                 (assoc v i replacement-number)
                 v))
-            numbers (range (count numbers)))
+      numbers (range (count numbers)))
     (map (fn [number]
            (if (m/nan? number)
              replacement-number
@@ -388,8 +391,8 @@
          numbers)))
 
 (s/fdef replace-nan
-        :args (s/cat :replacement-number ::m/number :numbers ::m/numbers)
-        :ret ::m/numbers)
+  :args (s/cat :replacement-number ::m/number :numbers ::m/numbers)
+  :ret ::m/numbers)
 
 (defn round-roughly-vector-prob
   "Rounds any probs that are roughly probs."
@@ -403,9 +406,9 @@
         v))
 
 (s/fdef round-roughly-vector-prob
-        :args (s/cat :v ::vector
-                     :accu ::m/accu)
-        :ret ::vector)
+  :args (s/cat :v ::vector
+               :accu ::m/accu)
+  :ret ::vector)
 
 (defn rnd-shuffle-vector!
   "Randomly shuffles vector."
@@ -424,13 +427,13 @@
                  (dec n)))))))
 
 (s/fdef rnd-shuffle-vector!
-        :args (s/cat :v ::vector)
-        :ret ::vector)
+  :args (s/cat :v ::vector)
+  :ret ::vector)
 
 ;;;VECTOR MATH
 (defn kahan-sum
   "Kahan Summation algorithm -- for greater floating-point summation accuracy,
-  as fast alternative to bigDecimal."
+   as a fast alternative to bigDecimal."
   [numbers]
   (loop [[h & t] numbers
          sum 0.0
@@ -444,8 +447,8 @@
           (recur t new-sum (- new-sum sum y)))))))
 
 (s/fdef kahan-sum
-        :args (s/cat :numbers ::m/numbers)
-        :ret ::m/number)
+  :args (s/cat :numbers ::m/numbers)
+  :ret ::m/number)
 
 (defn dot-product
   "The dot product is the sum of the products of the corresponding entries of
@@ -459,11 +462,11 @@
                 v2)))
 
 (s/fdef dot-product
-        :args (s/and (s/cat :v1 ::vector
-                            :v2 ::vector)
-                     (fn [{:keys [v1 v2]}]
-                       (= (count v1) (count v2))))
-        :ret ::m/number)
+  :args (s/and (s/cat :v1 ::vector
+                      :v2 ::vector)
+               (fn [{:keys [v1 v2]}]
+                 (= (count v1) (count v2))))
+  :ret ::m/number)
 
 (defn cross-product
   "Given two linearly independent 3D vectors `v1` and `v2`, the cross product,
@@ -486,16 +489,16 @@
       :else nil)))
 
 (s/fdef cross-product
-        :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D
-                                      :vector-3D ::vector-3D)
-                            :v2 (s/or :vector-2D ::vector-2D
-                                      :vector-3D ::vector-3D))
-                     (fn [{:keys [v1 v2]}]
-                       (let [v1-type (first v1)
-                             v2-type (first v2)]
-                         (or (and (= v1-type :vector-2D) (= v2-type :vector-2D))
-                             (and (= v1-type :vector-3D) (= v2-type :vector-3D))))))
-        :ret (s/or :number ::m/number :v ::vector))
+  :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D
+                                :vector-3D ::vector-3D)
+                      :v2 (s/or :vector-2D ::vector-2D
+                                :vector-3D ::vector-3D))
+               (fn [{:keys [v1 v2]}]
+                 (let [v1-type (first v1)
+                       v2-type (first v2)]
+                   (or (and (= v1-type :vector-2D) (= v2-type :vector-2D))
+                       (and (= v1-type :vector-3D) (= v2-type :vector-3D))))))
+  :ret (s/or :number ::m/number :v ::vector))
 
 (defn projection
   "Returns vector of `v1` projected onto `v2`."
@@ -504,7 +507,7 @@
     (mapv #(* s %) v2)))
 
 (s/fdef projection
-        :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-                     (fn [{:keys [v1 v2]}]
-                       (= (count v1) (count v2))))
-        :ret ::vector)
+  :args (s/and (s/cat :v1 ::vector :v2 ::vector)
+               (fn [{:keys [v1 v2]}]
+                 (= (count v1) (count v2))))
+  :ret ::vector)
