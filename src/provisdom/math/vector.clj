@@ -7,7 +7,7 @@
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
-(declare kahan-sum open-probs?)
+(declare kahan-sum open-probs? probs?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -100,7 +100,22 @@
                :into [])
     #(gen/vector (s/gen ::m/prob) 0 mdl)))
 
-(s/def ::vector-open-prob
+(s/def ::vector-probs
+  (s/with-gen
+    (s/and (s/coll-of ::m/prob
+                      :kind clojure.core/vector?
+                      :into []
+                      :min-count 1)
+           #(probs? % 1e-8))
+    (fn []
+      (gen/fmap
+        (fn [weights]
+          (let [total (kahan-sum weights)
+                probs (mapv #(/ % total) weights)]
+            probs))
+        (gen/vector (s/gen ::m/finite+) 1 mdl)))))
+
+(s/def ::vector-open-probs
   (s/with-gen
     (s/and (s/coll-of ::m/open-prob
                       :kind clojure.core/vector?
