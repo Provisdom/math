@@ -130,19 +130,19 @@
     (let [b (double (apply max numbers))]
       (if (> b 700.0)
         (+ b
-          (m/log (reduce +
-                   (map
-                     (fn [val]
-                       (m/exp (- val b)))
-                     numbers))))
+           (m/log (reduce +
+                    (map
+                      (fn [val]
+                        (m/exp (- val b)))
+                      numbers))))
         (let [a (double (apply min numbers))]
           (if (< a -700.0)
             (+ a
-              (m/log (reduce +
-                       (map
-                         (fn [val]
-                           (m/exp (- val a)))
-                         numbers))))
+               (m/log (reduce +
+                        (map
+                          (fn [val]
+                            (m/exp (- val a)))
+                          numbers))))
             (m/log (reduce + (map m/exp numbers)))))))))
 
 (s/fdef log-sum-exp
@@ -158,7 +158,7 @@
         (> x 6.0) 1.0
         (< x -6.0) -1.0
         :else (* (m/sgn x)
-                (regularized-gamma-p 0.5 (m/sq x)))))
+                 (regularized-gamma-p 0.5 (m/sq x)))))
 
 (s/fdef erf
   :args (s/cat :x ::m/num)
@@ -279,21 +279,18 @@
 (def ^{:doc "See [[cdf-standard-normal]]"} inv-probit cdf-standard-normal)
 
 (defn logistic
-  ""
+  "Equivalent to (/ (inc (m/exp (- x)))."
   [x]
-  (/ (inc (m/exp (- x)))))
+  (+ 0.5 (* 0.5 (m/tanh (* 0.5 x)))))
 
 (s/fdef logistic
   :args (s/cat :x ::m/num)
   :ret ::m/prob)
 
 (defn logistic-derivative
-  ""
+  "Equivalent to (/ ex (m/sq (inc ex)))."
   [x]
-  (let [ex (m/exp x)]
-    (if (m/inf+? ex)
-      0.0
-      (/ ex (m/sq (inc ex))))))
+  (* 0.25 (m/one- (m/sq (m/tanh (* 0.5 x))))))
 
 (s/fdef logistic-derivative
   :args (s/cat :x ::m/num)
@@ -326,7 +323,7 @@
   [x]
   (reduce (fn [acc i]
             (+ acc (/ (get lanczos-coefficients2 i)
-                     (+ x (double i)))))
+                      (+ x (double i)))))
     (first lanczos-coefficients2)
     (range 1 (count lanczos-coefficients2))))
 
@@ -376,19 +373,19 @@
                 (m/div (* prod (inc (inv-gamma1-pm1 t))))))
             (let [prod (+ 5.2421875 abs-x)
                   t (* 2.5066282746310007
-                      (/ abs-x)
-                      (m/pow prod (+ 0.5 abs-x))
-                      (m/exp (- prod))
-                      (lanczos2 abs-x))]
+                       (/ abs-x)
+                       (m/pow prod (+ 0.5 abs-x))
+                       (m/exp (- prod))
+                       (lanczos2 abs-x))]
               (if (pos? a)
                 t
                 (/ (- m/PI)
-                  (* a t (m/sin (* (- m/PI) a))))
+                   (* a t (m/sin (* (- m/PI) a))))
                 ))))))
 
 (s/fdef gamma
   :args (s/cat :a (s/or :pos ::m/pos
-                    :non+ ::m/non-roughly-round-non+))
+                        :non+ ::m/non-roughly-round-non+))
   :ret ::m/non-inf-)
 
 (defn lower-gamma
@@ -420,8 +417,8 @@
   "Returns the upper gamma derivative `x`."
   [a x]
   (let [v (* (m/exp (- x))
-            (m/pow x (dec a))
-            (/ (gamma a)))]
+             (m/pow x (dec a))
+             (/ (gamma a)))]
     (if (m/inf-? v) m/inf+ v)))
 
 (s/fdef upper-gamma-derivative-x
@@ -439,18 +436,18 @@
                                    an an
                                    sum an]
                               (if (and (not (m/inf+? sum))
-                                    (> (m/abs (/ an sum)) 1e-14)
-                                    (< n m/max-int))
+                                       (> (m/abs (/ an sum)) 1e-14)
+                                       (< n m/max-int))
                                 (let [an (* an x (/ (+ a (inc n))))]
                                   (recur (inc n) an (+ an sum)))
                                 [n sum]))]
                 (cond (>= n m/max-int) m/nan
                       (m/inf+? sum) 1.0
                       :else (min 1.0
-                              (* sum
-                                (m/exp (+ (* a (m/log x))
-                                         (- x)
-                                         (- (log-gamma a))))))))))
+                                 (* sum
+                                    (m/exp (+ (* a (m/log x))
+                                              (- x)
+                                              (- (log-gamma a))))))))))
 
 (s/fdef regularized-gamma-p
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -476,10 +473,10 @@
                 (if (anomalies/anomaly? sum)
                   m/nan
                   (min 1.0
-                    (/ (m/exp (+ (* a (m/log x))
-                                (- x)
-                                (- (log-gamma a))))
-                      sum))))))
+                       (/ (m/exp (+ (* a (m/log x))
+                                    (- x)
+                                    (- (log-gamma a))))
+                          sum))))))
 
 (s/fdef regularized-gamma-q
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -500,9 +497,9 @@
         :else (let [sum (lanczos2 a)
                     tmp (+ a 5.2421875)]
                 (+ (* (+ a 0.5) (m/log tmp))
-                  (- tmp)
-                  m/half-log-two-pi
-                  (m/log (/ sum a))))))
+                   (- tmp)
+                   m/half-log-two-pi
+                   (m/log (/ sum a))))))
 
 (s/fdef log-gamma
   :args (s/cat :a ::m/pos)
@@ -534,12 +531,12 @@
             (cond (and (pos? x) (<= x 1.0e-5)) (- tot 0.5772156649015329 inv-x)
                   (>= x 49.0) (let [inv2-x (m/pow x -2.0)]
                                 (+ tot
-                                  (m/log x)
-                                  (* -0.5 inv-x)
-                                  (* (- inv2-x)
-                                    (+ (/ 12.0)
-                                      (* inv2-x
-                                        (- (/ 120.0) (/ inv2-x 252.0)))))))
+                                   (m/log x)
+                                   (* -0.5 inv-x)
+                                   (* (- inv2-x)
+                                      (+ (/ 12.0)
+                                         (* inv2-x
+                                            (- (/ 120.0) (/ inv2-x 252.0)))))))
                   :else (recur (inc x) (- tot inv-x)))))))))
 
 (s/fdef log-gamma-derivative
@@ -556,8 +553,8 @@
 
 (s/fdef gamma-derivative
   :args (s/cat :a (s/or :pos ::m/pos
-                    :non+ (s/and ::m/non-roughly-round-non+
-                            #(> % -3e8))))
+                        :non+ (s/and ::m/non-roughly-round-non+
+                                     #(> % -3e8))))
   :ret ::m/number)
 
 (defn trigamma
@@ -577,14 +574,14 @@
                 :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
                             (>= x 49.0) (let [inv-x (/ x)]
                                           (+ tot
-                                            inv-x
-                                            (/ inv2-x 2.0)
-                                            (* inv2-x
-                                              inv-x
-                                              (- (/ 6.0)
-                                                (* inv2-x
-                                                  (+ (/ 3.0)
-                                                    (/ inv2-x 42.0)))))))
+                                             inv-x
+                                             (/ inv2-x 2.0)
+                                             (* inv2-x
+                                                inv-x
+                                                (- (/ 6.0)
+                                                   (* inv2-x
+                                                      (+ (/ 3.0)
+                                                         (/ inv2-x 42.0)))))))
                             :else (recur (inc x) (+ tot inv2-x)))))))))
 
 (s/fdef trigamma
@@ -598,43 +595,43 @@
             (double p)
             p)]
     (* (m/pow m/PI (* 0.25 p (dec p)))
-      (apply * (map (fn [i]
-                      (gamma (+ a (* 0.5 (m/one- i)))))
-                 (range 1 (inc p)))))))
+       (apply * (map (fn [i]
+                       (gamma (+ a (* 0.5 (m/one- i)))))
+                     (range 1 (inc p)))))))
 
 (s/fdef multivariate-gamma
   :args (s/and (s/cat :a ::m/num
-                 :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:min 0 :max 20})))
-          (fn [{:keys [a p]}]
-            (and (< p 1e7)                                  ;for speed
-              (not (and (m/roughly-round?
-                          (+ a (* 0.5 (m/one- p)))
-                          0.0)
-                     (m/non+? (+ a (* 0.5 (m/one- p))))))
-              (or (zero? p)
-                (not (and (m/roughly-round?
-                            (+ a (* 0.5 (m/one- (dec p))))
-                            0.0)
-                       (m/non+?
-                         (+ a (* 0.5 (m/one- (dec p)))))))))))
+                      :p (s/with-gen ::m/int-non-
+                                     #(gen/large-integer* {:min 0 :max 20})))
+               (fn [{:keys [a p]}]
+                 (and (< p 1e7)                             ;for speed
+                      (not (and (m/roughly-round?
+                                  (+ a (* 0.5 (m/one- p)))
+                                  0.0)
+                                (m/non+? (+ a (* 0.5 (m/one- p))))))
+                      (or (zero? p)
+                          (not (and (m/roughly-round?
+                                      (+ a (* 0.5 (m/one- (dec p))))
+                                      0.0)
+                                    (m/non+?
+                                      (+ a (* 0.5 (m/one- (dec p)))))))))))
   :ret ::m/non-inf-)
 
 (defn multivariate-log-gamma
   "Returns the multivariate log gamma of `a` with dimension `p`."
   [a p]
   (+ (* m/log-pi 0.25 p (dec p))
-    (apply + (map (fn [i]
-                    (log-gamma (+ a (* 0.5 (m/one- i)))))
-               (range 1 (inc p))))))
+     (apply + (map (fn [i]
+                     (log-gamma (+ a (* 0.5 (m/one- i)))))
+                   (range 1 (inc p))))))
 
 (s/fdef multivariate-log-gamma
   :args (s/and (s/cat :a ::m/pos
-                 :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:min 0 :max 20})))
-          (fn [{:keys [a p]}]
-            (and (< p 1.0e7)                                ;speed
-              (or (m/nan? a) (> a (* 0.5 p))))))
+                      :p (s/with-gen ::m/int-non-
+                                     #(gen/large-integer* {:min 0 :max 20})))
+               (fn [{:keys [a p]}]
+                 (and (< p 1.0e7)                           ;speed
+                      (or (m/nan? a) (> a (* 0.5 p))))))
   :ret ::m/non-inf-)
 
 ;;;BETA FUNCTIONS
@@ -657,7 +654,7 @@
         dc (count delta-coefficients)
         s (vec (take dc (iterate (fn [acc]
                                    (+ 1.0 q (* q2 acc)))
-                          1.0)))
+                                 1.0)))
         sqrt-t (/ 10.0 b)
         t (* sqrt-t sqrt-t)
         w (* (get delta-coefficients (dec dc)) (get s (dec dc)))
@@ -709,10 +706,10 @@
                 bred (* (m/log prod2) (- 0.5 a))
                 v (* b (m/log-inc ared))]
             (+ (* -0.5 (m/log b))
-              0.9189385332046727
-              prod1
-              (- bred)
-              (- v)))
+               0.9189385332046727
+               prod1
+               (- bred)
+               (- v)))
 
           (and (> a 2.0) (> b 1000.0))
           (let [n (m/floor' (dec a))
@@ -721,13 +718,13 @@
                                    i 0]
                               (if (< i n)
                                 (recur (dec ared)
-                                  (* prod (dec ared) (/ (inc (/ ared b))))
-                                  (inc i))
+                                       (* prod (dec ared) (/ (inc (/ ared b))))
+                                       (inc i))
                                 [ared prod]))]
             (+ (m/log prod)
-              (* (- n) (m/log b))
-              (log-gamma ared)
-              (log-gamma-minus-log-gamma-sum ared b)))
+               (* (- n) (m/log b))
+               (log-gamma ared)
+               (log-gamma-minus-log-gamma-sum ared b)))
 
           (> a 2.0)
           (let [[prod1 ared] (loop [prod1 1.0
@@ -739,32 +736,32 @@
                                  [prod1 ared]))]
             (if (>= b 10.0)
               (+ (m/log prod1)
-                (log-gamma ared)
-                (log-gamma-minus-log-gamma-sum ared b))
+                 (log-gamma ared)
+                 (log-gamma-minus-log-gamma-sum ared b))
               (let [[prod2 bred] (loop [prod2 1.0
                                         bred b]
                                    (if (> bred 2.0)
                                      (recur (* prod2
-                                              (dec bred)
-                                              (/ (dec (+ ared bred))))
-                                       (dec bred))
+                                               (dec bred)
+                                               (/ (dec (+ ared bred))))
+                                            (dec bred))
                                      [prod2 bred]))]
                 (+ (m/log prod1)
-                  (m/log prod2)
-                  (log-gamma ared)
-                  (log-gamma bred)
-                  (- (log-gamma-sum ared bred))))))
+                   (m/log prod2)
+                   (log-gamma ared)
+                   (log-gamma bred)
+                   (- (log-gamma-sum ared bred))))))
 
           (< a 1.0)
           (if (>= b 10.0)
             (+ (log-gamma a)
-              (log-gamma-minus-log-gamma-sum a b))
+               (log-gamma-minus-log-gamma-sum a b))
             (m/log (* (gamma a) (gamma b) (/ (gamma (+ a b))))))
 
           (<= b 2.0)
           (+ (log-gamma a)
-            (log-gamma b)
-            (- (log-gamma-sum a b)))
+             (log-gamma b)
+             (- (log-gamma-sum a b)))
 
           (>= b 10.0)
           (+ (log-gamma a) (log-gamma-minus-log-gamma-sum a b))
@@ -774,14 +771,14 @@
                                     ared b]
                                (if (> ared 2.0)
                                  (recur (* prod1
-                                          (dec ared)
-                                          (/ (dec (+ a ared))))
-                                   (dec ared))
+                                           (dec ared)
+                                           (/ (dec (+ a ared))))
+                                        (dec ared))
                                  [prod1 ared]))]
             (+ (m/log prod1)
-              (log-gamma a)
-              (log-gamma ared)
-              (- (log-gamma-sum a ared)))))))
+               (log-gamma a)
+               (log-gamma ared)
+               (- (log-gamma-sum a ared)))))))
 
 (s/fdef log-beta
   :args (s/cat :x ::m/pos :y ::m/pos)
@@ -799,7 +796,7 @@
           (m/one? c) 1.0
 
           (and (> c (/ (inc x) (+ 2.0 x y)))
-            (<= (m/one- c) (/ (inc y) (+ 2.0 x y))))
+               (<= (m/one- c) (/ (inc y) (+ 2.0 x y))))
           (m/one- (regularized-beta (m/one- c) y x))
 
           :else
@@ -809,35 +806,35 @@
                                 (if (zero? (mod n 2))
                                   (let [m (* n 0.5)
                                         res (* m
-                                              (- y m)
-                                              c
-                                              (m/div (* (dec (+ x (* 2.0 m)))
-                                                       (+ x (* 2.0 m)))))]
+                                               (- y m)
+                                               c
+                                               (m/div (* (dec (+ x (* 2.0 m)))
+                                                         (+ x (* 2.0 m)))))]
                                     res)
                                   (let [m (* 0.5 (dec n))
                                         res (* (+ x m)
-                                              (+ x y m)
-                                              c
-                                              (m/div (* (+ x (* 2.0 m))
-                                                       (inc (+ x (* 2.0 m)))))
-                                              (- 1.0))]
+                                               (+ x y m)
+                                               c
+                                               (m/div (* (+ x (* 2.0 m))
+                                                         (inc (+ x (* 2.0 m)))))
+                                               (- 1.0))]
                                     res)))
-                           (drop 1 (range)))
+                              (drop 1 (range)))
                 gcf (series/multiplicative-generalized-continued-fraction
                       a-series b-series)
                 sum (series/multiplicative-sum-convergent-series gcf)]
             (if (anomalies/anomaly? sum)
               m/nan
               (m/div (m/exp (+ (* x (m/log c))
-                              (* y (m/log-inc (- c)))
-                              (- (m/log x))
-                              (- (log-beta x y))))
-                sum))))))
+                               (* y (m/log-inc (- c)))
+                               (- (m/log x))
+                               (- (log-beta x y))))
+                     sum))))))
 
 (s/fdef regularized-beta
   :args (s/cat :c ::m/prob
-          :x ::m/finite+
-          :y ::m/finite+)
+               :x ::m/finite+
+               :y ::m/finite+)
   :ret ::m/number)
 
 (def regularized-incomplete-beta regularized-beta)
@@ -853,6 +850,6 @@
 
 (s/fdef incomplete-beta
   :args (s/cat :c ::m/prob
-          :x ::m/finite+
-          :y ::m/finite+)
+               :x ::m/finite+
+               :y ::m/finite+)
   :ret ::m/number)

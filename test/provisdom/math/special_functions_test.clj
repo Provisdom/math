@@ -3,10 +3,7 @@
             [clojure.test :refer :all]
             [provisdom.test.core :refer :all]
             [provisdom.math.core :as m]
-            [provisdom.math.special-functions :as special-fns])
-  (:import
-    [org.apache.commons.math3.special
-     Beta Gamma]))
+            [provisdom.math.special-functions :as special-fns]))
 
 ;;9 seconds
 
@@ -153,7 +150,7 @@
     (is= 0.0 (special-fns/logistic-derivative m/inf-))
     (is= 0.0 (special-fns/logistic-derivative m/inf+))
     (is= 0.25 (special-fns/logistic-derivative 0.0))
-    (is= 0.0971947048006254 (special-fns/logistic-derivative -2.1))))
+    (is= 0.09719470480062539 (special-fns/logistic-derivative -2.1))))
 
 (deftest logit-test
   (with-instrument `special-fns/logit
@@ -189,17 +186,17 @@
     (is= 1.298055332647558 (special-fns/gamma 0.7))
     ;;;Math -10.6862870211931935489730533569448077816983878506097317904937
     (is= -10.686287021193191 (special-fns/gamma -0.1))
-    (is= -10.686287021193193 (Gamma/gamma -0.1))
+    #_(is= -10.686287021193193 (Gamma/gamma -0.1))          ;;Gamma was Apache
     (is= 9.332621544394415E155 (special-fns/gamma 100.0))
-    (is= 9.332621544394412E155 (Gamma/gamma 100.0))
+    #_ (is= 9.332621544394412E155 (Gamma/gamma 100.0))
     (is= 7.050810550405615E242 (special-fns/gamma 141.8))
     (is= 7.257415615308058E306 (special-fns/gamma 171.0))
     (is= m/inf+ (special-fns/gamma 172.0))
-    (is= m/inf+ (Gamma/gamma 141.8))
+    #_(is= m/inf+ (Gamma/gamma 141.8))
     (is= 4.297739720709703E242 (special-fns/gamma 141.7))
-    (is= 4.297739720709703E242 (Gamma/gamma 141.7))
+    #_(is= 4.297739720709703E242 (Gamma/gamma 141.7))
     (is= -6.3764985844038365E-245 (special-fns/gamma -141.7))
-    (is= 6.3764985844038365E-245 (Gamma/gamma -141.7))))
+    #_(is= 6.3764985844038365E-245 (Gamma/gamma -141.7))))
 
 (deftest lower-gamma-test
   (with-instrument `special-fns/lower-gamma
@@ -257,9 +254,9 @@
     (is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
     (is= 0.0 (special-fns/regularized-gamma-p 1 0))
     (is= 0.9758726562736721 (special-fns/regularized-gamma-p 0.1 1))
-    (is= 0.9758726562736726 (Gamma/regularizedGammaP 0.1 1))
+    #_(is= 0.9758726562736726 (Gamma/regularizedGammaP 0.1 1))
     (is= 0.5000049341877514 (special-fns/regularized-gamma-p 1e10 1e10))
-    (is= 0.5000049341877536 (Gamma/regularizedGammaP 1e10 1e10))
+    #_(is= 0.5000049341877536 (Gamma/regularizedGammaP 1e10 1e10))
     (is (m/nan? (special-fns/regularized-gamma-p 1e149 1e149)))))
 
 (deftest regularized-gamma-q-test
@@ -276,9 +273,9 @@
     (is= 0.3678794411714422 (special-fns/regularized-gamma-q 1 1))
     (is= 1.0 (special-fns/regularized-gamma-q 1 0))
     (is= 0.024127343726327855 (special-fns/regularized-gamma-q 0.1 1))
-    (is= 0.02412734372632741 (Gamma/regularizedGammaQ 0.1 1))
+    #_(is= 0.02412734372632741 (Gamma/regularizedGammaQ 0.1 1))
     (is= 0.4999950658122486 (special-fns/regularized-gamma-q 1e10 1e10))
-    (is= 0.4999950658122464 (Gamma/regularizedGammaQ 1e10 1e10))
+    #_(is= 0.4999950658122464 (Gamma/regularizedGammaQ 1e10 1e10))
     (is (m/nan? (special-fns/regularized-gamma-q 1e149 1e149)))))
 
 (deftest log-gamma-test
@@ -293,7 +290,7 @@
     (is= -0.04987244125983987 (special-fns/log-gamma 1.1))
     (is= 0.0 (special-fns/log-gamma 1))
     (is= 0.26086724653166665 (special-fns/log-gamma 0.7))
-    (is= 0.2608672465316666 (Gamma/logGamma 0.7))))
+    #_(is= 0.2608672465316666 (Gamma/logGamma 0.7))))
 
 (deftest log-gamma-inc-test
   (with-instrument `special-fns/log-gamma-inc
@@ -314,7 +311,7 @@
     (is= -1.2200235564290471 (special-fns/log-gamma-derivative 0.7))
     (is= 0.7031566378697294 (special-fns/digamma 2.5))
     (is= 1.1031566378697286 (special-fns/digamma -2.5))
-    (is= 1.1031566378697297 (Gamma/digamma -2.5))
+    #_(is= 1.1031566378697297 (Gamma/digamma -2.5))
     (is= m/inf- (special-fns/digamma -2.0))
     (is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0))))
 
@@ -342,7 +339,7 @@
     (is= m/inf+ (special-fns/trigamma 0.0))
     (is= 2.8340491557052214 (special-fns/trigamma 0.7))
     (is= 101.9225399585074 (special-fns/trigamma -0.1))
-    (is= 101.922539959477124 (Gamma/trigamma -0.1))
+    #_(is= 101.922539959477124 (Gamma/trigamma -0.1))
     (is= m/inf+ (special-fns/trigamma -2.0))))
 
 (deftest multivariate-gamma-test
@@ -390,9 +387,9 @@
     (is= 0.0 (special-fns/log-beta 1 1))
     (is= 2.302585092994046 (special-fns/log-beta 0.1 1))
     (is= 2.302585092994046 (special-fns/log-beta 1 0.1))
-    (is= 2.302585092994046 (Beta/logBeta 1.0 0.1))
+    #_(is= 2.302585092994046 (Beta/logBeta 1.0 0.1))
     (is= -1.386294362144632E10 (special-fns/log-beta 1e10 1e10))
-    (is= -1.386294362144632E10 (Beta/logBeta 1e10 1e10))))
+    #_(is= -1.386294362144632E10 (Beta/logBeta 1e10 1e10))))
 
 (deftest regularized-beta-test
   (with-instrument `special-fns/regularized-beta
@@ -405,15 +402,15 @@
     (is= 0.886568150565213 (special-fns/regularized-beta 0.3 0.1 1))
     (is= 0.9330329915368075 (special-fns/regularized-beta 0.5 0.1 1))
     (is= 0.9649610951198176 (special-fns/regularized-beta 0.7 0.1 1))
-    (is= 0.9649610951198176 (Beta/regularizedBeta 0.7 0.1 1.0))
+    #_(is= 0.9649610951198176 (Beta/regularizedBeta 0.7 0.1 1.0)) ;;old Apache
     (is= 1.0 (special-fns/regularized-beta 1 1 0.1))
     (is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))
-    (is= 0.49999999999999983 (Beta/regularizedBeta 0.5 0.5 0.5))
+    #_(is= 0.49999999999999983 (Beta/regularizedBeta 0.5 0.5 0.5))
     (is= 0.0 (special-fns/regularized-beta 0 1 1))
-    (is= 0.0 (Beta/regularizedBeta 0.0 1.0 1.0))
+    #_(is= 0.0 (Beta/regularizedBeta 0.0 1.0 1.0))
     (is= 0.5000004638553182 (special-fns/regularized-beta 0.5 1e10 1e10))
-    (is= 0.500000463837539 (Beta/regularizedBeta 0.5 1e10 1e10))
-    (is= 0.5 (Beta/regularizedBeta 0.5 1 1))
+    #_(is= 0.500000463837539 (Beta/regularizedBeta 0.5 1e10 1e10))
+    #_(is= 0.5 (Beta/regularizedBeta 0.5 1 1))
     (is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))))
 
 (deftest incomplete-beta-test

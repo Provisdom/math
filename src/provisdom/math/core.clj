@@ -875,6 +875,15 @@ type of output the user wants is generally known.")
   :args (s/cat :number ::number)
   :ret ::nan-or-corr)
 
+(defn sinh
+  "Returns hyperbolic sine of `number`."
+  [number]
+  (Math/sinh (double number)))
+
+(s/fdef sinh
+  :args (s/cat :number ::number)
+  :ret ::number)
+
 (defn asin
   "Returns inverse sine of `number`."
   [number]
@@ -901,6 +910,15 @@ type of output the user wants is generally known.")
 (s/fdef cos
   :args (s/cat :number ::number)
   :ret ::nan-or-corr)
+
+(defn cosh
+  "Returns hyperbolic cosine of `number`."
+  [number]
+  (Math/cosh (double number)))
+
+(s/fdef cosh
+  :args (s/cat :number ::number)
+  :ret (s/and ::nan-or-pos #(or (nan? %) (>= % 1.0))))
 
 (defn acos
   "Returns inverse cosine of `number`."
@@ -930,6 +948,15 @@ type of output the user wants is generally known.")
 (s/fdef tan
   :args (s/cat :number ::number)
   :ret ::number)
+
+(defn tanh
+  "Returns hyperbolic tangent of `number`."
+  [number]
+  (Math/tanh (double number)))
+
+(s/fdef tanh
+  :args (s/cat :number ::number)
+  :ret ::nan-or-corr)
 
 (defn atan
   "Returns inverse tangent of `number`."

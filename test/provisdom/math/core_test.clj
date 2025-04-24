@@ -665,6 +665,10 @@
   (with-instrument `m/sin
     (is (spec-check m/sin))))
 
+(deftest sinh-test
+  (with-instrument `m/sinh
+    (is (spec-check m/sinh))))
+
 (deftest asin-test
   (with-instrument `m/asin
     (is (spec-check m/asin))))
@@ -687,6 +691,10 @@
   (with-instrument `m/cos
     (is (spec-check m/cos))))
 
+(deftest cosh-test
+  (with-instrument `m/cosh
+    (is (spec-check m/cosh))))
+
 (deftest acos-test
   (with-instrument `m/acos
     (is (spec-check m/acos))))
@@ -704,6 +712,10 @@
 (deftest tan-test
   (with-instrument `m/tan
     (is (spec-check m/tan))))
+
+(deftest tanh-test
+  (with-instrument `m/tanh
+    (is (spec-check m/tanh))))
 
 (deftest atan-test
   (with-instrument `m/atan
