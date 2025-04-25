@@ -51,6 +51,7 @@
 
 (defmacro vector-of-spec
   [{d?        :distinct?
+    max-count :max-count
     min-count :min-count
     pred      :pred
     :or       {d?        false
@@ -61,12 +62,21 @@
                 :distinct? ~d?
                 :into []
                 :kind clojure.core/vector?
+                :max-count (if ~max-count
+                             (max ~max-count ~min-count)
+                             (+ ~min-count mdl))
                 :min-count ~min-count)
      #(if ~d?
         (gen/vector-distinct (s/gen ~pred)
-                             {:max-elements (+ ~min-count mdl)
+                             {:max-elements (if ~max-count
+                                              (max ~max-count ~min-count)
+                                              (+ ~min-count mdl))
                               :min-elements ~min-count})
-        (gen/vector (s/gen ~pred) ~min-count (+ ~min-count mdl)))))
+        (gen/vector (s/gen ~pred)
+                    ~min-count
+                    (if ~max-count
+                      (max ~max-count ~min-count)
+                      (+ ~min-count mdl))))))
 
 (defmacro vector-finite-spec
   [{d?        :distinct?
