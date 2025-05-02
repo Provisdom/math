@@ -82,6 +82,7 @@
   [{d?        :distinct?
     m1        :min
     m2        :max
+    max-count :max-count
     min-count :min-count
     :or       {d?        false
                m1        m/min-dbl
@@ -92,8 +93,15 @@
                 :distinct? ~d?
                 :into []
                 :kind clojure.core/vector?
+                :max-count (if ~max-count
+                             (max ~max-count ~min-count)
+                             (+ ~min-count mdl))
                 :min-count ~min-count)
-     #((if ~d? gen/vector-distinct gen/vector)
+     #((if ~d? (gen/vector-distinct (s/gen ::m/finite)
+                                    {:max-elements (if ~max-count
+                                                     (max ~max-count ~min-count)
+                                                     (+ ~min-count mdl))
+                                     :min-elements ~min-count}))
        (m/finite-spec {:min m1 :max m2}) ~min-count (+ ~min-count mdl))))
 
 (s/def ::vector-finite+
