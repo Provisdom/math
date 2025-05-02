@@ -225,7 +225,7 @@
   :args (s/cat :size ::size :bounds (s/? ::bounds))
   :ret ::vector-bounds)
 
-(defn positive-definite-matrix-bounds
+(defn pos-definite-matrix-bounds
   "Returns a vector of bounds flattened for a symmetric positive matrix."
   [size]
   (let [m (if (zero? size)
@@ -239,11 +239,11 @@
                c (range r size)]
            (get-in m [r c])))))
 
-(s/fdef positive-definite-matrix-bounds
+(s/fdef pos-definite-matrix-bounds
   :args (s/cat :size ::size)
   :ret ::vector-bounds)
 
-(defn finite-positive-definite-matrix-bounds
+(defn finite-pos-definite-matrix-bounds
   "Returns a vector of bounds flattened for a finite symmetric positive matrix."
   [size]
   (let [m (if (zero? size)
@@ -257,7 +257,7 @@
                c (range r size)]
            (get-in m [r c])))))
 
-(s/fdef finite-positive-definite-matrix-bounds
+(s/fdef finite-pos-definite-matrix-bounds
   :args (s/cat :size ::size)
   :ret ::vector-bounds)
 

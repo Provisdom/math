@@ -146,9 +146,9 @@
            ::intervals/open-upper? false}]
       (intervals/vector-bounds 2 intervals/bounds+))))
 
-(deftest positive-definite-matrix-bounds-test
-  (with-instrument `intervals/positive-definite-matrix-bounds
-    (is (spec-check intervals/positive-definite-matrix-bounds)))
+(deftest pos-definite-matrix-bounds-test
+  (with-instrument `intervals/pos-definite-matrix-bounds
+    (is (spec-check intervals/pos-definite-matrix-bounds)))
   (with-instrument (st/instrumentable-syms)
     (is= [{::intervals/lower       0.0
            ::intervals/upper       m/inf+
@@ -162,11 +162,11 @@
            ::intervals/upper       m/inf+
            ::intervals/open-lower? true
            ::intervals/open-upper? false}]
-      (intervals/positive-definite-matrix-bounds 2))))
+      (intervals/pos-definite-matrix-bounds 2))))
 
-(deftest finite-positive-definite-matrix-bounds-test
-  (with-instrument `intervals/finite-positive-definite-matrix-bounds
-    (is (spec-check intervals/finite-positive-definite-matrix-bounds)))
+(deftest finite-pos-definite-matrix-bounds-test
+  (with-instrument `intervals/finite-pos-definite-matrix-bounds
+    (is (spec-check intervals/finite-pos-definite-matrix-bounds)))
   (with-instrument (st/instrumentable-syms)
     (is= [{::intervals/lower       0.0
            ::intervals/upper       m/inf+
@@ -180,7 +180,7 @@
            ::intervals/upper       m/inf+
            ::intervals/open-lower? true
            ::intervals/open-upper? true}]
-      (intervals/finite-positive-definite-matrix-bounds 2))))
+      (intervals/finite-pos-definite-matrix-bounds 2))))
 
 (deftest get-interval-test
   (with-instrument `intervals/get-interval
