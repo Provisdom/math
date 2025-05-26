@@ -13,7 +13,7 @@
 
 (s/def ::size
   (s/with-gen ::m/int-non-
-              #(gen/large-integer* {:min 0 :max mdl})))
+    #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::vector ::tensor/tensor1D)
 
@@ -97,12 +97,16 @@
                              (max ~max-count ~min-count)
                              (+ ~min-count mdl))
                 :min-count ~min-count)
-     #((if ~d? (gen/vector-distinct (s/gen ::m/finite)
-                                    {:max-elements (if ~max-count
-                                                     (max ~max-count ~min-count)
-                                                     (+ ~min-count mdl))
-                                     :min-elements ~min-count}))
-       (m/finite-spec {:min m1 :max m2}) ~min-count (+ ~min-count mdl))))
+     #(if ~d? (gen/vector-distinct (s/gen ::m/finite)
+                                   {:max-elements (if ~max-count
+                                                    (max ~max-count ~min-count)
+                                                    (+ ~min-count mdl))
+                                    :min-elements ~min-count})
+              (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2}))
+                          ~min-count
+                          (if ~max-count
+                            (max ~max-count ~min-count)
+                            (+ ~min-count mdl))))))
 
 (s/def ::vector-finite+
   (s/with-gen
@@ -153,12 +157,12 @@
     (s/coll-of (s/tuple ::m/int-non- ::m/number))
     #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
                           (gen/large-integer* {:min 0 :max mdl}))
-               (fn [[i j]]
-                 (gen/vector
-                   (gen/tuple
-                     (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
-                     (s/gen ::m/number))
-                   (min i j))))))
+       (fn [[i j]]
+         (gen/vector
+           (gen/tuple
+             (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
+             (s/gen ::m/number))
+           (min i j))))))
 
 (s/def ::index->number
   (s/fspec :args (s/cat :index ::tensor/index)
@@ -204,7 +208,7 @@
   (and (vector? x)
        (every? (fn [number]
                  (m/roughly-prob? number accu))
-               x)))
+         x)))
 
 (s/fdef vector-roughly-prob?
   :args (s/cat :x any?
@@ -403,7 +407,7 @@
   :args (s/cat :coll1 (s/coll-of any?)
                :coll2 (s/coll-of any?)
                :i (s/with-gen ::m/int
-                              #(gen/large-integer* {:min (- mdl) :max mdl})))
+                    #(gen/large-integer* {:min (- mdl) :max mdl})))
   :ret coll?)
 
 (defn replace-nan
@@ -436,7 +440,7 @@
                   (neg? p) 0.0
                   :else p)
             p))
-        v))
+    v))
 
 (s/fdef round-roughly-vector-prob
   :args (s/cat :v ::vector
