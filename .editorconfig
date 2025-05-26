@@ -1,0 +1,32 @@
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+max_line_length = 120
+tab_width = 2
+ij_continuation_indent_size = 8
+ij_formatter_off_tag = @formatter:off
+ij_formatter_on_tag = @formatter:on
+ij_formatter_tags_enabled = true
+ij_smart_tabs = false
+ij_visual_guides = 100
+ij_wrap_on_typing = false
+
+[{*.clj,*.cljd}]
+ij_visual_guides = 80
+ij_clojure_alignbindingforms = false
+ij_clojure_alignmapvalues = true
+ij_clojure_alignreaderconditionals = true
+ij_clojure_commentaligncolumn = 60
+ij_clojure_defaultonlyindent = true
+ij_clojure_docstringfillwidth = 80
+ij_clojure_forceonlyindent = true
+ij_clojure_keepnssorted = true
+ij_clojure_keepsinglensrequireinvector = true
+ij_clojure_nsimportsuse = list
+ij_clojure_nsrequiresuse = vector
+ij_clojure_onespacelists = false
+ij_clojure_userecommendednsclauseorder = true
+ij_clojure_userecommendednscollections = true
