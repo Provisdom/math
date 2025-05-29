@@ -506,9 +506,9 @@
   :ret ::m/number)
 
 (defn cross-product
-  "Given two linearly independent 3D vectors `v1` and `v2`, the cross product,
+  "Given two linearly independent 3D vectors `v1` and `v2`, the cross-product,
   `v1` × `v2`, is a vector that is perpendicular to both `v1` and `v2`. For 2D
-  vectors, the cross product has an analog result, which is a number. Only
+  vectors, the cross-product has an analog result, which is a number. Only
   defined for 2D and 3D vectors."
   [v1 v2]
   (let [v10 (double (get v1 0))
