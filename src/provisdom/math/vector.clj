@@ -64,7 +64,7 @@
                 :kind clojure.core/vector?
                 :max-count (if ~max-count
                              (max ~max-count ~min-count)
-                             (+ ~min-count mdl))
+                             m/max-int)
                 :min-count ~min-count)
      #(if ~d?
         (gen/vector-distinct (s/gen ~pred)
@@ -95,7 +95,7 @@
                 :kind clojure.core/vector?
                 :max-count (if ~max-count
                              (max ~max-count ~min-count)
-                             (+ ~min-count mdl))
+                             m/max-int)
                 :min-count ~min-count)
      #(if ~d? (gen/vector-distinct (s/gen ::m/finite)
                                    {:max-elements (if ~max-count
