@@ -115,6 +115,20 @@
                :into [])
     #(gen/vector (s/gen ::m/finite+) 0 mdl)))
 
+(s/def ::vector-non-
+  (s/with-gen
+    (s/coll-of ::m/non-
+      :kind clojure.core/vector?
+      :into [])
+    #(gen/vector (s/gen ::m/non-) 0 mdl)))
+
+(s/def ::vector-pos
+  (s/with-gen
+    (s/coll-of ::m/pos
+      :kind clojure.core/vector?
+      :into [])
+    #(gen/vector (s/gen ::m/pos) 0 mdl)))
+
 (s/def ::vector-prob
   (s/with-gen
     (s/coll-of ::m/prob
