@@ -41,8 +41,3 @@ project.clj
 # Operating System Files
 # ================================
 .DS_Store
-
-# ================================
-# Miscellaneous
-# ================================
-code
