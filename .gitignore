@@ -1,18 +1,48 @@
+# ================================
+# Build Artifacts & Dependencies
+# ================================
 /target
 /classes
 /checkouts
-pom.xml
-pom.xml.asc
+/out
 *.jar
 *.class
+pom.xml
+pom.xml.asc
+node_modules
+
+# ================================
+# Clojure/ClojureScript Tooling
+# ================================
 /.lein-*
 /.nrepl-port
-.hgignore
-.hg/
+.nrepl-history
+project.clj
+.cpcache
+.clj-kondo
+.lsp
+.shadow-cljs
+
+# ================================
+# IDE & Editor Files
+# ================================
 .idea/
 *.iml
-project.clj
-.nrepl-history
-.cpcache
-node_modules
-.shadow-cljs
+.calva
+
+# ================================
+# Environment & Configuration
+# ================================
+.env
+.envrc
+.local
+
+# ================================
+# Operating System Files
+# ================================
+.DS_Store
+
+# ================================
+# Miscellaneous
+# ================================
+code
