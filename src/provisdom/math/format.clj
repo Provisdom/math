@@ -1,4 +1,16 @@
 (ns provisdom.math.format
+  "Number formatting and parsing utilities.
+  
+  Provides intelligent number formatting that automatically chooses between
+  fixed-point and scientific notation based on magnitude and display constraints.
+  Includes shorthand notation (K, M, B, T) for large numbers and money formatting.
+  
+  Key features:
+  - Adaptive formatting (fixed vs scientific notation)
+  - Shorthand notation parsing/unparsing (1.5K → 1500)  
+  - Money formatting with $ prefix
+  - Configurable precision and length limits
+  - Robust parsing that handles edge cases"
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -28,7 +40,16 @@
    "K" 1000})
 
 (defn trim-number-as-string
-  "Trims number of any unnecessary characters e.g. -0.3 and 0.30."
+  "Removes unnecessary characters from a number string.
+  
+  Eliminates leading/trailing zeros and normalizes negative zero representations.
+  Useful for cleaning up formatted number output.
+  
+  Examples:
+    (trim-number-as-string \"0.30\")    ;=> \"0.3\"
+    (trim-number-as-string \"-0.0\")    ;=> \"0\"
+    (trim-number-as-string \"000123\")  ;=> \"123\"
+    (trim-number-as-string \"5.000\")   ;=> \"5\""
   [s]
   (let [s (cond (str/starts-with? s "-0")
                 (trim-number-as-string
@@ -83,7 +104,21 @@
   :ret string?)
 
 (defn format-number
-  "Formats `number` into its best form."
+  "Formats a number intelligently within length constraints.
+  
+  Automatically chooses between fixed-point and scientific notation to
+  produce the most readable result within `max-length` characters.
+  Handles special values (NaN, Infinity) appropriately.
+  
+  Options:
+    ::max-decimal-places - Limit decimal precision
+    ::max-digits - Limit significant digits in scientific notation
+  
+  Examples:
+    (format-number 1234.5678 8)           ;=> \"1234.568\"
+    (format-number 0.000123 8)           ;=> \"1.23E-4\"  
+    (format-number 1234567890 8)         ;=> \"1.235E+9\"
+    (format-number ##NaN 5)              ;=> \"NaN\""
   ([number max-length] (format-number number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits]}]
    (let [number (double number)]
@@ -183,8 +218,20 @@
   :ret string?)
 
 (defn parse-shorthand
-  "Converts a shorthand string, `s`, into a number if possible. Otherwise,
-  returns nil."
+  "Parses shorthand number strings back to numeric values.
+  
+  Converts formatted strings with suffixes (K, M, B, T) and money symbols ($)
+  back to their numeric equivalents. Returns nil if parsing fails.
+  
+  Handles special values and all formats produced by [[unparse-shorthand]].
+  
+  Examples:
+    (parse-shorthand \"1.5K\")    ;=> 1500.0
+    (parse-shorthand \"$2.3M\")   ;=> 2300000.0  
+    (parse-shorthand \"-$500K\")  ;=> -500000.0
+    (parse-shorthand \"NaN\")     ;=> ##NaN
+    (parse-shorthand \"42\")      ;=> 42
+    (parse-shorthand \"invalid\") ;=> nil"
   [s]
   (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
 

@@ -1,4 +1,15 @@
 (ns provisdom.math.arrays
+  "High-performance array operations for numerical computation.
+  
+  Provides efficient operations on Java arrays, particularly double arrays,
+  with mathematical functions for linear algebra and statistics.
+  
+  Key features:
+  - Array creation, copying, and manipulation
+  - Element-wise mathematical operations  
+  - Statistical functions (mean, variance, correlation)
+  - Linear algebra primitives (dot product, norm, projection)
+  - Memory-efficient array processing with areduce/amap"
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -42,7 +53,16 @@
 (def double-array-3D-type (Class/forName "[[[D"))
 
 (defn array?
-  "Returns true if `x` is an Array."
+  "Tests if a value is a Java array.
+  
+  Returns true if `x` is any type of Java array (primitive or object arrays).
+  Returns false for nil values.
+  
+  Examples:
+    (array? (double-array [1 2 3]))  ;=> true
+    (array? (into-array [1 2 3]))    ;=> true
+    (array? [1 2 3])                 ;=> false (vector, not array)
+    (array? nil)                     ;=> false"
   [x]
   (if (some? x)
     (-> x class .isArray)
@@ -59,7 +79,14 @@
        (gen/vector (s/gen ::m/double) 0 mdl))))
 
 (defn array2D?
-  "Returns true if `x` is an Array and each element is an Array."
+  "Tests if a value is a 2D array (array of arrays).
+  
+  Returns true if `x` is an array where every element is also an array.
+  
+  Examples:
+    (array2D? (array2D :double [[1 2] [3 4]]))  ;=> true
+    (array2D? (double-array [1 2 3]))           ;=> false (1D array)
+    (array2D? [[1 2] [3 4]])                    ;=> false (vector of vectors)"
   [x]
   (and (array? x) (every? array? x)))
 
@@ -99,7 +126,14 @@
          mdl))))
 
 (defn double-array?
-  "Returns true if `x` is an Array and each element is a double."
+  "Tests if a value is a double array.
+  
+  Returns true if `x` is an array containing only double values.
+  
+  Examples:
+    (double-array? (double-array [1.0 2.0]))  ;=> true
+    (double-array? (into-array [1 2 3]))      ;=> false (integers)
+    (double-array? [1.0 2.0])                 ;=> false (vector)"
   [x]
   (and (array? x) (every? double? x)))
 
@@ -165,7 +199,14 @@
     x))
 
 (defn arrayND->vector
-  "Converts an Array into a vector."
+  "Converts a multidimensional array to nested vectors.
+  
+  Recursively converts an array and all nested arrays to Clojure vectors,
+  preserving the nested structure.
+  
+  Examples:
+    (arrayND->vector (double-array [1 2 3]))            ;=> [1.0 2.0 3.0]
+    (arrayND->vector (array2D :double [[1 2] [3 4]]))   ;=> [[1.0 2.0] [3.0 4.0]]"
   [array]
   (arrayND->vector-recursion array))
 
@@ -174,11 +215,20 @@
   :ret (s/coll-of any? :kind vector? :into []))
 
 (defn keyword->array-type
-  "Returns the Java type for `array-type-keyword`, which can be:
-    `:double`
-    `:long`
-    `:boolean`
-    `:char`."
+  "Converts array type keywords to Java primitive types.
+  
+  Maps keyword symbols to their corresponding Java primitive class types
+  for array creation.
+  
+  Supported types:
+  - `:double` → Double/TYPE  
+  - `:long` → Long/TYPE
+  - `:boolean` → Boolean/TYPE
+  - `:char` → Character/TYPE
+  
+  Examples:
+    (keyword->array-type :double)   ;=> java.lang.Double/TYPE
+    (keyword->array-type :long)     ;=> java.lang.Long/TYPE"
   [array-type-keyword]
   (condp = array-type-keyword
     :long Long/TYPE
@@ -191,12 +241,18 @@
   :ret ::array-type)
 
 (defn array2D
-  "Create a 2D Array.
-   `array-type-keyword` can be:
-      `:double`
-      `:long`
-      `:boolean`
-      `:char`."
+  "Creates a 2D array from nested collections.
+  
+  Constructs a Java 2D array from a collection of collections, where each
+  inner collection becomes a row in the resulting array.
+  
+  Parameters:
+  - `array-type-keyword`: Element type (:double, :long, :boolean, :char)
+  - `coll2D`: Collection of collections (e.g., [[1 2] [3 4]])
+  
+  Examples:
+    (array2D :double [[1 2] [3 4]])     ;=> 2x2 double array
+    (array2D :long [[1 2 3] [4 5 6]])   ;=> 2x3 long array"
   [array-type-keyword coll2D]
   (let [array-type (keyword->array-type array-type-keyword)]
     (into-array (map (partial into-array array-type) coll2D))))
@@ -223,7 +279,16 @@
 
 ;;;DOUBLE ARRAY INFO
 (defn double-array-copy
-  "This function will create a copy of `dbl-array`."
+  "Creates a copy of a double array.
+  
+  Returns a new double array with the same elements as the input.
+  Uses Arrays/copyOf for efficient native copying.
+  
+  Examples:
+    (def arr (double-array [1 2 3]))
+    (def copy (double-array-copy arr))
+    (identical? arr copy)  ;=> false (different objects)
+    (= (seq arr) (seq copy))  ;=> true (same contents)"
   [dbl-array]
   (Arrays/copyOf (doubles dbl-array) (alength dbl-array)))
 
@@ -241,11 +306,17 @@
   :ret ::double-array2D)
 
 (defn double-array=
-  "Returns true if the two specified arrays of doubles are equal to one another.
-  Two arrays are considered equal if both arrays contain the same number of
-  elements, and all corresponding pairs of elements in the two arrays are equal.
-  In other words, two arrays are equal if they contain the same elements in the
-  same order. Also, two array references are considered equal if both are nil."
+  "Tests if two double arrays are equal element-wise.
+  
+  Returns true if both arrays have the same length and all corresponding
+  elements are equal. Uses efficient native comparison via Arrays/equals.
+  Handles nil arrays correctly (both nil → true, one nil → false).
+  
+  Examples:
+    (double-array= [1.0 2.0] [1.0 2.0])  ;=> true
+    (double-array= [1.0 2.0] [1.0 3.0])  ;=> false  
+    (double-array= nil nil)              ;=> true
+    (double-array= [1.0] nil)            ;=> false"
   [dbl-array1 dbl-array2]
   (Arrays/equals (double-array dbl-array1) (double-array dbl-array2)))
 
@@ -268,9 +339,23 @@
   :ret boolean?)
 
 (defn double-array-reduce-kv
-  "Similar to [[reduce-kv]] but for double arrays. First array must be the
-  shortest. Calls `f` with the return value, index, and the value(s) at that
-  index."
+  "Reduces over double arrays with index and value(s).
+  
+  Like reduce-kv but for double arrays. The function `f` receives:
+  - The accumulated result
+  - The current index
+  - The value(s) at that index from the array(s)
+  
+  For multiple arrays, all arrays are processed in parallel. The first array
+  determines the iteration length, so it should be the shortest.
+  
+  Examples:
+    (double-array-reduce-kv + 0.0 [1.0 2.0 3.0])  
+    ;=> calls (+ 0.0 0 1.0), then (+ result 1 2.0), then (+ result 2 3.0)
+    
+    (double-array-reduce-kv 
+      (fn [sum idx a b] (+ sum (* a b))) 
+      0.0 [1.0 2.0] [3.0 4.0])  ;=> 11.0 (1*3 + 2*4)"
   ([f init-dbl dbl-array]
    (areduce (doubles dbl-array) i ret (double init-dbl)
      (double (f ret
@@ -569,7 +654,15 @@
   :ret ::double-array)
 
 (defn double-array-sum
-  "Sum of `dbl-array` elements."
+  "Computes the sum of all elements in a double array.
+  
+  Returns the arithmetic sum of all array elements using efficient
+  array reduction.
+  
+  Examples:
+    (double-array-sum (double-array [1.0 2.0 3.0]))  ;=> 6.0
+    (double-array-sum (double-array []))             ;=> 0.0
+    (double-array-sum (double-array [-1.0 1.0]))     ;=> 0.0"
   [dbl-array]
   (double-array-reduce-kv (fn [tot _ da]
                             (+ tot da))
@@ -593,9 +686,15 @@
   :ret ::m/double)
 
 (defn double-array-dot-product
-  "The dot product is the sum of the products of the corresponding entries of
-  two vectors. Geometrically, the dot product is the product of the Euclidean
-  magnitudes of the two vectors and the cosine of the angle between them."
+  "Computes the dot product of two double arrays.
+  
+  The dot product is the sum of element-wise products. Geometrically, for vectors
+  it represents |a| × |b| × cos(θ) where θ is the angle between vectors.
+  Arrays must have the same length.
+  
+  Examples:
+    (double-array-dot-product (double-array [1.0 2.0 3.0]) (double-array [4.0 5.0 6.0]))  ;=> 32.0
+    (double-array-dot-product (double-array [1.0 0.0]) (double-array [0.0 1.0]))          ;=> 0.0"
   [dbl-array1 dbl-array2]
   (double-array-reduce-kv (fn [tot _ da1 da2]
                             (+ tot (* da1 da2)))
@@ -633,7 +732,7 @@
   :args (s/cat :dbl-array ::double-array)
   :ret ::m/double)
 
-(def ^{:doc "See [[double-array-norm]]."} double-array-norm2 double-array-norm)
+(def  double-array-norm2 "See [[double-array-norm]]." double-array-norm)
 
 (defn double-array-norm1
   "The sum of the absolute values of the elements."
@@ -647,7 +746,15 @@
 
 ;;;DOUBLE ARRAY STATS
 (defn double-array-mean
-  "The mean of the elements in `dbl-array`."
+  "Computes the arithmetic mean of a double array.
+  
+  Returns the average value (sum / count) of all elements.
+  Returns NaN for empty arrays due to division by zero.
+  
+  Examples:
+    (double-array-mean (double-array [1.0 2.0 3.0]))  ;=> 2.0
+    (double-array-mean (double-array [5.0]))          ;=> 5.0
+    (double-array-mean (double-array []))             ;=> ##NaN"
   [dbl-array]
   (m/div (double-array-sum dbl-array) (alength dbl-array)))
 
@@ -665,7 +772,15 @@
   :ret ::m/double)
 
 (defn double-array-variance
-  "The variance of the elements in `dbl-array`."
+  "Computes the population variance of a double array.
+  
+  Returns the variance using the formula: Var(X) = E[X²] - (E[X])²
+  This is the population variance (divides by N, not N-1).
+  
+  Examples:
+    (double-array-variance (double-array [1.0 2.0 3.0]))  ;=> 0.6666666666666666
+    (double-array-variance (double-array [5.0 5.0 5.0]))  ;=> 0.0 (no variation)
+    (double-array-variance (double-array [1.0]))          ;=> 0.0 (single element)"
   [dbl-array]
   (- (double-array-second-moment dbl-array)
     (m/sq (double-array-mean dbl-array))))

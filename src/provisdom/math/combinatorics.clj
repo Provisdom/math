@@ -1,4 +1,15 @@
 (ns provisdom.math.combinatorics
+  "Combinatorial functions and sequence generation.
+  
+  Provides efficient algorithms for:
+  - Factorials and subfactorials (derangements)
+  - Combinations and permutations
+  - Stirling numbers and Bell numbers  
+  - Binomial probability calculations
+  - Lazy sequence generators for combinatorial objects
+  
+  Includes both exact computations for small values and log-space calculations
+  for larger values to avoid overflow."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -44,7 +55,16 @@
 
 ;;;FACTORIALS
 (defn factorial
-  "Returns the factorial of `x`."
+  "Computes the factorial of a number.
+  
+  Returns x! = x × (x-1) × ... × 2 × 1. Uses the gamma function identity:
+  x! = Γ(x+1) for accurate computation of non-integer factorials.
+  
+  Examples:
+    (factorial 5)    ;=> 120.0
+    (factorial 0)    ;=> 1.0  
+    (factorial 3.5)  ;=> 11.631728396567448 (Γ(4.5))
+    (factorial -1)   ;=> ##Inf (undefined for negative integers)"
   [x]
   (special-fns/gamma (inc (double x))))
 
@@ -53,7 +73,15 @@
   :ret ::m/num)
 
 (defn factorial'
-  "Returns the factorial of `x`. Returns long if possible."
+  "Computes the factorial of a number, returning a long when possible.
+  
+  Like [[factorial]] but returns a long if the result fits in long range,
+  otherwise returns a double. Useful for exact integer arithmetic.
+  
+  Examples:
+    (factorial' 5)   ;=> 120 (long)
+    (factorial' 20)  ;=> 2432902008176640000 (long)
+    (factorial' 21)  ;=> 5.109094217170944E19 (double, too large for long)"
   [x]
   (m/maybe-long-able (factorial x)))
 
@@ -62,7 +90,15 @@
   :ret ::m/num)
 
 (defn log-factorial
-  "Returns the log-factorial of `x`"
+  "Computes the natural logarithm of the factorial.
+  
+  Returns ln(x!). More numerically stable than computing factorial and then
+  taking the log, especially for large x where x! would overflow.
+  
+  Examples:
+    (log-factorial 5)   ;=> 4.787491742782046 (ln(120))
+    (log-factorial 100) ;=> 363.7393755555635 (ln(100!) without overflow)
+    (log-factorial 0)   ;=> 0.0 (ln(1))"
   [x]
   (special-fns/log-gamma-inc (double x)))
 
@@ -71,9 +107,18 @@
   :ret ::m/num)
 
 (defn subfactorial
-  "Returns the subfactorial of `x`. The number of ways that n objects can be
-  arranged where no object appears in its natural position (known as
-  'derangements.')"
+  "Computes the subfactorial (number of derangements).
+  
+  Returns !x, the number of permutations of x objects where no object appears
+  in its original position. Also known as derangements or discordant permutations.
+  
+  Uses precomputed values for x < 22, otherwise approximates using !x ≈ x!/e.
+  
+  Examples:
+    (subfactorial 3)  ;=> 2 (permutations: [2,3,1] and [3,1,2])
+    (subfactorial 4)  ;=> 9 
+    (subfactorial 0)  ;=> 1 (by convention)
+    (subfactorial 1)  ;=> 0 (impossible to derange one item)"
   [x]
   (if (and (m/long-able? x) (< x 22))
     (subfactorials (m/round x :up))
@@ -85,9 +130,18 @@
 
 ;;;CHOOSING
 (defn choose-k-from-n
-  "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!). `k` and `n` must be int, otherwise use
-  [[log-choose-k-from-n]]."
+  "Calculates binomial coefficient C(n,k) = n! / (k! × (n-k)!).
+  
+  Returns the number of ways to choose `k` items from `n` items without regard 
+  to order. Uses optimized algorithm that avoids computing large factorials
+  directly. For very large values, consider using [[log-choose-k-from-n]].
+  
+  Constraints: k ≤ n, both non-negative integers
+  
+  Examples:
+    (choose-k-from-n 2 5)   ;=> 10.0 (choosing 2 from 5: {1,2},{1,3},{1,4},{1,5},{2,3},{2,4},{2,5},{3,4},{3,5},{4,5})
+    (choose-k-from-n 0 5)   ;=> 1.0  (only one way to choose nothing)
+    (choose-k-from-n 5 5)   ;=> 1.0  (only one way to choose everything)"
   [k n]
   (let [diff (- n k)]
     (cond (or (zero? diff) (zero? k)) 1.0
@@ -133,9 +187,17 @@
   :ret ::m/num)
 
 (defn log-choose-k-from-n
-  "Returns the log of the number of ways to choose `k` items out of `n` items.
-  `n` must be >= `k`, and `n` and `k` must be non-negative. Otherwise, use
-  [[choose-k-from-n]]."
+  "Computes the natural logarithm of the binomial coefficient.
+  
+  Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). More numerically stable than 
+  computing the binomial coefficient directly for large values.
+  
+  Constraints: n ≥ k ≥ 0
+  
+  Examples:
+    (log-choose-k-from-n 2 5)   ;=> 2.3025850929940455 (ln(10))
+    (log-choose-k-from-n 50 100) ;=> 66.7838... (ln of very large number)
+    (log-choose-k-from-n 0 5)   ;=> 0.0 (ln(1))"
   [k n]
   (let [lfn (log-factorial n)]
     (if (m/inf+? lfn)
@@ -198,10 +260,21 @@
   :ret ::m/number)
 
 (defn binomial-probability
-  "Likelihood of seeing `successes` out of `trials` with `success-prob`.
-  `successes` and `trials` must be int, otherwise use
-  [[log-binomial-probability]]. For general use, if `trials` is greater than
-  1000, use [[log-binomial-probability]]."
+  "Computes the binomial probability mass function.
+  
+  Returns P(X = k) for a binomial distribution: the probability of exactly
+  `successes` successes in `trials` independent trials, each with probability
+  `success-prob` of success.
+  
+  Formula: P(X=k) = C(n,k) × p^k × (1-p)^(n-k)
+  
+  For large `trials` (>1000), consider using [[log-binomial-probability]]
+  to avoid numerical overflow.
+  
+  Examples:
+    (binomial-probability 2 5 0.3)  ;=> 0.30869 (2 successes in 5 trials)
+    (binomial-probability 0 3 0.5)  ;=> 0.125 (no successes in 3 trials)
+    (binomial-probability 5 5 0.9)  ;=> 0.59049 (all successes)"
   [successes trials success-prob]
   (* (choose-k-from-n successes trials)
     (m/pow success-prob successes)
@@ -272,8 +345,19 @@
       (step c 1))))
 
 (defn combinations
-  "All the unique ways of taking `n` different elements from `items`, or all the
-  unique ways of taking different elements from `items`."
+  "Generates all combinations of items.
+  
+  With one argument, returns all possible combinations of all sizes (power set).
+  With two arguments, returns all combinations of exactly `n` items.
+  
+  Combinations are unordered selections - [1 2] and [2 1] are the same combination.
+  Returns lazy sequences for memory efficiency.
+  
+  Examples:
+    (combinations [1 2 3] 2)     ;=> ((1 2) (1 3) (2 3))
+    (combinations [:a :b] 1)     ;=> ((:a) (:b))
+    (combinations [1 2])         ;=> (() (1) (2) (1 2)) [all sizes]
+    (combinations [] 1)          ;=> nil (impossible)"
   ([items]
    (let [c (count items)
          c (if (= c m/max-long) (double c) c)]
@@ -363,7 +447,19 @@
       (range (count items)))))
 
 (defn permutations
-  "All the permutations of `items`."
+  "Generates all permutations of items.
+  
+  Returns all possible arrangements where order matters. Unlike combinations,
+  [1 2] and [2 1] are different permutations.
+  
+  Preserves the input collection type (vector input → vector output).
+  
+  Examples:
+    (permutations [1 2 3])  ;=> ([1 2 3] [1 3 2] [2 1 3] [2 3 1] [3 1 2] [3 2 1])
+    (permutations '(a b))   ;=> ((a b) (b a))
+    (permutations [])       ;=> [[]]
+    
+  Warning: Number of permutations is n! which grows very quickly."
   [items]
   (let [p (permute (into [] items)
             (if (vector? items) [] '()))]

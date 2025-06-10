@@ -1,4 +1,15 @@
 (ns provisdom.math.integrals
+  "Numerical integration using adaptive Gauss-Kronrod quadrature.
+  
+  Provides high-accuracy numerical integration for:
+  - Single-variable functions over finite or infinite intervals
+  - Multi-variable functions over rectangular regions  
+  - Non-rectangular 2D integration with variable bounds
+  - Automatic change of variables for infinite intervals
+  
+  Uses adaptive algorithms that subdivide intervals where error is highest,
+  with parallel processing support. Based on globally adaptive Gauss-Kronrod
+  quadrature with embedded error estimation."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -761,24 +772,26 @@
   :ret (s/tuple ::v->tensor ::finite-intervals))
 
 (defn integration
-  "Returns the integral of a function `number->tensor` over the num-interval
-  from `a` to `b` using global adaptive integration of the Gauss-Kronrod
-  Quadrature Formula.
+  "Integrates a function over an interval using adaptive Gauss-Kronrod quadrature.
+  
+  Computes ∫[a,b] f(x) dx where f can return scalars, vectors, or tensors.
+  Automatically handles infinite intervals via change of variables.
+  Uses globally adaptive algorithm that subdivides where error is highest.
+  
   Options:
-    `::accu` -- default is m/*dbl-close* (accuracy is also adjusted for
-      Gauss-Konrod quadrature type)
-    `::iter-interval` -- default is [10 1000]
-    `::parallel?` -- default is false
-    `::points` -- 15, 21, 31, 41, 51, 61; default is 21 or 15 if num-interval is
-     infinite.
-
-  Known Limitations:
-    Very large absolute ranges (not infinite) can cause approximation errors due
-      to limited rounded accuracy of the 'double' type.
-    Example Problem: exp(-x^2) from -166 (or more negative) to Inf+ returns zero
-      instead of sqrt of PI with default `::iter-interval` and 51 `::points`.
-    Solution: use a change of variable, or increase minimum of
-      `::iter-interval`, or increase `::points`."
+    ::accu - Relative accuracy target (default: m/dbl-close) 
+    ::iter-interval - [min-iter max-iter] bounds (default: [10 1000])
+    ::parallel? - Use parallel processing (default: false)
+    ::points - Quadrature points: 15,21,31,41,51,61 (auto-selected by default)
+  
+  Returns integral value or anomaly map if convergence fails.
+  
+  Examples:
+    (integration #(* % %) [0 1])           ;=> 0.33333... (∫x² from 0 to 1)
+    (integration #(Math/exp (- (* % %))) [-##Inf ##Inf])  ;=> ~1.77245 (√π)
+    
+  Known limitations: Very large finite intervals may lose precision due to 
+  floating-point limits. For such cases, increase ::points or ::iter-interval."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
   ([number->tensor [a b] {::keys [accu iter-interval parallel? points]
                           :or    {accu          m/dbl-close

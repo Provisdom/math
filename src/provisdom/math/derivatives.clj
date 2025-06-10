@@ -1,4 +1,16 @@
 (ns provisdom.math.derivatives
+  "Numerical differentiation using finite difference methods.
+  
+  Provides high-accuracy numerical derivatives for scalar and vector functions:
+  - Derivatives of scalar functions (1st through 8th order)
+  - Gradients of multivariable scalar functions  
+  - Jacobians of vector-valued functions
+  - Hessians (second partial derivatives)
+  - Partial derivatives for bivariate functions
+  
+  Supports central, forward, and backward difference schemes with configurable
+  accuracy levels. Uses pre-computed finite difference coefficients for optimal
+  precision."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -195,20 +207,26 @@
   :ret ::coefficients)
 
 (defn derivative-fn
-  "Returns a numerical derivative function. Function `number->number` takes and
-  returns a number. Note that [[derivative-fn]] will not be accurate when inputs
-  or outputs are so large when divided by `::h` that they lose precision.
+  "Creates a numerical derivative function using finite differences.
+  
+  Takes a function `number->number` and returns its derivative function.
+  Uses finite difference methods with pre-computed coefficients for high accuracy.
+  
   Options:
-    `::derivative` - can be 0 or 1 (default) to 8
-    `::h` - (default is m/*sgl-close* for 1st deriv, 10x less for others) is
-      the denominator, which is equal to (dx ^ `::derivative`), where 'dx' is
-      the small change (smaller `::h` isn't usually better, changes to `::h` can
-      be important)
-    `::type` - can be `:central` (default), `:forward`, or `:backward`
-    `::accuracy` - can be 2, 4, 6, or 8 for central (no 8 for 3rd or 4th deriv),
-      and 1-6 for forward or backward (no 6 for 4th deriv). (default
-      `::accuracy` is 2 for `::derivative` <= 2, else 6. `::accuracy` is ignored
-      for `::derivative` > 4 and default accuracies are used."
+    ::derivative - Order (0-8, default 1). Order 0 returns original function.
+    ::h - Step size (default m/sgl-close for 1st deriv, smaller for higher orders).
+           Smaller isn't always better due to floating-point precision limits.
+    ::type - Difference scheme: :central (default), :forward, or :backward
+    ::accuracy - Points used: 2,4,6,8 for central; 1-6 for forward/backward
+  
+  Returns function that computes nth derivative at given point.
+  
+  Examples:
+    (def f (derivative-fn #(* % % %)))  ; derivative of x³  
+    (f 2.0)  ;=> ~12.0 (3x² at x=2)
+    
+    (def f'' (derivative-fn sin {::derivative 2}))  ; second derivative of sin
+    (f'' 0.0)  ;=> ~0.0 (-sin(0))"
   ([number->number] (derivative-fn number->number {}))
   ([number->number {::keys [derivative h type accuracy]
                     :or    {derivative 1
@@ -241,7 +259,7 @@
                                 (<= derivative 2) 2
                                 (and (== derivative 4) (not= type :central)) 5
                                 :else 6)
-                 coefficient-fn (condp = type
+                 coefficient-fn (case type
                                   :central get-central-coefficients
                                   :forward get-forward-coefficients
                                   :backward get-backward-coefficients)
@@ -274,15 +292,24 @@
   :ret ::number->number)
 
 (defn gradient-fn
-  "Returns a numerical gradient function. Function `v->number` takes a vector
-  and returns a number. The output function takes and returns a vector.
+  "Creates a numerical gradient function for multivariable functions.
+  
+  Takes a function `v->number` (vector → scalar) and returns its gradient function
+  (vector → vector). The gradient points in the direction of steepest ascent.
+  
   Options:
-    `::h` (default m/*sgl-close*) is the denominator, which is equal to 'dx',
-      where 'dx' is the small change (smaller `::h` isn't usually better,
-      changes to `::h` can be important)
-    `::type` can be `:central` (default), `:forward`, or `:backward`
-    `::accuracy` can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for
-      `:forward` or `:backward`."
+    ::h - Step size (default: m/sgl-close). Balance between accuracy and numerical stability.
+    ::type - Difference scheme: :central (default), :forward, or :backward  
+    ::accuracy - Number of points: 2 (default), 4, 6, 8 for central; 1-6 for others
+  
+  Returns a function that computes ∇f at any point.
+  
+  Examples:
+    (def grad-f (gradient-fn (fn [[x y]] (+ (* x x) (* y y)))))
+    (grad-f [2.0 3.0])  ;=> [4.0 6.0] (gradient of x²+y² at (2,3))
+    
+    (def grad-g (gradient-fn (fn [[x y]] (* x y))))  
+    (grad-g [1.0 2.0])  ;=> [2.0 1.0] (gradient of xy at (1,2))"
   ([v->number] (gradient-fn v->number {}))
   ([v->number {::keys [h type accuracy]
                :or    {h        m/sgl-close
@@ -319,16 +346,23 @@
   :ret ::v->v)
 
 (defn jacobian-fn
-  "Returns a numerical jacobian function. Function `v->v` takes a vector and
-  returns a vector. The output function takes a vector and returns a matrix,
-  where each row is the gradient of f's output.
+  "Creates a numerical Jacobian function for vector-valued functions.
+  
+  Takes a function `v->v` (vector → vector) and returns its Jacobian function
+  (vector → matrix). The Jacobian matrix contains all first-order partial derivatives.
+  
+  For function f: ℝⁿ → ℝᵐ, the Jacobian J is an m×n matrix where J[i,j] = ∂fᵢ/∂xⱼ.
+  Each row represents the gradient of one output component.
+  
   Options:
-    `::h` -- (default m/*sgl-close*) is the denominator, which is equal to 'dx',
-      where 'dx' is the small change (smaller `::h` isn't usually better,
-      changes to `::h` can be important)
-    `::type` -- can be `:central` (default), `:forward`, or `:backward`
-    `::accuracy` -- can be 2 (default), 4, 6, or 8 for `:central`, and 1-6 for
-    `:forward` or `:backward`."
+    ::h - Step size (default: m/sgl-close)
+    ::type - Difference scheme: :central (default), :forward, or :backward
+    ::accuracy - Number of points: 2 (default), 4, 6, 8 for central; 1-6 for others
+  
+  Examples:
+    (def jac-f (jacobian-fn (fn [[x y]] [(* x y) (+ x y)])))
+    (jac-f [2.0 3.0])  ;=> [[3.0 2.0]    ; ∂(xy)/∂x, ∂(xy)/∂y
+                       ;     [1.0 1.0]]   ; ∂(x+y)/∂x, ∂(x+y)/∂y"
   ([v->v] (jacobian-fn v->v {}))
   ([v->v {::keys [h type accuracy]
           :or    {h        m/sgl-close
@@ -397,16 +431,23 @@
   :ret ::m/number)
 
 (defn hessian-fn
-  "Returns a numerical Hessian function. Function `v->number` takes a vector and
-  returns a number. The output function takes a vector and returns a symmetric
-  matrix. Options:
-    `::h` -- (default m/*sgl-close* / 10) is the denominator, which is equal to
-    (dx * dx), where 'dx' is the small change (smaller `::h` isn't usually
-    better, changes to `::h` can be important)
-    `::type` can be `:joint-central` (default), `:central`, `:forward`, or
-      `:backward`
-    `::accuracy` can be 2 (default, only choice for `:joint-central`); 2, 4, 6,
-    and 1-6 for `:forward` or `:backward`."
+  "Creates a numerical Hessian function for scalar multivariable functions.
+  
+  Takes a function `v->number` (vector → scalar) and returns its Hessian function
+  (vector → symmetric matrix). The Hessian contains all second-order partial derivatives.
+  
+  For function f: ℝⁿ → ℝ, the Hessian H is an n×n matrix where H[i,j] = ∂²f/(∂xᵢ∂xⱼ).
+  Used for optimization, analyzing critical points, and Newton's method.
+  
+  Options:
+    ::h - Step size (default: m/sgl-close * 0.1, since this involves second derivatives)
+    ::type - Method: :joint-central (default, most accurate), :central, :forward, :backward
+    ::accuracy - 2 (default, only option for :joint-central); 2,4,6,8 for central; 1-6 for others
+  
+  Examples:
+    (def hess-f (hessian-fn (fn [[x y]] (+ (* x x y) (* y y y)))))  ; f(x,y) = x²y + y³
+    (hess-f [1.0 2.0])  ;=> [[4.0 2.0]    ; ∂²f/∂x², ∂²f/∂x∂y
+                        ;     [2.0 12.0]]  ; ∂²f/∂y∂x, ∂²f/∂y²"
   ([v->number] (hessian-fn v->number {}))
   ([v->number {::keys [h type accuracy]
                :or    {h        (* m/sgl-close 0.1)

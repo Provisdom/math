@@ -1,4 +1,11 @@
 (ns provisdom.math.polynomials
+  "Polynomial functions and orthogonal polynomial bases.
+  
+  Provides polynomial evaluation, interpolation, and specialized polynomial 
+  families including Chebyshev, Legendre, and other orthogonal polynomials.
+  Useful for function approximation, numerical integration, and spectral methods.
+  
+  Features polynomial evaluation using Horner's method for numerical stability."
   (:require
     [clojure.spec.alpha :as s]
     [provisdom.math.combinatorics :as combinatorics]
@@ -89,8 +96,24 @@
 
 ;;;CHEBYSHEV POLYNOMIALS
 (defn chebyshev-polynomial-fn
-  "Returns a chebyshev polynomial function of `degree`. Can optionally use first
-  kind (default) or set `second-kind?` to true."
+  "Creates a Chebyshev polynomial function of the specified degree.
+  
+  Chebyshev polynomials are orthogonal polynomials useful for function
+  approximation and numerical integration. First kind polynomials T_n(x)
+  are bounded on [-1,1], while second kind polynomials U_n(x) are their
+  derivatives scaled by (1-x²).
+  
+  Parameters:
+    degree - Non-negative integer degree of the polynomial
+  
+  Options:
+    ::second-kind? - If true, returns U_n(x) instead of T_n(x) (default false)
+  
+  Returns a function that evaluates the Chebyshev polynomial at a given point.
+  
+  Example:
+    ((chebyshev-polynomial-fn 2) 0.5) ; => T₂(0.5) = -0.5
+    ((chebyshev-polynomial-fn 2 {::second-kind? true}) 0.5) ; => U₂(0.5) = -1.0"
   ([degree] (chebyshev-polynomial-fn degree {}))
   ([degree {::keys [second-kind?] :or {second-kind? false}}]
    (let [degree (long degree)
@@ -114,9 +137,22 @@
 ;;http://en.wikipedia.org/wiki/Chebyshev_polynomials 
 ;;-- also solved for the derivative of second-kind at x = +-1
 (defn chebyshev-derivative-fn
-  "Returns a chebyshev-derivative function. Can optionally use first kind
-  (default) or set `second-kind?` to true. Will use numerical derivative when
-  necessary."
+  "Creates a function that computes derivatives of Chebyshev polynomials.
+  
+  Computes the nth derivative of Chebyshev polynomials using analytic
+  formulas when available, falling back to numerical differentiation.
+  
+  Parameters:
+    degree - Degree of the base Chebyshev polynomial
+    derivative - Order of derivative (1 for first derivative, 2 for second, etc.)
+  
+  Options:
+    ::second-kind? - If true, differentiates U_n(x) instead of T_n(x) (default false)
+  
+  Returns a function that evaluates the derivative at a given point.
+  
+  Example:
+    ((chebyshev-derivative-fn 3 1) 0.5) ; => T₃'(0.5)"
   ([degree derivative] (chebyshev-derivative-fn degree derivative {}))
   ([degree derivative {::keys [second-kind?] :or {second-kind? false}}]
    (cond (zero? degree) (constantly 0.0)
@@ -160,9 +196,27 @@
   :ret ::number->number)
 
 (defn chebyshev-poly-factors-to-regular-poly-factors
-  "Returns polynomial factors a (i.e., a0 + a1 * x + a2 * x^2 +...) from
-  chebyshev factors (i.e., b0 + b1 * x + b2 * (2x^2 - 1) + ...). Can optionally
-  use first kind (default) or set `second-kind?` to true."
+  "Converts Chebyshev polynomial coefficients to standard polynomial form.
+  
+  Transforms a representation as a linear combination of Chebyshev polynomials:
+  b₀T₀(x) + b₁T₁(x) + b₂T₂(x) + ...
+  
+  Into standard polynomial form:
+  a₀ + a₁x + a₂x² + ...
+  
+  This is useful for integration with systems that expect standard polynomials.
+  
+  Parameters:
+    chebyshev-factors - Sequence of coefficients for Chebyshev expansion
+  
+  Options:
+    ::second-kind? - If true, converts from U_n(x) basis instead of T_n(x)
+  
+  Returns coefficients for the equivalent standard polynomial.
+  
+  Example:
+    (chebyshev-poly-factors-to-regular-poly-factors [1 2 3])
+    ; => [0 2 6] representing 0 + 2x + 6x²"
   ([chebyshev-factors]
    (chebyshev-poly-factors-to-regular-poly-factors
      chebyshev-factors {}))
@@ -207,8 +261,23 @@
                 :ret ::m/number)))
 
 (defn polynomial-fn
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
-  polynomial. Returns a function that takes a number and returns a vector."
+  "Creates a function that evaluates polynomial basis functions up to a degree.
+  
+  Generates a vector of polynomial values [P₀(x), P₁(x), ..., P_n(x)] where
+  P_i(x) depends on the polynomial kind specified.
+  
+  Parameters:
+    end-degree - Maximum degree of polynomials to include
+  
+  Options:
+    ::start-degree - Minimum degree to include (default 0)
+    ::chebyshev-kind - Polynomial type: 0=standard (x^n), 1=Chebyshev T_n(x), 2=Chebyshev U_n(x)
+  
+  Returns a function that takes a number x and returns a vector of polynomial evaluations.
+  
+  Example:
+    ((polynomial-fn 3) 2.0) ; => [1.0 2.0 4.0 8.0] (standard: [1, x, x², x³])
+    ((polynomial-fn 2 {::chebyshev-kind 1}) 0.5) ; => [1.0 0.5 -0.5] (Chebyshev T_n)"
   ([end-degree] (polynomial-fn end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -225,9 +294,22 @@
   :ret ::number->v)
 
 (defn polynomial-fns
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
-  polynomial. Returns a collection of functions that each take a number and
-  return a number."
+  "Creates a collection of individual polynomial basis functions.
+  
+  Similar to polynomial-fn but returns separate functions rather than
+  a single function that returns a vector.
+  
+  Parameters:
+    end-degree - Maximum degree of polynomials to include
+  
+  Options:
+    ::start-degree - Minimum degree to include (default 0)
+    ::chebyshev-kind - Polynomial type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+  
+  Returns a sequence of functions, each evaluating one polynomial basis function.
+  
+  Example:
+    (map #(% 2.0) (polynomial-fns 2)) ; => (1.0 2.0 4.0)"
   ([end-degree] (polynomial-fns end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -245,8 +327,21 @@
   :ret (s/coll-of ::number->number))
 
 (defn polynomial-2D-count
-  "Returns the number of elements in 2D between `start-degree` and
-  `end-degree`."
+  "Calculates the number of 2D polynomial terms within degree bounds.
+  
+  For 2D polynomials up to degree n, counts terms like: 1, x, y, x², xy, y², ...
+  The total count follows the formula: Σ(i+1) for i from start-degree to end-degree.
+  
+  Parameters:
+    end-degree - Maximum total degree to include
+  
+  Options:
+    ::start-degree - Minimum total degree to include (default 0)
+  
+  Returns the number of polynomial terms.
+  
+  Example:
+    (polynomial-2D-count 2) ; => 6 (terms: 1, x, y, x², xy, y²)"
   ([end-degree] (polynomial-2D-count end-degree {}))
   ([end-degree {::keys [start-degree]
                 :or    {start-degree 0}}]
@@ -268,10 +363,23 @@
   (- (m/sqrt (+ 0.25 (* 2.0 count))) 1.5))
 
 (defn polynomial-2D-fn-by-degree
-  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular
-  polynomial. Order retains x to the highest powers first, e.g.,
-  [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3]. Returns a function that takes
-  two numbers (an x and a y) and returns a vector."
+  "Creates a 2D polynomial basis function organized by total degree.
+  
+  Generates all polynomial terms x^i × y^j where i+j ≤ end-degree.
+  Terms are ordered by total degree, then by x-power (highest first):
+  [1, x, y, x², xy, y², x³, x²y, xy², y³, ...]
+  
+  Parameters:
+    end-degree - Maximum total degree (i+j) to include
+  
+  Options:
+    ::start-degree - Minimum total degree to include (default 0)
+    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+  
+  Returns a function that takes (x, y) and returns a vector of polynomial evaluations.
+  
+  Example:
+    ((polynomial-2D-fn-by-degree 2) 2.0 3.0) ; => [1.0 2.0 3.0 4.0 6.0 9.0]"
   ([end-degree] (polynomial-2D-fn-by-degree end-degree {}))
   ([end-degree {::keys [start-degree chebyshev-kind]
                 :or    {start-degree 0, chebyshev-kind 0}}]
@@ -298,10 +406,23 @@
   :ret ::number2->v)
 
 (defn polynomial-2D-fn-by-basis-count
-  "`cheybshev-kind` can be 0 (default), 1, or 2, where 0 means a regular
-  polynomial. Order retains x to the highest powers first, e.g.,
-  [1 x y x^2 xy y^2 x^3 (x^2 × y) (y^2 × x) y^3]. Returns a function that takes
-  two numbers (an x and a y) and returns a vector."
+  "Creates a 2D polynomial basis function with a specified number of terms.
+  
+  Similar to polynomial-2D-fn-by-degree but determines the degree based on
+  the desired number of basis functions rather than a maximum degree.
+  
+  Parameters:
+    basis-count - Exact number of polynomial terms to include
+  
+  Options:
+    ::start-degree - Minimum total degree to include (default 0)
+    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+  
+  Returns a function that takes (x, y) and returns a vector with exactly
+  basis-count polynomial evaluations.
+  
+  Example:
+    ((polynomial-2D-fn-by-basis-count 4) 2.0 3.0) ; => [1.0 2.0 3.0 4.0]"
   ([basis-count] (polynomial-2D-fn-by-basis-count basis-count {}))
   ([basis-count {::keys [start-degree chebyshev-kind]
                  :or    {start-degree 0, chebyshev-kind 0}}]
@@ -324,10 +445,26 @@
   :ret ::number2->v)
 
 (defn polynomial-ND-fn
-  "Returns a function that takes a vector [x y z ...] and returns a vector.
-  Terms are sorted by order and then by dimension, e.g.,
-  [1 x y z x^2 xy xz y^2 yz z^2 x^3 (x^2 × y) (x^2 × z) (x × y^2)
-  (x × y × z) (x × z^2) y^3 (y^2 × z) (y × z^2) z^3]."
+  "Creates an N-dimensional polynomial basis function.
+  
+  Generates all polynomial terms up to the specified degree for an arbitrary
+  number of variables. Terms are ordered by total degree, then lexicographically
+  by dimension with a small perturbation to ensure consistent ordering.
+  
+  For variables [x, y, z, ...], generates terms like:
+  [1, x, y, z, x², xy, xz, y², yz, z², x³, x²y, x²z, xy², xyz, xz², y³, ...]
+  
+  Parameters:
+    end-degree - Maximum total degree for polynomial terms
+  
+  Options:
+    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+  
+  Returns a function that takes a vector [x y z ...] and returns a vector
+  of polynomial evaluations.
+  
+  Example:
+    ((polynomial-ND-fn 2) [2.0 3.0 4.0]) ; => all terms up to degree 2"
   ([end-degree] (polynomial-ND-fn end-degree {}))
   ([end-degree {::keys [chebyshev-kind] :or {chebyshev-kind 0}}]
    (let [p (polynomial-functions chebyshev-kind)]
@@ -355,9 +492,25 @@
   :ret ::v->v)
 
 (defn polynomial-ND-fn-without-cross-terms
-  "Returns a function that takes a vector [x y z ...] and returns a vector.
-  Terms are sorted by order and then by dimension, e.g.,
-  [1 x y z x^2 y^2 z^2 x^3 y^3 z^3]."
+  "Creates an N-dimensional polynomial basis with no interaction terms.
+  
+  Generates only pure power terms (no cross-products) for each variable:
+  [1, x, y, z, x², y², z², x³, y³, z³, ...]
+  
+  This is useful for additive models where variables don't interact.
+  
+  Parameters:
+    end-degree - Maximum degree for individual variable terms
+  
+  Options:
+    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+  
+  Returns a function that takes a vector [x y z ...] and returns a vector
+  of polynomial evaluations without cross-terms.
+  
+  Example:
+    ((polynomial-ND-fn-without-cross-terms 2) [2.0 3.0 4.0])
+    ; => [1.0 2.0 3.0 4.0 4.0 9.0 16.0] (no xy, xz, yz terms)"
   ([end-degree] (polynomial-ND-fn-without-cross-terms end-degree {}))
   ([end-degree {::keys [chebyshev-kind] :or {chebyshev-kind 0}}]
    (fn [v]

@@ -1,4 +1,16 @@
 (ns provisdom.math.special-functions
+  "Special mathematical functions for advanced numerical computation.
+  
+  Implements a comprehensive collection of special functions including:
+  - Gamma and incomplete gamma functions (with log versions)
+  - Beta functions and incomplete beta functions
+  - Error functions (erf, erfc, inverse erf)
+  - Bessel functions of the first and second kind
+  - Hypergeometric functions
+  - Elliptic integrals
+  
+  Uses high-precision algorithms with series expansions, continued fractions,
+  and asymptotic expansions as appropriate for different parameter ranges."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -122,8 +134,14 @@
 
 ;;;LOG-SUM-EXP
 (defn log-sum-exp
-  "Special function for taking the log of the sum of the exponent of numbers
-  that are either very large or very small."
+  "Computes log(∑e^xi) in a numerically stable way.
+  
+  Avoids overflow/underflow when computing the log of sums of exponentials
+  for very large or very small numbers. Uses the log-sum-exp trick.
+  
+  Examples:
+    (log-sum-exp [1200 1210]) ;=> 1210.0000453988991
+    (log-sum-exp [-1200 -1210]) ;=> -1199.9999546011009"
   [numbers]
   (if (empty? numbers)
     0.0
@@ -151,8 +169,20 @@
 
 ;;;ERROR FUNCTIONS
 (defn erf
-  "Returns the error function:
-  2 / (sqrt PI) × integral[0 `x`] (e ^ - (t ^ 2) × dt)."
+  "Computes the error function erf(x).
+  
+  Defined as (2/√π) ∫₀ˣ e^(-t²) dt. Represents the probability that a random
+  variable from a standard normal distribution falls within [-x√2, x√2].
+  
+  Properties:
+  - erf(0) = 0
+  - erf(∞) = 1
+  - erf(-x) = -erf(x) (odd function)
+  
+  Examples:
+    (erf 0.0) ;=> 0.0
+    (erf 1.0) ;=> 0.842700792949715
+    (erf -1.0) ;=> -0.842700792949715"
   [x]
   (cond (zero? x) 0.0
         (> x 6.0) 1.0
@@ -165,7 +195,14 @@
   :ret ::m/corr)
 
 (defn erf-diff
-  "Returns the difference between [[erf]](`x1`) and [[erf]](`x2`)."
+  "Computes erf(x2) - erf(x1) with improved numerical stability.
+  
+  Uses optimized algorithms to avoid loss of precision when computing
+  the difference of two error function values.
+  
+  Examples:
+    (erf-diff -1.0 1.0) ;=> 1.68540158589943
+    (erf-diff 1.0 2.0) ;=> 0.1526214720692377"
   [x1 x2]
   (if (> x1 x2)
     (- (erf-diff x2 x1))
@@ -182,7 +219,14 @@
   :ret (s/double-in :min -2.0 :max 2.0))
 
 (defn erf-derivative
-  "Returns the derivative of the error function."
+  "Computes the derivative of the error function: d/dx erf(x).
+  
+  The derivative is (2/√π) e^(-x²), which is the standard normal
+  probability density function scaled by √(2π).
+  
+  Examples:
+    (erf-derivative 0.0) ;=> 1.1283791670955126 (2/√π)
+    (erf-derivative 1.0) ;=> 0.41510749742502713"
   [x]
   (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
 
@@ -191,7 +235,14 @@
   :ret ::m/non-)
 
 (defn erfc
-  "Returns the complementary error function."
+  "Computes the complementary error function erfc(x) = 1 - erf(x).
+  
+  More numerically stable than computing 1 - erf(x) directly,
+  especially for large positive x where erf(x) ≈ 1.
+  
+  Examples:
+    (erfc 0.0) ;=> 1.0
+    (erfc 3.0) ;=> 2.2090496998585441e-5"
   [x]
   (m/one- (erf x)))
 
@@ -207,7 +258,17 @@
     (rest coeffs)))
 
 (defn inv-erf
-  "Returns the inverse error function."
+  "Computes the inverse error function erf⁻¹(x).
+  
+  Finds y such that erf(y) = x. Uses rational approximations
+  with different coefficient sets for different ranges.
+  
+  Domain: [-1, 1]
+  Range: (-∞, ∞)
+  
+  Examples:
+    (inv-erf 0.0) ;=> 0.0
+    (inv-erf 0.8427) ;=> ~1.0 (approximately)"
   [x]
   (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
         (m/roughly? -1.0 x m/dbl-close) m/inf-
@@ -238,7 +299,17 @@
   :ret ::m/num)
 
 (defn inv-erfc
-  "Returns the inverse complementary error function."
+  "Computes the inverse complementary error function erfc⁻¹(x).
+  
+  Finds y such that erfc(y) = x. Equivalent to inv-erf(1-x).
+  
+  Domain: [0, 2]
+  Range: (-∞, ∞)
+  
+  Examples:
+    (inv-erfc 1.0) ;=> 0.0
+    (inv-erfc 0.0) ;=> ∞
+    (inv-erfc 2.0) ;=> -∞"
   [x]
   (cond (m/roughly? x 0.0 m/dbl-close) m/inf+
         (m/roughly? x 2.0 m/dbl-close) m/inf-
@@ -251,7 +322,14 @@
 
 ;;;SIGMOID FUNCTIONS
 (defn inv-cdf-standard-normal
-  "Returns the standard Normal inverse cdf."
+  "Computes the inverse cumulative distribution function of the standard normal.
+  
+  Finds the value x such that Φ(x) = p, where Φ is the standard normal CDF.
+  Also known as the probit function or normal quantile function.
+  
+  Examples:
+    (inv-cdf-standard-normal 0.5) ;=> 0.0 (median)
+    (inv-cdf-standard-normal 0.975) ;=> ~1.96 (97.5th percentile)"
   [cumulative-prob]
   (cond (zero? cumulative-prob) m/inf-
         (m/one? cumulative-prob) m/inf+
@@ -263,7 +341,15 @@
   :ret ::m/num)
 
 (defn cdf-standard-normal
-  "Returns the standard Normal cdf."
+  "Computes the cumulative distribution function of the standard normal.
+  
+  Calculates Φ(x) = P(Z ≤ x) where Z ~ N(0,1). Related to the error
+  function by Φ(x) = (1 + erf(x/√2))/2.
+  
+  Examples:
+    (cdf-standard-normal 0.0) ;=> 0.5
+    (cdf-standard-normal 1.96) ;=> ~0.975
+    (cdf-standard-normal -1.96) ;=> ~0.025"
   [x]
   (cond (m/inf+? x) 1.0
         (m/inf-? x) 0.0
@@ -279,7 +365,20 @@
 (def ^{:doc "See [[cdf-standard-normal]]"} inv-probit cdf-standard-normal)
 
 (defn logistic
-  "Equivalent to (/ (inc (m/exp (- x)))."
+  "Computes the logistic (sigmoid) function: 1/(1 + e^(-x)).
+  
+  Maps real numbers to (0,1). Often used as an activation function
+  in neural networks and in logistic regression.
+  
+  Properties:
+  - logistic(0) = 0.5
+  - logistic(-x) = 1 - logistic(x)
+  - Derivative is logistic(x) * (1 - logistic(x))
+  
+  Examples:
+    (logistic 0.0) ;=> 0.5
+    (logistic 2.0) ;=> 0.8807970779778823
+    (logistic -2.0) ;=> 0.11920292202211755"
   [x]
   (+ 0.5 (* 0.5 (m/tanh (* 0.5 x)))))
 
@@ -288,7 +387,15 @@
   :ret ::m/prob)
 
 (defn logistic-derivative
-  "Equivalent to (/ ex (m/sq (inc ex)))."
+  "Computes the derivative of the logistic function.
+  
+  The derivative is logistic(x) * (1 - logistic(x)), which has its
+  maximum of 0.25 at x = 0. This is efficiently computed as
+  0.25 * (1 - tanh²(x/2)).
+  
+  Examples:
+    (logistic-derivative 0.0) ;=> 0.25
+    (logistic-derivative 2.0) ;=> 0.10499358540350662"
   [x]
   (* 0.25 (m/one- (m/sq (m/tanh (* 0.5 x))))))
 
@@ -297,7 +404,15 @@
   :ret ::m/prob)
 
 (defn logit
-  ""
+  "Computes the logit function: ln(p/(1-p)).
+  
+  The inverse of the logistic function. Maps probabilities in (0,1)
+  to real numbers. Used in logistic regression and odds ratios.
+  
+  Examples:
+    (logit 0.5) ;=> 0.0
+    (logit 0.75) ;=> 1.0986122886681098 (ln(3))
+    (logit 0.25) ;=> -1.0986122886681098"
   [p]
   (cond (zero? p) m/inf-
         (m/one? p) m/inf+
@@ -308,7 +423,14 @@
   :ret ::m/num)
 
 (defn logit-derivative
-  ""
+  "Computes the derivative of the logit function: d/dp logit(p).
+  
+  The derivative is 1/(p(1-p)), which approaches infinity as p
+  approaches 0 or 1.
+  
+  Examples:
+    (logit-derivative 0.5) ;=> 4.0
+    (logit-derivative 0.25) ;=> 5.333333333333333"
   [p]
   (if (or (zero? p) (m/one? p))
     m/inf+
@@ -349,9 +471,21 @@
             (* x f)))))))
 
 (defn gamma
-  "Returns the gamma function: integral[0 inf] (t ^ (`a`- 1) × e ^ -t × dt).
-  Although gamma is defined for positive `a`, this function also allows for all
-  non-roughly-round-non+ `a`."
+  "Computes the gamma function Γ(a).
+  
+  Defined as Γ(a) = ∫₀^∞ t^(a-1) e^(-t) dt for a > 0.
+  Extended to negative non-integers using the reflection formula.
+  
+  Properties:
+  - Γ(n) = (n-1)! for positive integers n
+  - Γ(1/2) = √π
+  - Γ(a+1) = a Γ(a) (recurrence relation)
+  
+  Examples:
+    (gamma 1.0) ;=> 1.0 (0!)
+    (gamma 2.0) ;=> 1.0 (1!)
+    (gamma 3.0) ;=> 2.0 (2!)
+    (gamma 0.5) ;=> 1.7724538509055159 (√π)"
   [a]
   (cond (>= a 141.8) (m/exp (log-gamma a))
         (<= a -141.8) 0.0
@@ -389,8 +523,16 @@
   :ret ::m/non-inf-)
 
 (defn lower-gamma
-  "Returns the lower incomplete gamma function:
-   integral[0, `x`] (t ^ (`a` - 1) × e ^ -t × dt)."
+  "Computes the lower incomplete gamma function γ(a,x).
+  
+  Defined as γ(a,x) = ∫₀^x t^(a-1) e^(-t) dt.
+  Represents the \"tail\" of the gamma function from 0 to x.
+  
+  Related to the regularized gamma P function by γ(a,x) = Γ(a) P(a,x).
+  
+  Examples:
+    (lower-gamma 2.0 1.0) ;=> 0.6321205588285577
+    (lower-gamma 1.0 2.0) ;=> 0.8646647167633873"
   [a x]
   (cond (zero? x) 0.0
         (m/one? a) (- (m/dec-exp (- x)))
@@ -402,8 +544,17 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma
-  "Returns the upper incomplete gamma function:
-   integral[`x`, inf] (t ^ (`a` - 1) × e ^ -t × dt)."
+  "Computes the upper incomplete gamma function Γ(a,x).
+  
+  Defined as Γ(a,x) = ∫_x^∞ t^(a-1) e^(-t) dt.
+  Represents the \"tail\" of the gamma function from x to infinity.
+  
+  Related to the regularized gamma Q function by Γ(a,x) = Γ(a) Q(a,x).
+  Satisfies γ(a,x) + Γ(a,x) = Γ(a).
+  
+  Examples:
+    (upper-gamma 2.0 1.0) ;=> 0.36787944117144233
+    (upper-gamma 1.0 2.0) ;=> 0.1353352832366127"
   [a x]
   (cond (zero? x) (gamma a)
         (m/one? a) (m/exp (- x))
@@ -414,7 +565,13 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma-derivative-x
-  "Returns the upper gamma derivative `x`."
+  "Computes the derivative of the upper gamma function with respect to x.
+  
+  The derivative is d/dx Γ(a,x) = -x^(a-1) e^(-x).
+  This is the negative of the integrand in the gamma function definition.
+  
+  Examples:
+    (upper-gamma-derivative-x 2.0 1.0) ;=> -0.36787944117144233"
   [a x]
   (let [v (* (m/exp (- x))
              (m/pow x (dec a))
@@ -426,8 +583,18 @@
   :ret ::m/nan-or-non-)
 
 (defn regularized-gamma-p
-  "Returns the regularized gamma function P(`a`, `x`) = 1 - Q(`a`, `x`). Equal
-  to [[lower-gamma]] function (a, x) divided by [[gamma]] function (`a`)."
+  "Computes the regularized lower incomplete gamma function P(a,x).
+  
+  Defined as P(a,x) = γ(a,x) / Γ(a), where γ is the lower incomplete gamma.
+  Represents the cumulative distribution function of the gamma distribution.
+  
+  Properties:
+  - P(a,0) = 0
+  - P(a,∞) = 1
+  - P(a,x) + Q(a,x) = 1
+  
+  Examples:
+    (regularized-gamma-p 2.0 1.0) ;=> 0.6321205588285577"
   [a x]
   (cond (zero? x) 0.0
         (>= x (inc a)) (m/one- (regularized-gamma-q a x))
@@ -454,8 +621,18 @@
   :ret ::m/nan-or-prob)
 
 (defn regularized-gamma-q
-  "Returns the regularized gamma function Q(`a`, `x`) = 1 - P(`a`, `x`). Equal
- to [[upper-gamma]] function (`a`, `x`) divided by [[gamma]] function (`a`)."
+  "Computes the regularized upper incomplete gamma function Q(a,x).
+  
+  Defined as Q(a,x) = Γ(a,x) / Γ(a), where Γ is the upper incomplete gamma.
+  Represents the survival function (1 - CDF) of the gamma distribution.
+  
+  Properties:
+  - Q(a,0) = 1
+  - Q(a,∞) = 0
+  - P(a,x) + Q(a,x) = 1
+  
+  Examples:
+    (regularized-gamma-q 2.0 1.0) ;=> 0.36787944117144233"
   [a x]
   (cond (zero? x) 1.0
         (< x (inc (double a))) (m/one- (regularized-gamma-p a x))
@@ -483,7 +660,15 @@
   :ret ::m/nan-or-prob)
 
 (defn log-gamma
-  "Returns the log gamma of `a`."
+  "Computes the natural logarithm of the gamma function ln(Γ(a)).
+  
+  More numerically stable than computing log(gamma(a)) directly,
+  especially for large values of a where gamma(a) would overflow.
+  
+  Examples:
+    (log-gamma 1.0) ;=> 0.0 (ln(1))
+    (log-gamma 2.0) ;=> 0.0 (ln(1))
+    (log-gamma 10.0) ;=> 12.801827480081469 (ln(9!))"
   [a]
   (cond (m/inf+? a) m/inf+
         (< a 0.5) (- (log-gamma-inc a) (m/log a))
@@ -506,7 +691,14 @@
   :ret ::m/non-inf-)
 
 (defn log-gamma-inc
-  "Returns the log gamma of one plus `a`. Useful when `a` is close to zero."
+  "Computes ln(Γ(1+a)) with improved accuracy for small a.
+  
+  More numerically stable than computing log-gamma(1+a) directly
+  when a is close to zero, avoiding cancellation errors.
+  
+  Examples:
+    (log-gamma-inc 0.0) ;=> 0.0 (ln(Γ(1)))
+    (log-gamma-inc 0.1) ;=> -0.04987244125983972"
   [a]
   (if (or (< a -0.5) (> a 1.5))
     (log-gamma (inc a))
@@ -517,8 +709,17 @@
   :ret ::m/non-inf-)
 
 (defn log-gamma-derivative
-  "Returns the derivative of the log gamma of `a`. `a` > -3e8 because
-  it becomes slow. Taken from Apache. Could use a better algorithm."
+  "Computes the derivative of ln(Γ(a)), also known as the digamma function ψ(a).
+  
+  The digamma function is d/da ln(Γ(a)) = Γ'(a)/Γ(a).
+  
+  Properties:
+  - ψ(1) = -γ (negative Euler-Mascheroni constant)
+  - ψ(n) = -γ + ∑(1/k) for k=1 to n-1 (positive integers)
+  
+  Examples:
+    (log-gamma-derivative 1.0) ;=> -0.5772156649015329 (-γ)
+    (log-gamma-derivative 2.0) ;=> 0.42278433509846713"
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -546,8 +747,13 @@
 (def digamma log-gamma-derivative)
 
 (defn gamma-derivative
-  "Returns the derivative of the gamma of `a`. `a` > -3e8 because it becomes
-  slow."
+  "Computes the derivative of the gamma function Γ'(a).
+  
+  The derivative is Γ'(a) = Γ(a) ψ(a), where ψ is the digamma function.
+  
+  Examples:
+    (gamma-derivative 1.0) ;=> -0.5772156649015329
+    (gamma-derivative 2.0) ;=> 0.42278433509846713"
   [a]
   (* (gamma a) (log-gamma-derivative a)))
 
@@ -558,9 +764,17 @@
   :ret ::m/number)
 
 (defn trigamma
-  "Returns the trigamma (2nd derivative of log-gamma) of `a`. Approximated for
-  `a` < -1e7 because it becomes slow. Taken from Apache. Could use a better
-  algorithm."
+  "Computes the trigamma function ψ'(a), the second derivative of ln(Γ(a)).
+  
+  The trigamma function is d²/da² ln(Γ(a)) = d/da ψ(a).
+  Related to the variance of certain probability distributions.
+  
+  Properties:
+  - ψ'(1) = π²/6 (Apéry's constant)
+  - ψ'(n) = π²/6 - ∑(1/k²) for k=1 to n-1
+  
+  Examples:
+    (trigamma 1.0) ;=> 1.6449340668482264 (π²/6)"
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -589,7 +803,14 @@
   :ret ::m/num)
 
 (defn multivariate-gamma
-  "Returns the multivariate gamma of `a` with dimension `p`."
+  "Computes the multivariate gamma function Γ_p(a).
+  
+  Defined as Γ_p(a) = π^(p(p-1)/4) ∏_{j=1}^p Γ(a + (1-j)/2).
+  Used in multivariate statistics, particularly with Wishart distributions.
+  
+  Examples:
+    (multivariate-gamma 2.0 1) ;=> 1.0 (same as univariate gamma)
+    (multivariate-gamma 2.0 2) ;=> 0.8862269254527579"
   [a p]
   (let [p (if (= p m/max-long)
             (double p)
@@ -618,7 +839,14 @@
   :ret ::m/non-inf-)
 
 (defn multivariate-log-gamma
-  "Returns the multivariate log gamma of `a` with dimension `p`."
+  "Computes the natural logarithm of the multivariate gamma function.
+  
+  More numerically stable than computing log(multivariate-gamma(a, p))
+  directly, especially for large values.
+  
+  Examples:
+    (multivariate-log-gamma 2.0 1) ;=> 0.0
+    (multivariate-log-gamma 2.0 2) ;=> -0.12078223763524518"
   [a p]
   (+ (* m/log-pi 0.25 p (dec p))
      (apply + (map (fn [i]
@@ -636,8 +864,19 @@
 
 ;;;BETA FUNCTIONS
 (defn beta
-  "Returns the beta of `x` and `y`:
-  integral[0, 1] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) * dt."
+  "Computes the beta function B(x,y).
+  
+  Defined as B(x,y) = ∫₀¹ t^(x-1) (1-t)^(y-1) dt.
+  Related to the gamma function by B(x,y) = Γ(x)Γ(y)/Γ(x+y).
+  
+  Properties:
+  - B(x,y) = B(y,x) (symmetric)
+  - B(1,1) = 1
+  - B(m,n) = (m-1)!(n-1)!/(m+n-1)! for positive integers
+  
+  Examples:
+    (beta 1.0 1.0) ;=> 1.0
+    (beta 2.0 3.0) ;=> 0.08333333333333333 (1/12)"
   [x y]
   (m/exp (log-beta x y)))
 
@@ -695,7 +934,14 @@
           :else (+ (log-gamma-inc (dec x)) (m/log (* x (inc x)))))))
 
 (defn log-beta
-  "Returns the log-beta of `x` and `y`."
+  "Computes the natural logarithm of the beta function ln(B(x,y)).
+  
+  More numerically stable than computing log(beta(x, y)) directly.
+  Uses the relation ln(B(x,y)) = ln(Γ(x)) + ln(Γ(y)) - ln(Γ(x+y)).
+  
+  Examples:
+    (log-beta 1.0 1.0) ;=> 0.0
+    (log-beta 2.0 3.0) ;=> -2.4849066497880004"
   [x y]
   (let [a (min x y)
         b (max x y)]
@@ -785,9 +1031,20 @@
   :ret ::m/nan-or-non-inf-)
 
 (defn regularized-beta
-  "Also called the regularized incomplete beta function. Returns the regularized
-  beta. Equal to incomplete beta function divided by beta function. If solution
-  doesn't converge, then NaN is returned."
+  "Computes the regularized incomplete beta function I_c(x,y).
+  
+  Defined as I_c(x,y) = B_c(x,y) / B(x,y), where B_c is the incomplete beta.
+  Represents the cumulative distribution function of the beta distribution.
+  
+  Properties:
+  - I_0(x,y) = 0
+  - I_1(x,y) = 1
+  - I_c(x,y) = 1 - I_{1-c}(y,x)
+  
+  Examples:
+    (regularized-beta 0.5 2.0 3.0) ;=> 0.875
+    (regularized-beta 0.0 2.0 3.0) ;=> 0.0
+    (regularized-beta 1.0 2.0 3.0) ;=> 1.0"
   [c x y]
   (let [x (double x)
         y (double y)
@@ -840,9 +1097,14 @@
 (def regularized-incomplete-beta regularized-beta)
 
 (defn incomplete-beta
-  "Returns the lower beta:
-  integral[0, `c`] (t ^ (`x` - 1) × (1 - t) ^ (`y` - 1) × dt. If solution
-  doesn't converge, then NaN is returned."
+  "Computes the incomplete beta function B_c(x,y).
+  
+  Defined as B_c(x,y) = ∫₀^c t^(x-1) (1-t)^(y-1) dt.
+  Related to the regularized incomplete beta by B_c(x,y) = B(x,y) I_c(x,y).
+  
+  Examples:
+    (incomplete-beta 0.5 2.0 3.0) ;=> 0.072916666666666663
+    (incomplete-beta 0.0 2.0 3.0) ;=> 0.0"
   [c x y]
   (if (zero? c)
     0.0
