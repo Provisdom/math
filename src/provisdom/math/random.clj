@@ -39,11 +39,11 @@
 
 ;;;HELPERS
 (defn random-long
-  "Converts a random double [0,1) to a long within the specified interval.
+  "Converts random double `rnd` [0,1) to a long within the specified `interval`.
   
   Parameters:
-    rnd - Random double in [0,1)
-    interval - Optional [lower upper] bounds (default: [min-long max-long])
+    `rnd` - Random double in [0,1)
+    `interval` - Optional [lower upper] bounds (default: [min-long max-long])
   
   Returns a long uniformly distributed within the interval."
   ([rnd] (random-long rnd [m/min-long m/max-long]))
@@ -56,12 +56,12 @@
         :ret ::m/long)
 
 (defn random-bool
-  "Converts a random double to a boolean with 50% probability.
+  "Converts random double `rnd` to a boolean with 50% probability.
   
   Parameters:
-    rnd - Random double in [0,1)
+    `rnd` - Random double in [0,1)
   
-  Returns true if rnd ≤ 0.5, false otherwise."
+  Returns true if `rnd` ≤ 0.5, false otherwise."
   [rnd]
   (<= rnd 0.5))
 
@@ -70,13 +70,13 @@
         :ret boolean?)
 
 (defn random-normal
-  "Converts a uniform random value to a standard normal distribution.
+  "Converts uniform random value `rnd` to a standard normal distribution.
   
   Uses the inverse CDF transformation method to generate normally
   distributed values with mean=0 and standard deviation=1.
   
   Parameters:
-    rnd - Random double in [0,1)
+    `rnd` - Random double in [0,1)
   
   Returns a normally distributed value."
   [rnd]
@@ -88,10 +88,10 @@
 
 ;;;IMMUTABLE RNG
 (defn rng
-  "Creates a new splittable random number generator from a seed.
+  "Creates a new splittable random number generator from `seed`.
   
   Parameters:
-    seed - Long value to seed the generator
+    `seed` - Long value to seed the generator
   
   Returns a new RNG instance that implements IRandom."
   [seed]
@@ -102,11 +102,11 @@
         :ret ::rng)
 
 (defn rnd
-  "Generates a random double from the RNG within the specified interval.
+  "Generates a random double from `rng` within the specified `interval`.
   
   Parameters:
-    rng - Random number generator
-    interval - Optional [lower upper] bounds (default: [0, 1])
+    `rng` - Random number generator
+    `interval` - Optional [lower upper] bounds (default: [0, 1])
   
   Returns a uniformly distributed double within the interval.
   Special case: if interval difference is infinite, uses scaled generation."
@@ -123,11 +123,11 @@
         :ret ::m/finite)
 
 (defn rnd-long
-  "Generates a random long from the RNG within the specified interval.
+  "Generates a random long from `rng` within the specified `interval`.
   
   Parameters:
-    rng - Random number generator  
-    interval - Optional [lower upper] bounds (default: all possible longs)
+    `rng` - Random number generator  
+    `interval` - Optional [lower upper] bounds (default: all possible longs)
   
   Returns a uniformly distributed long within the interval."
   ([rng] (split/rand-long rng))
@@ -142,10 +142,10 @@
         :ret ::m/long)
 
 (defn rnd-bool
-  "Generates a random boolean from the RNG.
+  "Generates a random boolean from `rng`.
   
   Parameters:
-    rng - Random number generator
+    `rng` - Random number generator
   
   Returns true or false with equal probability."
   [rng]
@@ -156,10 +156,10 @@
         :ret boolean?)
 
 (defn rnd-normal
-  "Generates a normally distributed value from the RNG.
+  "Generates a normally distributed value from `rng`.
   
   Parameters:
-    rng - Random number generator
+    `rng` - Random number generator
   
   Returns a value from standard normal distribution (mean=0, std=1)."
   [rng]
@@ -176,7 +176,7 @@
   statistical independence for parallel computation.
   
   Parameters:
-    rng - Initial random number generator
+    `rng` - Initial random number generator
   
   Returns a lazy sequence of RNG instances."
   [rng]
@@ -190,7 +190,7 @@
   "Creates a lazy sequence of random doubles from independent RNGs.
   
   Parameters:
-    rng - Initial random number generator
+    `rng` - Initial random number generator
   
   Returns a lazy sequence of doubles in [0, 1)."
   [rng]

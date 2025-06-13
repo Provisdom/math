@@ -200,7 +200,7 @@
 
 ;;;VECTOR TYPES
 (defn vector?
-  "Returns true if x is a valid vector.
+  "Returns true if `x` is a valid vector.
   
   A vector is a Clojure vector containing only numbers.
   
@@ -217,7 +217,7 @@
   :ret boolean?)
 
 (defn vector-prob?
-  "Returns true if x is a vector containing only probability values.
+  "Returns true if `x` is a vector containing only probability values.
   
   All elements must be numbers in the range [0, 1].
   
@@ -234,7 +234,7 @@
   :ret boolean?)
 
 (defn vector-open-prob?
-  "Returns true if x is a vector containing only open probability values.
+  "Returns true if `x` is a vector containing only open probability values.
   
   All elements must be numbers in the range (0, 1), excluding 0 and 1.
   
@@ -251,10 +251,10 @@
   :ret boolean?)
 
 (defn vector-roughly-prob?
-  "Returns true if x is a vector of values that are approximately probabilities.
+  "Returns true if `x` is a vector of values that are approximately probabilities.
   
   Elements are considered probability values if they are within the
-  specified accuracy tolerance of the range [0, 1].
+  specified accuracy tolerance `accu` of the range [0, 1].
   
   Examples:
     (vector-roughly-prob? [0.3 1.01] 0.02) ;=> true (1.01 is close to 1)
@@ -271,10 +271,10 @@
   :ret boolean?)
 
 (defn probs?
-  "Returns true if x is a valid probability distribution vector.
+  "Returns true if `x` is a valid probability distribution vector.
   
   A probability distribution must contain only probability values and
-  sum to 1.0 within the specified tolerance.
+  sum to 1.0 within the specified tolerance `sum-accu`.
   
   Examples:
     (probs? [0.3 0.7] 1e-8) ;=> true
@@ -290,10 +290,10 @@
   :ret boolean?)
 
 (defn open-probs?
-  "Returns true if x is a valid open probability distribution vector.
+  "Returns true if `x` is a valid open probability distribution vector.
   
   Like probs? but requires all elements to be in (0, 1), excluding
-  boundary values 0 and 1.
+  boundary values 0 and 1. Uses tolerance `sum-accu`.
   
   Examples:
     (open-probs? [0.3 0.7] 1e-8) ;=> true
@@ -308,10 +308,10 @@
   :ret boolean?)
 
 (defn roughly-probs?
-  "Returns true if x is approximately a probability distribution vector.
+  "Returns true if `x` is approximately a probability distribution vector.
   
-  Elements must be approximately in [0, 1] within accu tolerance,
-  and the sum must be approximately 1.0 within sum-accu tolerance.
+  Elements must be approximately in [0, 1] within `accu` tolerance,
+  and the sum must be approximately 1.0 within `sum-accu` tolerance.
   
   Examples:
     (roughly-probs? [0.31 0.69] 0.01 1e-8) ;=> true
@@ -328,7 +328,7 @@
 
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
-  "Converts a nested structure to a flat vector of numbers.
+  "Converts nested structure `x` to a flat vector of numbers.
   
   Flattens any nested sequences and converts to a vector.
   Returns nil if any non-numeric values are encountered.
@@ -349,7 +349,7 @@
   :ret (s/nilable ::vector))
 
 (defn compute-vector
-  "Creates a vector by computing elements using a function.
+  "Creates a vector of `size` by computing elements using function `index->number`.
   
   The function receives the index (0-based) and should return the
   value for that position.
@@ -365,7 +365,7 @@
   :ret ::vector)
 
 (defn compute-coll
-  "Creates a lazy collection by computing elements using a function.
+  "Creates a lazy collection of `size` by computing elements using function `index->any`.
   
   Similar to compute-vector but returns a lazy sequence and allows
   any return type from the function.
@@ -383,7 +383,7 @@
   :ret coll?)
 
 (defn rnd-vector!
-  "Creates a vector with random numbers.
+  "Creates a vector of `size` with random numbers.
   
   Generates a vector of the specified size filled with uniformly
   distributed random doubles between 0 and 1.
@@ -398,7 +398,7 @@
   :ret ::vector)
 
 (defn sparse->vector
-  "Constructs a vector from sparse representation.
+  "Constructs a vector from sparse representation `sparse` applied to vector `v`.
   
   Takes a collection of [index value] pairs and applies them to an
   existing vector. Later values override earlier ones for the same index.
@@ -421,7 +421,7 @@
 
 ;;;VECTOR INFO
 (defn indexes-of
-  "Returns a vector of indices where the specified number appears.
+  "Returns a vector of indices where `number` appears in vector `v`.
   
   Searches through the vector and returns all positions where
   the exact number is found.
@@ -439,7 +439,7 @@
   :ret ::vector)
 
 (defn filter-kv
-  "Filters vector elements based on a predicate that receives index and value.
+  "Filters vector `v` elements based on predicate `index+number->bool`.
   
   The predicate function receives (index value) and should return true
   to include the value in the result.
@@ -461,7 +461,7 @@
   :ret ::vector)
 
 (defn some-kv
-  "Finds the first element where the predicate returns a truthy value.
+  "Finds the first element in vector `v` where predicate `index+number->bool` returns a truthy value.
   
   The predicate receives (index value) and the function returns the
   first value for which the predicate is truthy, or nil if none found.
@@ -485,7 +485,7 @@
 
 ;;;VECTOR MANIPULATION
 (defn insertv
-  "Inserts a number at the specified index, shifting existing elements.
+  "Inserts `number` into vector `v` at the specified `index`, shifting existing elements.
   
   Returns a new vector with the number inserted at the given position.
   All elements at and after the index are shifted right.
@@ -506,7 +506,7 @@
   :ret (s/nilable ::vector))
 
 (defn removev
-  "Removes the element at the specified index.
+  "Removes the element at `index` from vector `v`.
   
   Returns a new vector with the element at the given index removed.
   All elements after the index are shifted left.
@@ -526,10 +526,10 @@
   :ret ::vector)
 
 (defn concat-by-index
-  "Concatenates two collections with the second starting at a specific index.
+  "Concatenates collections `coll1` and `coll2` with the second starting at index `i`.
   
-  Overlays coll2 onto coll1 starting at index i. Values from coll2 take
-  precedence over coll1. Gaps are filled with nil.
+  Overlays `coll2` onto `coll1` starting at index `i`. Values from `coll2` take
+  precedence over `coll1`. Gaps are filled with nil.
   
   Examples:
     (concat-by-index [1 2 3] [8 9] 1) ;=> (1 8 9)
@@ -557,7 +557,7 @@
   :ret coll?)
 
 (defn replace-nan
-  "Replaces all NaN values in a collection with a replacement number.
+  "Replaces all NaN values in collection `numbers` with `replacement-number`.
   
   Works correctly with NaN values (unlike clojure.core/replace).
   Preserves the original collection type.
@@ -583,7 +583,7 @@
   :ret ::m/numbers)
 
 (defn round-roughly-vector-prob
-  "Rounds values that are approximately valid probabilities.
+  "Rounds values in vector `v` that are approximately valid probabilities within tolerance `accu`.
   
   Values close to 0 are rounded to 0, values close to 1 are rounded to 1,
   within the specified accuracy tolerance.
@@ -606,7 +606,7 @@
   :ret ::vector)
 
 (defn rnd-shuffle-vector!
-  "Returns a randomly shuffled copy of the vector.
+  "Returns a randomly shuffled copy of vector `v`.
   
   Uses the Fisher-Yates shuffle algorithm for uniform random permutation.
   
@@ -632,7 +632,7 @@
 
 ;;;VECTOR MATH
 (defn kahan-sum
-  "Computes the sum using Kahan summation algorithm for improved accuracy.
+  "Computes the sum of `numbers` using Kahan summation algorithm for improved accuracy.
   
   Reduces floating-point errors that accumulate in naive summation,
   providing better precision than regular addition for large sequences.
@@ -657,9 +657,9 @@
   :ret ::m/number)
 
 (defn dot-product
-  "Computes the dot product (inner product) of two vectors.
+  "Computes the dot product (inner product) of vectors `v1` and `v2`.
   
-  Calculates ∑(v1[i] * v2[i]). Geometrically, this equals |v1| |v2| cos(θ)
+  Calculates ∑(`v1`[i] * `v2`[i]). Geometrically, this equals |`v1`| |`v2`| cos(θ)
   where θ is the angle between the vectors.
   
   Properties:
@@ -684,10 +684,10 @@
   :ret ::m/number)
 
 (defn cross-product
-  "Computes the cross product of two vectors.
+  "Computes the cross product of vectors `v1` and `v2`.
   
   For 3D vectors: returns a vector perpendicular to both inputs with
-  magnitude |v1| |v2| sin(θ). Direction follows right-hand rule.
+  magnitude |`v1`| |`v2`| sin(θ). Direction follows right-hand rule.
   
   For 2D vectors: returns the z-component of the 3D cross product,
   which is the signed area of the parallelogram formed by the vectors.
@@ -723,12 +723,12 @@
   :ret (s/or :number ::m/number :v ::vector))
 
 (defn projection
-  "Computes the vector projection of v1 onto v2.
+  "Computes the vector projection of `v1` onto `v2`.
   
-  Returns the component of v1 that lies in the direction of v2.
-  The result is parallel to v2 with length |v1| cos(θ).
+  Returns the component of `v1` that lies in the direction of `v2`.
+  The result is parallel to `v2` with length |`v1`| cos(θ).
   
-  Formula: proj_v2(v1) = ((v1 · v2) / |v2|²) * v2
+  Formula: proj_`v2`(`v1`) = ((`v1` · `v2`) / |`v2`|²) * `v2`
   
   Examples:
     (projection [3 4] [1 0]) ;=> [3.0 0.0] (projection onto x-axis)

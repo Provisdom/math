@@ -113,7 +113,7 @@
 
 ;;;TENSOR TYPES
 (defn tensor?
-  "Returns true if x is a valid tensor.
+  "Returns true if `x` is a valid tensor.
   
   A valid tensor is either:
   - A number (0-dimensional tensor)
@@ -139,7 +139,7 @@
 
 ;;;TENSOR CONSTRUCTOR
 (defn to-tensor
-  "Converts a sequential structure to a tensor, or returns nil if invalid.
+  "Converts sequential structure `x` to a tensor, or returns nil if invalid.
   
   Recursively processes nested sequences and validates the result.
   Numbers are returned as-is. Non-sequential values return nil.
@@ -169,10 +169,11 @@
         (range (get shape dim))))))
 
 (defn compute-tensor
-  "Creates a tensor by computing each element using a function.
+  "Creates a tensor by computing each element using function `indices->number`.
   
   The function receives a vector of indices (coordinates) and should return
-  the value for that position. Indices are 0-based.
+  the value for that position. Indices are 0-based. The tensor will have
+  dimensions specified by `shape`.
   
   Examples:
     (compute-tensor [2 3] #(apply + %)) ;=> [[0 1 2] [1 2 3]]
@@ -188,10 +189,10 @@
   :ret ::tensor)
 
 (defn repeat-tensor
-  "Creates a tensor by repeating a value or tensor according to the given shape.
+  "Creates a tensor by repeating `seed-tensor` according to `shape`.
   
   With one argument, creates a tensor filled with zeros.
-  With two arguments, tiles the seed-tensor according to the shape dimensions.
+  With two arguments, tiles `seed-tensor` according to the `shape` dimensions.
   
   Examples:
     (repeat-tensor [2 3]) ;=> [[0.0 0.0 0.0] [0.0 0.0 0.0]]
@@ -213,9 +214,9 @@
   :ret ::tensor)
 
 (defn fill-tensor
-  "Creates a tensor with the specified shape using values from a sequence.
+  "Creates a tensor with `shape` using values from sequence `numbers`.
   
-  Fills the tensor in row-major order. If the sequence is too short, remaining
+  Fills the tensor in row-major order. If `numbers` is too short, remaining
   elements are filled with 0.0. If too long, extra values are ignored.
   
   Examples:
@@ -243,7 +244,7 @@
   :ret ::tensor)
 
 (defn rnd-tensor!
-  "Creates a tensor with the specified shape filled with random numbers.
+  "Creates a tensor with `shape` filled with random numbers.
   
   Random values are uniformly distributed doubles between 0 and 1.
   Uses the current random number generator state.
@@ -259,10 +260,10 @@
 
 ;;;TENSOR INFO
 (defn first-number
-  "Returns the first number encountered in the tensor.
+  "Returns the first number encountered in `tensor`.
   
   Recursively traverses nested structure to find the first numeric element.
-  Returns nil if the tensor is nil.
+  Returns nil if `tensor` is nil.
   
   Examples:
     (first-number [[1 2] [3 4]]) ;=> 1
@@ -278,7 +279,7 @@
   :ret (s/nilable ::m/number))
 
 (defn ecount
-  "Returns the total number of elements in the tensor.
+  "Returns the total number of elements in `tensor`.
   
   For scalars, returns 1. For multi-dimensional tensors, returns the product
   of all dimension sizes.
@@ -297,7 +298,7 @@
   :ret ::m/int-non-)
 
 (defn rank
-  "Returns the number of dimensions (rank) of the tensor.
+  "Returns the number of dimensions (rank) of `tensor`.
   
   Scalars have rank 0, vectors have rank 1, matrices have rank 2, etc.
   
@@ -319,7 +320,7 @@
   :ret ::m/int-non-)
 
 (defn shape
-  "Returns the dimensions of the tensor as a vector.
+  "Returns the dimensions of `tensor` as a vector.
   
   The shape describes the size of each dimension.
   
@@ -730,7 +731,7 @@
   :ret (s/nilable ::tensor))
 
 (defn average
-  "Calculates the arithmetic mean of all tensor elements.
+  "Calculates the arithmetic mean of all elements in `tensor`.
   
   For scalars, returns the scalar itself. For tensors, computes the sum
   of all elements divided by the total count.
@@ -751,7 +752,7 @@
   :ret ::m/number)
 
 (defn norm1
-  "Calculates the L1 norm (Manhattan norm) of the tensor.
+  "Calculates the L1 norm (Manhattan norm) of `tensor`.
   
   Returns the sum of absolute values of all elements.
   
@@ -768,7 +769,7 @@
   :ret ::m/number)
 
 (defn norm
-  "Calculates the L2 norm (Euclidean norm) of the tensor.
+  "Calculates the L2 norm (Euclidean norm) of `tensor`.
   
   Returns the square root of the sum of squared elements.
   Also available as norm2.
@@ -788,10 +789,10 @@
 (def ^{:doc "See [[norm]]"} norm2 norm)
 
 (defn norm-p
-  "Calculates the Lp norm of the tensor.
+  "Calculates the Lp norm of `tensor` using exponent `p`.
   
   Returns the p-th root of the sum of absolute values raised to the p-th power.
-  For p >= 1.0, this is a valid norm.
+  For `p` >= 1.0, this is a valid norm.
   
   Examples:
     (norm-p [1 -1 1] 1) ;=> 3.0 (L1 norm)
@@ -810,9 +811,9 @@
   :ret ::m/number)
 
 (defn normalize1
-  "Normalizes the tensor to unit L1 norm.
+  "Normalizes `tensor` to unit L1 norm.
   
-  Divides each element by the L1 norm of the tensor, resulting in
+  Divides each element by the L1 norm of `tensor`, resulting in
   a tensor where the sum of absolute values equals 1.
   
   Examples:
@@ -826,9 +827,9 @@
   :ret ::tensor)
 
 (defn normalize
-  "Normalizes the tensor to unit L2 norm.
+  "Normalizes `tensor` to unit L2 norm.
   
-  Divides each element by the L2 norm of the tensor, resulting in
+  Divides each element by the L2 norm of `tensor`, resulting in
   a tensor with Euclidean length of 1. Also available as normalize2.
   
   Examples:
@@ -844,9 +845,9 @@
 (def ^{:doc "See [[normalize2]]"} normalize2 normalize)
 
 (defn normalize-p
-  "Normalizes the tensor to unit Lp norm.
+  "Normalizes `tensor` to unit Lp norm using exponent `p`.
   
-  Divides each element by the Lp norm of the tensor, resulting in
+  Divides each element by the Lp norm of `tensor`, resulting in
   a tensor with Lp norm equal to 1.
   
   Examples:
@@ -860,7 +861,7 @@
   :ret ::tensor)
 
 (defn inner-product
-  "Computes the inner product (generalized dot product) of two tensors.
+  "Computes the inner product (generalized dot product) of `tensor1` and `tensor2`.
   
   Multiplies corresponding elements and sums all results. For vectors,
   this is the standard dot product. Both tensors must have the same shape.
@@ -892,7 +893,7 @@
 
 ;;;TENSOR NUMERICAL STABILITY
 (defn roughly?
-  "Tests if two tensors are approximately equal within a tolerance.
+  "Tests if `tensor1` and `tensor2` are approximately equal within tolerance `accu`.
   
   Returns true if tensors have the same shape and all corresponding
   elements are within the specified accuracy of each other.
@@ -915,7 +916,7 @@
   :ret boolean?)
 
 (defn roughly-distinct
-  "Removes approximately duplicate elements from a tensor.
+  "Removes approximately duplicate elements from `tensor` within tolerance `accu`.
   
   Keeps only the first occurrence of elements that are approximately equal
   (within the specified tolerance). Works on top-level elements.

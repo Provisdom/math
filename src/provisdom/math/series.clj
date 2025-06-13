@@ -37,7 +37,7 @@
 (defn power-series-fn
   "Returns a function that evaluates a power series at a given point.
   
-  Takes a sequence of coefficients [a₀ a₁ a₂ ...] and returns a function that
+  Takes a sequence of coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function that
   computes the power series Σ(aₙ × xⁿ) for a given x.
   
   Example:
@@ -54,7 +54,7 @@
 (defn power-series-derivative-fn
   "Returns a function that evaluates the derivative of a power series.
   
-  Takes coefficients [a₀ a₁ a₂ ...] and returns a function computing the
+  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
   derivative: Σ(n × aₙ × xⁿ⁻¹).
   
   Example:
@@ -71,7 +71,7 @@
 (defn power-series-integral-fn
   "Returns a function that evaluates the indefinite integral of a power series.
   
-  Takes coefficients [a₀ a₁ a₂ ...] and returns a function computing the
+  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
   integral: Σ(aₙ × xⁿ⁺¹ / (n+1)).
   
   Example:
@@ -88,7 +88,7 @@
   :ret ::number->term-series)
 
 (defn continued-fraction
-  "Converts a sequence to its continued fraction representation.
+  "Converts sequence `term-series` to its continued fraction representation.
   
   Given coefficients [a₀ a₁ a₂ ...], computes the continued fraction:
   a₀ + 1/(a₁ + 1/(a₂ + 1/(a₃ + ...)))
@@ -117,7 +117,7 @@
 (defn generalized-continued-fraction
   "Computes a generalized continued fraction from two coefficient sequences.
   
-  Given sequences [a₀ a₁ a₂ ...] and [b₀ b₁ b₂ ...], computes:
+  Given sequences `a-term-series` [a₀ a₁ a₂ ...] and `b-term-series` [b₀ b₁ b₂ ...], computes:
   a₀ + b₀/(a₁ + b₁/(a₂ + b₂/(a₃ + ...)))
   
   Returns a lazy sequence of partial convergents.
@@ -145,7 +145,7 @@
   :ret ::term-series)
 
 (defn multiplicative-continued-fraction
-  "Computes continued fraction using multiplicative convergence algorithm.
+  "Computes continued fraction for `term-series` using multiplicative convergence algorithm.
   
   More numerically stable than the standard algorithm in some cases.
   Uses the relative accuracy threshold to avoid division by zero.
@@ -181,7 +181,7 @@
   :ret ::term-series)
 
 (defn multiplicative-generalized-continued-fraction
-  "Computes generalized continued fraction using multiplicative algorithm.
+  "Computes generalized continued fraction for `a-term-series` and `b-term-series` using multiplicative algorithm.
   
   More numerically stable than standard algorithm, especially useful for
   special functions. Based on Didonato and Morris (1992) Algorithm 708.
@@ -223,13 +223,13 @@
 
 ;;;SUMMATION
 (defn sum-convergent-series
-  "Sums an infinite series with adaptive convergence detection.
+  "Sums infinite series `term-series` with adaptive convergence detection.
   
   Iteratively sums terms until convergence criteria are met or an error
   condition is detected. Supports Kahan summation for improved numerical accuracy.
   
   Parameters:
-    term-series - Lazy sequence of series terms
+    `term-series` - Lazy sequence of series terms
   
   Options:
     ::kahan? - Use Kahan summation for reduced floating-point error (default true)
@@ -285,13 +285,13 @@
          :anomaly ::anomalies/anomaly))
 
 (defn multiplicative-sum-convergent-series
-  "Computes the product of an infinite series with convergence detection.
+  "Computes the product of infinite series `term-series` with convergence detection.
   
   Multiplies terms until convergence criteria are met. Useful for series
   where terms approach 1.0 rather than 0.0.
   
   Parameters:
-    term-series - Lazy sequence of series terms
+    `term-series` - Lazy sequence of series terms
   
   Options:
     ::converged-pred - Function (product index term) -> boolean indicating convergence

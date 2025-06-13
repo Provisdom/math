@@ -134,7 +134,7 @@
 
 ;;;LOG-SUM-EXP
 (defn log-sum-exp
-  "Computes log(∑e^xi) in a numerically stable way.
+  "Computes log(∑e^xi) for sequence `numbers` in a numerically stable way.
   
   Avoids overflow/underflow when computing the log of sums of exponentials
   for very large or very small numbers. Uses the log-sum-exp trick.
@@ -169,10 +169,10 @@
 
 ;;;ERROR FUNCTIONS
 (defn erf
-  "Computes the error function erf(x).
+  "Computes the error function erf(`x`).
   
   Defined as (2/√π) ∫₀ˣ e^(-t²) dt. Represents the probability that a random
-  variable from a standard normal distribution falls within [-x√2, x√2].
+  variable from a standard normal distribution falls within [-`x`√2, `x`√2].
   
   Properties:
   - erf(0) = 0
@@ -195,7 +195,7 @@
   :ret ::m/corr)
 
 (defn erf-diff
-  "Computes erf(x2) - erf(x1) with improved numerical stability.
+  "Computes erf(`x2`) - erf(`x1`) with improved numerical stability.
   
   Uses optimized algorithms to avoid loss of precision when computing
   the difference of two error function values.
@@ -219,7 +219,7 @@
   :ret (s/double-in :min -2.0 :max 2.0))
 
 (defn erf-derivative
-  "Computes the derivative of the error function: d/dx erf(x).
+  "Computes the derivative of the error function: d/d`x` erf(`x`).
   
   The derivative is (2/√π) e^(-x²), which is the standard normal
   probability density function scaled by √(2π).
@@ -235,10 +235,10 @@
   :ret ::m/non-)
 
 (defn erfc
-  "Computes the complementary error function erfc(x) = 1 - erf(x).
+  "Computes the complementary error function erfc(`x`) = 1 - erf(`x`).
   
-  More numerically stable than computing 1 - erf(x) directly,
-  especially for large positive x where erf(x) ≈ 1.
+  More numerically stable than computing 1 - erf(`x`) directly,
+  especially for large positive `x` where erf(`x`) ≈ 1.
   
   Examples:
     (erfc 0.0) ;=> 1.0
@@ -258,9 +258,9 @@
     (rest coeffs)))
 
 (defn inv-erf
-  "Computes the inverse error function erf⁻¹(x).
+  "Computes the inverse error function erf⁻¹(`x`).
   
-  Finds y such that erf(y) = x. Uses rational approximations
+  Finds y such that erf(y) = `x`. Uses rational approximations
   with different coefficient sets for different ranges.
   
   Domain: [-1, 1]
@@ -299,9 +299,9 @@
   :ret ::m/num)
 
 (defn inv-erfc
-  "Computes the inverse complementary error function erfc⁻¹(x).
+  "Computes the inverse complementary error function erfc⁻¹(`x`).
   
-  Finds y such that erfc(y) = x. Equivalent to inv-erf(1-x).
+  Finds y such that erfc(y) = `x`. Equivalent to inv-erf(1-`x`).
   
   Domain: [0, 2]
   Range: (-∞, ∞)
@@ -324,7 +324,7 @@
 (defn inv-cdf-standard-normal
   "Computes the inverse cumulative distribution function of the standard normal.
   
-  Finds the value x such that Φ(x) = p, where Φ is the standard normal CDF.
+  Finds the value x such that Φ(x) = `cumulative-prob`, where Φ is the standard normal CDF.
   Also known as the probit function or normal quantile function.
   
   Examples:
@@ -343,8 +343,8 @@
 (defn cdf-standard-normal
   "Computes the cumulative distribution function of the standard normal.
   
-  Calculates Φ(x) = P(Z ≤ x) where Z ~ N(0,1). Related to the error
-  function by Φ(x) = (1 + erf(x/√2))/2.
+  Calculates Φ(`x`) = P(Z ≤ `x`) where Z ~ N(0,1). Related to the error
+  function by Φ(`x`) = (1 + erf(`x`/√2))/2.
   
   Examples:
     (cdf-standard-normal 0.0) ;=> 0.5
@@ -365,7 +365,7 @@
 (def ^{:doc "See [[cdf-standard-normal]]"} inv-probit cdf-standard-normal)
 
 (defn logistic
-  "Computes the logistic (sigmoid) function: 1/(1 + e^(-x)).
+  "Computes the logistic (sigmoid) function: 1/(1 + e^(-`x`)).
   
   Maps real numbers to (0,1). Often used as an activation function
   in neural networks and in logistic regression.
@@ -387,11 +387,11 @@
   :ret ::m/prob)
 
 (defn logistic-derivative
-  "Computes the derivative of the logistic function.
+  "Computes the derivative of the logistic function at `x`.
   
-  The derivative is logistic(x) * (1 - logistic(x)), which has its
-  maximum of 0.25 at x = 0. This is efficiently computed as
-  0.25 * (1 - tanh²(x/2)).
+  The derivative is logistic(`x`) * (1 - logistic(`x`)), which has its
+  maximum of 0.25 at `x` = 0. This is efficiently computed as
+  0.25 * (1 - tanh²(`x`/2)).
   
   Examples:
     (logistic-derivative 0.0) ;=> 0.25
@@ -404,7 +404,7 @@
   :ret ::m/prob)
 
 (defn logit
-  "Computes the logit function: ln(p/(1-p)).
+  "Computes the logit function: ln(`p`/(1-`p`)).
   
   The inverse of the logistic function. Maps probabilities in (0,1)
   to real numbers. Used in logistic regression and odds ratios.
@@ -423,9 +423,9 @@
   :ret ::m/num)
 
 (defn logit-derivative
-  "Computes the derivative of the logit function: d/dp logit(p).
+  "Computes the derivative of the logit function: d/d`p` logit(`p`).
   
-  The derivative is 1/(p(1-p)), which approaches infinity as p
+  The derivative is 1/(`p`(1-`p`)), which approaches infinity as `p`
   approaches 0 or 1.
   
   Examples:
@@ -471,9 +471,9 @@
             (* x f)))))))
 
 (defn gamma
-  "Computes the gamma function Γ(a).
+  "Computes the gamma function Γ(`a`).
   
-  Defined as Γ(a) = ∫₀^∞ t^(a-1) e^(-t) dt for a > 0.
+  Defined as Γ(`a`) = ∫₀^∞ t^(`a`-1) e^(-t) dt for `a` > 0.
   Extended to negative non-integers using the reflection formula.
   
   Properties:
@@ -523,12 +523,12 @@
   :ret ::m/non-inf-)
 
 (defn lower-gamma
-  "Computes the lower incomplete gamma function γ(a,x).
+  "Computes the lower incomplete gamma function γ(`a`,`x`).
   
-  Defined as γ(a,x) = ∫₀^x t^(a-1) e^(-t) dt.
-  Represents the \"tail\" of the gamma function from 0 to x.
+  Defined as γ(`a`,`x`) = ∫₀^`x` t^(`a`-1) e^(-t) dt.
+  Represents the \"tail\" of the gamma function from 0 to `x`.
   
-  Related to the regularized gamma P function by γ(a,x) = Γ(a) P(a,x).
+  Related to the regularized gamma P function by γ(`a`,`x`) = Γ(`a`) P(`a`,`x`).
   
   Examples:
     (lower-gamma 2.0 1.0) ;=> 0.6321205588285577
@@ -544,13 +544,13 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma
-  "Computes the upper incomplete gamma function Γ(a,x).
+  "Computes the upper incomplete gamma function Γ(`a`,`x`).
   
-  Defined as Γ(a,x) = ∫_x^∞ t^(a-1) e^(-t) dt.
-  Represents the \"tail\" of the gamma function from x to infinity.
+  Defined as Γ(`a`,`x`) = ∫_`x`^∞ t^(`a`-1) e^(-t) dt.
+  Represents the \"tail\" of the gamma function from `x` to infinity.
   
-  Related to the regularized gamma Q function by Γ(a,x) = Γ(a) Q(a,x).
-  Satisfies γ(a,x) + Γ(a,x) = Γ(a).
+  Related to the regularized gamma Q function by Γ(`a`,`x`) = Γ(`a`) Q(`a`,`x`).
+  Satisfies γ(`a`,`x`) + Γ(`a`,`x`) = Γ(`a`).
   
   Examples:
     (upper-gamma 2.0 1.0) ;=> 0.36787944117144233
@@ -565,9 +565,9 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma-derivative-x
-  "Computes the derivative of the upper gamma function with respect to x.
+  "Computes the derivative of the upper gamma function with respect to `x`.
   
-  The derivative is d/dx Γ(a,x) = -x^(a-1) e^(-x).
+  The derivative is d/d`x` Γ(`a`,`x`) = -`x`^(`a`-1) e^(-`x`).
   This is the negative of the integrand in the gamma function definition.
   
   Examples:
@@ -583,9 +583,9 @@
   :ret ::m/nan-or-non-)
 
 (defn regularized-gamma-p
-  "Computes the regularized lower incomplete gamma function P(a,x).
+  "Computes the regularized lower incomplete gamma function P(`a`,`x`).
   
-  Defined as P(a,x) = γ(a,x) / Γ(a), where γ is the lower incomplete gamma.
+  Defined as P(`a`,`x`) = γ(`a`,`x`) / Γ(`a`), where γ is the lower incomplete gamma.
   Represents the cumulative distribution function of the gamma distribution.
   
   Properties:
@@ -621,9 +621,9 @@
   :ret ::m/nan-or-prob)
 
 (defn regularized-gamma-q
-  "Computes the regularized upper incomplete gamma function Q(a,x).
+  "Computes the regularized upper incomplete gamma function Q(`a`,`x`).
   
-  Defined as Q(a,x) = Γ(a,x) / Γ(a), where Γ is the upper incomplete gamma.
+  Defined as Q(`a`,`x`) = Γ(`a`,`x`) / Γ(`a`), where Γ is the upper incomplete gamma.
   Represents the survival function (1 - CDF) of the gamma distribution.
   
   Properties:
@@ -660,10 +660,10 @@
   :ret ::m/nan-or-prob)
 
 (defn log-gamma
-  "Computes the natural logarithm of the gamma function ln(Γ(a)).
+  "Computes the natural logarithm of the gamma function ln(Γ(`a`)).
   
-  More numerically stable than computing log(gamma(a)) directly,
-  especially for large values of a where gamma(a) would overflow.
+  More numerically stable than computing log(gamma(`a`)) directly,
+  especially for large values of `a` where gamma(`a`) would overflow.
   
   Examples:
     (log-gamma 1.0) ;=> 0.0 (ln(1))
