@@ -1,4 +1,15 @@
 (ns provisdom.math.random
+  "Random number generation and probability distributions.
+  
+  Provides high-quality random number generators and implementations of 
+  common probability distributions including:
+  - Uniform, normal (Gaussian), exponential, gamma distributions
+  - Beta, chi-squared, Student's t, F distributions  
+  - Discrete distributions (binomial, Poisson, etc.)
+  - Multivariate distributions
+  
+  Uses splittable random number generators for reproducible parallel computation.
+  All functions support both seeded and unseeded generation."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -28,7 +39,13 @@
 
 ;;;HELPERS
 (defn random-long
-  "Returns a random long within the given interval (or any long by default)."
+  "Converts random double `rnd` [0,1) to a long within the specified `interval`.
+  
+  Parameters:
+    `rnd` - Random double in [0,1)
+    `interval` - Optional [lower upper] bounds (default: [min-long max-long])
+  
+  Returns a long uniformly distributed within the interval."
   ([rnd] (random-long rnd [m/min-long m/max-long]))
   ([rnd [lower upper]]
    (m/floor' (+ lower (* (- (inc (double upper)) lower) rnd)))))
@@ -39,7 +56,12 @@
         :ret ::m/long)
 
 (defn random-bool
-  "Returns a random boolean."
+  "Converts random double `rnd` to a boolean with 50% probability.
+  
+  Parameters:
+    `rnd` - Random double in [0,1)
+  
+  Returns true if `rnd` ≤ 0.5, false otherwise."
   [rnd]
   (<= rnd 0.5))
 
@@ -48,7 +70,15 @@
         :ret boolean?)
 
 (defn random-normal
-  "Returns a value drawn from a standard Normal distribution."
+  "Converts uniform random value `rnd` to a standard normal distribution.
+  
+  Uses the inverse CDF transformation method to generate normally
+  distributed values with mean=0 and standard deviation=1.
+  
+  Parameters:
+    `rnd` - Random double in [0,1)
+  
+  Returns a normally distributed value."
   [rnd]
   (special-fns/inv-cdf-standard-normal rnd))
 
@@ -58,7 +88,12 @@
 
 ;;;IMMUTABLE RNG
 (defn rng
-  "Returns a new RNG."
+  "Creates a new splittable random number generator from `seed`.
+  
+  Parameters:
+    `seed` - Long value to seed the generator
+  
+  Returns a new RNG instance that implements IRandom."
   [seed]
   (split/make-java-util-splittable-random seed))
 
@@ -67,7 +102,14 @@
         :ret ::rng)
 
 (defn rnd
-  "Returns a random finite within the given interval (or [0, 1] by default)."
+  "Generates a random double from `rng` within the specified `interval`.
+  
+  Parameters:
+    `rng` - Random number generator
+    `interval` - Optional [lower upper] bounds (default: [0, 1])
+  
+  Returns a uniformly distributed double within the interval.
+  Special case: if interval difference is infinite, uses scaled generation."
   ([rng] (split/rand-double rng))
   ([rng [lower upper]]
    (let [diff (- (double upper) lower)]
@@ -81,7 +123,13 @@
         :ret ::m/finite)
 
 (defn rnd-long
-  "Returns a random long within the given interval (or any long by default)."
+  "Generates a random long from `rng` within the specified `interval`.
+  
+  Parameters:
+    `rng` - Random number generator  
+    `interval` - Optional [lower upper] bounds (default: all possible longs)
+  
+  Returns a uniformly distributed long within the interval."
   ([rng] (split/rand-long rng))
   ([rng [lower upper]]
    (m/floor' (+ lower
@@ -94,7 +142,12 @@
         :ret ::m/long)
 
 (defn rnd-bool
-  "Returns a random boolean."
+  "Generates a random boolean from `rng`.
+  
+  Parameters:
+    `rng` - Random number generator
+  
+  Returns true or false with equal probability."
   [rng]
   (random-bool (rnd rng)))
 
@@ -103,7 +156,12 @@
         :ret boolean?)
 
 (defn rnd-normal
-  "Returns a value randomly drawn from a standard Normal distribution."
+  "Generates a normally distributed value from `rng`.
+  
+  Parameters:
+    `rng` - Random number generator
+  
+  Returns a value from standard normal distribution (mean=0, std=1)."
   [rng]
   (random-normal (rnd rng)))
 
@@ -112,8 +170,15 @@
         :ret ::m/num)
 
 (defn rng-lazy
-  "Returns a lazy sequence of RNG where each iteration is split from the
-  previous."
+  "Creates a lazy sequence of independent RNG instances.
+  
+  Each RNG in the sequence is split from the previous one, ensuring
+  statistical independence for parallel computation.
+  
+  Parameters:
+    `rng` - Initial random number generator
+  
+  Returns a lazy sequence of RNG instances."
   [rng]
   (iterate (comp first split/split) rng))
 
@@ -122,7 +187,12 @@
         :ret (s/every ::rng))
 
 (defn rnd-lazy
-  "Returns a lazy seq of random rnds."
+  "Creates a lazy sequence of random doubles from independent RNGs.
+  
+  Parameters:
+    `rng` - Initial random number generator
+  
+  Returns a lazy sequence of doubles in [0, 1)."
   [rng]
   (map split/rand-double (rng-lazy rng)))
 
@@ -131,7 +201,12 @@
         :ret ::rnd-lazy)
 
 (defn rnd-long-lazy
-  "Returns a lazy seq of random longs."
+  "Creates a lazy sequence of random longs from independent RNGs.
+  
+  Parameters:
+    rng - Initial random number generator
+  
+  Returns a lazy sequence of random longs."
   [rng]
   (map split/rand-long (rng-lazy rng)))
 
@@ -141,7 +216,10 @@
 
 ;;;BOUND RNG
 (defn rng!
-  "Returns the bound RNG."
+  "Retrieves the current bound RNG from the dynamic context.
+  
+  Returns the RNG instance bound to *rng-gen*.
+  Must be called within a bind-seed context or after set-seed!."
   []
   (*rng-gen*))
 
@@ -150,8 +228,15 @@
         :ret ::rng)
 
 (defn rng-gen
-  "Returns a function that will generate random numbers from the bound or other
-  static RNG."
+  "Creates a stateful RNG generator function from an initial RNG.
+  
+  The returned function maintains an internal sequence of split RNGs
+  to ensure each call produces an independent generator.
+  
+  Parameters:
+    rng - Initial random number generator
+  
+  Returns a function that produces fresh RNG instances on each call."
   [rng]
   (let [gens (atom (rng-lazy rng))]
     (fn [] volatile!
@@ -160,12 +245,26 @@
         rng))))
 
 (defn set-seed!
-  "Sets the RNG generator to `seed`."
+  "Sets the global RNG generator to use the specified seed.
+  
+  This mutates the global *rng-gen* var, affecting all subsequent
+  calls to bound RNG functions (rnd!, rnd-long!, etc.).
+  
+  Parameters:
+    seed - Long value to seed the generator
+  
+  Side effects: Modifies global *rng-gen* state."
   [seed]
   (alter-var-root (var *rng-gen*) (constantly (rng-gen (rng seed)))))
 
 (defn rnd!
-  "Returns a random finite within the given interval (or [0, 1] by default)."
+  "Generates a random double using the bound RNG.
+  
+  Parameters:
+    interval - Optional [lower upper] bounds (default: [0, 1])
+  
+  Returns a uniformly distributed double within the interval.
+  Requires bound RNG context (bind-seed or set-seed!)."
   ([] (rnd (rng!)))
   ([[lower upper]] (rnd (rng!) [lower upper])))
 
@@ -174,7 +273,13 @@
         :ret ::m/finite)
 
 (defn rnd-long!
-  "Returns a random long within the given interval (or any long by default)."
+  "Generates a random long using the bound RNG.
+  
+  Parameters:
+    interval - Optional [lower upper] bounds (default: all possible longs)
+  
+  Returns a uniformly distributed long within the interval.
+  Requires bound RNG context (bind-seed or set-seed!)."
   ([] (rnd-long (rng!)))
   ([[lower upper]] (rnd-long (rng!) [lower upper])))
 
@@ -183,7 +288,10 @@
         :ret ::m/long)
 
 (defn rnd-bool!
-  "Returns a random boolean."
+  "Generates a random boolean using the bound RNG.
+  
+  Returns true or false with equal probability.
+  Requires bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-bool (rng!)))
 
@@ -192,7 +300,10 @@
         :ret boolean?)
 
 (defn rnd-normal!
-  "Returns a value randomly drawn from a standard Normal distribution."
+  "Generates a normally distributed value using the bound RNG.
+  
+  Returns a value from standard normal distribution (mean=0, std=1).
+  Requires bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-normal (rng!)))
 
@@ -201,8 +312,10 @@
         :ret ::m/num)
 
 (defn rng-lazy!
-  "Returns a lazy sequence of RNG where each iteration is split from the
-  previous."
+  "Creates a lazy sequence of independent RNGs using the bound RNG.
+  
+  Returns a lazy sequence of RNG instances, each split from the previous.
+  Requires bound RNG context (bind-seed or set-seed!)."
   []
   (rng-lazy (rng!)))
 
@@ -211,7 +324,10 @@
         :ret (s/every ::rng))
 
 (defn rnd-lazy!
-  "Returns a lazy seq of random doubles."
+  "Creates a lazy sequence of random doubles using the bound RNG.
+  
+  Returns a lazy sequence of doubles in [0, 1).
+  Requires bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-lazy (rng!)))
 
@@ -220,7 +336,10 @@
         :ret ::rnd-lazy)
 
 (defn rnd-long-lazy!
-  "Returns a lazy seq of random longs."
+  "Creates a lazy sequence of random longs using the bound RNG.
+  
+  Returns a lazy sequence of random longs.
+  Requires bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-long-lazy (rng!)))
 
@@ -230,7 +349,12 @@
 
 ;;;USE CLOCK
 (defn rng$
-  "Makes a new RNG from the current clock time."
+  "Creates a new RNG seeded from the current system time.
+  
+  Uses the current clock time to generate a unique RNG instance.
+  Useful for non-reproducible random generation.
+  
+  Returns a new RNG instance."
   []
   (split/next-rng))
 
@@ -239,7 +363,12 @@
         :ret ::rng)
 
 (defn seed$
-  "Returns a new seed from the current clock time."
+  "Generates a random seed from the current system time.
+  
+  Creates a time-based RNG and extracts a random long value
+  suitable for seeding other generators.
+  
+  Returns a random long seed value."
   []
   (rnd-long (rng$)))
 
@@ -248,7 +377,12 @@
         :ret ::seed)
 
 (defn set-seed!$
-  "Sets the RNG generator to the current clock time."
+  "Sets the global RNG generator using the current system time.
+  
+  Equivalent to calling set-seed! with a time-based seed.
+  Provides non-reproducible random behavior.
+  
+  Side effects: Modifies global *rng-gen* state."
   []
   (set-seed! (System/currentTimeMillis)))
 

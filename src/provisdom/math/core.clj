@@ -1,4 +1,16 @@
 (ns provisdom.math.core
+  "Core mathematical functions and constants for numerical computation.
+  
+  Provides fundamental operations, constants, type predicates, and rounding functions.
+  Functions return doubles by default unless marked with ' (apostrophe) which attempts
+  to return longs when possible. Example: (floor' 3.0) returns 3 (long).
+  
+  Key features:
+  - Mathematical constants (PI, E, sqrt-two, etc.)
+  - Enhanced numeric type predicates that handle NaN/infinity
+  - Robust arithmetic with division-by-zero handling
+  - High-precision rounding and comparison functions
+  - Angle conversion utilities"
   (:refer-clojure :exclude [abs int? neg? pos?])
   (:require
     [clojure.spec.alpha :as s]
@@ -83,7 +95,14 @@ type of output the user wants is generally known.")
           :gen #(gen/one-of [(gen/double) (gen/large-integer)])))
 
 (defn numbers?
-  "Returns true if a collection of numbers."
+  "Tests if a collection contains only numbers.
+  
+  Returns true if `x` is sequential and every element is a number.
+  
+  Examples:
+    (numbers? [1 2 3])        ;=> true
+    (numbers? [1 :a 3])       ;=> false  
+    (numbers? #{1 2 3})       ;=> false (not sequential)"
   [x]
   (and (sequential? x) (every? number? x)))
 
@@ -104,7 +123,16 @@ type of output the user wants is generally known.")
                                 :into '())))))
 
 (defn num?
-  "Returns true if `x` is a number and not NaN."
+  "Tests if a value is a valid (non-NaN) number.
+  
+  Returns true if `x` is a number and not NaN. Uses the property that 
+  NaN is not equal to itself (NaN != NaN).
+  
+  Examples:
+    (num? 42)        ;=> true
+    (num? 3.14)      ;=> true  
+    (num? ##NaN)     ;=> false
+    (num? \"foo\")    ;=> false"
   [x]
   (and (number? x) (== x x)))
 
@@ -113,14 +141,32 @@ type of output the user wants is generally known.")
           :gen #(gen/one-of [(gen/double* {:NaN? false}) (gen/large-integer)])))
 
 (defn nan?
-  "Returns true if `x` is NaN."
+  "Tests if a value is NaN (Not a Number).
+  
+  Returns true if `x` is NaN. Uses the IEEE 754 property that NaN != NaN.
+  Only returns true for actual NaN values, not other non-numeric types.
+  
+  Examples:
+    (nan? ##NaN)           ;=> true
+    (nan? (/ 0.0 0.0))     ;=> true
+    (nan? 42)              ;=> false
+    (nan? \"not-a-number\") ;=> false"
   [x]
   (and (number? x) (not (== x x))))
 
 (s/def ::nan (s/spec nan? :gen #(gen/return nan)))
 
 (defn pos?
-  "Returns true if `x` is a number that is positive."
+  "Tests if a number is positive (> 0).
+  
+  Returns true if `x` is a number and positive. Unlike clojure.core/pos?,
+  this function ensures the input is actually a number first.
+  
+  Examples:
+    (pos? 5)     ;=> true
+    (pos? 0)     ;=> false
+    (pos? -3)    ;=> false
+    (pos? ##NaN) ;=> false"
   [x]
   (and (number? x) (clojure.core/pos? x)))
 
@@ -137,7 +183,16 @@ type of output the user wants is generally known.")
                    (gen/large-integer* {:min 1})])))
 
 (defn neg?
-  "Returns true if `x` is a number that is negative."
+  "Tests if a number is negative (< 0).
+  
+  Returns true if `x` is a number and negative. Unlike clojure.core/neg?,
+  this function ensures the input is actually a number first.
+  
+  Examples:
+    (neg? -5)    ;=> true
+    (neg? 0)     ;=> false
+    (neg? 3)     ;=> false
+    (neg? ##NaN) ;=> false"
   [x]
   (and (number? x) (clojure.core/neg? x)))
 
@@ -154,7 +209,15 @@ type of output the user wants is generally known.")
                    (gen/large-integer* {:max -1})])))
 
 (defn non-?
-  "Returns true if `x` is non-negative."
+  "Tests if a number is non-negative (>= 0).
+  
+  Returns true if `x` is a number and greater than or equal to zero.
+  
+  Examples:
+    (non-? 5)     ;=> true
+    (non-? 0)     ;=> true
+    (non-? -3)    ;=> false
+    (non-? ##NaN) ;=> false"
   [x]
   (and (number? x) (>= x 0)))
 
@@ -171,7 +234,15 @@ type of output the user wants is generally known.")
                    (gen/large-integer* {:min 0})])))
 
 (defn non+?
-  "Returns true if `x` is non-positive."
+  "Tests if a number is non-positive (<= 0).
+  
+  Returns true if `x` is a number and less than or equal to zero.
+  
+  Examples:
+    (non+? -5)    ;=> true
+    (non+? 0)     ;=> true
+    (non+? 3)     ;=> false
+    (non+? ##NaN) ;=> false"
   [x]
   (and (number? x) (<= x 0)))
 
@@ -188,7 +259,15 @@ type of output the user wants is generally known.")
                    (gen/large-integer* {:max 0})])))
 
 (defn finite?
-  "Returns true if `x` is a finite number."
+  "Tests if a number is finite (not infinite or NaN).
+  
+  Returns true if `x` is a valid number that is neither infinite nor NaN.
+  
+  Examples:
+    (finite? 42)      ;=> true
+    (finite? -3.14)   ;=> true
+    (finite? ##Inf)   ;=> false
+    (finite? ##NaN)   ;=> false"
   [x]
   (and (num? x) (not (Double/isInfinite (double x)))))
 
@@ -654,7 +733,14 @@ type of output the user wants is generally known.")
   :ret boolean?)
 
 (defn next-up
-  "Returns `number` plus smallest amount to make a change."
+  "Returns the next representable floating-point value greater than `number`.
+  
+  Uses IEEE 754 nextAfter operation to find the smallest possible increment.
+  Useful for creating strict upper bounds or testing floating-point precision.
+  
+  Examples:
+    (next-up 1.0)  ;=> 1.0000000000000002
+    (next-up 0.0)  ;=> 4.9E-324 (smallest positive double)"
   [number]
   (Math/nextAfter (double number) inf+))
 
@@ -663,7 +749,14 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn next-down
-  "Returns `number` minus smallest amount to make a change."
+  "Returns the next representable floating-point value less than `number`.
+  
+  Uses IEEE 754 nextAfter operation to find the smallest possible decrement.
+  Useful for creating strict lower bounds or testing floating-point precision.
+  
+  Examples:
+    (next-down 1.0)  ;=> 0.9999999999999998
+    (next-down 0.0)  ;=> -4.9E-324 (smallest negative double)"
   [number]
   (Math/nextAfter (double number) inf-))
 
@@ -672,11 +765,20 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn div
-  "Returns `number1` divided by `number2`. Or 1 divided by `number2`. Dividing a
-  positive number divided by zero returns Inf+. Dividing a negative number
-  divided by zero returns Inf-. Dividing zero by zero will return NaN by
-  default. Optionally, can include alternative return value for 0/0,
-  `zero-div-by-zero`."
+  "Divides numbers with proper handling of division by zero.
+  
+  Returns `number1` divided by `number2`, or (1 / `number2`) if only one argument.
+  Handles edge cases:
+  - Positive / 0 → +Infinity  
+  - Negative / 0 → -Infinity
+  - 0 / 0 → NaN (or custom value via `zero-div-by-zero`)
+  - NaN / 0 → NaN
+  
+  Examples:
+    (div 6 2)     ;=> 3.0
+    (div 1 0)     ;=> ##Inf
+    (div 0 0)     ;=> ##NaN
+    (div 0 0 42)  ;=> 42"
   ([number2] (div 1 number2))
   ([number1 number2] (div number1 number2 nan))
   ([number1 number2 zero-div-by-zero]
@@ -695,7 +797,15 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn one-
-  "Returns (1 - `number`). Will always return a double if `numbers` is used."
+  "Computes 1 minus the sum of arguments.
+  
+  Returns (1 - `number`) for single argument, or (1 - sum) for multiple arguments.
+  Always returns a double when multiple arguments are provided.
+  
+  Examples:
+    (one- 0.3)      ;=> 0.7
+    (one- 0.2 0.3)  ;=> 0.5 (1 - 0.2 - 0.3)
+    (one- 1)        ;=> 0"
   ([number] (inc (- number)))
   ([number & numbers] (inc (- (apply + (double number) numbers)))))
 
@@ -704,7 +814,14 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn sq
-  "Returns square of `number`."
+  "Computes the square of a number.
+  
+  Returns `number` × `number`. Always returns a double.
+  
+  Examples:
+    (sq 5)     ;=> 25.0
+    (sq -3)    ;=> 9.0
+    (sq 1.5)   ;=> 2.25"
   [number]
   (* (double number) number))
 
@@ -713,7 +830,14 @@ type of output the user wants is generally known.")
   :ret ::nan-or-non-)
 
 (defn sq'
-  "Returns square of `number` as a long if possible."
+  "Computes the square of a number, returning a long when possible.
+  
+  Returns `number` × `number` as a long if the result fits in long range,
+  otherwise returns a double.
+  
+  Examples:
+    (sq' 5)       ;=> 25 (long)
+    (sq' 1.5)     ;=> 2.25 (double, non-integer result)"
   [number]
   (maybe-long-able
     (* (double number) number)))
@@ -742,7 +866,19 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn sgn
-  "Returns 1 if `number` positive, 0 if 0, -1 if negative."
+  "Returns the sign of a number.
+  
+  Returns:
+  - 1 if `number` is positive
+  - 0 if `number` is zero  
+  - -1 if `number` is negative
+  - NaN if `number` is NaN
+  
+  Examples:
+    (sgn 5)     ;=> 1
+    (sgn 0)     ;=> 0
+    (sgn -3)    ;=> -1
+    (sgn ##NaN) ;=> ##NaN"
   [number]
   (cond (zero? number) 0
         (neg? number) -1
@@ -829,7 +965,9 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn abs
-  "Returns absolute value of `number`."
+  "Computes the absolute value of a number.
+  
+  Returns |`number`|, always non-negative. Always returns a double."
   [number]
   (Math/abs (double number)))
 
@@ -848,7 +986,15 @@ type of output the user wants is generally known.")
   :ret ::nan-or-non-)
 
 (defn sqrt
-  "Returns square root of `number`."
+  "Computes the square root of a number.
+  
+  Returns √`number`. For negative numbers, returns NaN.
+  
+  Examples:
+    (sqrt 9)     ;=> 3.0
+    (sqrt 2)     ;=> 1.4142135623730951
+    (sqrt 0)     ;=> 0.0
+    (sqrt -1)    ;=> ##NaN"
   [number]
   (Math/sqrt (double number)))
 
@@ -1056,7 +1202,9 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn floor
-  "Rounds down. Returns a double."
+  "Rounds a number down to the nearest integer.
+  
+  Returns the largest integer ≤ `number`. Always returns a double."
   [number]
   (Math/floor number))
 
@@ -1065,7 +1213,10 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn floor'
-  "Rounds down. Returns a long if possible, otherwise a double."
+  "Rounds a number down, returning a long when possible.
+  
+  Returns the largest integer ≤ `number` as a long if it fits in long range,
+  otherwise returns a double."
   [number]
   (maybe-long-range (floor number)))
 
@@ -1074,7 +1225,9 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn ceil
-  "Rounds up. Returns a double."
+  "Rounds a number up to the nearest integer.
+  
+  Returns the smallest integer ≥ `number`. Always returns a double."
   [number]
   (Math/ceil number))
 
@@ -1131,8 +1284,21 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn roughly?
-  "Returns true if `number1` and `number2` are within `accu` of each other, or
-  within double accuracy."
+  "Tests if two numbers are approximately equal within a tolerance.
+  
+  Returns true if `number1` and `number2` are within `accu` of each other.
+  Handles special cases:
+  - NaN arguments → false
+  - Infinite tolerance → true  
+  - Infinite arguments → false (unless both same infinity)
+  
+  Useful for floating-point comparisons where exact equality fails due to
+  rounding errors.
+  
+  Examples:
+    (roughly? 1.0 1.0000001 1e-6)  ;=> true
+    (roughly? 1.0 1.1 0.05)        ;=> false  
+    (roughly? ##NaN 1.0 0.1)       ;=> false"
   [number1 number2 accu]
   (cond (or (nan? number1) (nan? number2)) false
         (inf+? accu) true

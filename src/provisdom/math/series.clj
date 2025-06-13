@@ -1,4 +1,15 @@
 (ns provisdom.math.series
+  "Infinite series summation with convergence testing.
+  
+  Provides robust algorithms for summing infinite series with adaptive 
+  convergence detection. Supports both regular and Kahan summation
+  for improved numerical stability.
+  
+  Key features:
+  - Adaptive convergence testing with customizable criteria
+  - Kahan summation for reduced floating-point error accumulation  
+  - Configurable iteration limits and relative accuracy targets
+  - Anomaly handling for non-convergent series"
   (:require
     [clojure.spec.alpha :as s]
     [provisdom.math.core :as m]
@@ -24,8 +35,13 @@
     :ret boolean?))
 
 (defn power-series-fn
-  "Returns a function that takes a number and returns the power series of a
-  value 'x' using a `term-series`: (a_n × x^n)."
+  "Returns a function that evaluates a power series at a given point.
+  
+  Takes a sequence of coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function that
+  computes the power series Σ(aₙ × xⁿ) for a given x.
+  
+  Example:
+    ((power-series-fn [1 2 3]) 2) ; => [1.0 4.0 12.0] (coeffs: 1×2⁰, 2×2¹, 3×2²)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (m/pow x n)))
@@ -36,8 +52,13 @@
   :ret ::number->term-series)
 
 (defn power-series-derivative-fn
-  "Returns a function that takes a number and returns the derivative of the
-  power series of a value 'x' using a `term-series`: (a_n × x^n)."
+  "Returns a function that evaluates the derivative of a power series.
+  
+  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
+  derivative: Σ(n × aₙ × xⁿ⁻¹).
+  
+  Example:
+    ((power-series-derivative-fn [1 2 3]) 2) ; => [0.0 4.0 24.0] (derivatives)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (double n) (m/pow x (dec n))))
@@ -48,8 +69,13 @@
   :ret ::number->term-series)
 
 (defn power-series-integral-fn
-  "Returns a function that takes a number and returns the integral of the power
-  series of a value x using a `term-series`: (a_n × x^n)."
+  "Returns a function that evaluates the indefinite integral of a power series.
+  
+  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
+  integral: Σ(aₙ × xⁿ⁺¹ / (n+1)).
+  
+  Example:
+    ((power-series-integral-fn [1 2 3]) 2) ; => [2.0 4.0 8.0] (integrals)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an
@@ -62,8 +88,15 @@
   :ret ::number->term-series)
 
 (defn continued-fraction
-  "Returns the continued fraction series for a `term-series`:
-   a0 + (1 / (a1 + 1 / (a2 + 1 / (a3 + ..."
+  "Converts sequence `term-series` to its continued fraction representation.
+  
+  Given coefficients [a₀ a₁ a₂ ...], computes the continued fraction:
+  a₀ + 1/(a₁ + 1/(a₂ + 1/(a₃ + ...)))
+  
+  Returns a lazy sequence of partial convergents.
+  
+  Example:
+    (continued-fraction [1.0 3.0 6.0 8.0]) ; => [1.0 -0.25 0.01 ...]"
   [term-series]
   (if (empty? term-series)
     '()
@@ -82,8 +115,15 @@
   :ret ::term-series)
 
 (defn generalized-continued-fraction
-  "Returns the generalized continued fraction series:
-   a0 + (b0 / (a1 + b1 / (a2 + b2 / (a3 + ..."
+  "Computes a generalized continued fraction from two coefficient sequences.
+  
+  Given sequences `a-term-series` [a₀ a₁ a₂ ...] and `b-term-series` [b₀ b₁ b₂ ...], computes:
+  a₀ + b₀/(a₁ + b₁/(a₂ + b₂/(a₃ + ...)))
+  
+  Returns a lazy sequence of partial convergents.
+  
+  Example:
+    (generalized-continued-fraction [1 3 6 8] [2 3 2 6]) ; => convergent series"
   [a-term-series b-term-series]
   (if (empty? a-term-series)
     '()
@@ -105,8 +145,16 @@
   :ret ::term-series)
 
 (defn multiplicative-continued-fraction
-  "Returns the continued fraction series for a `term-series`:
-   a0 + (1 / (a1 + 1 / (a2 + 1 / (a3 + ..."
+  "Computes continued fraction for `term-series` using multiplicative convergence algorithm.
+  
+  More numerically stable than the standard algorithm in some cases.
+  Uses the relative accuracy threshold to avoid division by zero.
+  
+  Options:
+    ::rel-accu - Relative accuracy threshold (default 1e-50)
+  
+  Example:
+    (multiplicative-continued-fraction [1.0 3.0 6.0 8.0]) ; => stable convergents"
   ([term-series] (multiplicative-continued-fraction term-series {}))
   ([term-series {::keys [rel-accu] :or {rel-accu 1e-50}}]
    (if (empty? term-series)
@@ -133,13 +181,17 @@
   :ret ::term-series)
 
 (defn multiplicative-generalized-continued-fraction
-  "Returns the generalized continued fraction series:
-   a0 + (b0 / (a1 + b1 / (a2 + b2 / (a3 + ...
-
-   The multiplicative algorithm works better in some cases. Adopted from Apache,
-   which took it from Didonato and Morris (1992). 'Algorithm 708: Significant
-   Digit Computation of the Incomplete Beta Function Ratios, TOMS 18(3),
-   360-373.'"
+  "Computes generalized continued fraction for `a-term-series` and `b-term-series` using multiplicative algorithm.
+  
+  More numerically stable than standard algorithm, especially useful for
+  special functions. Based on Didonato and Morris (1992) Algorithm 708.
+  
+  Options:
+    ::rel-accu - Relative accuracy threshold (default 1e-50)
+  
+  Example:
+    (multiplicative-generalized-continued-fraction [1 3 6 8] [2 3 2 6])
+    ; => numerically stable convergents"
   ([a-term-series b-term-series]
    (multiplicative-generalized-continued-fraction
      a-term-series b-term-series {}))
@@ -171,17 +223,26 @@
 
 ;;;SUMMATION
 (defn sum-convergent-series
-  "Returns the sum of a convergent series. The functions `converged-pred` and
-  `error-pred` take the sum, an index, and the next series value.
+  "Sums infinite series `term-series` with adaptive convergence detection.
+  
+  Iteratively sums terms until convergence criteria are met or an error
+  condition is detected. Supports Kahan summation for improved numerical accuracy.
+  
+  Parameters:
+    `term-series` - Lazy sequence of series terms
+  
   Options:
-    `::kahan?` (default false) -- set to true for greater floating-point
-      summation accuracy.
-    `::converged-pred` -- predicate indicating that series has converged
-      (default is that index >= 5 AND the abs next value is less than or equal
-      to m/quad-close or the abs next value is m/quad-close times smaller than
-      the abs sum).
-    `::error-pred` -- predicate indicating an error (default is that index is >
-      10000 or the sum is not finite)."
+    ::kahan? - Use Kahan summation for reduced floating-point error (default true)
+    ::converged-pred - Function (sum index term) -> boolean indicating convergence
+                      (default: after 5 terms, |term| ≤ quad-close or |term/sum| ≤ quad-close)
+    ::error-pred - Function (sum index term) -> boolean indicating error condition
+                  (default: index > 10000 or sum not finite)
+  
+  Returns the series sum or an anomaly map if convergence fails.
+  
+  Example:
+    (sum-convergent-series (map #(/ (math/pow -1 %) (inc %)) (range)))
+    ; => ln(2) ≈ 0.693..."
   ([term-series] (sum-convergent-series term-series {}))
   ([term-series {::keys [kahan? converged-pred error-pred]
                  :or    {kahan?         true
@@ -224,14 +285,26 @@
          :anomaly ::anomalies/anomaly))
 
 (defn multiplicative-sum-convergent-series
-  "Returns the multiplicative sum of a convergent series. The functions
-  `converged-pred` and `error-pred` take the sum, an index, and the next series
-  value.
+  "Computes the product of infinite series `term-series` with convergence detection.
+  
+  Multiplies terms until convergence criteria are met. Useful for series
+  where terms approach 1.0 rather than 0.0.
+  
+  Parameters:
+    `term-series` - Lazy sequence of series terms
+  
   Options:
-    `::converged-pred` -- predicate indicating that series has converged
-      (default is that next value is within 1e-14 of 1.0).
-    `::error-pred` -- predicate indicating an error (default is that index is >=
-      100000 or the sum is not finite.)."
+    ::converged-pred - Function (product index term) -> boolean indicating convergence
+                      (default: term within 1e-14 of 1.0)
+    ::error-pred - Function (product index term) -> boolean indicating error
+                  (default: index ≥ 100000 or product not finite)
+  
+  Returns the series product or an anomaly map if convergence fails.
+  
+  Example:
+    (multiplicative-sum-convergent-series
+      (map #(+ 1.0 (/ (math/pow -1 %) %)) (range 1 1000)))
+    ; => converging infinite product"
   ([term-series] (multiplicative-sum-convergent-series term-series {}))
   ([term-series {::keys [converged-pred error-pred]
                  :or    {converged-pred (fn [sum i val]

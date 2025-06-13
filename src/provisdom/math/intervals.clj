@@ -1,4 +1,15 @@
 (ns provisdom.math.intervals
+  "Interval arithmetic and bounds checking utilities.
+  
+  Provides comprehensive interval and bounds manipulation for:
+  - Simple intervals [a, b] with inclusive endpoints
+  - Complex bounds with open/closed endpoint specifications  
+  - Interval operations (intersection, union, containment tests)
+  - Bounds generation for optimization and constraint problems
+  - Specialized bounds for positive definite matrices
+  
+  Intervals are represented as [lower, upper] vectors.
+  Bounds are maps with ::lower, ::upper, ::open-lower?, ::open-upper? keys."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -103,7 +114,14 @@
 
 ;;INTERVALS
 (defn in-interval?
-  "Tests whether `number` is inside the interval."
+  "Tests if a number lies within an interval (inclusive endpoints).
+  
+  Returns true if `number` is in the closed interval [lower, upper].
+  
+  Examples:
+    (in-interval? [1 5] 3)    ;=> true
+    (in-interval? [1 5] 5)    ;=> true (inclusive)
+    (in-interval? [1 5] 6)    ;=> false"
   [[lower upper] number]
   (and (>= number lower) (<= number upper)))
 
@@ -124,7 +142,15 @@
   :ret boolean?)
 
 (defn bound-by-interval
-  "Bounds a `number` to an interval."
+  "Constrains a number to lie within an interval.
+  
+  Returns the closest value to `number` that lies within [lower, upper].
+  If `number` is already in the interval, returns `number` unchanged.
+  
+  Examples:
+    (bound-by-interval [0 10] 5)   ;=> 5 (unchanged)
+    (bound-by-interval [0 10] 15)  ;=> 10 (clamped to upper bound)
+    (bound-by-interval [0 10] -3)  ;=> 0 (clamped to lower bound)"
   [[lower upper] number]
   (max lower (min upper number)))
 
@@ -137,8 +163,8 @@
   "Bounds a `number` to a strict interval."
   [[lower upper] number]
   (cond (>= number upper) (m/next-down upper)
-        (<= number lower) (m/next-up lower)
-        :else number))
+    (<= number lower) (m/next-up lower)
+    :else number))
 
 (s/fdef bound-by-strict-interval
   :args (s/cat :strict-interval ::strict-interval
@@ -162,7 +188,23 @@
 
 ;;;BOUNDS CONSTRUCTORS
 (defn bounds
-  "Default bounds are Inf- to Inf+. Bounds are closed by default."
+  "Creates bounds with optional open/closed endpoints.
+  
+  Bounds extend intervals by allowing open endpoints. Useful for optimization
+  constraints and mathematical domains where endpoints may be excluded.
+  
+  Default bounds span from -∞ to +∞ with closed endpoints.
+  
+  Parameters:
+  - No args: Creates unbounded domain (-∞, +∞)
+  - [lower upper]: Closed bounds [lower, upper] 
+  - lower, upper: Closed bounds [lower, upper]
+  - With open flags: Specify open (true) or closed (false) endpoints
+  
+  Examples:
+    (bounds)                    ;=> unbounded
+    (bounds 0 10)              ;=> [0, 10] (closed)
+    (bounds 0 10 true false)   ;=> (0, 10] (open lower, closed upper)"
   ([] (bounds m/inf- m/inf+))
   ([[lower upper]] (bounds lower upper false false))
   ([lower upper] (bounds lower upper false false))
@@ -203,18 +245,53 @@
                         (not open-upper?))))))
   :ret ::bounds)
 
-(def bounds-num (bounds))
-(def bounds-finite (bounds m/inf- m/inf+ true true))
-(def bounds-finite+ (bounds 0.0 m/inf+ true true))
-(def bounds-finite- (bounds m/inf- 0.0 true true))
-(def bounds-finite-non- (bounds 0.0 m/inf+ false true))
-(def bounds+ (bounds 0.0 m/inf+ true false))
-(def bounds-non- (bounds 0.0 m/inf+))
-(def bounds-prob (bounds 0.0 1.0))
-(def bounds-open-prob (bounds 0.0 1.0 true true))
-(def bounds-long-non- (bounds 0 m/max-long))
-(def bounds-long (bounds m/min-long m/max-long false false))
-(def bounds-long+ (bounds 0 m/max-long true false))
+(def bounds-num
+  "Unbounded numeric domain spanning from -∞ to +∞ with closed endpoints."
+  (bounds))
+
+(def bounds-finite
+  "Finite numeric domain (-∞, +∞) with open endpoints, excluding infinities."
+  (bounds m/inf- m/inf+ true true))
+
+(def bounds-finite+
+  "Finite positive domain (0, +∞) with open endpoints, excluding zero and infinity."
+  (bounds 0.0 m/inf+ true true))
+
+(def bounds-finite-
+  "Finite negative domain (-∞, 0) with open endpoints, excluding zero and infinity."
+  (bounds m/inf- 0.0 true true))
+
+(def bounds-finite-non-
+  "Finite non-negative domain [0, +∞) including zero, excluding infinity."
+  (bounds 0.0 m/inf+ false true))
+
+(def bounds+
+  "Positive domain (0, +∞] with open lower bound, closed upper bound."
+  (bounds 0.0 m/inf+ true false))
+
+(def bounds-non-
+  "Non-negative domain [0, +∞] including zero and infinity."
+  (bounds 0.0 m/inf+))
+
+(def bounds-prob
+  "Probability domain [0, 1] with closed endpoints for standard probabilities."
+  (bounds 0.0 1.0))
+
+(def bounds-open-prob
+  "Open probability domain (0, 1) excluding endpoints 0 and 1."
+  (bounds 0.0 1.0 true true))
+
+(def bounds-long-non-
+  "Non-negative long integer domain [0, max-long] with closed endpoints."
+  (bounds 0 m/max-long))
+
+(def bounds-long
+  "Full long integer domain [min-long, max-long] with closed endpoints."
+  (bounds m/min-long m/max-long false false))
+
+(def bounds-long+
+  "Positive long integer domain (0, max-long] excluding zero."
+  (bounds 0 m/max-long true false))
 
 (defn vector-bounds
   "Returns a vector of bounds."
@@ -277,8 +354,8 @@
   [bound-coll]
   (reduce (fn [[bound open-bound?] [bound2 open-bound2?]]
             (cond (< bound bound2) [bound open-bound?]
-                  (< bound2 bound) [bound2 open-bound2?]
-                  :else [bound (and open-bound? open-bound2?)]))
+              (< bound2 bound) [bound2 open-bound2?]
+              :else [bound (and open-bound? open-bound2?)]))
     [m/inf+ false]
     bound-coll))
 
@@ -286,8 +363,8 @@
   [bound-coll]
   (reduce (fn [[bound open-bound?] [bound2 open-bound2?]]
             (cond (> bound bound2) [bound open-bound?]
-                  (> bound2 bound) [bound2 open-bound2?]
-                  :else [bound (and open-bound? open-bound2?)]))
+              (> bound2 bound) [bound2 open-bound2?]
+              :else [bound (and open-bound? open-bound2?)]))
     [m/inf- false]
     bound-coll))
 
