@@ -52,11 +52,11 @@
     (trim-number-as-string \"5.000\")   ;=> \"5\""
   [s]
   (let [s (cond (str/starts-with? s "-0")
-                (trim-number-as-string
-                  (str "-" (strings/trim-start s "-0")))
+            (trim-number-as-string
+              (str "-" (strings/trim-start s "-0")))
 
-                (str/includes? s ".") (strings/trim-end s "0")
-                :else s)]
+            (str/includes? s ".") (strings/trim-end s "0")
+            :else s)]
     (strings/trim-start s "0")))
 
 (s/fdef trim-number-as-string
@@ -165,7 +165,28 @@
 
 ;;;SHORTHAND
 (defn unparse-shorthand
-  "Converts `number` into shorthand."
+  "Converts numbers to shorthand notation with K, M, B, T suffixes.
+  
+  Formats large numbers using shorthand suffixes (K=thousands, M=millions, 
+  B=billions, T=trillions) within the specified `max-length` character limit.
+  Automatically falls back to standard formatting for very large numbers or 
+  when shorthand doesn't provide space savings.
+  
+  Parameters:
+    max-length - Maximum number of characters in the output string
+  
+  Options:
+    ::max-decimal-places - Limit decimal precision
+    ::max-digits - Limit significant digits in scientific notation  
+    ::money? - Add $ prefix for currency formatting
+  
+  Examples:
+    (unparse-shorthand 1500 5)                    ;=> \"1.5K\"
+    (unparse-shorthand 2300000 6)                 ;=> \"2.3M\"
+    (unparse-shorthand 1500 5 {::money? true})    ;=> \"$1.5K\"
+    (unparse-shorthand -500000 7 {::money? true}) ;=> \"-$500K\"
+    (unparse-shorthand 42 5)                      ;=> \"42\"
+    (unparse-shorthand ##NaN 5)                   ;=> \"NaN\""
   ([number max-length] (unparse-shorthand number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits money?]}]
    (cond
@@ -196,13 +217,13 @@
                                       adjusted-number)]
                  (str without-ending letter)))
            s (cond (>= absolute-value 1e15)
-                   (format-number shortened-number max-length)
+               (format-number shortened-number max-length)
 
-                   (>= absolute-value (by-letter "T")) (f shortened-number "T")
-                   (>= absolute-value (by-letter "B")) (f shortened-number "B")
-                   (>= absolute-value (by-letter "M")) (f shortened-number "M")
-                   (>= absolute-value (by-letter "K")) (f shortened-number "K")
-                   :else (format-number shortened-number max-length))]
+               (>= absolute-value (by-letter "T")) (f shortened-number "T")
+               (>= absolute-value (by-letter "B")) (f shortened-number "B")
+               (>= absolute-value (by-letter "M")) (f shortened-number "M")
+               (>= absolute-value (by-letter "K")) (f shortened-number "K")
+               :else (format-number shortened-number max-length))]
        (if money?
          (if (neg? shortened-number)
            (str "-$" (strings/rest-string s))
@@ -235,10 +256,10 @@
   [s]
   (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
 
-                            (str/starts-with? s "-$")
-                            (str "-" (strings/trim-start s "-$"))
+                        (str/starts-with? s "-$")
+                        (str "-" (strings/trim-start s "-$"))
 
-                            :else s)]
+                        :else s)]
     (case removed-money
       "NaN" m/nan
       "Inf" m/inf+
@@ -248,13 +269,13 @@
                   (when (number? n)
                     (* (by-letter letter) n))))]
         (try (cond (str/ends-with? removed-money "T") (f removed-money "T")
-                   (str/ends-with? removed-money "B") (f removed-money "B")
-                   (str/ends-with? removed-money "M") (f removed-money "M")
-                   (str/ends-with? removed-money "K") (f removed-money "K")
-                   :else (let [n (read-string removed-money)]
-                           (when (number? n)
-                             n)))
-             (catch Exception _ nil))))))
+               (str/ends-with? removed-money "B") (f removed-money "B")
+               (str/ends-with? removed-money "M") (f removed-money "M")
+               (str/ends-with? removed-money "K") (f removed-money "K")
+               :else (let [n (read-string removed-money)]
+                       (when (number? n)
+                         n)))
+          (catch Exception _ nil))))))
 
 (s/fdef parse-shorthand
   :args (s/cat :s string?)
