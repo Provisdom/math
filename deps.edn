@@ -9,7 +9,7 @@
                                            org.clojure/test.check           {:mvn/version "1.1.1"}
                                            orchestra/orchestra              {:mvn/version "2021.01.01-1"}
                                            provisdom/test                   {:git/url "https://github.com/Provisdom/test.git"
-                                                                             :sha     "cc19437a48bb368244c2dd0e8d240dacad1e8582"}}}
+                                                                             :sha     "8d4fb1a50a23168f2f63f19cb571bdf9ba5ba9c6"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
