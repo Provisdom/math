@@ -656,11 +656,11 @@
     (is= [[1.0]]
       (mx/filter-symmetric-matrix (fn [v]
                                     (< (apply + (tensor/emap m/sq v)) 2.0))
-        [[1.0 0.5] [0.5 4.0]])))
+        [[1.0 0.5] [0.5 4.0]]))))
 
-  (def s
-    [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-     [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]))
+(def s
+  [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+   [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
 
 (deftest matrix-partition-test
   (with-instrument `mx/matrix-partition
