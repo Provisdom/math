@@ -9,7 +9,8 @@
   - Specialized bounds for positive definite matrices
   
   Intervals are represented as [lower, upper] vectors.
-  Bounds are maps with ::lower, ::upper, ::open-lower?, ::open-upper? keys."
+  Bounds are maps with `::lower`, `::upper`, `::open-lower?`, `::open-upper?`
+    keys."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -24,11 +25,22 @@
   ([spec] `(interval-spec ~spec ~spec))
   ([lower upper & {:keys [compare-op]
                    :or   {compare-op `>=}}]
-   `(s/with-gen
-      (s/and (s/tuple ~lower ~upper)
-        (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
-                            (and (m/nan? ~'x1) (m/nan? ~'x2)))))
-      #(gen/fmap (comp vec sort) (gen/tuple (s/gen ~lower) (s/gen ~upper))))))
+   (let [lower-is-keyword? (keyword? lower)
+         upper-is-keyword? (keyword? upper)
+         lower-spec (if lower-is-keyword? lower `number?)
+         upper-spec (if upper-is-keyword? upper `number?)
+         lower-gen (if lower-is-keyword? 
+                     `(s/gen ~lower) 
+                     `(gen/return ~lower))
+         upper-gen (if upper-is-keyword? 
+                     `(s/gen ~upper) 
+                     `(gen/return ~upper))]
+     `(s/with-gen
+        (s/and (s/tuple ~lower-spec ~upper-spec)
+          (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
+                              (and (m/nan? ~'x1) (m/nan? ~'x2)))))
+        #(gen/fmap (comp vec sort) 
+                   (gen/tuple ~lower-gen ~upper-gen))))))
 
 (defmacro strict-interval-spec
   ([spec] `(strict-interval-spec ~spec ~spec))
