@@ -213,26 +213,60 @@
                  m2          m/max-dbl
                  min-columns 1
                  min-rows    0}}]
-  `(s/with-gen
-     (fn [x]
-       (and
-         (and (vector? x)
-              (vector? (first x))
-              (not (and (empty? (first x)) (> (count x) 1)))
-              (>= (rows x) min-rows)
-              (>= (columns x) min-columns)
-              (every?
-                #(and (vector? %)
-                      (= (count %) (count (first x)))
-                      (every? (fn [e] (and (m/finite? e) (>= e m1) (<= e m2)))
-                              %))
-                x))))
-     #(gen/bind (gen/large-integer* {:min min-rows :max (+ min-rows mdl)})
-                (fn [i]
-                  (gen/vector
-                    (gen/vector (m/finite-spec {:min m1 :max m2}) i)
-                    min-columns
-                    (dec (+ min-columns mdl)))))))
+  (let [x-sym (gensym "x")
+        e-sym (gensym "e")
+        columns-sym (gensym "columns")
+        rows-sym (gensym "rows")]
+    `(s/with-gen
+       (fn [~x-sym]
+         (and
+           (and (vector? ~x-sym)
+                (vector? (first ~x-sym))
+                (not (and (empty? (first ~x-sym)) (> (count ~x-sym) 1)))
+                (>= (rows ~x-sym) ~min-rows)
+                (>= (columns ~x-sym) ~min-columns)
+                (every?
+                  #(and (vector? %)
+                        (= (count %) (count (first ~x-sym)))
+                        (every? (fn [~e-sym] (and (m/finite? ~e-sym) (>= ~e-sym ~m1) (<= ~e-sym ~m2)))
+                                %))
+                  ~x-sym))))
+       #(gen/bind (gen/large-integer* {:min ~min-columns :max (+ ~min-columns mdl)})
+                  (fn [~columns-sym]
+                    (gen/bind (gen/large-integer* {:min ~min-rows :max (+ ~min-rows mdl)})
+                             (fn [~rows-sym]
+                               (gen/vector
+                                 (gen/vector (m/finite-spec {:min ~m1 :max ~m2}) ~columns-sym)
+                                 ~rows-sym))))))))
+
+(defmacro sized-matrix-finite-spec
+  [{m1           :min
+    m2           :max
+    column-count :column-count
+    row-count    :row-count
+    :or          {m1           m/min-dbl
+                  m2           m/max-dbl
+                  column-count 1
+                  row-count    1}}]
+  (let [x-sym (gensym "x")
+        e-sym (gensym "e")]
+    `(s/with-gen
+       (fn [~x-sym]
+         (and
+           (and (vector? ~x-sym)
+                (vector? (first ~x-sym))
+                (not (and (empty? (first ~x-sym)) (> (count ~x-sym) 1)))
+                (= (rows ~x-sym) ~row-count)
+                (= (columns ~x-sym) ~column-count)
+                (every?
+                  #(and (vector? %)
+                        (= (count %) (count (first ~x-sym)))
+                        (every? (fn [~e-sym] (and (m/finite? ~e-sym) (>= ~e-sym ~m1) (<= ~e-sym ~m2)))
+                                %))
+                  ~x-sym))))
+       #(gen/vector
+          (gen/vector (m/finite-spec {:min ~m1 :max ~m2}) ~column-count)
+          ~row-count))))
 
 (defn matrix-finite-non-?
   "Returns true if x is a valid matrix of finite non-negative numbers.
