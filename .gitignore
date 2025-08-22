@@ -19,9 +19,10 @@ node_modules
 .nrepl-history
 project.clj
 .cpcache
-.clj-kondo
-.lsp
+.lsp/.cache/
+.lsp/sqlite.*.db
 .shadow-cljs
+.clerk
 
 # ================================
 # IDE & Editor Files
@@ -36,6 +37,7 @@ project.clj
 .env
 .envrc
 .local
+.cache
 
 # ================================
 # Operating System Files
