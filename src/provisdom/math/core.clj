@@ -269,7 +269,7 @@ type of output the user wants is generally known.")
     (finite? ##Inf)   ;=> false
     (finite? ##NaN)   ;=> false"
   [x]
-  (and (num? x) (not (Double/isInfinite (double x)))))
+  (and (num? x) (not (infinite? (double x)))))
 
 (s/def ::finite
   (s/spec finite?
@@ -301,7 +301,7 @@ type of output the user wants is generally known.")
 (defn finite+?
   "Returns true if `x` is a positive finite number."
   [x]
-  (and (pos? x) (not (Double/isInfinite ^double x))))
+  (and (pos? x) (not (infinite? x))))
 
 (s/def ::finite+
   (s/spec finite+?
@@ -328,7 +328,7 @@ type of output the user wants is generally known.")
 (defn finite-?
   "Returns true if `x` is a negative finite number."
   [x]
-  (and (neg? x) (not (Double/isInfinite ^double x))))
+  (and (neg? x) (not (infinite? x))))
 
 (s/def ::finite-
   (s/spec finite-?
@@ -348,7 +348,7 @@ type of output the user wants is generally known.")
 (defn finite-non-?
   "Returns true if `x` is a non-negative finite number."
   [x]
-  (and (non-? x) (not (Double/isInfinite ^double x))))
+  (and (non-? x) (not (infinite? x))))
 
 (s/def ::finite-non-
   (s/spec finite-non-?
@@ -374,7 +374,7 @@ type of output the user wants is generally known.")
 (defn finite-non+?
   "Returns true if `x` is a non-positive finite number."
   [x]
-  (and (non+? x) (not (Double/isInfinite ^double x))))
+  (and (non+? x) (not (infinite? x))))
 
 (s/def ::finite-non+
   (s/spec finite-non+?
@@ -394,9 +394,7 @@ type of output the user wants is generally known.")
 (defn double-finite?
   "Returns true if `x` is a double and finite."
   [x]
-  (and (double? x)
-       (== x x)
-       (not (Double/isInfinite ^double x))))
+  (and (double? x) (== x x) (not (infinite? x))))
 
 (s/def ::double-finite
   (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
@@ -418,7 +416,7 @@ type of output the user wants is generally known.")
   (and (double? x)
        (or (sgl-range? x)
            (not (== x x))
-           (Double/isInfinite ^double x))))
+           (infinite? x))))
 
 (s/def ::single
   (s/spec single? :gen #(gen/double)))
@@ -606,7 +604,7 @@ type of output the user wants is generally known.")
   "Returns true if `x` is Inf+."
   [x]
   (and (number? x)
-       (Double/isInfinite ^double x)
+       (infinite? x)
        (pos? x)))
 
 (s/def ::non-inf+
@@ -620,7 +618,7 @@ type of output the user wants is generally known.")
 (defn inf-?
   "Returns true if `x` is Inf-."
   [x]
-  (and (number? x) (Double/isInfinite (double x)) (neg? x)))
+  (and (number? x) (infinite? (double x)) (neg? x)))
 
 (s/def ::non-inf-
   (s/spec #(and (num? %) (not (inf-? %)))
@@ -633,7 +631,7 @@ type of output the user wants is generally known.")
 (defn inf?
   "Returns true if `x` is Inf+ or Inf-."
   [x]
-  (and (number? x) (Double/isInfinite (double x))))
+  (and (number? x) (infinite? (double x))))
 
 (s/def ::inf
   (s/spec inf?
