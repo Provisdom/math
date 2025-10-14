@@ -27,8 +27,7 @@ project.clj
 # ================================
 # IDE & Editor Files
 # ================================
-.idea/
-*.iml
+.idea/libraries
 .calva
 
 # ================================
@@ -38,6 +37,7 @@ project.clj
 .envrc
 .local
 .cache
+.claude/settings.local.json
 
 # ================================
 # Operating System Files
