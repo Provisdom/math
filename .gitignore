@@ -25,6 +25,7 @@ project.clj
 .clerk
 .clojure-mcp
 !.clojure-mcp/config.edn
+public/build
 
 # ================================
 # IDE & Editor Files
