@@ -23,6 +23,8 @@ project.clj
 .lsp/sqlite.*.db
 .shadow-cljs
 .clerk
+.clojure-mcp
+!.clojure-mcp/config.edn
 
 # ================================
 # IDE & Editor Files
