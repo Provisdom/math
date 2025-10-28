@@ -4,4 +4,4 @@
  :insert-missing-whitespace? false
  :indent-line-comments? true
  :function-arguments-indentation :cursive
- :indents {#re "^\\w" [[:inner 0]]}}
+ :indents {#re ".*" [[:inner 0]]}}
