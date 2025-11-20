@@ -24,7 +24,7 @@
     <orderEntry type="library" name="Deps: orchestra:2021.01.01-1" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/tools.reader:1.5.0" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/test.check:1.1.1" level="project" />
-    <orderEntry type="library" name="Deps: provisdom/test:e64700" level="project" />
+    <orderEntry type="library" name="Deps: provisdom/test:c3247f" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.memoize:1.1.266" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/data.priority-map:1.2.0" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.cache:1.1.234" level="project" />
