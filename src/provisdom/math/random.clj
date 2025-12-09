@@ -1,23 +1,25 @@
 (ns provisdom.math.random
   "Random number generation and probability distributions.
-  
-  Provides high-quality random number generators and implementations of 
+
+  Provides high-quality random number generators and implementations of
   common probability distributions including:
   - Uniform, normal (Gaussian), exponential, gamma distributions
-  - Beta, chi-squared, Student's t, F distributions  
+  - Beta, chi-squared, Student's t, F distributions
   - Discrete distributions (binomial, Poisson, etc.)
   - Multivariate distributions
-  
+
   Uses splittable random number generators for reproducible parallel computation.
   All functions support both seeded and unseeded generation."
+  (:refer-clojure :exclude [random-uuid])
   (:require
+    [clojure.core.reducers :as reducers]
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.core.reducers :as reducers]
     [provisdom.math.core :as m]
     [provisdom.math.internal-splittable-random :as split]
     [provisdom.math.intervals :as intervals]
-    [provisdom.math.special-functions :as special-fns]))
+    [provisdom.math.special-functions :as special-fns])
+  (:import (java.util UUID)))
 
 (def mdl 6)
 
@@ -71,13 +73,13 @@
 
 (defn random-normal
   "Converts uniform random value `rnd` to a standard normal distribution.
-  
+
   Uses the inverse CDF transformation method to generate normally
   distributed values with mean=0 and standard deviation=1.
-  
+
   Parameters:
     `rnd` - Random double in [0,1)
-  
+
   Returns a normally distributed value."
   [rnd]
   (special-fns/inv-cdf-standard-normal rnd))
@@ -85,6 +87,30 @@
 (s/fdef random-normal
         :args (s/cat :rnd ::rnd)
         :ret ::m/num)
+
+(defn random-uuid
+  "Converts two random doubles to a UUID (version 4).
+
+  Creates a random UUID following RFC 4122 version 4 format.
+  Requires two random values since a UUID needs 128 bits of randomness.
+
+  Parameters:
+    `rnd1` - Random double in [0,1) for most significant bits
+    `rnd2` - Random double in [0,1) for least significant bits
+
+  Returns a random java.util.UUID."
+  [rnd1 rnd2]
+  (let [msb (-> (random-long rnd1)
+                (bit-and (unchecked-long 0xffffffffffff0fff))
+                (bit-or (unchecked-long 0x0000000000004000)))
+        lsb (-> (random-long rnd2)
+                (bit-and (unchecked-long 0x3fffffffffffffff))
+                (bit-or (unchecked-long 0x8000000000000000)))]
+    (UUID. msb lsb)))
+
+(s/fdef random-uuid
+        :args (s/cat :rnd1 ::rnd :rnd2 ::rnd)
+        :ret uuid?)
 
 ;;;IMMUTABLE RNG
 (defn rng
@@ -168,6 +194,24 @@
 (s/fdef rnd-normal
         :args (s/cat :rng ::rng)
         :ret ::m/num)
+
+(defn rnd-uuid
+  "Generates a random UUID (version 4) from `rng`.
+
+  Creates a random UUID following RFC 4122 version 4 format,
+  using two independent random doubles from split RNGs.
+
+  Parameters:
+    `rng` - Random number generator
+
+  Returns a random java.util.UUID."
+  [rng]
+  (let [[rng1 rng2] (split/split rng)]
+    (random-uuid (rnd rng1) (rnd rng2))))
+
+(s/fdef rnd-uuid
+        :args (s/cat :rng ::rng)
+        :ret uuid?)
 
 (defn rng-lazy
   "Creates a lazy sequence of independent RNG instances.
@@ -264,7 +308,7 @@
     interval - Optional [lower upper] bounds (default: [0, 1])
   
   Returns a uniformly distributed double within the interval.
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   ([] (rnd (rng!)))
   ([[lower upper]] (rnd (rng!) [lower upper])))
 
@@ -291,7 +335,7 @@
   "Generates a random boolean using the bound RNG.
   
   Returns true or false with equal probability.
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-bool (rng!)))
 
@@ -303,7 +347,7 @@
   "Generates a normally distributed value using the bound RNG.
   
   Returns a value from standard normal distribution (mean=0, std=1).
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-normal (rng!)))
 
@@ -311,11 +355,23 @@
         :args (s/cat)
         :ret ::m/num)
 
+(defn rnd-uuid!
+  "Generates a random UUID (version 4) using the bound RNG.
+
+  Returns a random java.util.UUID.
+  Requires the bound RNG context (bind-seed or set-seed!)."
+  []
+  (rnd-uuid (rng!)))
+
+(s/fdef rnd-uuid!
+        :args (s/cat)
+        :ret uuid?)
+
 (defn rng-lazy!
   "Creates a lazy sequence of independent RNGs using the bound RNG.
-  
+
   Returns a lazy sequence of RNG instances, each split from the previous.
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   []
   (rng-lazy (rng!)))
 
@@ -327,7 +383,7 @@
   "Creates a lazy sequence of random doubles using the bound RNG.
   
   Returns a lazy sequence of doubles in [0, 1).
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-lazy (rng!)))
 
@@ -339,7 +395,7 @@
   "Creates a lazy sequence of random longs using the bound RNG.
   
   Returns a lazy sequence of random longs.
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   []
   (rnd-long-lazy (rng!)))
 
