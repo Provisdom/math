@@ -752,29 +752,29 @@
 (defn- symmetric-row-fill
   [r c size numbers]
   (get numbers
-    (+ c
-      (* r size)
-      (* -1 m/half (+ r (m/sq' r))))
+    (long (+ c
+             (* r size)
+             (* -0.5 (+ r (m/sq' r)))))
     m/nan))
 
 (defn- symmetric-column-fill
   [r c numbers]
   (get numbers
-    (+ r (* m/half c (inc c)))
+    (long (+ r (* 0.5 c (inc c))))
     m/nan))
 
 (defn- symmetric-without-diagonal-row-fill
   [r c size numbers]
   (get numbers
-    (+ c
-      (* r size)
-      (* -1 m/half (+ (inc r) (m/sq' (inc r)))))
+    (long (+ c
+             (* r size)
+             (* -0.5 (+ (inc r) (m/sq' (inc r))))))
     m/nan))
 
 (defn- symmetric-without-diagonal-column-fill
   [r c numbers]
   (get numbers
-    (+ r (* m/half c (dec c)))
+    (long (+ r (* 0.5 c (dec c))))
     m/nan))
 
 (defn deserialize-upper-triangular-matrix

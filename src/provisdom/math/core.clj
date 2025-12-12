@@ -1,39 +1,56 @@
 (ns provisdom.math.core
   "Core mathematical functions and constants for numerical computation.
-  
-  Provides fundamental operations, constants, type predicates, and rounding functions.
-  Functions return doubles by default unless marked with ' (apostrophe) which attempts
-  to return longs when possible. Example: (floor' 3.0) returns 3 (long).
-  
-  Key features:
-  - Mathematical constants (PI, E, sqrt-two, etc.)
-  - Enhanced numeric type predicates that handle NaN/infinity
-  - Robust arithmetic with division-by-zero handling
-  - High-precision rounding and comparison functions
-  - Angle conversion utilities"
+
+  This namespace provides the foundation for all provisdom.math libraries:
+
+  ## Constants
+  Mathematical constants with full double precision: PI, E, sqrt-two, sqrt-pi,
+  log-two, log-pi, inv-sqrt-two-pi, and many derived values. Also includes
+  system limits: max-dbl, min-dbl, max-long, tiny-dbl, etc.
+
+  ## Type Predicates
+  IEEE 754-aware predicates that correctly handle NaN and infinity:
+  - Sign: pos?, neg?, non-?, non+?
+  - Finiteness: finite?, finite+?, finite-?, inf?, inf+?, inf-?, nan?
+  - Ranges: prob? (0-1), open-prob?, corr? (-1 to 1), open-corr?
+  - Integer types: long?, int?, long-able?, roughly-round?
+
+  ## Arithmetic
+  Safe operations that handle edge cases gracefully:
+  - div: division with proper 0/0 → NaN, n/0 → ±Inf handling
+  - sq, cube, sqrt, cbrt, pow, exp, log, log2, log10, logn
+  - sgn: sign function returning -1, 0, 1, or NaN
+
+  ## Rounding & Comparison
+  - floor, ceil, round with configurable rounding modes
+  - roughly?: approximate equality within tolerance
+  - roughly-floor, roughly-ceil: tolerance-aware rounding
+  - round-significant: round to N significant digits
+
+  ## Trigonometry
+  Standard and hyperbolic: sin, cos, tan, asin, acos, atan, atan2,
+  sinh, cosh, tanh, asinh, acosh, atanh, hypot
+
+  ## Angle Conversion
+  radians->angle', angle->radians', reduce-angle', reduce-radians'
+
+  ## Apostrophe Convention
+  Functions marked with ' (e.g., floor', mod', sq') return longs when the
+  result fits in long range, otherwise doubles. Unmarked functions always
+  return doubles for consistency and to avoid overflow surprises."
   (:refer-clojure :exclude [abs int? neg? pos?])
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]))
-
-(comment "May want to write about philosophy of math.core.  Types are not
-conserved by default. The output of the functions are doubles unless otherwise
-specified. Other functions have a ' marking, e.g., mod' that signify they will
-attempt to return a long if possible, otherwise a double.  The idea is that the
-type of output the user wants is generally known.")
 
 ;;;DECLARATIONS
 (declare ceil' floor floor' nan? next-down next-up non-? non+? roughly-round?)
 
 ;;;MATH CONSTANTS
 (def ^:const ^long sgl-digits 6)
-(def ^:const ^long dbl-digits 15)
-(def ^:const ^long long-digits 18)
-(def ^:const ^long quad-digits 33)
 (def ^:const ^double sgl-close 1e-6)
 (def ^:const ^double dbl-close 1e-15)
 (def ^:const ^double quad-close 1e-33)
-(def ^:const half (/ 2))
 (def ^:const ^double E Math/E)
 (def ^:const ^double PI Math/PI)
 (def ^:const ^double nan Double/NaN)
@@ -52,9 +69,7 @@ type of output the user wants is generally known.")
 (def ^:const ^long min-int Integer/MIN_VALUE)
 (def ^:const ^double log-half (Math/log 0.5))               ;;since marked as const, should use Math/log
 (def ^:const ^double log-two (Math/log 2.0))
-(def ^:const ^double log-ten (Math/log 10.0))
 (def ^:const ^double log-pi (Math/log PI))
-(def ^:const ^double log-pi-squared (* 2.0 log-pi))
 (def ^:const ^double log-two-pi (+ log-two log-pi))
 (def ^:const ^double log-two-pi-e (+ (Math/log E) log-two-pi))
 (def ^:const ^double half-log-two-pi (* 0.5 log-two-pi))
@@ -64,25 +79,27 @@ type of output the user wants is generally known.")
 (def ^:const ^double sqrt-two (Math/sqrt 2.0))
 (def ^:const ^double sqrt-half (/ sqrt-two))
 (def ^:const ^double sqrt-pi (Math/sqrt PI))
-(def ^:const ^double sqrt-two-pi (* sqrt-two sqrt-pi))
 (def ^:const ^double sqrt-half-pi (* sqrt-half sqrt-pi))
 (def ^:const ^double inv-pi (/ PI))
 (def ^:const ^double inv-sqrt-pi (/ sqrt-pi))
 (def ^:const ^double inv-sqrt-two (/ sqrt-two))
 (def ^:const ^double inv-two-pi (* 0.5 inv-pi))
 (def ^:const ^double inv-sqrt-two-pi (* inv-sqrt-two inv-sqrt-pi))
-(def ^:const ^double inv-log-two (/ log-two))
 
 ;;;TEST FOR NUMERIC TYPES
 (defn- long-range?
+  "Returns true if x is within the range representable by a long."
   [x]
   (and (<= x max-long) (>= x min-long)))
 
 (defn- maybe-long-range
+  "Coerces x to long if it's within long range, otherwise returns x unchanged.
+  Does NOT check if x is an integer - use maybe-long-able for that."
   [x]
   (if (long-range? x) (long x) x))
 
 (defn- int-range?
+  "Returns true if x is within the range representable by an int."
   [x]
   (and (<= x max-int) (>= x min-int)))
 
@@ -498,7 +515,7 @@ type of output the user wants is generally known.")
   (s/spec long-non+? :gen #(s/gen (s/int-in min-long 1))))
 
 (defn int?
-  "Returns true is `x` is an integer that is within the int range."
+  "Returns true if `x` is an integer that is within the int range."
   [x]
   (and (integer? x) (int-range? x)))
 
@@ -597,7 +614,7 @@ type of output the user wants is generally known.")
           :gen #(s/gen (s/double-in :NaN? false))))
 
 (s/def ::nan-or-non-roughly-round-non+
-  (s/spec #(and (number? %) (or nan (not (roughly-round? % 0.0))))
+  (s/spec #(and (number? %) (or (nan? %) (not (roughly-round? % 0.0))))
           :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf+?
@@ -706,7 +723,9 @@ type of output the user wants is generally known.")
           :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0)))))
 
 (defn maybe-long-able
-  "Returns `x` as a long if possible.  Otherwise, returns x."
+  "Coerces x to long if it's an integer value within long range, otherwise
+  returns x unchanged. Unlike maybe-long-range (private), this checks that x
+  is actually an integer (via roughly-round?) before converting."
   [x]
   (if (long-able? x)
     (long x)
@@ -715,7 +734,7 @@ type of output the user wants is generally known.")
 ;;;BASIC MATH
 (defn ===
   "Equality for numbers that works with NaN."
-  ([number] true)
+  ([_number] true)
   ([number1 number2]
    (or (and (nan? number1) (nan? number2))
        (== number1 number2)))
@@ -1001,9 +1020,9 @@ type of output the user wants is generally known.")
   :ret ::nan-or-non-)
 
 (defn cbrt
-  "Returns cube root of `number`."
+  "Returns cube root of `number`. Handles negative numbers correctly."
   [number]
-  (* (sgn number) (pow (abs number) (/ 3.0))))
+  (Math/cbrt (double number)))
 
 (s/fdef cbrt
   :args (s/cat :number ::number)
@@ -1074,11 +1093,14 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn acosh
-  "Returns inverse hyperbolic cosine of `number`."
+  "Returns inverse hyperbolic cosine of `number`.
+
+  Uses asymptotic formula log(2x) for large x to avoid precision loss."
   [number]
-  (if-not (>= number 1)
-    nan
-    (-> (double number) sq dec sqrt (+ number) log)))
+  (cond (not (>= number 1)) nan
+        ;; For large x, use log(2x) = log(2) + log(x) to avoid overflow in x^2
+        (> number 1e8) (+ log-two (log number))
+        :else (-> (double number) sq dec sqrt (+ number) log)))
 
 (s/fdef acosh
   :args (s/cat :number ::number)
@@ -1121,12 +1143,17 @@ type of output the user wants is generally known.")
   :ret ::number)
 
 (defn atanh
-  "Returns inverse hyperbolic tangent."
+  "Returns inverse hyperbolic tangent of `number`.
+
+  Computes atanh(x) = 0.5 × ln((1+x)/(1-x)).
+  Domain: (-1, 1), returns NaN outside this range.
+  atanh(±1) = ±∞"
   [number]
   (cond (not (corr? number)) nan
         (one? number) inf+
         (== number -1) inf-
-        :else (-> (double number) inc log (* -0.5))))
+        :else (* 0.5 (- (log (inc (double number)))
+                        (log (- 1.0 number))))))
 
 (s/fdef atanh
   :args (s/cat :number ::number)
@@ -1400,14 +1427,19 @@ type of output the user wants is generally known.")
   :ret boolean?)
 
 ;;;QUOTIENTS
+(defn- quotient-invalid?
+  "Returns true if numerator/divisor pair is invalid for quotient operations."
+  [numerator divisor]
+  (or (nan? divisor)
+      (nan? numerator)
+      (inf? numerator)
+      (inf? divisor)
+      (zero? divisor)))
+
 (defn quot'
   "Quotient of dividing `numerator` by `divisor`. Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor)
-          (nan? numerator)
-          (inf? numerator)
-          (inf? divisor)
-          (zero? divisor))
+  (if (quotient-invalid? numerator divisor)
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
@@ -1425,11 +1457,7 @@ type of output the user wants is generally known.")
   sign of `divisor` unless numerical rounding error with [[quot']]. Will stay
   consistent with [[quot']]. Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor)
-          (nan? numerator)
-          (inf? numerator)
-          (inf? divisor)
-          (zero? divisor))
+  (if (quotient-invalid? numerator divisor)
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
@@ -1447,11 +1475,7 @@ type of output the user wants is generally known.")
   unless numerical rounding error with [[quot']]. Will stay consistent with
   [[quot']]. Returns a long if possible."
   [numerator divisor]
-  (if (or (nan? divisor)
-          (nan? numerator)
-          (inf? numerator)
-          (inf? divisor)
-          (zero? divisor))
+  (if (quotient-invalid? numerator divisor)
     nan
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
@@ -1492,16 +1516,39 @@ type of output the user wants is generally known.")
   :ret (s/tuple ::number ::number))
 
 (defn gcd
-  "Returns the Greatest Common Divisor (Denominator) of two longs."
+  "Returns the Greatest Common Divisor (Denominator) of two longs.
+
+  Handles negative numbers by taking absolute values. Returns a non-negative
+  result. gcd(0, 0) returns 0."
   [long1 long2]
-  (if (zero? long2)
-    long1
-    (recur long2 (mod' long1 long2))))
+  (let [a (abs' long1)
+        b (abs' long2)]
+    (if (zero? b)
+      a
+      (recur b (mod' a b)))))
 
 (s/fdef gcd
-  :args (s/cat :long1 ::long+
-               :long2 ::long+)
-  :ret ::long+)
+  :args (s/cat :long1 ::long
+               :long2 ::long)
+  :ret ::long-non-)
+
+(defn lcm'
+  "Returns the Least Common Multiple of two longs. Returns a long if possible.
+
+  Handles negative numbers by taking absolute values. Returns a non-negative
+  result. lcm(0, n) = lcm(n, 0) = 0. Returns a double if the result overflows
+  long range."
+  [long1 long2]
+  (let [a (abs' long1)
+        b (abs' long2)]
+    (if (or (zero? a) (zero? b))
+      0
+      (maybe-long-able (* (double (quot' a (gcd a b))) b)))))
+
+(s/fdef lcm'
+  :args (s/cat :long1 ::long
+               :long2 ::long)
+  :ret ::non-)
 
 ;;;ANGLES
 (defn reduce-angle'

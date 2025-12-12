@@ -730,7 +730,8 @@
     (is (spec-check m/atanh)))
   (with-instrument (st/instrumentable-syms)
     (is= 0.0 (m/atanh 0.0))
-    (is= -0.2027325540540822 (m/atanh 0.5))
+    (is (approx= 0.5493061443340549 (m/atanh 0.5) :tolerance 1e-14))
+    (is (approx= -0.5493061443340549 (m/atanh -0.5) :tolerance 1e-14))
     (is= m/inf- (m/atanh -1.0))
     (is= m/inf+ (m/atanh 1.0))
     (is (m/nan? (m/atanh -2.0)))
@@ -1122,7 +1123,28 @@
   (with-instrument `m/gcd
     (is (spec-check m/gcd)))
   (with-instrument (st/instrumentable-syms)
-    (is= 7 (m/gcd 271284701247 12467364728))))
+    (is= 7 (m/gcd 271284701247 12467364728))
+    (is= 6 (m/gcd 12 18))
+    (is= 6 (m/gcd -12 18))
+    (is= 6 (m/gcd 12 -18))
+    (is= 6 (m/gcd -12 -18))
+    (is= 5 (m/gcd 0 5))
+    (is= 5 (m/gcd 5 0))
+    (is= 0 (m/gcd 0 0))))
+
+(deftest lcm'-test
+  (with-instrument `m/lcm'
+    (is (spec-check m/lcm')))
+  (with-instrument (st/instrumentable-syms)
+    (is= 36 (m/lcm' 12 18))
+    (is= 36 (m/lcm' -12 18))
+    (is= 36 (m/lcm' 12 -18))
+    (is= 36 (m/lcm' -12 -18))
+    (is= 0 (m/lcm' 0 5))
+    (is= 0 (m/lcm' 5 0))
+    (is= 0 (m/lcm' 0 0))
+    (is= 12 (m/lcm' 4 6))
+    (is= 15 (m/lcm' 5 15))))
 
 ;;;ANGLES
 (deftest reduce-angle'-test
