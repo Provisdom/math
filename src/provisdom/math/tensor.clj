@@ -810,6 +810,23 @@
           :p (s/and ::m/finite+ #(>= % 1.0)))
   :ret ::m/number)
 
+(defn norm-inf
+  "Calculates the L-infinity norm (maximum norm) of `tensor`.
+
+  Returns the maximum absolute value among all elements.
+
+  Examples:
+    (norm-inf [-3 4]) ;=> 4.0
+    (norm-inf [[-1 2] [3 -4]]) ;=> 4.0"
+  [tensor]
+  (if (number? tensor)
+    (m/abs tensor)
+    (reduce max (map m/abs (flatten tensor)))))
+
+(s/fdef norm-inf
+  :args (s/cat :tensor ::tensor)
+  :ret ::m/number)
+
 (defn normalize1
   "Normalizes `tensor` to unit L1 norm.
   
@@ -858,6 +875,25 @@
 (s/fdef normalize-p
   :args (s/cat :tensor ::tensor
           :p (s/and ::m/finite+ #(>= % 1.0)))
+  :ret ::tensor)
+
+(defn normalize-inf
+  "Normalizes `tensor` to unit L-infinity norm.
+
+  Divides each element by the L-infinity norm of `tensor`, resulting in
+  a tensor where the maximum absolute value equals 1.
+
+  Examples:
+    (normalize-inf [3 -6]) ;=> [0.5 -1.0]
+    (normalize-inf [[2 -4] [1 3]]) ;=> [[0.5 -1.0] [0.25 0.75]]"
+  [tensor]
+  (let [n (norm-inf tensor)]
+    (if (zero? n)
+      tensor
+      (emap #(m/div % n) tensor))))
+
+(s/fdef normalize-inf
+  :args (s/cat :tensor ::tensor)
   :ret ::tensor)
 
 (defn inner-product

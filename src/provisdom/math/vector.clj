@@ -1,21 +1,23 @@
 (ns provisdom.math.vector
   "Vector operations and linear algebra primitives.
-  
-  Specialized vector functionality built on tensor operations:
-  - Vector arithmetic (addition, subtraction, scaling)
-  - Dot products, cross products, and norms
-  - Vector projections and orthogonalization  
-  - Probability vector operations and validation
-  - Kahan summation for improved numerical accuracy
-  - Statistical operations (mean, variance, etc.)
-  
-  Vectors are 1D tensors with specialized operations for linear algebra
-  and numerical stability."
+
+  Vectors are 1D tensors (Clojure vectors of numbers) with specialized
+  operations for numerical computation and probability distributions.
+
+  Core functionality:
+  - Type predicates and validation (vector?, probs?, open-probs?)
+  - Probability vector operations and normalization checks
+  - Vector construction (compute-vector, sparse->vector, rnd-vector!)
+  - Element access and filtering (indexes-of, filter-kv, some-kv)
+  - Manipulation (insertv, removev, concat-by-index, replace-nan)
+  - Linear algebra (dot-product, cross-product, projection)
+  - Kahan summation for improved numerical accuracy"
   (:refer-clojure :exclude [vector?])
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
+    [provisdom.math.intervals :as intervals]
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
@@ -742,3 +744,66 @@
                (fn [{:keys [v1 v2]}]
                  (= (count v1) (count v2))))
   :ret ::vector)
+
+(defn orthogonal?
+  "Returns true if vectors `v1` and `v2` are orthogonal within tolerance `accu`.
+
+  Two vectors are orthogonal (perpendicular) when their dot product is zero.
+  Uses the specified accuracy tolerance for floating-point comparison.
+
+  Examples:
+    (orthogonal? [1 0] [0 1] 1e-8) ;=> true
+    (orthogonal? [1 1] [1 -1] 1e-8) ;=> true
+    (orthogonal? [1 0] [1 1] 1e-8) ;=> false"
+  [v1 v2 accu]
+  (m/roughly? 0.0 (dot-product v1 v2) accu))
+
+(s/fdef orthogonal?
+  :args (s/and (s/cat :v1 ::vector :v2 ::vector :accu ::m/accu)
+               (fn [{:keys [v1 v2]}]
+                 (= (count v1) (count v2))))
+  :ret boolean?)
+
+(defn angle-between
+  "Returns the angle in radians between vectors `v1` and `v2`.
+
+  Computes the angle using the dot product formula:
+  θ = acos((v1 · v2) / (|v1| |v2|))
+
+  The result is always in the range [0, π].
+
+  Examples:
+    (angle-between [1 0] [0 1]) ;=> 1.5707963267948966 (π/2)
+    (angle-between [1 0] [1 0]) ;=> 0.0
+    (angle-between [1 0] [-1 0]) ;=> 3.141592653589793 (π)"
+  [v1 v2]
+  (let [dot (dot-product v1 v2)
+        n1 (tensor/norm v1)
+        n2 (tensor/norm v2)
+        cos-theta (intervals/bound-by-interval [-1.0 1.0] (m/div dot (* n1 n2)))]
+    (m/acos cos-theta)))
+
+(s/fdef angle-between
+  :args (s/and (s/cat :v1 ::vector :v2 ::vector)
+               (fn [{:keys [v1 v2]}]
+                 (= (count v1) (count v2))))
+  :ret ::m/number)
+
+(defn distance
+  "Returns the Euclidean distance between vectors `v1` and `v2`.
+
+  Computes the L2 norm of the difference: |v1 - v2|.
+  Treats vectors as points in n-dimensional space.
+
+  Examples:
+    (distance [0 0] [3 4]) ;=> 5.0
+    (distance [1 2 3] [1 2 3]) ;=> 0.0
+    (distance [0 0] [1 1]) ;=> 1.4142135623730951"
+  [v1 v2]
+  (tensor/norm (tensor/subtract v1 v2)))
+
+(s/fdef distance
+  :args (s/and (s/cat :v1 ::vector :v2 ::vector)
+               (fn [{:keys [v1 v2]}]
+                 (= (count v1) (count v2))))
+  :ret ::m/number)

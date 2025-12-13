@@ -142,16 +142,16 @@
     (t/is (t/spec-check tensor/every-kv?)))
   (t/with-instrument :all
     (t/is-not (tensor/every-kv? (fn [indices v]
-                                  (and (seq indices)
-                                    (> (first indices) v)))
+                                  (boolean (and (seq indices)
+                                             (> (first indices) v))))
                 [1.0 0.5]))
     (t/is (tensor/every-kv? (fn [indices v]
-                              (and (seq indices)
-                                (> (first indices) -1)))
+                              (boolean (and (seq indices)
+                                         (> (first indices) -1))))
             [1.0 0.5]))
     (t/is (tensor/every-kv? (fn [indices v]
-                              (and (= 2 (count indices))
-                                (> (second indices) (- v 2.1))))
+                              (boolean (and (= 2 (count indices))
+                                         (> (second indices) (- v 2.1)))))
             [[1.0 0.5] [2.0 3.0]]))))
 
 (deftest filter-kv-test
@@ -326,6 +326,16 @@
     (t/is= 1.1049918154523823 (tensor/norm-p [1.0 0.5] 2.1))
     (t/is= 1.5 (tensor/norm-p [1.0 0.5] 1.0))))
 
+(deftest norm-inf-test
+  (t/with-instrument `tensor/norm-inf
+    (t/is (t/spec-check tensor/norm-inf)))
+  (t/with-instrument :all
+    (t/is= 4.0 (tensor/norm-inf [[1.0 0.5] [2.0 4.0]]))
+    (t/is= 1.0 (tensor/norm-inf [[1.0 0.5]]))
+    (t/is= 1.0 (tensor/norm-inf [1.0 0.5]))
+    (t/is= 5.0 (tensor/norm-inf [-3 4 -5]))
+    (t/is= 3.0 (tensor/norm-inf -3))))
+
 (deftest normalize1-test
   (t/with-instrument `tensor/normalize1
     (t/is (t/spec-check tensor/normalize1)))
@@ -371,6 +381,21 @@
       (tensor/normalize-p [1.0 0.5] 2.1))
     (t/is= [0.6666666666666666 0.3333333333333333]
       (tensor/normalize-p [1.0 0.5] 1.0))))
+
+(deftest normalize-inf-test
+  (t/with-instrument `tensor/normalize-inf
+    (t/is (t/spec-check tensor/normalize-inf)))
+  (t/with-instrument :all
+    (t/is= [[0.25 0.125] [0.5 1.0]]
+      (tensor/normalize-inf [[1.0 0.5] [2.0 4.0]]))
+    (t/is= [[1.0 0.5]]
+      (tensor/normalize-inf [[1.0 0.5]]))
+    (t/is= [1.0 0.5]
+      (tensor/normalize-inf [1.0 0.5]))
+    (t/is= [-0.6 0.8 -1.0]
+      (tensor/normalize-inf [-3 4 -5]))
+    (t/is= [0 0]
+      (tensor/normalize-inf [0 0]))))
 
 (deftest inner-product-test
   (t/with-instrument `tensor/inner-product

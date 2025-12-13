@@ -265,3 +265,34 @@
       (vector/projection [0 1 2 3] [5 6 7 8]))
     (t/is= [0.0 3.142857142857143 6.285714285714286 9.428571428571429]
       (vector/projection [5 6 7 8] [0 1 2 3]))))
+
+(deftest orthogonal?-test
+  (t/with-instrument `vector/orthogonal?
+    (t/is (t/spec-check vector/orthogonal?)))
+  (t/with-instrument :all
+    (t/is (vector/orthogonal? [1 0] [0 1] 1e-8))
+    (t/is (vector/orthogonal? [1 1] [1 -1] 1e-8))
+    (t/is-not (vector/orthogonal? [1 0] [1 1] 1e-8))
+    (t/is-not (vector/orthogonal? [1 0] [1 0] 1e-8))
+    (t/is (vector/orthogonal? [1 0 0] [0 1 0] 1e-8))
+    (t/is (vector/orthogonal? [1 2 3] [-2 1 0] 1e-8))))
+
+(deftest angle-between-test
+  (t/with-instrument `vector/angle-between
+    (t/is (t/spec-check vector/angle-between)))
+  (t/with-instrument :all
+    (t/is= 0.0 (vector/angle-between [1 0] [1 0]))
+    (t/is= m/PI (vector/angle-between [1 0] [-1 0]))
+    (t/is= 1.5707963267948966 (vector/angle-between [1 0] [0 1]))
+    (t/is= 1.5707963267948966 (vector/angle-between [1 1] [1 -1]))
+    (t/is= 0.05123716740341752 (vector/angle-between [3 4] [5 6]))))
+
+(deftest distance-test
+  (t/with-instrument `vector/distance
+    (t/is (t/spec-check vector/distance)))
+  (t/with-instrument :all
+    (t/is= 0.0 (vector/distance [1 2 3] [1 2 3]))
+    (t/is= 5.0 (vector/distance [0 0] [3 4]))
+    (t/is= 5.0 (vector/distance [3 4] [0 0]))
+    (t/is= 1.4142135623730951 (vector/distance [0 0] [1 1]))
+    (t/is= 5.196152422706632 (vector/distance [1 2 3] [4 5 6]))))
