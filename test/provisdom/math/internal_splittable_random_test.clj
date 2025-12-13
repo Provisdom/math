@@ -3,13 +3,12 @@
   of the tests (the random number generator) is also the primary
   internal driver of the tests, but hopefully it will still be meaningful."
   (:require
-    [clojure.spec.test.alpha :as st]
     [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
     [clojure.test.check.clojure-test :refer [defspec]]
     [clojure.test.check.generators :as gen]
     [clojure.test.check.properties :as prop]
-    [clojure.test.check.random :as test-random]))
+    [clojure.test.check.random :as test-random]
+    [provisdom.test.core :as t]))
 
 ;; copied from https://github.com/clojure/test.check/blob/master/src/test/clojure/clojure/test/check/random_test.clj
 

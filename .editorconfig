@@ -15,7 +15,7 @@ ij_visual_guides = 100
 ij_wrap_on_typing = false
 
 [{*.clj,*.cljd}]
-ij_visual_guides = 80
+ij_visual_guides = 100
 ij_clojure_alignbindingforms = false
 ij_clojure_alignmapvalues = true
 ij_clojure_alignreaderconditionals = true
