@@ -1,11 +1,12 @@
 (ns provisdom.math.matrix-test
   (:require
     [clojure.test :refer :all]
-    [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
     [provisdom.math.random :as random]
-    [provisdom.math.tensor :as tensor]))
+    [provisdom.math.tensor :as tensor]
+    [provisdom.test.core :as t]
+    [provisdom.utility-belt.anomalies :as anom]))
 ;;1 seconds
 (set! *warn-on-reflection* true)
 ;;;TYPES
@@ -351,13 +352,11 @@
       (t/is= [[]] (mx/rnd-matrix! 0 0)))
     (random/bind-seed 0
       (t/is= [[0.8833108082136426 0.026433771592597743]
-            [0.10634669156721244 0.17386786595968284]]
+              [0.10634669156721244 0.17386786595968284]]
         (mx/rnd-matrix! 2 2)))
     (random/bind-seed 0
-      (t/is= [[0.8833108082136426 0.026433771592597743
-             0.10634669156721244]
-            [0.17386786595968284 0.24568894884013137
-             0.39646797562881353]]
+      (t/is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
+              [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
         (mx/rnd-matrix! 2 3)))))
 
 (deftest rnd-reflection-matrix!-test
@@ -370,7 +369,7 @@
       (t/is= [[-1.0]] (mx/rnd-reflection-matrix! 1)))
     (random/bind-seed 0
       (t/is= [[-0.9982104970725829 -0.059798022827738856]
-            [-0.059798022827738856 0.998210497072583]]
+              [-0.059798022827738856 0.998210497072583]]
         (mx/rnd-reflection-matrix! 2)))))
 
 (deftest rnd-spectral-matrix!-test
@@ -383,7 +382,7 @@
       (t/is= [[2.0]] (mx/rnd-spectral-matrix! [2.0])))
     (random/bind-seed 0
       (t/is= [[1.7925482077721386 -0.9782452422074177]
-            [-0.9782452422074177 2.2074517922278627]]
+              [-0.9782452422074177 2.2074517922278627]]
         (mx/rnd-spectral-matrix! [1.0 3.0])))))
 
 (deftest sparse->matrix-test
@@ -637,51 +636,51 @@
     (t/is (t/spec-check mx/matrix-partition)))
   (t/with-instrument :all
     (t/is= {::mx/bottom-left  [[9.0 10.0] [13.0 14.0]]
-          ::mx/bottom-right [[11.0 12.0] [15.0 16.0]]
-          ::mx/top-left     [[1.0 2.0] [5.0 6.0]]
-          ::mx/top-right    [[3.0 4.0] [7.0 8.0]]}
+            ::mx/bottom-right [[11.0 12.0] [15.0 16.0]]
+            ::mx/top-left     [[1.0 2.0] [5.0 6.0]]
+            ::mx/top-right    [[3.0 4.0] [7.0 8.0]]}
       (mx/matrix-partition s 2 2))
     (t/is= {::mx/bottom-left  [[5.0] [9.0] [13.0]]
-          ::mx/bottom-right [[6.0 7.0 8.0] [10.0 11.0 12.0] [14.0 15.0 16.0]]
-          ::mx/top-left     [[1.0]]
-          ::mx/top-right    [[2.0 3.0 4.0]]}
+            ::mx/bottom-right [[6.0 7.0 8.0] [10.0 11.0 12.0] [14.0 15.0 16.0]]
+            ::mx/top-left     [[1.0]]
+            ::mx/top-right    [[2.0 3.0 4.0]]}
       (mx/matrix-partition s 1 1))
     (t/is= {::mx/bottom-left  [[1.0 2.0 3.0] [5.0 6.0 7.0]
-                             [9.0 10.0 11.0] [13.0 14.0 15.0]]
-          ::mx/bottom-right [[4.0] [8.0] [12.0] [16.0]]
-          ::mx/top-left     [[]]
-          ::mx/top-right    [[]]}
+                               [9.0 10.0 11.0] [13.0 14.0 15.0]]
+            ::mx/bottom-right [[4.0] [8.0] [12.0] [16.0]]
+            ::mx/top-left     [[]]
+            ::mx/top-right    [[]]}
       (mx/matrix-partition s 0 3))
     (t/is= {::mx/bottom-left  [[]]
-          ::mx/bottom-right [[13.0 14.0 15.0 16.0]]
-          ::mx/top-left     [[]]
-          ::mx/top-right    [[1.0 2.0 3.0 4.0]
-                             [5.0 6.0 7.0 8.0]
-                             [9.0 10.0 11.0 12.0]]}
+            ::mx/bottom-right [[13.0 14.0 15.0 16.0]]
+            ::mx/top-left     [[]]
+            ::mx/top-right    [[1.0 2.0 3.0 4.0]
+                               [5.0 6.0 7.0 8.0]
+                               [9.0 10.0 11.0 12.0]]}
       (mx/matrix-partition s 3 0))
     (t/is= {::mx/bottom-left  [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                             [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
-          ::mx/bottom-right [[]]
-          ::mx/top-left     [[]]
-          ::mx/top-right    [[]]}
+                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
+            ::mx/bottom-right [[]]
+            ::mx/top-left     [[]]
+            ::mx/top-right    [[]]}
       (mx/matrix-partition s 0 4))
     (t/is= {::mx/bottom-left  [[]]
-          ::mx/bottom-right [[]]
-          ::mx/top-left     [[]]
-          ::mx/top-right    [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                             [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]}
+            ::mx/bottom-right [[]]
+            ::mx/top-left     [[]]
+            ::mx/top-right    [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]}
       (mx/matrix-partition s 4 0))
     (t/is= {::mx/bottom-left  [[]]
-          ::mx/bottom-right [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                             [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
-          ::mx/top-left     [[]]
-          ::mx/top-right    [[]]}
+            ::mx/bottom-right [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
+            ::mx/top-left     [[]]
+            ::mx/top-right    [[]]}
       (mx/matrix-partition s 0 0))
     (t/is= {::mx/bottom-left  [[]]
-          ::mx/bottom-right [[]]
-          ::mx/top-left     [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
-                             [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
-          ::mx/top-right    [[]]}
+            ::mx/bottom-right [[]]
+            ::mx/top-left     [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
+                               [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]]
+            ::mx/top-right    [[]]}
       (mx/matrix-partition s 4 4))))
 
 (deftest some-kv-test
@@ -778,10 +777,10 @@
     (t/is (t/spec-check mx/assoc-row)))
   (t/with-instrument :all
     (t/is= [[8.0 9.0]] (mx/assoc-row [[]] 0 [8.0 9.0]))
-    (t/is= nil (mx/assoc-row [[1]] 0 [8.0 9.0]))
+    (t/is= ::anom/incorrect (::anom/category (mx/assoc-row [[1]] 0 [8.0 9.0])))
     (t/is= [[2]] (mx/assoc-row [[1]] 0 [2]))
     (t/is= [[1] [2]] (mx/assoc-row [[1]] 1 [2]))
-    (t/is= nil (mx/assoc-row [[1]] 2 [2]))
+    (t/is= ::anom/incorrect (::anom/category (mx/assoc-row [[1]] 2 [2])))
     (t/is= [[8.0 9.0] [2.0 4.0]] (mx/assoc-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
 (deftest assoc-column-test
@@ -789,10 +788,10 @@
     (t/is (t/spec-check mx/assoc-column)))
   (t/with-instrument :all
     (t/is= [[8.0] [9.0]] (mx/assoc-column [[]] 0 [8.0 9.0]))
-    (t/is= nil (mx/assoc-column [[1]] 0 [8.0 9.0]))
+    (t/is= ::anom/incorrect (::anom/category (mx/assoc-column [[1]] 0 [8.0 9.0])))
     (t/is= [[2]] (mx/assoc-column [[1]] 0 [2]))
     (t/is= [[1 2]] (mx/assoc-column [[1]] 1 [2]))
-    (t/is= nil (mx/assoc-column [[1]] 2 [2]))
+    (t/is= ::anom/incorrect (::anom/category (mx/assoc-column [[1]] 2 [2])))
     (t/is= [[8.0 0.5] [9.0 4.0]] (mx/assoc-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
 (deftest assoc-diagonal-test
@@ -800,7 +799,7 @@
     (t/is (t/spec-check mx/assoc-diagonal)))
   (t/with-instrument :all
     (t/is= [[8.0 0.0] [0.0 9.0]] (mx/assoc-diagonal [[]] [8.0 9.0]))
-    (t/is= nil (mx/assoc-diagonal [[1]] [8.0 9.0]))
+    (t/is= ::anom/incorrect (::anom/category (mx/assoc-diagonal [[1]] [8.0 9.0])))
     (t/is= [[2]] (mx/assoc-diagonal [[1]] [2]))
     (t/is= [[8.0 0.5] [2.0 9.0]] (mx/assoc-diagonal [[1.0 0.5] [2.0 4.0]] [8.0 9.0]))))
 
@@ -809,10 +808,10 @@
     (t/is (t/spec-check mx/insert-row)))
   (t/with-instrument :all
     (t/is= [[8.0 9.0]] (mx/insert-row [[]] 0 [8.0 9.0]))
-    (t/is= nil (mx/insert-row [[1]] 0 [8.0 9.0]))
+    (t/is= ::anom/incorrect (::anom/category (mx/insert-row [[1]] 0 [8.0 9.0])))
     (t/is= [[2] [1]] (mx/insert-row [[1]] 0 [2]))
     (t/is= [[1] [2]] (mx/insert-row [[1]] 1 [2]))
-    (t/is= nil (mx/insert-row [[1]] 2 [2]))
+    (t/is= ::anom/incorrect (::anom/category (mx/insert-row [[1]] 2 [2])))
     (t/is= [[8.0 9.0] [1.0 0.5] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))
     (t/is= [[1.0 0.5] [8.0 9.0] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 1 [8.0 9.0]))))
 
@@ -821,10 +820,10 @@
     (t/is (t/spec-check mx/insert-column)))
   (t/with-instrument :all
     (t/is= [[8.0] [9.0]] (mx/insert-column [[]] 0 [8.0 9.0]))
-    (t/is= nil (mx/insert-column [[1]] 0 [8.0 9.0]))
+    (t/is= ::anom/incorrect (::anom/category (mx/insert-column [[1]] 0 [8.0 9.0])))
     (t/is= [[2 1]] (mx/insert-column [[1]] 0 [2]))
     (t/is= [[1 2]] (mx/insert-column [[1]] 1 [2]))
-    (t/is= nil (mx/insert-column [[1]] 2 [2]))
+    (t/is= ::anom/incorrect (::anom/category (mx/insert-column [[1]] 2 [2])))
     (t/is= [[8.0 1.0 0.5] [9.0 2.0 4.0]] (mx/insert-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
 (deftest update-row-test
@@ -953,9 +952,9 @@
         2
         0))
     (t/is= [[0.0 0.0 0.0 1.0 0.5]
-          [0.0 1.0 2.0 2.0 4.0]
-          [3.0 4.0 5.0 0.0 0.0]
-          [6.0 7.0 8.0 0.0 0.0]]
+            [0.0 1.0 2.0 2.0 4.0]
+            [3.0 4.0 5.0 0.0 0.0]
+            [6.0 7.0 8.0 0.0 0.0]]
       (mx/replace-submatrix [[0.0 1.0 2.0] [3.0 4.0 5.0] [6.0 7.0 8.0]]
         [[1.0 0.5] [2.0 4.0]]
         -1
@@ -993,18 +992,18 @@
     (t/is= [[1]] (mx/kronecker-product [[1]]))
     (t/is= [[]] (mx/kronecker-product [[]] [[1]]))
     (t/is= [[1.0 0.5 0.5 0.25]
-          [2.0 4.0 1.0 2.0]
-          [2.0 1.0 4.0 2.0]
-          [4.0 8.0 8.0 16.0]]
+            [2.0 4.0 1.0 2.0]
+            [2.0 1.0 4.0 2.0]
+            [4.0 8.0 8.0 16.0]]
       (mx/kronecker-product [[1.0 0.5] [2.0 4.0]] [[1.0 0.5] [2.0 4.0]]))
     (t/is= [[1.0 0.5 0.5 0.25 0.5 0.25 0.25 0.125]
-          [2.0 4.0 1.0 2.0 1.0 2.0 0.5 1.0]
-          [2.0 1.0 4.0 2.0 1.0 0.5 2.0 1.0]
-          [4.0 8.0 8.0 16.0 2.0 4.0 4.0 8.0]
-          [2.0 1.0 1.0 0.5 4.0 2.0 2.0 1.0]
-          [4.0 8.0 2.0 4.0 8.0 16.0 4.0 8.0]
-          [4.0 2.0 8.0 4.0 8.0 4.0 16.0 8.0]
-          [8.0 16.0 16.0 32.0 16.0 32.0 32.0 64.0]]
+            [2.0 4.0 1.0 2.0 1.0 2.0 0.5 1.0]
+            [2.0 1.0 4.0 2.0 1.0 0.5 2.0 1.0]
+            [4.0 8.0 8.0 16.0 2.0 4.0 4.0 8.0]
+            [2.0 1.0 1.0 0.5 4.0 2.0 2.0 1.0]
+            [4.0 8.0 2.0 4.0 8.0 16.0 4.0 8.0]
+            [4.0 2.0 8.0 4.0 8.0 4.0 16.0 8.0]
+            [8.0 16.0 16.0 32.0 16.0 32.0 32.0 64.0]]
       (mx/kronecker-product [[1.0 0.5] [2.0 4.0]]
         [[1.0 0.5] [2.0 4.0]]
         [[1.0 0.5] [2.0 4.0]]))
@@ -1029,3 +1028,14 @@
     (t/is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-columns [[1.0 0.5] [2.0 4.0]] 1e-6))
     (t/is= [[1.0E-13 0.0] [1.0 0.0]]
       (mx/round-roughly-zero-columns [[1e-13 1e-8] [1.0 1e-17]] 1e-6))))
+
+;;;TRACE
+
+;;;TRACE
+(deftest trace-test
+  (t/with-instrument `mx/trace
+    (t/is (t/spec-check mx/trace)))
+  (t/with-instrument :all
+    (t/is= 0.0 (mx/trace [[]]))
+    (t/is= 5.0 (mx/trace [[1.0 2.0] [3.0 4.0]]))
+    (t/is= 6.0 (mx/trace [[1.0 0.0 0.0] [0.0 2.0 0.0] [0.0 0.0 3.0]]))))

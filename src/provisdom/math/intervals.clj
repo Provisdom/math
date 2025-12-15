@@ -18,6 +18,9 @@
 
 (def mdl 6)
 
+;; Forward declarations for functions used before definition
+(declare intersection)
+
 (s/def ::size
   (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
@@ -78,7 +81,15 @@
 (s/def ::long+-interval (interval-spec ::m/long+))
 
 (defn long-interval-gen
-  ""
+  "Generator for long integer intervals within [min, max] bounds.
+
+  Returns a generator that produces [lower, upper] tuples where both values
+  are long integers within the specified range. Note: generated intervals
+  may not be sorted (lower could be greater than upper).
+
+  Examples:
+    (gen/sample (long-interval-gen 0 100))
+    ;=> ([45 23] [0 99] [12 78] ...)"
   [min max]
   (gen/tuple (gen/large-integer* {:min min :max max})
     (gen/large-integer* {:min min :max max})))
@@ -143,7 +154,15 @@
   :ret boolean?)
 
 (defn in-interval-roughly?
-  "Tests whether `number` is roughly inside the interval."
+  "Tests whether `number` is roughly inside the interval within tolerance.
+
+  Returns true if `number` is within `accu` (accuracy/tolerance) distance
+  of the interval. The interval is effectively expanded by `accu` on both sides.
+
+  Examples:
+    (in-interval-roughly? [0 10] 10.5 1.0)   ;=> true (within tolerance)
+    (in-interval-roughly? [0 10] -0.5 1.0)   ;=> true (within tolerance)
+    (in-interval-roughly? [0 10] 12.0 1.0)   ;=> false (outside tolerance)"
   [[lower upper] number accu]
   (and (>= number (- lower accu)) (<= number (+ upper accu))))
 
@@ -183,9 +202,45 @@
           :number ::m/number)
   :ret ::m/nan-or-finite)
 
+(defn interval-width
+  "Returns the width (span) of an interval.
+
+  Examples:
+    (interval-width [0 10])   ;=> 10.0
+    (interval-width [-5 5])   ;=> 10.0
+    (interval-width [3 3])    ;=> 0.0"
+  [[lower upper]]
+  (- upper lower))
+
+(s/fdef interval-width
+  :args (s/cat :interval ::interval)
+  :ret ::m/non-)
+
+(defn interval-midpoint
+  "Returns the midpoint (center) of an interval.
+
+  Examples:
+    (interval-midpoint [0 10])   ;=> 5.0
+    (interval-midpoint [-5 5])   ;=> 0.0
+    (interval-midpoint [2 8])    ;=> 5.0"
+  [[lower upper]]
+  (/ (+ lower upper) 2.0))
+
+(s/fdef interval-midpoint
+  :args (s/cat :interval ::interval)
+  :ret ::m/number)
+
 ;;;BOUNDS TEST
 (defn in-bounds?
-  "Tests whether `number` is inside the bounds."
+  "Tests whether `number` is inside the bounds.
+
+  Respects open/closed endpoint specifications. Open endpoints exclude the
+  boundary value, closed endpoints include it.
+
+  Examples:
+    (in-bounds? (bounds 0 10) 5)           ;=> true
+    (in-bounds? (bounds 0 10) 0)           ;=> true (closed lower)
+    (in-bounds? (bounds 0 10 true false) 0) ;=> false (open lower)"
   [{::keys [lower upper open-lower? open-upper?]} number]
   (and (if open-lower?
          (> number lower)
@@ -196,6 +251,94 @@
 
 (s/fdef in-bounds?
   :args (s/cat :bounds ::bounds :number ::m/number)
+  :ret boolean?)
+
+(defn bound-by-bounds
+  "Constrains a number to lie within bounds.
+
+  Returns the closest value to `number` that lies within the bounds.
+  For open endpoints, uses `m/next-up` or `m/next-down` to stay inside.
+  If `number` is already in the bounds, returns `number` unchanged.
+
+  Examples:
+    (bound-by-bounds (bounds 0 10) 5)       ;=> 5 (unchanged)
+    (bound-by-bounds (bounds 0 10) 15)      ;=> 10 (clamped to upper)
+    (bound-by-bounds (bounds 0 10 true false) -1)  ;=> 4.9E-324 (just above 0)"
+  [{::keys [lower upper open-lower? open-upper?]} number]
+  (let [effective-lower (if open-lower? (m/next-up lower) lower)
+        effective-upper (if open-upper? (m/next-down upper) upper)]
+    (max effective-lower (min effective-upper number))))
+
+(s/fdef bound-by-bounds
+  :args (s/cat :bounds ::bounds :number ::m/number)
+  :ret ::m/number)
+
+(defn bounds-width
+  "Returns the width (span) of bounds.
+
+  Examples:
+    (bounds-width (bounds 0 10))   ;=> 10.0
+    (bounds-width (bounds -5 5))   ;=> 10.0"
+  [{::keys [lower upper]}]
+  (- upper lower))
+
+(s/fdef bounds-width
+  :args (s/cat :bounds ::bounds)
+  :ret ::m/non-)
+
+(defn bounds-midpoint
+  "Returns the midpoint (center) of bounds.
+
+  Examples:
+    (bounds-midpoint (bounds 0 10))   ;=> 5.0
+    (bounds-midpoint (bounds -5 5))   ;=> 0.0"
+  [{::keys [lower upper]}]
+  (/ (+ lower upper) 2.0))
+
+(s/fdef bounds-midpoint
+  :args (s/cat :bounds ::bounds)
+  :ret ::m/number)
+
+(defn overlaps?
+  "Tests whether two bounds overlap (have any points in common).
+
+  Returns true if there is any intersection between the bounds.
+
+  Examples:
+    (overlaps? (bounds 0 5) (bounds 3 8))    ;=> true
+    (overlaps? (bounds 0 5) (bounds 6 10))   ;=> false
+    (overlaps? (bounds 0 5) (bounds 5 10))   ;=> true (touch at endpoint)"
+  [bounds1 bounds2]
+  (some? (intersection [bounds1 bounds2])))
+
+(s/fdef overlaps?
+  :args (s/cat :bounds1 ::bounds :bounds2 ::bounds)
+  :ret boolean?)
+
+(defn contains-bounds?
+  "Tests whether `outer` bounds fully contain `inner` bounds.
+
+  Returns true if every point in `inner` is also in `outer`.
+
+  Examples:
+    (contains-bounds? (bounds 0 10) (bounds 2 8))   ;=> true
+    (contains-bounds? (bounds 0 10) (bounds -1 8))  ;=> false
+    (contains-bounds? (bounds 0 10 true true) (bounds 0 10))  ;=> false"
+  [{o-lower ::lower o-upper ::upper o-open-lower? ::open-lower? o-open-upper? ::open-upper?}
+   {i-lower ::lower i-upper ::upper i-open-lower? ::open-lower? i-open-upper? ::open-upper?}]
+  (and
+    ;; Lower bound check: outer lower must be <= inner lower
+    ;; If outer is open and inner is closed at same point, outer doesn't contain inner
+    (or (< o-lower i-lower)
+      (and (== o-lower i-lower)
+        (or (not o-open-lower?) i-open-lower?)))
+    ;; Upper bound check: outer upper must be >= inner upper
+    (or (> o-upper i-upper)
+      (and (== o-upper i-upper)
+        (or (not o-open-upper?) i-open-upper?)))))
+
+(s/fdef contains-bounds?
+  :args (s/cat :outer ::bounds :inner ::bounds)
   :ret boolean?)
 
 ;;;BOUNDS CONSTRUCTORS
@@ -351,7 +494,15 @@
   :ret ::vector-bounds)
 
 (defn get-interval
-  "Returns Interval from bounds."
+  "Converts bounds to an interval [lower, upper].
+
+  For open endpoints, adjusts to the nearest representable value inside
+  the bounds using `m/next-up` for lower and `m/next-down` for upper.
+
+  Examples:
+    (get-interval (bounds 0 10))              ;=> [0 10]
+    (get-interval (bounds 0 10 true false))   ;=> [4.9E-324 10] (open lower)
+    (get-interval (bounds 0 10 false true))   ;=> [0 9.999999999999998] (open upper)"
   [{::keys [lower upper open-lower? open-upper?]}]
   (let [l (if open-lower? (m/next-up lower) lower)
         u (if open-upper? (m/next-down upper) upper)]
@@ -362,7 +513,26 @@
   :ret ::interval)
 
 ;;;BOUNDS MANIPULATION
-(defn- min-bound
+(s/def ::bound-entry
+  (s/tuple ::m/number boolean?))
+
+(s/def ::bound-coll
+  (s/coll-of ::bound-entry :kind sequential?))
+
+(defn min-bound
+  "Finds the minimum bound value from a collection of [value open?] pairs.
+
+  Each entry is a tuple of [number, open-bound?]. Returns [min-value, open?]
+  where open? is true only if ALL entries with the minimum value are open.
+
+  Used for finding lower bounds in intersection operations.
+
+  Examples:
+    (min-bound [[5 false] [3 true] [7 false]])
+    ;=> [3 true]
+
+    (min-bound [[3 false] [3 true]])
+    ;=> [3 false]  ; closed wins when values equal"
   [bound-coll]
   (reduce (fn [[bound open-bound?] [bound2 open-bound2?]]
             (cond (< bound bound2) [bound open-bound?]
@@ -371,7 +541,24 @@
     [m/inf+ false]
     bound-coll))
 
-(defn- max-bound
+(s/fdef min-bound
+  :args (s/cat :bound-coll ::bound-coll)
+  :ret ::bound-entry)
+
+(defn max-bound
+  "Finds the maximum bound value from a collection of [value open?] pairs.
+
+  Each entry is a tuple of [number, open-bound?]. Returns [max-value, open?]
+  where open? is true only if ALL entries with the maximum value are open.
+
+  Used for finding upper bounds in intersection operations.
+
+  Examples:
+    (max-bound [[5 false] [3 true] [7 false]])
+    ;=> [7 false]
+
+    (max-bound [[7 false] [7 true]])
+    ;=> [7 false]  ; closed wins when values equal"
   [bound-coll]
   (reduce (fn [[bound open-bound?] [bound2 open-bound2?]]
             (cond (> bound bound2) [bound open-bound?]
@@ -379,6 +566,10 @@
               :else [bound (and open-bound? open-bound2?)]))
     [m/inf- false]
     bound-coll))
+
+(s/fdef max-bound
+  :args (s/cat :bound-coll ::bound-coll)
+  :ret ::bound-entry)
 
 (defn sort-bounds
   "Returns a vector of bounds sorted by lower bound first (by default) or upper
@@ -398,7 +589,17 @@
   :ret ::vector-bounds)
 
 (defn intersection
-  "Returns the bounds intersection or nil."
+  "Returns the intersection of all bounds, or nil if no intersection exists.
+
+  The intersection is the region where all bounds overlap. Returns nil when
+  the bounds do not overlap.
+
+  Examples:
+    (intersection [(bounds 0 10) (bounds 5 15)])
+    ;=> {::lower 5, ::upper 10, ...}
+
+    (intersection [(bounds 0 5) (bounds 10 15)])
+    ;=> nil (no overlap)"
   [vector-bounds]
   (let [[lower open-lower?] (max-bound (map
                                          #(vector (::lower %) (::open-lower? %))
@@ -416,26 +617,18 @@
   :args (s/cat :vector-bounds ::vector-bounds)
   :ret (s/nilable ::bounds))
 
-(defn union
-  "Returns a vector of non-overlapping bounds."
-  [vector-bounds]
-  (if (empty? vector-bounds)
-    []
-    (loop [sep []
-           [a b & c] (sort-bounds vector-bounds)]
-      (if b
-        (let [g (intersection [a b])]
-          (if g
-            (recur sep (cons g c))
-            (recur (conj sep a) (cons b c))))
-        (conj sep a)))))
-
-(s/fdef union
-  :args (s/cat :vector-bounds ::vector-bounds)
-  :ret ::vector-bounds)
-
 (defn encompassing-bounds
-  "Returns smallest bounds that encompass the bounds in `vector-bounds`."
+  "Returns smallest bounds that encompass all bounds in `vector-bounds`.
+
+  Finds the minimum lower bound and maximum upper bound across all bounds,
+  preserving open/closed status appropriately.
+
+  Examples:
+    (encompassing-bounds [(bounds 0 5) (bounds 3 10)])
+    ;=> {::lower 0, ::upper 10, ::open-lower? false, ::open-upper? false}
+
+    (encompassing-bounds [(bounds 0 5 true false) (bounds -2 3 false true)])
+    ;=> {::lower -2, ::upper 5, ::open-lower? false, ::open-upper? false}"
   [vector-bounds]
   (let [[lower open-lower?] (min-bound
                               (map (fn [bounds]
@@ -454,5 +647,39 @@
                                 (fn [vb]
                                   (pos? (count vb)))))
   :ret ::bounds)
+
+(defn union
+  "Merges overlapping bounds into a minimal set of non-overlapping bounds.
+
+  Takes a vector of bounds and combines any that overlap into single bounds
+  using `encompassing-bounds`. Non-overlapping bounds are kept separate.
+
+  Examples:
+    ;; Overlapping bounds merge into one
+    (union [(bounds 0 5) (bounds 3 8)])
+    ;=> [{::lower 0, ::upper 8, ::open-lower? false, ::open-upper? false}]
+
+    ;; Non-overlapping bounds stay separate
+    (union [(bounds 0 2) (bounds 5 8)])
+    ;=> [{...lower 0 upper 2...} {...lower 5 upper 8...}]
+
+    ;; Multiple overlapping bounds merge progressively
+    (union [(bounds 0 3) (bounds 2 5) (bounds 4 8)])
+    ;=> [{::lower 0, ::upper 8, ...}]"
+  [vector-bounds]
+  (if (empty? vector-bounds)
+    []
+    (loop [sep []
+           [a b & c] (sort-bounds vector-bounds)]
+      (if b
+        (let [g (intersection [a b])]
+          (if g
+            (recur sep (cons (encompassing-bounds [a b]) c))
+            (recur (conj sep a) (cons b c))))
+        (conj sep a)))))
+
+(s/fdef union
+  :args (s/cat :vector-bounds ::vector-bounds)
+  :ret ::vector-bounds)
   
 

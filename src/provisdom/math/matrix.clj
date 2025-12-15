@@ -1,16 +1,20 @@
 (ns provisdom.math.matrix
-  "Matrix operations and linear algebra utilities.
-  
+  "Matrix operations and creation utilities.
+
   Provides comprehensive matrix functionality including:
-  - Matrix creation, validation, and type checking  
-  - Basic operations (transpose, multiplication, addition)
-  - Specialized matrices (diagonal, symmetric, triangular)
-  - Matrix decomposition and serialization
-  - Sparse matrix support
-  - Integration with tensor operations
-  
+  - Matrix creation (identity, diagonal, Toeplitz, random)
+  - Specialized types (symmetric, triangular, sparse)
+  - Matrix multiplication, transpose, Kronecker product
+  - Slicing, filtering, and partitioning
+  - Serialization/deserialization of triangular matrices
+  - Row/column manipulation (insert, remove, update)
+  - Element-wise matrix math and rounding
+
   Matrices are represented as vectors of vectors with consistent row lengths.
-  Supports both dense and sparse representations for memory efficiency."
+  Supports both dense and sparse representations for memory efficiency.
+
+  For linear algebra operations (decompositions, solve, inverse, etc.),
+  see provisdom.math.linear-algebra."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -18,6 +22,7 @@
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.vector :as vector]
+    [provisdom.utility-belt.anomalies :as anom]
     [provisdom.utility-belt.extensions :as extensions]))
 
 ;;;DECLARATIONS
@@ -29,8 +34,8 @@
   size-of-symmetric-or-triangular-matrix-without-diag to-matrix
   symmetric-matrix-by-averaging constant-matrix mx* assoc-diagonal
   ecount-of-symmetric-or-triangular-matrix
-  ecount-of-symmetric-or-triangular-matrix-without-diag lower-triangular-matrix?
-  upper-triangular-matrix?)
+  ecount-of-symmetric-or-triangular-matrix-without-diag
+  lower-triangular-matrix? upper-triangular-matrix?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -205,20 +210,36 @@
            mdl)))))
 
 (defn all-matrix-values?
-  "Docstring"
+  "Returns true if all matrix elements are within the specified bounds.
+
+  Checks that every element e satisfies m1 <= e <= m2.
+
+  Examples:
+    (all-matrix-values? [[1 2] [3 4]] 0 5) ;=> true
+    (all-matrix-values? [[1 2] [3 4]] 2 4) ;=> false"
   [x m1 m2]
   (every?
     #(every? (fn [e] (and (>= e m1) (<= e m2))) %)
     x))
 
 (defn matrix-size?
-  "Docstring"
+  "Returns true if the matrix has exactly the specified dimensions.
+
+  Examples:
+    (matrix-size? [[1 2] [3 4]] 2 2) ;=> true
+    (matrix-size? [[1 2 3]] 1 3) ;=> true
+    (matrix-size? [[1 2]] 2 2) ;=> false"
   [x row-count column-count]
   (and (= (rows x) row-count)
     (= (columns x) column-count)))
 
 (defn matrix-min-size?
-  "Docstring"
+  "Returns true if the matrix has at least the specified dimensions.
+
+  Examples:
+    (matrix-min-size? [[1 2] [3 4]] 2 2) ;=> true
+    (matrix-min-size? [[1 2] [3 4]] 1 1) ;=> true
+    (matrix-min-size? [[1 2]] 2 2) ;=> false"
   [x min-rows min-columns]
   (and (>= (rows x) min-rows)
     (>= (columns x) min-columns)))
@@ -1058,9 +1079,9 @@
 ;;;MATRIX INFO
 (defn rows
   "Returns the number of rows in the matrix.
-  
+
   For an empty matrix [[]], returns 0.
-  
+
   Examples:
     (rows [[1 2] [3 4]]) ;=> 2
     (rows [[]]) ;=> 0"
@@ -1075,9 +1096,9 @@
 
 (defn columns
   "Returns the number of columns in the matrix.
-  
+
   Based on the length of the first row.
-  
+
   Examples:
     (columns [[1 2] [3 4]]) ;=> 2
     (columns [[]]) ;=> 0"
@@ -1263,9 +1284,9 @@
 
 (defn trace
   "Calculates the trace of a square matrix.
-  
+
   Returns the sum of all elements on the main diagonal.
-  
+
   Examples:
     (trace [[1 2] [3 4]]) ;=> 5.0
     (trace [[]]) ;=> 0.0"
@@ -1670,10 +1691,10 @@
 
 (defn assoc-row
   "Replaces a row in the matrix with new values.
-  
-  Returns nil if the new row length doesn't match existing columns or if
+
+  Returns anomaly if the new row length doesn't match existing columns or if
   row index is out of bounds.
-  
+
   Examples:
     (assoc-row [[1 2] [3 4]] 0 [5 6]) ;=> [[5 6] [3 4]]
     (assoc-row [[]] 0 [1 2]) ;=> [[1 2]] (empty matrix case)"
@@ -1683,18 +1704,25 @@
     (and (= (count numbers) (columns m)) (<= row (rows m)))
     (assoc m row (vec numbers))
 
-    :else nil))
+    (not= (count numbers) (columns m))
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Row length " (count numbers) " does not match matrix columns "
+                       (columns m))}
+
+    :else
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Row index " row " out of bounds for matrix with " (rows m) " rows")}))
 
 (s/fdef assoc-row
   :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
-  :ret (s/nilable ::matrix))
+  :ret (s/or :matrix ::matrix :anomaly ::anom/anomaly))
 
 (defn assoc-column
   "Replaces a column in the matrix with new values.
-  
-  Returns nil if the new column length doesn't match existing rows or if
+
+  Returns anomaly if the new column length doesn't match existing rows or if
   column index is out of bounds.
-  
+
   Examples:
     (assoc-column [[1 2] [3 4]] 0 [5 6]) ;=> [[5 2] [6 4]]
     (assoc-column [[]] 0 [1 2]) ;=> [[1] [2]] (empty matrix case)"
@@ -1706,41 +1734,52 @@
                         (assoc row-vector column (get numbers row 0.0)))
            m))
 
-    :else nil))
+    (not= (count numbers) (rows m))
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Column length " (count numbers) " does not match matrix rows " (rows m))}
+
+    :else
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Column index " column " out of bounds for matrix with "
+                       (columns m) " columns")}))
 
 (s/fdef assoc-column
   :args (s/cat :m ::matrix :column ::column :numbers ::m/numbers)
-  :ret (s/nilable ::matrix))
+  :ret (s/or :matrix ::matrix :anomaly ::anom/anomaly))
 
 (defn assoc-diagonal
   "Replaces the main diagonal elements with new values.
-  
-  Returns nil if the number of values doesn't match the diagonal length.
+
+  Returns anomaly if the number of values doesn't match the diagonal length.
   For an empty matrix, creates a new diagonal matrix.
-  
+
   Examples:
     (assoc-diagonal [[1 2] [3 4]] [5 6]) ;=> [[5 2] [3 6]]
     (assoc-diagonal [[]] [1 2]) ;=> [[1.0 0.0] [0.0 2.0]]"
   [m numbers]
-  (cond (empty-matrix? m) (diagonal-matrix numbers)
+  (let [diag-len (count (diagonal m))]
+    (cond (empty-matrix? m) (diagonal-matrix numbers)
 
-    (= (count numbers) (count (diagonal m)))
-    (let [v (vec numbers)]
-      (vec (for [row (range (count numbers))]
-             (assoc (get-row m row) row (get v row 0.0)))))
+      (= (count numbers) diag-len)
+      (let [v (vec numbers)]
+        (vec (for [row (range (count numbers))]
+               (assoc (get-row m row) row (get v row 0.0)))))
 
-    :else nil))
+      :else
+      {::anom/category ::anom/incorrect
+       ::anom/message  (str "Diagonal length "
+                         (count numbers) " does not match matrix diagonal length " diag-len)})))
 
 (s/fdef assoc-diagonal
   :args (s/cat :m ::matrix :numbers ::m/numbers)
-  :ret (s/nilable ::matrix))
+  :ret (s/or :matrix ::matrix :anomaly ::anom/anomaly))
 
 (defn insert-row
   "Inserts a new row at the specified position.
-  
-  Returns nil if the new row length doesn't match existing columns or if
+
+  Returns anomaly if the new row length doesn't match existing columns or if
   row index is out of bounds.
-  
+
   Examples:
     (insert-row [[1 2] [3 4]] 1 [5 6]) ;=> [[1 2] [5 6] [3 4]]
     (insert-row [[]] 0 [1 2]) ;=> [[1 2]] (empty matrix case)"
@@ -1750,18 +1789,25 @@
     (and (= (count numbers) (columns m)) (<= row (rows m)))
     (vec (concat (subvec m 0 row) [(vec numbers)] (subvec m row)))
 
-    :else nil))
+    (not= (count numbers) (columns m))
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Row length " (count numbers) " does not match matrix columns "
+                       (columns m))}
+
+    :else
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Row index " row " out of bounds for matrix with " (rows m) " rows")}))
 
 (s/fdef insert-row
   :args (s/cat :m ::matrix :row ::row :numbers ::m/numbers)
-  :ret (s/nilable ::matrix))
+  :ret (s/or :matrix ::matrix :anomaly ::anom/anomaly))
 
 (defn insert-column
   "Inserts a new column at the specified position.
-  
-  Returns nil if the new column length doesn't match existing rows or if
+
+  Returns anomaly if the new column length doesn't match existing rows or if
   column index is out of bounds.
-  
+
   Examples:
     (insert-column [[1 2] [3 4]] 1 [5 6]) ;=> [[1 5 2] [3 6 4]]
     (insert-column [[]] 0 [1 2]) ;=> [[1] [2]] (empty matrix case)"
@@ -1774,13 +1820,20 @@
              (vector/insertv row-vector column (get numbers row 0.0)))
            m))
 
-    :else nil))
+    (not= (count numbers) (rows m))
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Column length " (count numbers) " does not match matrix rows " (rows m))}
+
+    :else
+    {::anom/category ::anom/incorrect
+     ::anom/message  (str "Column index " column " out of bounds for matrix with "
+                       (columns m) " columns")}))
 
 (s/fdef insert-column
   :args (s/cat :m ::matrix
           :column ::column
           :numbers ::m/numbers)
-  :ret (s/nilable ::matrix))
+  :ret (s/or :matrix ::matrix :anomaly ::anom/anomaly))
 
 (defn remove-row
   "Removes the specified row from the matrix.
@@ -2131,3 +2184,4 @@
 (s/fdef round-roughly-zero-columns
   :args (s/cat :m ::matrix :accu ::m/accu)
   :ret ::matrix)
+

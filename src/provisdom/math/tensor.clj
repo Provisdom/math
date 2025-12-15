@@ -1,14 +1,14 @@
 (ns provisdom.math.tensor
   "Multidimensional array operations and tensor algebra.
-  
-  Provides comprehensive tensor functionality for numerical computing:
+
+  Provides tensor functionality for numerical computing:
   - N-dimensional array creation, manipulation, and validation
-  - Element-wise operations (map, reduce, filter with coordinate access)  
-  - Tensor arithmetic (addition, multiplication, broadcasting)
-  - Shape manipulation (reshape, transpose, slicing)
-  - Advanced operations (inner products, convolution)
-  - Memory-efficient lazy operations where possible
-  
+  - Element-wise operations (map, reduce, filter with coordinate access)
+  - Tensor arithmetic (addition, subtraction, multiplication, division)
+  - Shape manipulation (reshape, transpose)
+  - Reduction operations (sum, product, average, norms)
+  - Inner products and broadcasting
+
   Tensors are represented as nested vectors with consistent dimensionality."
   (:require
     [clojure.spec.alpha :as s]
@@ -158,6 +158,27 @@
   :args (s/cat :x any?)
   :ret (s/nilable ::tensor))
 
+(defn- ereduce
+  "Reduces over all elements of a tensor without intermediate allocation.
+  Recursively traverses nested vectors, applying f to each number.
+  More efficient than (reduce f init (flatten tensor))."
+  [f init tensor]
+  (if (number? tensor)
+    (f init tensor)
+    (reduce (fn [acc subtensor]
+              (ereduce f acc subtensor))
+      init
+      tensor)))
+
+(defn- all-true?
+  "Returns true if x is true or a tensor where all elements are true."
+  [x]
+  (cond
+    (true? x) true
+    (false? x) false
+    (vector? x) (every? all-true? x)
+    :else false))
+
 (defn- recursive-compute-tensor
   "Recursively computes a tensor for [[compute-tensor]]."
   [shape f sh]
@@ -280,10 +301,10 @@
 
 (defn ecount
   "Returns the total number of elements in `tensor`.
-  
+
   For scalars, returns 1. For multi-dimensional tensors, returns the product
   of all dimension sizes.
-  
+
   Examples:
     (ecount 5) ;=> 1
     (ecount [1 2 3]) ;=> 3
@@ -291,7 +312,7 @@
   [tensor]
   (if (number? tensor)
     1
-    (count (flatten tensor))))
+    (ereduce (fn [acc _] (inc acc)) 0 tensor)))
 
 (s/fdef ecount
   :args (s/cat :tensor ::tensor)
@@ -346,22 +367,22 @@
 
 (defn every-kv?
   "Returns true if the predicate function returns true for every tensor element.
-  
+
   The predicate receives (indices element) where indices is a vector of
   coordinates for the element's position.
-  
+
   Examples:
     (every-kv? (fn [idx val] (pos? val)) [[1 2] [3 4]]) ;=> true
     (every-kv? (fn [idx val] (even? val)) [1 2 3]) ;=> false"
   [indices+number->bool tensor]
   (if (number? tensor)
     (indices+number->bool [] tensor)
-    (every? true?
-      (flatten (recursive-compute-tensor
-                 (shape tensor)
-                 (fn [indices]
-                   (indices+number->bool indices (get-in tensor indices)))
-                 [])))))
+    (let [result (recursive-compute-tensor
+                   (shape tensor)
+                   (fn [indices]
+                     (indices+number->bool indices (get-in tensor indices)))
+                   [])]
+      (all-true? result))))
 
 (s/fdef every-kv?
   :args (s/cat :indices+number->bool (s/fspec :args (s/cat :indices ::indices
@@ -394,6 +415,140 @@
 (s/fdef filter-kv
   :args (s/cat :index+tensor->bool ::index+tensor->bool
           :tensor-v ::tensor)
+  :ret (s/nilable ::tensor))
+
+;;;TENSOR REDUCTION
+(defn flatten-tensor
+  "Flattens a tensor to a 1D vector of numbers in row-major order.
+
+  Recursively traverses the tensor structure, collecting all numeric
+  elements into a single vector. More efficient than Clojure's flatten.
+
+  Examples:
+    (flatten-tensor 5) ;=> [5]
+    (flatten-tensor [1 2 3]) ;=> [1 2 3]
+    (flatten-tensor [[1 2] [3 4]]) ;=> [1 2 3 4]
+    (flatten-tensor [[[1 2] [3 4]] [[5 6] [7 8]]]) ;=> [1 2 3 4 5 6 7 8]"
+  [tensor]
+  (if (number? tensor)
+    [tensor]
+    (persistent!
+      (ereduce (fn [acc n] (conj! acc n))
+        (transient [])
+        tensor))))
+
+(s/fdef flatten-tensor
+  :args (s/cat :tensor ::tensor)
+  :ret ::m/numbers)
+
+(defn sum
+  "Returns the sum of all elements in `tensor`.
+
+  For scalars, returns the scalar itself. Uses double arithmetic
+  for consistent precision.
+
+  Examples:
+    (sum 5) ;=> 5.0
+    (sum [1 2 3]) ;=> 6.0
+    (sum [[1 2] [3 4]]) ;=> 10.0"
+  [tensor]
+  (if (number? tensor)
+    (double tensor)
+    (ereduce (fn [acc n] (+ acc (double n))) 0.0 tensor)))
+
+(s/fdef sum
+  :args (s/cat :tensor ::tensor)
+  :ret ::m/number)
+
+(defn product
+  "Returns the product of all elements in `tensor`.
+
+  For scalars, returns the scalar itself. Uses double arithmetic.
+
+  Examples:
+    (product 5) ;=> 5.0
+    (product [1 2 3]) ;=> 6.0
+    (product [[2 3] [4 5]]) ;=> 120.0"
+  [tensor]
+  (if (number? tensor)
+    (double tensor)
+    (ereduce (fn [acc n] (* acc (double n))) 1.0 tensor)))
+
+(s/fdef product
+  :args (s/cat :tensor ::tensor)
+  :ret ::m/number)
+
+;;;TENSOR SHAPE MANIPULATION
+(defn reshape
+  "Reshapes a tensor to a new shape while preserving elements in row-major order.
+
+  The new shape must have the same total element count as the original tensor.
+  Returns nil if the shapes are incompatible.
+
+  Examples:
+    (reshape [1 2 3 4] [2 2]) ;=> [[1 2] [3 4]]
+    (reshape [[1 2] [3 4]] [4]) ;=> [1 2 3 4]
+    (reshape [[1 2 3] [4 5 6]] [3 2]) ;=> [[1 2] [3 4] [5 6]]
+    (reshape [1 2 3] [2 2]) ;=> nil (incompatible sizes)"
+  [tensor new-shape]
+  (let [old-count (ecount tensor)
+        new-count (reduce * 1 new-shape)]
+    (when (= old-count new-count)
+      (fill-tensor new-shape (flatten-tensor tensor)))))
+
+(s/fdef reshape
+  :args (s/cat :tensor ::tensor :new-shape ::shape)
+  :ret (s/nilable ::tensor))
+
+(defn transpose
+  "Transposes a tensor by permuting its axes.
+
+  With one argument (tensor only), reverses all axes - equivalent to
+  swapping rows and columns for 2D matrices.
+
+  With two arguments, permutes axes according to the given permutation vector.
+  The permutation specifies where each axis of the input goes in the output.
+
+  For scalars and 1D tensors, returns the tensor unchanged.
+
+  Examples:
+    (transpose [[1 2 3] [4 5 6]]) ;=> [[1 4] [2 5] [3 6]]
+    (transpose 5) ;=> 5
+    (transpose [1 2 3]) ;=> [1 2 3]
+    (transpose [[[1 2] [3 4]] [[5 6] [7 8]]] [2 1 0])
+    ;=> [[[1 5] [3 7]] [[2 6] [4 8]]]"
+  ([tensor]
+   (let [r (rank tensor)]
+     (cond
+       (< r 2) tensor
+       (= r 2) (if (or (empty? tensor) (empty? (first tensor)))
+                 [[]]
+                 (apply mapv vector tensor))
+       :else (transpose tensor (vec (reverse (range r)))))))
+  ([tensor axes]
+   (let [r (rank tensor)
+         sh (shape tensor)
+         axes-vec (vec axes)]
+     (cond
+       (< r 2) tensor
+       (not= (count axes) r) nil
+       (not= (set axes) (set (range r))) nil
+       :else (let [new-shape (mapv #(get sh %) axes)]
+               (compute-tensor new-shape
+                 (fn [new-indices]
+                   (let [old-indices (vec (for [old-axis (range r)]
+                                            (get new-indices (.indexOf axes-vec old-axis))))]
+                     (get-in tensor old-indices)))))))))
+
+(s/def ::axes
+  (s/with-gen
+    (s/coll-of ::index :kind vector?)
+    #(gen/bind (gen/large-integer* {:min 0 :max 4})
+       (fn [n] (gen/fmap vec (gen/shuffle (range n)))))))
+
+(s/fdef transpose
+  :args (s/or :one (s/cat :tensor ::tensor)
+          :two (s/cat :tensor ::tensor :axes ::axes))
   :ret (s/nilable ::tensor))
 
 ;;;TENSOR MANIPULATION
@@ -590,23 +745,18 @@
 ;;;TENSOR MATH
 (defn ===
   "Tests tensor equality with NaN-aware comparison.
-  
+
   Unlike regular equality, considers NaN values equal to other NaN values.
   Tensors must have identical shapes and corresponding elements.
-  
+
   Examples:
     (=== [[1 ##NaN]] [[1 ##NaN]]) ;=> true
     (=== [1 2] [1 2]) ;=> true
     (=== [1 2] [1 3]) ;=> false"
   ([tensor] true)
   ([tensor1 tensor2]
-   (let [eq (emap (fn [n1 n2]
-                    (m/=== n1 n2))
-              tensor1
-              tensor2)]
-     (if (and eq (every? true? (flatten eq)))
-       true
-       false)))
+   (let [eq (emap m/=== tensor1 tensor2)]
+     (if eq (all-true? eq) false)))
   ([tensor1 tensor2 & more]
    (and (=== tensor1 tensor2) (apply === tensor2 more))))
 
@@ -732,10 +882,10 @@
 
 (defn average
   "Calculates the arithmetic mean of all elements in `tensor`.
-  
+
   For scalars, returns the scalar itself. For tensors, computes the sum
   of all elements divided by the total count.
-  
+
   Examples:
     (average 5) ;=> 5
     (average [1 2 3]) ;=> 2.0
@@ -743,9 +893,7 @@
   [tensor]
   (if (number? tensor)
     tensor
-    (let [numbers (flatten tensor)]
-      (m/div (reduce + (map double numbers))
-        (count numbers) m/nan))))
+    (m/div (sum tensor) (ecount tensor) m/nan)))
 
 (s/fdef average
   :args (s/cat :tensor ::tensor)
@@ -753,16 +901,16 @@
 
 (defn norm1
   "Calculates the L1 norm (Manhattan norm) of `tensor`.
-  
+
   Returns the sum of absolute values of all elements.
-  
+
   Examples:
     (norm1 [-3 4]) ;=> 7.0
     (norm1 [[-1 2] [3 -4]]) ;=> 10.0"
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
-    (reduce + (map m/abs (flatten tensor)))))
+    (ereduce (fn [acc n] (+ acc (m/abs n))) 0.0 tensor)))
 
 (s/fdef norm1
   :args (s/cat :tensor ::tensor)
@@ -770,17 +918,17 @@
 
 (defn norm
   "Calculates the L2 norm (Euclidean norm) of `tensor`.
-  
+
   Returns the square root of the sum of squared elements.
   Also available as norm2.
-  
+
   Examples:
     (norm [3 4]) ;=> 5.0
     (norm [[1 1] [1 1]]) ;=> 2.0"
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
-    (m/sqrt (reduce + (map m/sq (flatten tensor))))))
+    (m/sqrt (ereduce (fn [acc n] (+ acc (m/sq n))) 0.0 tensor))))
 
 (s/fdef norm
   :args (s/cat :tensor ::tensor)
@@ -790,10 +938,10 @@
 
 (defn norm-p
   "Calculates the Lp norm of `tensor` using exponent `p`.
-  
+
   Returns the p-th root of the sum of absolute values raised to the p-th power.
   For `p` >= 1.0, this is a valid norm.
-  
+
   Examples:
     (norm-p [1 -1 1] 1) ;=> 3.0 (L1 norm)
     (norm-p [3 4] 2) ;=> 5.0 (L2 norm)
@@ -801,8 +949,7 @@
   [tensor p]
   (if (number? tensor)
     (m/abs tensor)
-    (m/pow (reduce + (map #(m/pow (m/abs %) p)
-                       (flatten tensor)))
+    (m/pow (ereduce (fn [acc n] (+ acc (m/pow (m/abs n) p))) 0.0 tensor)
       (/ p))))
 
 (s/fdef norm-p
@@ -821,7 +968,7 @@
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
-    (reduce max (map m/abs (flatten tensor)))))
+    (ereduce (fn [acc n] (max acc (m/abs n))) m/inf- tensor)))
 
 (s/fdef norm-inf
   :args (s/cat :tensor ::tensor)
@@ -859,7 +1006,7 @@
   :args (s/cat :tensor ::tensor)
   :ret ::tensor)
 
-(def ^{:doc "See [[normalize2]]"} normalize2 normalize)
+(def ^{:doc "See [[normalize]]"} normalize2 normalize)
 
 (defn normalize-p
   "Normalizes `tensor` to unit Lp norm using exponent `p`.
@@ -930,10 +1077,10 @@
 ;;;TENSOR NUMERICAL STABILITY
 (defn roughly?
   "Tests if `tensor1` and `tensor2` are approximately equal within tolerance `accu`.
-  
+
   Returns true if tensors have the same shape and all corresponding
   elements are within the specified accuracy of each other.
-  
+
   Examples:
     (roughly? [1.0 2.0] [1.001 1.999] 0.01) ;=> true
     (roughly? [1.0] [1.1] 0.05) ;=> false"
@@ -941,9 +1088,10 @@
   (and (= (shape tensor1) (shape tensor2))
     (if (number? tensor1)
       (m/roughly? tensor1 tensor2 accu)
-      (every? true? (map #(m/roughly? %1 %2 accu)
-                      (flatten tensor1)
-                      (flatten tensor2))))))
+      (let [flat1 (flatten-tensor tensor1)
+            flat2 (flatten-tensor tensor2)]
+        (every? identity
+          (map (fn [n1 n2] (m/roughly? n1 n2 accu)) flat1 flat2))))))
 
 (s/fdef roughly?
   :args (s/cat :tensor1 ::tensor

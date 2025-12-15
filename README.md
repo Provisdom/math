@@ -1,4 +1,4 @@
-L# provisdom.math
+# provisdom.math
 
 A comprehensive Clojure mathematics library providing numerical computing primitives with robust handling of edge cases, IEEE 754 compliance, and spec-driven development.
 
@@ -38,10 +38,30 @@ Specialized 1D tensor operations:
 ### Matrix (`provisdom.math.matrix`)
 Comprehensive matrix operations:
 - Matrix creation (identity, diagonal, Toeplitz, random)
-- Specialized types (symmetric, triangular, sparse)
+- Specialized types (symmetric, triangular, sparse, positive-definite)
 - Matrix multiplication, transpose, Kronecker product
 - Slicing, filtering, and partitioning
+- Row/column manipulation (insert, remove, update)
 - Serialization/deserialization of triangular matrices
+- Matrix trace, outer product, and element-wise operations
+- Matrix rounding utilities
+
+### Linear Algebra (`provisdom.math.linear-algebra`)
+Matrix decompositions and linear system solving:
+- LU decomposition with partial pivoting
+- Cholesky decomposition for positive-definite matrices
+- QR decomposition using Householder reflections
+- Eigendecomposition for symmetric matrices
+- Singular Value Decomposition (SVD)
+- Linear system solving (exact and least squares)
+- Matrix inverse and Moore-Penrose pseudoinverse
+- Determinant, condition number, and matrix rank
+- Minors, cofactors, and adjugate matrices
+- Matrix power (including negative powers via inverse)
+- Matrix exponential (e^M) using Padé approximation
+- Induced matrix norms (1-norm, infinity-norm, spectral norm)
+- Positive definite/semi-definite utilities
+- Correlation/covariance matrix conversions
 
 ### Special Functions (`provisdom.math.special-functions`)
 Advanced mathematical functions:
@@ -87,10 +107,14 @@ Numerical integration:
 - Parallel processing support
 
 ### Intervals (`provisdom.math.intervals`)
-Interval arithmetic:
-- Simple intervals `[a, b]`
-- Complex bounds with open/closed endpoints
-- Interval operations (intersection, containment)
+Interval arithmetic and bounds manipulation:
+- **Intervals**: Simple `[lower, upper]` vectors with inclusive endpoints
+- **Bounds**: Maps with `::lower`, `::upper`, `::open-lower?`, `::open-upper?` keys for flexible endpoint handling
+- Interval operations: `in-interval?`, `bound-by-interval`, `interval-width`, `interval-midpoint`
+- Bounds operations: `intersection`, `union`, `encompassing-bounds`, `overlaps?`, `contains-bounds?`
+- Bounds utilities: `bound-by-bounds`, `bounds-width`, `bounds-midpoint`
+- Predefined bounds: `bounds-prob` [0,1], `bounds-open-prob` (0,1), `bounds+` (0,∞], `bounds-finite` (-∞,+∞)
+- Specialized bounds for optimization constraints and positive-definite matrices
 
 ### Arrays (`provisdom.math.arrays`)
 Java primitive array operations for performance-critical code.
@@ -104,6 +128,7 @@ Number formatting utilities.
 (require '[provisdom.math.core :as m])
 (require '[provisdom.math.random :as random])
 (require '[provisdom.math.matrix :as mx])
+(require '[provisdom.math.linear-algebra :as la])
 (require '[provisdom.math.special-functions :as special-fns])
 
 ;; Core math
@@ -118,6 +143,12 @@ Number formatting utilities.
 ;; Matrix operations
 (mx/mx* [[1 2] [3 4]] [[5 6] [7 8]])  ;=> [[19 22] [43 50]]
 (mx/transpose [[1 2] [3 4]])          ;=> [[1 3] [2 4]]
+
+;; Linear algebra
+(la/determinant [[1 2] [3 4]])        ;=> -2.0
+(la/inverse [[4 7] [2 6]])            ;=> [[0.6 -0.7] [-0.2 0.4]]
+(la/solve [[2 1] [1 3]] [4 5])        ;=> [1.4 1.2]
+(la/matrix-power [[1 2] [3 4]] 3)     ;=> [[37 54] [81 118]]
 
 ;; Special functions
 (special-fns/gamma 5)      ;=> 24.0 (4!)

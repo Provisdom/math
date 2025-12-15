@@ -423,3 +423,79 @@
     (t/is= [[1 1] [1.01 1.01]] (tensor/roughly-distinct [[1 1] [1.01 1.01] [1.001 1.001]] 0.005))
     (t/is= [[1 1.01]]
       (tensor/roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]] 0.05))))
+
+;;REDUCTION
+(deftest flatten-tensor-test
+  (t/with-instrument `tensor/flatten-tensor
+    (t/is (t/spec-check tensor/flatten-tensor)))
+  (t/with-instrument :all
+    (t/is= [5] (tensor/flatten-tensor 5))
+    (t/is= [] (tensor/flatten-tensor []))
+    (t/is= [1 2 3] (tensor/flatten-tensor [1 2 3]))
+    (t/is= [1 2 3 4] (tensor/flatten-tensor [[1 2] [3 4]]))
+    (t/is= [1 2 3 4 5 6 7 8]
+      (tensor/flatten-tensor [[[1 2] [3 4]] [[5 6] [7 8]]]))))
+
+(deftest sum-test
+  (t/with-instrument `tensor/sum
+    (t/is (t/spec-check tensor/sum)))
+  (t/with-instrument :all
+    (t/is= 5.0 (tensor/sum 5))
+    (t/is= 0.0 (tensor/sum []))
+    (t/is= 6.0 (tensor/sum [1 2 3]))
+    (t/is= 10.0 (tensor/sum [[1 2] [3 4]]))
+    (t/is= 36.0 (tensor/sum [[[1 2] [3 4]] [[5 6] [7 8]]]))))
+
+(deftest product-test
+  (t/with-instrument `tensor/product
+    (t/is (t/spec-check tensor/product)))
+  (t/with-instrument :all
+    (t/is= 5.0 (tensor/product 5))
+    (t/is= 1.0 (tensor/product []))
+    (t/is= 6.0 (tensor/product [1 2 3]))
+    (t/is= 24.0 (tensor/product [[1 2] [3 4]]))
+    (t/is= 40320.0 (tensor/product [[[1 2] [3 4]] [[5 6] [7 8]]]))))
+
+;;SHAPE MANIPULATION
+(deftest reshape-test
+  (t/with-instrument `tensor/reshape
+    (t/is (t/spec-check tensor/reshape)))
+  (t/with-instrument :all
+    (t/is= [[1 2] [3 4]] (tensor/reshape [1 2 3 4] [2 2]))
+    (t/is= [1 2 3 4] (tensor/reshape [[1 2] [3 4]] [4]))
+    (t/is= [[1 2] [3 4] [5 6]] (tensor/reshape [[1 2 3] [4 5 6]] [3 2]))
+    (t/is= [[[1 2] [3 4]] [[5 6] [7 8]]]
+      (tensor/reshape [1 2 3 4 5 6 7 8] [2 2 2]))
+    (t/is= nil (tensor/reshape [1 2 3] [2 2]))
+    (t/is= 5 (tensor/reshape 5 []))
+    (t/is= [5] (tensor/reshape 5 [1]))))
+
+(deftest transpose-test
+  (t/with-instrument `tensor/transpose
+    (t/is (t/spec-check tensor/transpose {:num-tests 50})))
+  ;; Use specific instrumentation since :all would instrument compute-tensor's
+  ;; fspec which fails when spec-checking the inner lambda function
+  (t/with-instrument `tensor/transpose
+    ;; Scalars unchanged
+    (t/is= 5 (tensor/transpose 5))
+    ;; 1D unchanged
+    (t/is= [1 2 3] (tensor/transpose [1 2 3]))
+    ;; 2D standard transpose
+    (t/is= [[]] (tensor/transpose [[]]))
+    (t/is= [[1 4] [2 5] [3 6]] (tensor/transpose [[1 2 3] [4 5 6]]))
+    (t/is= [[1 2] [3 4]] (tensor/transpose (tensor/transpose [[1 2] [3 4]])))
+    ;; 3D default (reverse axes)
+    (let [t3 [[[1 2] [3 4]] [[5 6] [7 8]]]]
+      (t/is= [[[1 5] [3 7]] [[2 6] [4 8]]]
+        (tensor/transpose t3)))
+    ;; 3D with explicit axes
+    (let [t3 [[[1 2] [3 4]] [[5 6] [7 8]]]]
+      (t/is= [[[1 5] [3 7]] [[2 6] [4 8]]]
+        (tensor/transpose t3 [2 1 0]))
+      ;; Swap first two axes only
+      (t/is= [[[1 2] [5 6]] [[3 4] [7 8]]]
+        (tensor/transpose t3 [1 0 2])))
+    ;; Invalid axes
+    (t/is= nil (tensor/transpose [[1 2] [3 4]] [0]))
+    (t/is= nil (tensor/transpose [[1 2] [3 4]] [0 0]))
+    (t/is= nil (tensor/transpose [[1 2] [3 4]] [0 2]))))
