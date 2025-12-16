@@ -74,37 +74,70 @@ Advanced mathematical functions:
 
 ### Combinatorics (`provisdom.math.combinatorics`)
 Combinatorial computations:
-- Factorials and subfactorials (derangements)
-- Combinations and permutations
-- Stirling numbers and Bell numbers
+- Factorials: factorial, subfactorial (derangements), double factorial
+- Pochhammer symbols: rising and falling factorials
+- Binomial coefficients: choose-k-from-n, multinomial coefficient
+- Special numbers: Stirling (1st/2nd kind), Bell, Catalan
+- Binomial probability calculations
+- Integer partitions (partitioning numbers, not sets)
+- Combinations and permutations (lazy sequences)
+- K-permutations (partial permutations)
+- Direct access: nth-combination, nth-permutation for random sampling
+- Counting functions for combinatorial enumeration
+- Cartesian product and selections with replacement
 - Log-space calculations to avoid overflow
 
 ### Series (`provisdom.math.series`)
-Infinite series summation:
-- Adaptive convergence testing
-- Power series evaluation
-- Continued fractions
-- Kahan summation integration
+Infinite series summation and acceleration:
+- Adaptive convergence testing with diagnostics
+- Power series evaluation, multiplication, composition, and inversion
+- Continued fractions (standard, generalized, multiplicative)
+- Series acceleration: Aitken, Wynn epsilon, Euler transform, Richardson
+- Padé approximants for rational function approximation
+- Multiple summation algorithms: Kahan, Neumaier, pairwise
+- Radius of convergence estimation
 
 ### Polynomials (`provisdom.math.polynomials`)
-Polynomial operations:
-- Polynomial evaluation (Horner's method)
-- Chebyshev polynomials (first and second kind)
-- Legendre and other orthogonal polynomials
+Polynomial evaluation, orthogonal polynomials, and interpolation:
+- Polynomial evaluation using Horner's method (`horner-eval`)
+- Chebyshev series evaluation using Clenshaw algorithm (`clenshaw-eval`)
+- Polynomial arithmetic: add, subtract, multiply, scale, divide
+- Chebyshev polynomials (first and second kind) with derivatives
+- Bidirectional Chebyshev ↔ standard polynomial coefficient conversion
+- Chebyshev nodes and extrema for optimal interpolation
+- Legendre polynomials for Gaussian quadrature
+- Hermite polynomials (physicist's and probabilist's conventions)
+- Laguerre polynomials for exponential-weighted problems
+- Lagrange and Newton interpolation (functions and coefficients)
+- 1D, 2D, and N-dimensional polynomial basis functions
 
 ### Derivatives (`provisdom.math.derivatives`)
 Numerical differentiation:
 - Scalar derivatives (1st through 8th order)
 - Gradients, Jacobians, and Hessians
+- Partial derivatives for bivariate functions (∂f/∂x, ∂f/∂y, ∂²f/∂x², ∂²f/∂y², ∂²f/∂x∂y)
 - Central, forward, and backward difference schemes
 - Configurable accuracy levels
+- Richardson extrapolation for improved accuracy
+- Adaptive step size selection with convergence testing
+- Error estimates with derivative values
+- Vector calculus: directional derivatives, Laplacian, divergence, curl (3D)
+- Higher-order mixed partial derivatives
+- Sparse Jacobian and Hessian computation for efficiency
 
 ### Integrals (`provisdom.math.integrals`)
-Numerical integration:
-- Adaptive Gauss-Kronrod quadrature
-- Single and multi-variable integration
-- Finite and infinite interval support
-- Parallel processing support
+Numerical integration with multiple quadrature methods:
+- **Gauss-Kronrod**: `integration` - Default adaptive quadrature for 1D integrals
+- **Clenshaw-Curtis**: `clenshaw-curtis-integration` - Chebyshev-based, includes endpoints
+- **Tanh-sinh**: `tanh-sinh-integration` - Double-exponential for endpoint singularities
+- **Monte Carlo**: `monte-carlo-integration`, `quasi-monte-carlo-integration` - High-dimensional integrals
+- **Sparse grids**: `sparse-grid-integration` - Smolyak algorithm for moderate dimensions (5-15)
+- **Oscillatory**: `oscillatory-integration` - Filon-type for f(x)·sin(ωx) integrands
+- Multi-dimensional integration: `rectangular-integration`, `non-rectangular-2D-integration`
+- `integration-with-error` returns value with error estimate
+- Singularity handling via `::singularities` option
+- Automatic infinite interval transformation
+- Parallel processing support via `::parallel?` option
 
 ### Intervals (`provisdom.math.intervals`)
 Interval arithmetic and bounds manipulation:
@@ -116,11 +149,22 @@ Interval arithmetic and bounds manipulation:
 - Predefined bounds: `bounds-prob` [0,1], `bounds-open-prob` (0,1), `bounds+` (0,∞], `bounds-finite` (-∞,+∞)
 - Specialized bounds for optimization constraints and positive-definite matrices
 
-### Arrays (`provisdom.math.arrays`)
-Java primitive array operations for performance-critical code.
-
 ### Format (`provisdom.math.format`)
-Number formatting utilities.
+Number formatting and parsing utilities:
+- Intelligent formatting that auto-selects fixed-point vs scientific notation
+- Shorthand notation: K (thousands), M (millions), B (billions), T (trillions)
+- Bidirectional parsing/unparsing (`unparse-shorthand`, `parse-shorthand`)
+- Scientific notation parsing support (e.g., "1.23E+4")
+- Money formatting with $ prefix
+- Percentage formatting (`format-percent`)
+- Engineering notation (`format-as-engineering`) with exponents divisible by 3
+- Extended formatting options (`format-number-extended`):
+  - Thousand separators
+  - Custom rounding modes (half-up, half-even, floor, ceiling)
+  - Localization (custom decimal/grouping symbols)
+- Customizable shorthand letters (`unparse-shorthand-custom`)
+- Special value handling (NaN, Infinity)
+- Safe parsing (no code execution risk)
 
 ## Usage
 

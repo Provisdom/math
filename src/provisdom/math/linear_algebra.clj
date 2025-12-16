@@ -1047,7 +1047,8 @@
                                      (let [needed (- nr (count valid-U-columns))
                                            extended (concat valid-U-columns
                                                       (take needed
-                                                        (map #(mx/get-column (mx/identity-matrix nr) %)
+                                                        (map #(mx/get-column (mx/identity-matrix nr)
+                                                                %)
                                                           (range nr))))
                                            extended-m (mx/transpose (vec (take nr extended)))
                                            {::keys [Q]} (qr-decomposition extended-m)]

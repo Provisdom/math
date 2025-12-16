@@ -2,9 +2,11 @@
   (:require
     [clojure.spec.test.alpha :as st]
     [clojure.test :refer :all]
-    [provisdom.test.core :as t]
     [provisdom.math.core :as m]
-    [provisdom.math.format :as format]))
+    [provisdom.math.format :as format]
+    [provisdom.math.random :as random]
+    [provisdom.test.core :as t]
+    [provisdom.utility-belt.anomalies :as anomalies]))
 
 ;;1 seconds
 
@@ -125,6 +127,120 @@
     (t/is= m/inf+ (format/parse-shorthand "Inf"))
     (t/is= m/inf- (format/parse-shorthand "-Inf"))
     (t/is= 2.3432343E16 (format/parse-shorthand "$23432.343T"))
-    (t/is= -2.3432343E16 (format/parse-shorthand "-$23432.343T"))))
+    (t/is= -2.3432343E16 (format/parse-shorthand "-$23432.343T"))
+    ;; Scientific notation parsing
+    (t/is= 12300.0 (format/parse-shorthand "1.23E+4"))
+    (t/is= 1.23E-4 (format/parse-shorthand "1.23E-4"))
+    (t/is= 12300.0 (format/parse-shorthand "1.23e+4"))
+    (t/is= -12300.0 (format/parse-shorthand "-1.23E+4"))
+    (t/is= 12300.0 (format/parse-shorthand "$1.23E+4"))))
 
+(deftest parse-shorthand-edge-cases-test
+  (t/with-instrument `format/parse-shorthand
+    ;; Empty string and whitespace return anomalies
+    (t/is (anomalies/anomaly? (format/parse-shorthand "")))
+    (t/is (anomalies/anomaly? (format/parse-shorthand "   ")))
+    ;; Invalid input returns anomalies
+    (t/is (anomalies/anomaly? (format/parse-shorthand "invalid")))
+    (t/is (anomalies/anomaly? (format/parse-shorthand "abc123")))
+    (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
 
+(deftest parse-shorthand-security-test
+  (t/with-instrument `format/parse-shorthand
+    ;; These should not execute code, just return anomalies
+    (t/is (anomalies/anomaly? (format/parse-shorthand "#=(+ 1 1)")))
+    (t/is (anomalies/anomaly? (format/parse-shorthand "(println \"test\")")))
+    (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
+
+(deftest unparse-shorthand-boundary-test
+  (t/with-instrument `format/unparse-shorthand
+    ;; Test boundary between no suffix and K
+    (t/is= "999.0" (format/unparse-shorthand 999 5))
+    (t/is= "1K" (format/unparse-shorthand 1000 5))
+    ;; Test boundary between K and M
+    (t/is= "999K" (format/unparse-shorthand 999000 5))
+    (t/is= "1M" (format/unparse-shorthand 1000000 5))))
+
+(deftest format-parse-roundtrip-test
+  (t/with-instrument :all
+    ;; Test that parse(unparse(x)) approximately equals x for various values
+    (random/bind-seed 42
+      (doseq [x [1234 1234567 1234567890 1234567890123 -5678]]
+        (let [formatted (format/unparse-shorthand x 10)
+              parsed (format/parse-shorthand formatted)]
+          (when (number? parsed)
+            (t/is (m/roughly? x parsed (* (m/abs x) 0.01))
+              (str "Roundtrip failed for " x " -> " formatted " -> " parsed))))))))
+
+(deftest format-number-max-length-test
+  (t/with-instrument `format/format-number
+    ;; max-length of 1 should still produce something
+    (t/is (string? (format/format-number 123456 1)))
+    ;; Very large max-length shouldn't cause issues
+    (t/is= "123456.0" (format/format-number 123456 1000))))
+
+;;;PERCENT
+(deftest format-percent-test
+  (t/with-instrument `format/format-percent
+    (t/is (t/spec-check format/format-percent)))
+  (t/with-instrument (st/instrumentable-syms)
+    (t/is= "15%" (format/format-percent 0.15))
+    (t/is= "16%" (format/format-percent 0.156 {::format/precision 0}))
+    (t/is= "15.6%" (format/format-percent 0.156 {::format/precision 1}))
+    (t/is= "150%" (format/format-percent 1.5))
+    (t/is= "-25%" (format/format-percent -0.25))
+    (t/is= "0%" (format/format-percent 0))
+    (t/is= "NaN" (format/format-percent m/nan))
+    (t/is= "Inf" (format/format-percent m/inf+))
+    (t/is= "-Inf" (format/format-percent m/inf-))))
+
+;;;ENGINEERING NOTATION
+(deftest format-as-engineering-test
+  (t/with-instrument `format/format-as-engineering
+    (t/is (t/spec-check format/format-as-engineering)))
+  (t/with-instrument (st/instrumentable-syms)
+    (t/is= "12.35E+3" (format/format-as-engineering 12345))
+    (t/is= "1.23E-3" (format/format-as-engineering 0.00123))
+    (t/is= "123.46E+6" (format/format-as-engineering 123456789))
+    (t/is= "1.235E+6" (format/format-as-engineering 1234567 {::format/digits 4}))
+    (t/is= "0E+0" (format/format-as-engineering 0))
+    (t/is= "-12.35E+3" (format/format-as-engineering -12345))
+    (t/is= "1.00E+0" (format/format-as-engineering 1))))
+
+;;;EXTENDED FORMATTING
+(deftest format-number-extended-test
+  (t/with-instrument `format/format-number-extended
+    (t/is (t/spec-check format/format-number-extended)))
+  (t/with-instrument (st/instrumentable-syms)
+    ;; Thousand separators (note: integers formatted as doubles have .0 suffix)
+    (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true}))
+    (t/is= "-1,234,567.0" (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
+    ;; With decimal places specified (format-number still adds .0 for round numbers)
+    (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true
+                                                                    ::format/max-decimal-places 0}))
+    ;; Engineering notation
+    (t/is= "12.35E+3" (format/format-number-extended 12345 10 {::format/engineering? true}))
+    ;; Localization (note: must escape decimal first to avoid double replacement)
+    (t/is= "1.234,56" (format/format-number-extended 1234.56 15
+                        {::format/thousands-sep? true
+                         ::format/decimal-symbol \,
+                         ::format/grouping-symbol \.}))
+    ;; Special values
+    (t/is= "NaN" (format/format-number-extended m/nan 5))
+    (t/is= "Inf" (format/format-number-extended m/inf+ 5))
+    (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
+
+;;;CUSTOM SHORTHAND
+(deftest unparse-shorthand-custom-test
+  (t/with-instrument `format/unparse-shorthand-custom
+    (t/is (t/spec-check format/unparse-shorthand-custom)))
+  (t/with-instrument (st/instrumentable-syms)
+    ;; Custom letters
+    (t/is= "1.5k" (format/unparse-shorthand-custom 1500 5 {::format/shorthand-letters {"k" 1000}}))
+    ;; Default behavior matches unparse-shorthand
+    (t/is= "1.5K" (format/unparse-shorthand-custom 1500 5))
+    ;; Money option
+    (t/is= "$1.5K" (format/unparse-shorthand-custom 1500 5 {::format/money? true}))
+    ;; Special values
+    (t/is= "NaN" (format/unparse-shorthand-custom m/nan 5))
+    (t/is= "Inf" (format/unparse-shorthand-custom m/inf+ 5))))

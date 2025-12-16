@@ -1,11 +1,18 @@
 (ns provisdom.math.polynomials
-  "Polynomial functions and orthogonal polynomial bases.
-  
-  Provides polynomial evaluation, interpolation, and specialized polynomial 
-  families including Chebyshev, Legendre, and other orthogonal polynomials.
-  Useful for function approximation, numerical integration, and spectral methods.
-  
-  Features polynomial evaluation using Horner's method for numerical stability."
+  "Polynomial evaluation, orthogonal polynomials, and interpolation.
+
+  Features:
+  - Efficient polynomial evaluation (Horner's method, Clenshaw algorithm)
+  - Polynomial arithmetic (add, subtract, multiply, divide, scale)
+  - Chebyshev polynomials (T_n and U_n) with derivatives
+  - Bidirectional Chebyshev ↔ standard polynomial coefficient conversion
+  - Chebyshev nodes and extrema for optimal interpolation
+  - Legendre, Hermite, and Laguerre orthogonal polynomials
+  - Lagrange and Newton polynomial interpolation
+  - Multi-dimensional polynomial basis functions (1D, 2D, N-D)
+
+  Useful for function approximation, spectral methods, numerical integration,
+  Gaussian quadrature, and regression."
   (:require
     [clojure.spec.alpha :as s]
     [provisdom.math.combinatorics :as combinatorics]
@@ -43,6 +50,23 @@
 (s/def ::v->v
   (s/fspec :args (s/cat :v ::vector/vector)
     :ret ::vector/vector))
+
+(s/def ::coefficients
+  (s/with-gen (s/coll-of ::m/number :kind vector? :min-count 1)
+    #(s/gen (s/coll-of (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)
+              :kind vector? :min-count 1 :max-count 5))))
+
+(s/def ::points
+  (s/with-gen (s/coll-of (s/tuple ::m/finite ::m/finite) :min-count 1)
+    #(s/gen (s/coll-of (s/tuple (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)
+                         (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false))
+              :min-count 1 :max-count 5))))
+
+(s/def ::node-count
+  (s/with-gen (s/int-in 1 1000)
+    #(s/gen (s/int-in 1 10))))
+
+(s/def ::physicist? boolean?)
 
 ;;;CONSTANTS
 (def ^:const ^:private chebyshev-polynomial-of-the-first-kind-fns
@@ -527,3 +551,621 @@
   :args (s/cat :end-degree ::end-degree
           :opts (s/? (s/keys :opt [::chebyshev-kind])))
   :ret ::v->v)
+
+;;;POLYNOMIAL EVALUATION
+(defn horner-eval
+  "Evaluates a polynomial at x using Horner's method.
+
+  Horner's method is numerically stable and efficient, requiring only n
+  multiplications and n additions for a degree-n polynomial.
+
+  Coefficients are ordered [a₀ a₁ a₂ ...] representing:
+  a₀ + a₁x + a₂x² + ...
+
+  Parameters:
+    coefficients - Vector of polynomial coefficients [a₀ a₁ a₂ ...]
+    x - Point at which to evaluate the polynomial
+
+  Returns the polynomial value at x.
+
+  Example:
+    (horner-eval [1 2 3] 2.0) ; => 1 + 2*2 + 3*4 = 17.0"
+  [coefficients x]
+  (reduce (fn [acc coef]
+            (+ coef (* acc x)))
+    0.0
+    (rseq (vec coefficients))))
+
+(s/fdef horner-eval
+  :args (s/cat :coefficients ::coefficients :x ::m/number)
+  :ret ::m/number)
+
+(defn- clenshaw-recurrence
+  "Helper for Clenshaw algorithm recurrence."
+  [coeffs x multiplier]
+  (let [n (dec (count coeffs))]
+    (loop [k n, b1 0.0, b2 0.0]
+      (if (zero? k)
+        [b1 b2]
+        (recur (dec k) (+ (get coeffs k) (* multiplier x b1) (- b2)) b1)))))
+
+(defn clenshaw-eval
+  "Evaluates a Chebyshev series at x using the Clenshaw algorithm.
+
+  Given coefficients [c₀ c₁ c₂ ...] for the expansion:
+  c₀T₀(x) + c₁T₁(x) + c₂T₂(x) + ...
+
+  Uses the recurrence relation for efficient and stable evaluation.
+
+  Parameters:
+    coefficients - Vector of Chebyshev coefficients [c₀ c₁ c₂ ...]
+    x - Point at which to evaluate (typically in [-1, 1])
+
+  Options:
+    ::second-kind? - If true, evaluates sum of U_n(x) instead of T_n(x)
+
+  Returns the value of the Chebyshev series at x.
+
+  Example:
+    (clenshaw-eval [1 2 3] 0.5) ; => T₀(0.5) + 2T₁(0.5) + 3T₂(0.5)"
+  ([coefficients x] (clenshaw-eval coefficients x {}))
+  ([coefficients x {::keys [second-kind?] :or {second-kind? false}}]
+   (let [coeffs (vec coefficients)
+         n (dec (count coeffs))]
+     (if (neg? n)
+       0.0
+       (let [[b1 b2] (clenshaw-recurrence coeffs x 2.0)]
+         (if second-kind?
+           (+ (get coeffs 0) (* 2.0 x b1) (- b2))
+           (+ (get coeffs 0) (* x b1) (- b2))))))))
+
+(s/fdef clenshaw-eval
+  :args (s/cat :coefficients ::coefficients
+          :x ::m/number
+          :opts (s/? (s/keys :opt [::second-kind?])))
+  :ret ::m/number)
+
+;;;POLYNOMIAL ARITHMETIC
+(defn poly-add
+  "Adds two polynomials represented as coefficient vectors.
+
+  Coefficients are ordered [a₀ a₁ a₂ ...] representing a₀ + a₁x + a₂x² + ...
+
+  Parameters:
+    coeffs1 - First polynomial coefficients
+    coeffs2 - Second polynomial coefficients
+
+  Returns coefficient vector of the sum polynomial.
+
+  Example:
+    (poly-add [1 2 3] [4 5]) ; => [5.0 7.0 3.0]"
+  [coeffs1 coeffs2]
+  (let [c1 (vec coeffs1)
+        c2 (vec coeffs2)
+        n (max (count c1) (count c2))]
+    (mapv (fn [i]
+            (+ (double (get c1 i 0.0)) (double (get c2 i 0.0))))
+      (range n))))
+
+(s/fdef poly-add
+  :args (s/cat :coeffs1 ::coefficients :coeffs2 ::coefficients)
+  :ret ::coefficients)
+
+(defn poly-subtract
+  "Subtracts two polynomials represented as coefficient vectors.
+
+  Parameters:
+    coeffs1 - First polynomial coefficients (minuend)
+    coeffs2 - Second polynomial coefficients (subtrahend)
+
+  Returns coefficient vector of coeffs1 - coeffs2.
+
+  Example:
+    (poly-subtract [5 7 3] [4 5]) ; => [1.0 2.0 3.0]"
+  [coeffs1 coeffs2]
+  (let [c1 (vec coeffs1)
+        c2 (vec coeffs2)
+        n (max (count c1) (count c2))]
+    (mapv (fn [i]
+            (- (double (get c1 i 0.0)) (double (get c2 i 0.0))))
+      (range n))))
+
+(s/fdef poly-subtract
+  :args (s/cat :coeffs1 ::coefficients :coeffs2 ::coefficients)
+  :ret ::coefficients)
+
+(defn poly-multiply
+  "Multiplies two polynomials represented as coefficient vectors.
+
+  Uses convolution of coefficient vectors.
+
+  Parameters:
+    coeffs1 - First polynomial coefficients
+    coeffs2 - Second polynomial coefficients
+
+  Returns coefficient vector of the product polynomial.
+
+  Example:
+    (poly-multiply [1 1] [1 1]) ; => [1.0 2.0 1.0] ((1+x)² = 1+2x+x²)"
+  [coeffs1 coeffs2]
+  (let [c1 (vec coeffs1)
+        c2 (vec coeffs2)
+        n1 (count c1)
+        n2 (count c2)]
+    (if (or (zero? n1) (zero? n2))
+      [0.0]
+      (let [result-len (dec (+ n1 n2))]
+        (mapv (fn [k]
+                (reduce (fn [sum i]
+                          (let [j (- k i)]
+                            (if (and (>= j 0) (< j n2))
+                              (+ sum (* (double (get c1 i 0.0)) (double (get c2 j 0.0))))
+                              sum)))
+                  0.0
+                  (range n1)))
+          (range result-len))))))
+
+(s/fdef poly-multiply
+  :args (s/cat :coeffs1 ::coefficients :coeffs2 ::coefficients)
+  :ret ::coefficients)
+
+(defn poly-scale
+  "Scales a polynomial by a constant.
+
+  Parameters:
+    coeffs - Polynomial coefficients
+    scalar - Scalar multiplier
+
+  Returns scaled coefficient vector.
+
+  Example:
+    (poly-scale [1 2 3] 2.0) ; => [2.0 4.0 6.0]"
+  [coeffs scalar]
+  (mapv #(* (double scalar) (double %)) coeffs))
+
+(s/fdef poly-scale
+  :args (s/cat :coeffs ::coefficients :scalar ::m/number)
+  :ret ::coefficients)
+
+(defn poly-divide
+  "Divides two polynomials using polynomial long division.
+
+  Returns a map with :quotient and :remainder coefficient vectors.
+
+  Parameters:
+    dividend - Dividend polynomial coefficients
+    divisor - Divisor polynomial coefficients
+
+  Returns {:quotient [...] :remainder [...]}
+
+  Example:
+    (poly-divide [1 0 1] [1 1])
+    ; => {:quotient [-1.0 1.0] :remainder [2.0]} (x²+1)/(x+1) = x-1 + 2/(x+1)"
+  [dividend divisor]
+  (let [roughly-zero? (fn [x] (< (m/abs x) 1e-14))
+        dividend (mapv double dividend)
+        divisor (mapv double divisor)
+        ;; Remove trailing zeros from divisor
+        divisor (loop [d divisor]
+                  (if (and (> (count d) 1) (roughly-zero? (peek d)))
+                    (recur (pop d))
+                    d))
+        deg-dividend (dec (count dividend))
+        deg-divisor (dec (count divisor))]
+    (if (or (empty? divisor) (and (= 1 (count divisor)) (roughly-zero? (first divisor))))
+      {:quotient [m/inf+] :remainder [0.0]}
+      (if (< deg-dividend deg-divisor)
+        {:quotient [0.0] :remainder dividend}
+        (loop [remainder dividend
+               quotient (vec (repeat (inc (- deg-dividend deg-divisor)) 0.0))]
+          (let [deg-rem (loop [d (dec (count remainder))]
+                          (if (and (>= d 0) (roughly-zero? (get remainder d)))
+                            (recur (dec d))
+                            d))]
+            (if (or (neg? deg-rem) (< deg-rem deg-divisor))
+              {:quotient quotient
+               :remainder (if (neg? deg-rem)
+                            [0.0]
+                            (mapv double (take (inc deg-rem) remainder)))}
+              (let [coef (/ (double (get remainder deg-rem))
+                           (double (get divisor deg-divisor)))
+                    pos (- deg-rem deg-divisor)
+                    new-quotient (assoc quotient pos coef)
+                    shift-divisor (vec (concat (repeat pos 0.0)
+                                         (map #(* coef (double %)) divisor)))
+                    new-remainder (mapv (fn [i]
+                                          (- (double (get remainder i 0.0))
+                                            (double (get shift-divisor i 0.0))))
+                                    (range (count remainder)))]
+                (recur new-remainder new-quotient)))))))))
+
+(s/fdef poly-divide
+  :args (s/cat :dividend ::coefficients :divisor ::coefficients)
+  :ret (s/keys :req-un [::quotient ::remainder]))
+
+;;;CHEBYSHEV UTILITIES
+(defn chebyshev-nodes
+  "Returns the Chebyshev nodes (zeros of T_n) for polynomial interpolation.
+
+  These are the optimal interpolation points on [-1, 1] that minimize
+  the Runge phenomenon.
+
+  Parameters:
+    n - Number of nodes to generate
+
+  Returns a vector of n Chebyshev node locations in [-1, 1].
+
+  Example:
+    (chebyshev-nodes 3) ; => [0.866... 0.0 -0.866...]"
+  [n]
+  (mapv (fn [k]
+          (m/cos (* m/PI (/ (- (* 2.0 (inc k)) 1.0)
+                          (* 2.0 n)))))
+    (range n)))
+
+(s/fdef chebyshev-nodes
+  :args (s/cat :n ::node-count)
+  :ret ::vector/vector)
+
+(defn chebyshev-extrema
+  "Returns the Chebyshev extrema (including endpoints) for interpolation.
+
+  These are the points where T_n reaches its extreme values ±1.
+
+  Parameters:
+    n - Number of extrema points (n+1 points from 0 to n)
+
+  Returns a vector of n Chebyshev extrema locations in [-1, 1].
+
+  Example:
+    (chebyshev-extrema 3) ; => [1.0 0.5 -0.5 -1.0]"
+  [n]
+  (mapv (fn [k]
+          (m/cos (/ (* m/PI k) (dec n))))
+    (range n)))
+
+(s/fdef chebyshev-extrema
+  :args (s/cat :n (s/and ::node-count #(>= % 2)))
+  :ret ::vector/vector)
+
+(defn regular-poly-factors-to-chebyshev-poly-factors
+  "Converts standard polynomial coefficients to Chebyshev form.
+
+  Transforms a standard polynomial:
+  a₀ + a₁x + a₂x² + ...
+
+  Into Chebyshev form:
+  c₀T₀(x) + c₁T₁(x) + c₂T₂(x) + ...
+
+  Uses the relationship between powers of x and Chebyshev polynomials.
+
+  Parameters:
+    regular-factors - Standard polynomial coefficients [a₀ a₁ a₂ ...]
+
+  Returns Chebyshev coefficients [c₀ c₁ c₂ ...].
+
+  Example:
+    (regular-poly-factors-to-chebyshev-poly-factors [1 0 1])
+    ; => [1.5 0.0 0.5] since x² = (T₂(x) + T₀(x))/2"
+  [regular-factors]
+  (let [n (count regular-factors)
+        ;; Coefficients for x^k in terms of Chebyshev polynomials
+        ;; x^0 = T_0
+        ;; x^1 = T_1
+        ;; x^2 = (T_2 + T_0)/2
+        ;; x^3 = (T_3 + 3T_1)/4
+        ;; etc. Using recurrence: x*T_n = (T_{n+1} + T_{n-1})/2
+        power-to-chebyshev (fn [k]
+                             (if (zero? k)
+                               [1.0]
+                               (loop [coeffs [0.0 1.0]  ; Start with T_1 = x
+                                      power 1]
+                                 (if (= power k)
+                                   coeffs
+                                   ;; Multiply by x: x*sum(c_i*T_i) = sum(c_i*(T_{i+1}+T_{i-1})/2)
+                                   (let [old-len (count coeffs)
+                                         new-len (inc old-len)
+                                         new-coeffs (vec (repeat new-len 0.0))]
+                                     (recur
+                                       (reduce (fn [acc i]
+                                                 (let [c (get coeffs i 0.0)]
+                                                   (-> acc
+                                                     (update (inc i) + (* 0.5 c))
+                                                     (update (long (m/abs (dec i))) + (* 0.5 c)))))
+                                         new-coeffs
+                                         (range old-len))
+                                       (inc power)))))))]
+    (reduce (fn [result k]
+              (let [chebyshev-coeffs (power-to-chebyshev k)
+                    scaled (mapv #(* (get regular-factors k) %) chebyshev-coeffs)]
+                (poly-add result scaled)))
+      [0.0]
+      (range n))))
+
+(s/fdef regular-poly-factors-to-chebyshev-poly-factors
+  :args (s/cat :regular-factors ::m/numbers)
+  :ret (s/coll-of ::m/number))
+
+;;;ORTHOGONAL POLYNOMIALS
+(defn legendre-polynomial-fn
+  "Creates a Legendre polynomial function of the specified degree.
+
+  Legendre polynomials P_n(x) are orthogonal on [-1, 1] with weight 1.
+  They satisfy: ∫₋₁¹ P_m(x)P_n(x)dx = 2/(2n+1) δ_{mn}
+
+  Used in:
+  - Gaussian quadrature
+  - Spherical harmonics
+  - Solving Laplace's equation
+
+  Parameters:
+    degree - Non-negative integer degree of the polynomial
+
+  Returns a function that evaluates P_n(x).
+
+  Example:
+    ((legendre-polynomial-fn 2) 0.5) ; => P₂(0.5) = -0.125"
+  [degree]
+  (let [degree (long degree)]
+    (cond
+      (zero? degree) (constantly 1.0)
+      (= 1 degree) (fn [x] (* 1.0 x))
+      :else
+      (fn [x]
+        (loop [p0 1.0
+               p1 x
+               n 1]
+          (if (= n degree)
+            p1
+            (let [p2 (/ (- (* (inc (* 2 n)) x p1) (* n p0))
+                       (inc n))]
+              (recur p1 p2 (inc n)))))))))
+
+(s/fdef legendre-polynomial-fn
+  :args (s/cat :degree ::degree)
+  :ret ::number->number)
+
+(defn hermite-polynomial-fn
+  "Creates a Hermite polynomial function of the specified degree.
+
+  Two conventions exist:
+  - Physicist's (default): H_n(x), orthogonal on ℝ with weight e^(-x²)
+  - Probabilist's: He_n(x), orthogonal on ℝ with weight e^(-x²/2)
+
+  Used in quantum mechanics (harmonic oscillator) and probability theory.
+
+  Parameters:
+    degree - Non-negative integer degree of the polynomial
+
+  Options:
+    ::physicist? - If true (default), uses physicist's convention H_n
+                   If false, uses probabilist's convention He_n
+
+  Returns a function that evaluates the Hermite polynomial.
+
+  Example:
+    ((hermite-polynomial-fn 2) 1.0) ; => H₂(1) = 2
+    ((hermite-polynomial-fn 2 {::physicist? false}) 1.0) ; => He₂(1) = 0"
+  ([degree] (hermite-polynomial-fn degree {}))
+  ([degree {::keys [physicist?] :or {physicist? true}}]
+   (let [degree (long degree)]
+     (cond
+       (zero? degree) (constantly 1.0)
+       (= 1 degree) (if physicist?
+                      (fn [x] (* 2.0 x))
+                      (fn [x] (* 1.0 x)))
+       :else
+       (if physicist?
+         ;; H_{n+1}(x) = 2xH_n(x) - 2nH_{n-1}(x)
+         (fn [x]
+           (loop [h0 1.0
+                  h1 (* 2.0 x)
+                  n 1]
+             (if (= n degree)
+               h1
+               (let [h2 (- (* 2.0 x h1) (* 2.0 n h0))]
+                 (recur h1 h2 (inc n))))))
+         ;; He_{n+1}(x) = xHe_n(x) - nHe_{n-1}(x)
+         (fn [x]
+           (loop [h0 1.0
+                  h1 x
+                  n 1]
+             (if (= n degree)
+               h1
+               (let [h2 (- (* x h1) (* n h0))]
+                 (recur h1 h2 (inc n)))))))))))
+
+(s/fdef hermite-polynomial-fn
+  :args (s/cat :degree ::degree
+          :opts (s/? (s/keys :opt [::physicist?])))
+  :ret ::number->number)
+
+(defn laguerre-polynomial-fn
+  "Creates a Laguerre polynomial function of the specified degree.
+
+  Laguerre polynomials L_n(x) are orthogonal on [0, ∞) with weight e^(-x).
+  They satisfy: ∫₀^∞ L_m(x)L_n(x)e^(-x)dx = δ_{mn}
+
+  Used in:
+  - Quantum mechanics (hydrogen atom radial functions)
+  - Solving differential equations with exponential decay
+
+  Parameters:
+    degree - Non-negative integer degree of the polynomial
+
+  Returns a function that evaluates L_n(x).
+
+  Example:
+    ((laguerre-polynomial-fn 2) 1.0) ; => L₂(1) = 0.5"
+  [degree]
+  (let [degree (long degree)]
+    (cond
+      (zero? degree) (constantly 1.0)
+      (= 1 degree) (fn [x] (- 1.0 x))
+      :else
+      ;; L_{n+1}(x) = ((2n+1-x)L_n(x) - nL_{n-1}(x)) / (n+1)
+      (fn [x]
+        (loop [l0 1.0
+               l1 (- 1.0 x)
+               n 1]
+          (if (= n degree)
+            l1
+            (let [l2 (/ (- (* (- (inc (* 2 n)) x) l1) (* n l0))
+                       (inc n))]
+              (recur l1 l2 (inc n)))))))))
+
+(s/fdef laguerre-polynomial-fn
+  :args (s/cat :degree ::degree)
+  :ret ::number->number)
+
+;;;INTERPOLATION
+(defn lagrange-interpolation-fn
+  "Creates a Lagrange interpolating polynomial for given data points.
+
+  Given n points (x₀,y₀), (x₁,y₁), ..., constructs the unique polynomial
+  of degree at most n-1 passing through all points.
+
+  Parameters:
+    points - Sequence of [x y] coordinate pairs
+
+  Returns a function that evaluates the interpolating polynomial at any x.
+
+  Note: For many points or points outside the data range, consider using
+  Chebyshev interpolation for better numerical stability.
+
+  Example:
+    (def f (lagrange-interpolation-fn [[0 1] [1 2] [2 5]]))
+    (f 1.5) ; => 3.25"
+  [points]
+  (let [points (vec points)
+        xs (mapv first points)
+        ys (mapv second points)]
+    (fn [x]
+      (reduce-kv
+        (fn [sum i yi]
+          (let [xi (get xs i)
+                li (reduce-kv
+                     (fn [prod j xj]
+                       (if (= i j)
+                         prod
+                         (* prod (/ (- x xj) (- xi xj)))))
+                     1.0
+                     xs)]
+            (+ sum (* yi li))))
+        0.0
+        ys))))
+
+(s/fdef lagrange-interpolation-fn
+  :args (s/cat :points ::points)
+  :ret ::number->number)
+
+(defn lagrange-interpolation-coefficients
+  "Returns the coefficients of the Lagrange interpolating polynomial.
+
+  Given n points, computes the standard polynomial coefficients [a₀ a₁ ... a_{n-1}]
+  such that p(x) = a₀ + a₁x + ... + a_{n-1}x^{n-1} passes through all points.
+
+  Parameters:
+    points - Sequence of [x y] coordinate pairs
+
+  Returns coefficient vector [a₀ a₁ a₂ ...].
+
+  Example:
+    (lagrange-interpolation-coefficients [[0 1] [1 2] [2 5]])
+    ; => [1.0 0.0 1.0] representing 1 + x²"
+  [points]
+  (let [points (vec points)
+        n (count points)
+        xs (mapv first points)
+        ys (mapv second points)]
+    (reduce-kv
+      (fn [result i yi]
+        (let [xi (get xs i)
+              ;; Build the basis polynomial L_i(x) = prod_{j≠i} (x - xj)/(xi - xj)
+              ;; Start with [1] and multiply by (x - xj)/(xi - xj) = [-xj/(xi-xj), 1/(xi-xj)]
+              basis (reduce-kv
+                      (fn [coeffs j xj]
+                        (if (= i j)
+                          coeffs
+                          (let [denom (- xi xj)
+                                factor [(/ (- xj) denom) (/ 1.0 denom)]]
+                            (poly-multiply coeffs factor))))
+                      [1.0]
+                      xs)]
+          (poly-add result (poly-scale basis yi))))
+      (vec (repeat n 0.0))
+      ys)))
+
+(s/fdef lagrange-interpolation-coefficients
+  :args (s/cat :points ::points)
+  :ret ::coefficients)
+
+(defn newton-interpolation-coefficients
+  "Computes Newton's divided difference interpolation coefficients.
+
+  Returns coefficients [c₀ c₁ c₂ ...] for Newton's form:
+  p(x) = c₀ + c₁(x-x₀) + c₂(x-x₀)(x-x₁) + ...
+
+  This form is more efficient for adding new points incrementally.
+
+  Parameters:
+    points - Sequence of [x y] coordinate pairs
+
+  Returns a map with:
+    :coefficients - Newton form coefficients
+    :xs - The x-values for computing the polynomial
+
+  Example:
+    (newton-interpolation-coefficients [[0 1] [1 2] [2 5]])"
+  [points]
+  (let [points (vec points)
+        n (count points)
+        xs (mapv first points)
+        ys (mapv second points)
+        ;; Build divided difference table
+        table (loop [table [ys]
+                     k 1]
+                (if (= k n)
+                  table
+                  (let [prev (peek table)
+                        next-col (mapv (fn [i]
+                                         (/ (- (get prev (inc i)) (get prev i))
+                                           (- (get xs (+ i k)) (get xs i))))
+                                   (range (- n k)))]
+                    (recur (conj table next-col) (inc k)))))]
+    {:coefficients (mapv first table)
+     :xs xs}))
+
+(s/fdef newton-interpolation-coefficients
+  :args (s/cat :points ::points)
+  :ret (s/keys :req-un [::coefficients ::xs]))
+
+(defn newton-interpolation-fn
+  "Creates a Newton interpolating polynomial for given data points.
+
+  Uses Newton's divided differences for efficient evaluation.
+
+  Parameters:
+    points - Sequence of [x y] coordinate pairs
+
+  Returns a function that evaluates the interpolating polynomial at any x.
+
+  Example:
+    (def f (newton-interpolation-fn [[0 1] [1 2] [2 5]]))
+    (f 1.5) ; => 3.25"
+  [points]
+  (let [{:keys [coefficients xs]} (newton-interpolation-coefficients points)
+        n (count coefficients)]
+    (fn [x]
+      ;; Horner-like evaluation: p(x) = c₀ + (x-x₀)(c₁ + (x-x₁)(c₂ + ...))
+      (loop [k (dec n)
+             result 0.0]
+        (if (neg? k)
+          result
+          (recur (dec k)
+            (+ (get coefficients k)
+              (* result (- x (get xs k))))))))))
+
+(s/fdef newton-interpolation-fn
+  :args (s/cat :points ::points)
+  :ret ::number->number)

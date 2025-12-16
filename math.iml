@@ -24,11 +24,11 @@
     <orderEntry type="library" name="Deps: orchestra:2021.01.01-1" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/tools.reader:1.5.0" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/test.check:1.1.2" level="project" />
-    <orderEntry type="library" name="Deps: provisdom/test:07d497" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.memoize:1.1.266" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/data.priority-map:1.2.0" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.cache:1.1.234" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.async:1.8.741" level="project" />
     <orderEntry type="module" module-name="utility-belt" />
+    <orderEntry type="module" module-name="test" />
   </component>
 </module>

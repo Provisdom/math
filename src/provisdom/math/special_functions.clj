@@ -1,14 +1,17 @@
 (ns provisdom.math.special-functions
   "Special mathematical functions for advanced numerical computation.
-  
+
   Implements a comprehensive collection of special functions including:
-  - Gamma and incomplete gamma functions (with log versions)
-  - Beta functions and incomplete beta functions
-  - Error functions (erf, erfc, inverse erf)
-  - Bessel functions of the first and second kind
-  - Hypergeometric functions
-  - Elliptic integrals
-  
+  - Gamma functions (gamma, log-gamma, digamma, trigamma, multivariate)
+  - Incomplete gamma functions (lower, upper, regularized P and Q)
+  - Beta functions (beta, log-beta, incomplete, regularized)
+  - Error functions (erf, erfc, inverse erf/erfc, derivatives)
+  - Sigmoid functions (logistic, logit, probit, with derivatives)
+  - Standard normal CDF and inverse CDF
+  - Log-sum-exp for numerical stability
+  - Bessel functions (J_ν, Y_ν, I_ν, K_ν for real orders)
+  - Hypergeometric functions (confluent ₁F₁, Gaussian ₂F₁)
+
   Uses high-precision algorithms with series expansions, continued fractions,
   and asymptotic expansions as appropriate for different parameter ranges."
   (:require
@@ -234,17 +237,47 @@
   :args (s/cat :x ::m/num)
   :ret ::m/non-)
 
+(defn- erfc-asymptotic
+  "Computes erfc(x) using asymptotic expansion for large x > 4.
+  erfc(x) ~ exp(-x²)/(x√π) * [1 - 1/(2x²) + 1·3/(2x²)² - 1·3·5/(2x²)³ + ...]"
+  [x]
+  (let [x2 (m/sq x)
+        inv-2x2 (/ (* 2.0 x2))
+        ;; Coefficients are (-1)^n * (2n-1)!! where (2n-1)!! = 1, 1, 3, 15, 105, 945, ...
+        ;; We sum until terms start growing (asymptotic series)
+        prefactor (* (m/exp (- x2)) m/inv-sqrt-pi (/ x))]
+    (loop [n 0
+           term 1.0
+           sum 1.0
+           prev-term 2.0]                                   ;; larger than first term
+      (if (or (> n 50) (> (m/abs term) (m/abs prev-term)))
+        (* prefactor sum)
+        (let [;; next term = prev-term * (-(2n+1)) / (2x²)
+              next-term (* term (- (inc (* 2.0 n))) inv-2x2)]
+          (recur (inc n) next-term (+ sum next-term) term))))))
+
 (defn erfc
   "Computes the complementary error function erfc(`x`) = 1 - erf(`x`).
-  
-  More numerically stable than computing 1 - erf(`x`) directly,
-  especially for large positive `x` where erf(`x`) ≈ 1.
-  
+
+  Uses numerically stable algorithms:
+  - Asymptotic expansion for large x (> 4) to avoid precision loss
+  - Standard computation for moderate x where 1 - erf(x) is accurate
+  - Symmetry relation for negative x
+
   Examples:
     (erfc 0.0) ;=> 1.0
-    (erfc 3.0) ;=> 2.2090496998585441e-5"
+    (erfc 3.0) ;=> 2.2090496998585441e-5
+    (erfc 5.0) ;=> 1.5374597944280349e-12
+    (erfc 10.0) ;=> 2.0884875837625447e-45"
   [x]
-  (m/one- (erf x)))
+  (cond
+    (zero? x) 1.0
+    (m/inf+? x) 0.0
+    (m/inf-? x) 2.0
+    (neg? x) (- 2.0 (erfc (- x)))
+    (> x 26.5) 0.0                                          ;; underflow to 0
+    (> x 4.0) (erfc-asymptotic x)
+    :else (m/one- (erf x))))
 
 (s/fdef erfc
   :args (s/cat :x ::m/num)
@@ -514,8 +547,8 @@
               (if (pos? a)
                 t
                 (/ (- m/PI)
-                   (* a t (m/sin (* (- m/PI) a))))
-                ))))))
+                   (* a t (m/sin (* (- m/PI) a))))))))))
+                
 
 (s/fdef gamma
   :args (s/cat :a (s/or :pos ::m/pos
@@ -1115,3 +1148,521 @@
                :x ::m/finite+
                :y ::m/finite+)
   :ret ::m/number)
+
+;;;HELPER FUNCTIONS
+(defn- pochhammer
+  "Computes the Pochhammer symbol (rising factorial) (a)_n.
+  (a)_n = a(a+1)(a+2)...(a+n-1) = Γ(a+n)/Γ(a)
+  (a)_0 = 1 by definition."
+  [a n]
+  (cond
+    (zero? n) 1.0
+    (m/one? n) (double a)
+    (neg? n) (/ (pochhammer (+ a n) (- n)))
+    :else (reduce (fn [acc i]
+                    (* acc (+ a i)))
+            1.0
+            (range n))))
+
+;;;BESSEL FUNCTIONS
+(s/def ::bessel-order ::m/num)
+
+(defn- bessel-j-series
+  "Power series for J_ν(x) for small x.
+  J_ν(x) = (x/2)^ν * Σ_{k=0}^∞ (-1)^k * (x/2)^(2k) / (k! * Γ(ν+k+1))"
+  [order x max-terms]
+  (let [x-half (* 0.5 x)
+        x2-neg (- (m/sq x-half))
+        prefactor (m/pow x-half order)]
+    (loop [k 0
+           term (/ (gamma (inc order)))
+           sum term]
+      (if (or (>= k max-terms)
+              (and (not (zero? sum))
+                   (< (m/abs (/ term sum)) 1e-15)))
+        (* prefactor sum)
+        (let [next-term (* term x2-neg
+                           (/ (* (inc k) (+ order k 1))))]
+          (recur (inc k) next-term (+ sum next-term)))))))
+
+(defn- bessel-j-asymptotic
+  "Asymptotic expansion for J_ν(x) for large x.
+  J_ν(x) ~ √(2/(πx)) * [P(ν,x)*cos(χ) - Q(ν,x)*sin(χ)]
+  where χ = x - νπ/2 - π/4"
+  [order x]
+  (let [chi (- x (* order 0.5 m/PI) (* 0.25 m/PI))
+        sqrt-factor (m/sqrt (/ 2.0 m/PI x))
+        ;; Compute P and Q using asymptotic series
+        mu (* 4.0 (m/sq order))
+        x8 (* 8.0 x)
+        ;; P ~ 1 - (μ-1)(μ-9)/(2!(8x)²) + ...
+        ;; Q ~ (μ-1)/(8x) - (μ-1)(μ-9)(μ-25)/(3!(8x)³) + ...
+        p (loop [k 0
+                 term 1.0
+                 sum 1.0]
+            (if (>= k 10)
+              sum
+              (let [factor (/ (* (- mu (m/sq (dec (* 4 k 2))))
+                                 (- mu (m/sq (inc (* 4 k 2)))))
+                              (* -1.0 (inc (* 2 k)) (+ 2 (* 2 k)) (m/sq x8)))
+                    next-term (* term factor)]
+                (if (< (m/abs next-term) 1e-16)
+                  (+ sum next-term)
+                  (recur (inc k) next-term (+ sum next-term))))))
+        q (loop [k 0
+                 term (/ (dec mu) x8)
+                 sum term]
+            (if (>= k 10)
+              sum
+              (let [factor (/ (* (- mu (m/sq (+ 1 (* 4 k 2))))
+                                 (- mu (m/sq (+ 3 (* 4 k 2)))))
+                              (* -1.0 (+ 2 (* 2 k)) (+ 3 (* 2 k)) (m/sq x8)))
+                    next-term (* term factor)]
+                (if (< (m/abs next-term) 1e-16)
+                  (+ sum next-term)
+                  (recur (inc k) next-term (+ sum next-term))))))]
+    (* sqrt-factor (- (* p (m/cos chi)) (* q (m/sin chi))))))
+
+(defn bessel-j
+  "Computes the Bessel function of the first kind J_`order`(`x`).
+
+  J_ν(x) is the solution to Bessel's equation that is finite at x=0.
+  For integer orders n, J_n(x) = (-1)^n * J_{-n}(x).
+
+  Parameters:
+    `order` - the order ν (any real number)
+    `x` - the argument (x >= 0)
+
+  Examples:
+    (bessel-j 0 0.0) ;=> 1.0
+    (bessel-j 0 1.0) ;=> 0.7651976865579666
+    (bessel-j 1 1.0) ;=> 0.4400505857449335"
+  [order x]
+  (cond
+    (zero? x) (if (zero? order) 1.0 0.0)
+    (neg? x) (if (m/roughly-round? order m/sgl-close)
+               (* (m/pow -1 (m/round order :toward-zero)) (bessel-j order (- x)))
+               m/nan)
+    ;; Use asymptotic for large x (x > 4|ν| + 15)
+    (> x (+ (* 4.0 (m/abs order)) 15.0))
+    (bessel-j-asymptotic order x)
+    ;; Use power series for small x
+    :else (bessel-j-series order x 100)))
+
+(s/fdef bessel-j
+  :args (s/cat :order ::bessel-order :x ::m/non-)
+  :ret ::m/num)
+
+(defn- bessel-y-series
+  "Computes Y_ν(x) for non-integer order using the relation:
+  Y_ν(x) = (J_ν(x)*cos(νπ) - J_{-ν}(x)) / sin(νπ)"
+  [order x]
+  (let [j-nu (bessel-j order x)
+        j-neg-nu (bessel-j (- order) x)
+        nu-pi (* order m/PI)]
+    (/ (- (* j-nu (m/cos nu-pi)) j-neg-nu)
+       (m/sin nu-pi))))
+
+(defn- bessel-y0-small
+  "Computes Y_0(x) for small x using series expansion.
+  Y_0(x) = (2/π){J_0(x)[ln(x/2) + γ] + Σ_{m=1}^∞ [(-1)^{m+1}/(m!)²](x/2)^{2m} H_m}
+  where H_m = 1 + 1/2 + ... + 1/m is the m-th harmonic number."
+  [x]
+  (let [gamma-euler 0.5772156649015329
+        j0 (bessel-j 0 x)
+        ln-x2 (m/log (* 0.5 x))
+        x-half (* 0.5 x)
+        x2 (m/sq x-half)
+        ;; First term: (2/π) * J_0(x) * [ln(x/2) + γ]
+        first-term (* (/ 2.0 m/PI) j0 (+ ln-x2 gamma-euler))
+        ;; Series: Σ_{m=1}^∞ [(-1)^{m+1}/(m!)²](x/2)^{2m} H_m
+        series-sum (loop [m 1
+                          h-m 1.0
+                          m-fact 1.0
+                          x-pow x2
+                          sum 0.0]
+                     (if (> m 30)
+                       sum
+                       (let [sign (if (odd? m) 1.0 -1.0)
+                             term (* sign x-pow (/ (* m-fact m-fact)) h-m)
+                             next-m (inc m)
+                             next-h-m (+ h-m (/ next-m))
+                             next-m-fact (* m-fact next-m)
+                             next-x-pow (* x-pow x2)]
+                         (if (and (> m 5) (< (m/abs term) 1e-16))
+                           (+ sum term)
+                           (recur next-m next-h-m next-m-fact next-x-pow
+                                  (+ sum term))))))]
+    (+ first-term (* (/ 2.0 m/PI) series-sum))))
+
+(defn- bessel-y1-small
+  "Computes Y_1(x) for small x using Wronskian relation."
+  [x]
+  ;; Wronskian: J_0(x)*Y_1(x) - J_1(x)*Y_0(x) = -2/(πx)
+  ;; So: Y_1(x) = [J_1(x)*Y_0(x) - 2/(πx)] / J_0(x)
+  (let [y0 (bessel-y0-small x)
+        j0 (bessel-j 0 x)
+        j1 (bessel-j 1 x)]
+    (/ (- (* j1 y0) (/ 2.0 (* m/PI x))) j0)))
+
+(defn- bessel-y-integer
+  "Computes Y_n(x) for integer order n."
+  [n x]
+  (let [n (long (m/abs n))]
+    (cond
+      (zero? n) (bessel-y0-small x)
+      (m/one? n) (bessel-y1-small x)
+      :else
+      ;; Use forward recurrence: Y_{n+1} = (2n/x)Y_n - Y_{n-1}
+      (loop [k 1
+             y-prev (bessel-y0-small x)
+             y-curr (bessel-y1-small x)]
+        (if (>= k n)
+          y-curr
+          (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
+            (recur (inc k) y-curr y-next)))))))
+
+(defn bessel-y
+  "Computes the Bessel function of the second kind Y_`order`(`x`).
+
+  Also called Neumann function N_ν(x). Y_ν(x) is the second linearly
+  independent solution to Bessel's equation. Has a logarithmic singularity
+  at x=0.
+
+  Parameters:
+    `order` - the order ν (any real number)
+    `x` - the argument (x > 0)
+
+  Examples:
+    (bessel-y 0 1.0) ;=> 0.08825696421567691
+    (bessel-y 1 1.0) ;=> -0.7812128213002887"
+  [order x]
+  (cond
+    (<= x 0.0) m/inf-
+    (m/roughly-round? order m/sgl-close)
+    (bessel-y-integer (m/round order :toward-zero) x)
+    :else (bessel-y-series order x)))
+
+(s/fdef bessel-y
+  :args (s/cat :order ::bessel-order :x ::m/finite+)
+  :ret ::m/num)
+
+(defn- bessel-i-series
+  "Power series for I_ν(x) for small to moderate x.
+  I_ν(x) = (x/2)^ν * Σ_{k=0}^∞ (x/2)^(2k) / (k! * Γ(ν+k+1))"
+  [order x max-terms]
+  (let [x-half (* 0.5 x)
+        x2 (m/sq x-half)
+        prefactor (m/pow x-half order)]
+    (loop [k 0
+           term (/ (gamma (inc order)))
+           sum term]
+      (if (or (>= k max-terms)
+              (and (not (zero? sum))
+                   (< (m/abs (/ term sum)) 1e-15)))
+        (* prefactor sum)
+        (let [next-term (* term x2
+                           (/ (* (inc k) (+ order k 1))))]
+          (recur (inc k) next-term (+ sum next-term)))))))
+
+(defn- bessel-i-asymptotic
+  "Asymptotic expansion for I_ν(x) for large x.
+  I_ν(x) ~ exp(x)/√(2πx) * [1 - (μ-1)/(8x) + ...]
+  where μ = 4ν²"
+  [order x]
+  (let [prefactor (/ (m/exp x) (m/sqrt (* 2.0 m/PI x)))
+        mu (* 4.0 (m/sq order))
+        x8 (* 8.0 x)]
+    (* prefactor
+       (loop [k 0
+              term 1.0
+              sum 1.0]
+         (if (>= k 20)
+           sum
+           (let [factor (/ (- mu (m/sq (inc (* 2 k))))
+                           (* -1.0 x8 (inc k)))
+                 next-term (* term factor)]
+             (if (< (m/abs next-term) 1e-16)
+               (+ sum next-term)
+               (recur (inc k) next-term (+ sum next-term)))))))))
+
+(defn bessel-i
+  "Computes the modified Bessel function of the first kind I_`order`(`x`).
+
+  I_ν(x) is the solution to the modified Bessel equation that is finite
+  at x=0. Related to J_ν by I_ν(x) = i^(-ν) * J_ν(ix).
+
+  Parameters:
+    `order` - the order ν (any real number)
+    `x` - the argument (x >= 0)
+
+  Examples:
+    (bessel-i 0 0.0) ;=> 1.0
+    (bessel-i 0 1.0) ;=> 1.2660658777520082
+    (bessel-i 1 1.0) ;=> 0.5651591039924851"
+  [order x]
+  (cond
+    (zero? x) (if (zero? order) 1.0 0.0)
+    (neg? x) (if (m/roughly-round? order m/sgl-close)
+               (bessel-i order (- x))
+               m/nan)
+    ;; Use asymptotic for large x
+    (> x (+ (* 4.0 (m/abs order)) 20.0))
+    (bessel-i-asymptotic order x)
+    ;; Use power series
+    :else (bessel-i-series order x 100)))
+
+(s/fdef bessel-i
+  :args (s/cat :order ::bessel-order :x ::m/non-)
+  :ret ::m/nan-or-non-)
+
+(defn- bessel-k-series
+  "Computes K_ν(x) for non-integer order using the relation:
+  K_ν(x) = (π/2) * (I_{-ν}(x) - I_ν(x)) / sin(νπ)"
+  [order x]
+  (let [i-nu (bessel-i order x)
+        i-neg-nu (bessel-i (- order) x)
+        nu-pi (* order m/PI)]
+    (* 0.5 m/PI (/ (- i-neg-nu i-nu) (m/sin nu-pi)))))
+
+(defn- bessel-k-integer
+  "Computes K_n(x) for integer order n using series expansion."
+  [n x]
+  (let [n (long (m/abs n))]
+    (cond
+      (zero? n)
+      ;; K_0(x) = -[γ + ln(x/2)]I_0(x) + Σ_{k=1}^∞ (x/2)^{2k} ψ(k) / (k!)²
+      ;; where ψ(k) = H_k = 1 + 1/2 + ... + 1/k
+      (let [gamma-euler 0.5772156649015329
+            ln-x2 (m/log (* 0.5 x))
+            x-half (* 0.5 x)
+            x2 (m/sq x-half)
+            i0 (bessel-i 0 x)
+            series-sum (loop [k 1
+                              psi-k 1.0
+                              factorial-sq 1.0
+                              sum (* psi-k x2)]
+                         (if (> k 30)
+                           sum
+                           (let [next-k (inc k)
+                                 next-psi-k (+ psi-k (/ next-k))
+                                 next-factorial-sq (* factorial-sq next-k next-k)
+                                 next-term (* next-psi-k
+                                              (m/pow x2 next-k)
+                                              (/ next-factorial-sq))]
+                             (if (< (m/abs next-term) 1e-16)
+                               (+ sum next-term)
+                               (recur next-k next-psi-k next-factorial-sq
+                                      (+ sum next-term))))))]
+        (+ (* -1.0 (+ gamma-euler ln-x2) i0) series-sum))
+
+      (m/one? n)
+      ;; K_1(x) via Wronskian: I_0*K_1 + I_1*K_0 = 1/x
+      ;; So K_1 = (1/x - I_1*K_0) / I_0
+      (let [k0 (bessel-k-integer 0 x)
+            i0 (bessel-i 0 x)
+            i1 (bessel-i 1 x)]
+        (/ (- (/ x) (* i1 k0)) i0))
+
+      :else
+      ;; Use forward recurrence: K_{n+1} = (2n/x)K_n + K_{n-1}
+      (loop [k 1
+             k-prev (bessel-k-integer 0 x)
+             k-curr (bessel-k-integer 1 x)]
+        (if (>= k n)
+          k-curr
+          (let [k-next (+ (* (/ (* 2.0 k) x) k-curr) k-prev)]
+            (recur (inc k) k-curr k-next)))))))
+
+(defn bessel-k
+  "Computes the modified Bessel function of the second kind K_`order`(`x`).
+
+  K_ν(x) is the second linearly independent solution to the modified
+  Bessel equation. Decays exponentially for large x. Has a singularity
+  at x=0.
+
+  Parameters:
+    `order` - the order ν (any real number)
+    `x` - the argument (x > 0)
+
+  Examples:
+    (bessel-k 0 1.0) ;=> 0.42102443824070834
+    (bessel-k 1 1.0) ;=> 0.6019072301972346"
+  [order x]
+  (cond
+    (<= x 0.0) m/inf+
+    (m/roughly-round? order m/sgl-close)
+    (bessel-k-integer (m/round order :toward-zero) x)
+    :else (bessel-k-series order x)))
+
+(s/fdef bessel-k
+  :args (s/cat :order ::bessel-order :x ::m/finite+)
+  :ret ::m/nan-or-pos)
+
+;;;HYPERGEOMETRIC FUNCTIONS
+(defn- hypergeometric-1f1-series
+  "Direct series for ₁F₁(a; b; z) = Σ_{n=0}^∞ (a)_n z^n / ((b)_n n!)
+  where (a)_n is the Pochhammer symbol (rising factorial)."
+  [a b z max-terms]
+  (loop [n 0
+         term 1.0
+         sum 1.0]
+    (if (or (>= n max-terms)
+            (and (not (zero? sum))
+                 (< (m/abs (/ term sum)) 1e-15)))
+      sum
+      (let [;; term_{n+1} = term_n * a_n * z / (b_n * (n+1))
+            ;; where a_n = a + n, b_n = b + n
+            next-term (* term (+ a n) z (/ (* (+ b n) (inc n))))]
+        (recur (inc n) next-term (+ sum next-term))))))
+
+(defn hypergeometric-1f1
+  "Computes the confluent hypergeometric function ₁F₁(`a`; `b`; `z`).
+
+  Also known as Kummer's function M(a,b,z). Defined by:
+  ₁F₁(a; b; z) = Σ_{n=0}^∞ (a)_n z^n / ((b)_n n!)
+
+  Parameters:
+    `a` - first parameter (any real number)
+    `b` - second parameter (must not be zero or negative integer)
+    `z` - the argument (any real number)
+
+  Special cases:
+    ₁F₁(a; a; z) = e^z
+    ₁F₁(0; b; z) = 1
+    ₁F₁(1; 2; 2z) = (e^z - 1)/z * sinh(z)/z for small z
+
+  Examples:
+    (hypergeometric-1f1 1 1 1) ;=> e ≈ 2.718281828
+    (hypergeometric-1f1 0.5 1.5 -1) ;=> 0.7468241328"
+  [a b z]
+  (cond
+    ;; b is non-positive integer: undefined (pole)
+    (and (m/roughly-round-non+? b m/sgl-close)
+         (not (and (m/roughly-round-non+? a m/sgl-close)
+                   (>= a b))))
+    m/nan
+
+    ;; a = 0: result is 1
+    (m/roughly? a 0.0 m/sgl-close)
+    1.0
+
+    ;; z = 0: result is 1
+    (zero? z)
+    1.0
+
+    ;; a = b: result is e^z
+    (m/roughly? a b m/sgl-close)
+    (m/exp z)
+
+    ;; Large negative z: use Kummer transformation
+    ;; M(a,b,z) = e^z * M(b-a,b,-z)
+    (< z -20.0)
+    (* (m/exp z) (hypergeometric-1f1 (- b a) b (- z)))
+
+    ;; Standard series
+    :else
+    (hypergeometric-1f1-series a b z 300)))
+
+(s/fdef hypergeometric-1f1
+  :args (s/cat :a ::m/num
+               :b ::m/num
+               :z ::m/num)
+  :ret ::m/num)
+
+(defn- hypergeometric-2f1-series
+  "Direct series for ₂F₁(a, b; c; z) = Σ_{n=0}^∞ (a)_n (b)_n z^n / ((c)_n n!)
+  Converges for |z| < 1."
+  [a b c z max-terms]
+  (loop [n 0
+         term 1.0
+         sum 1.0]
+    (if (or (>= n max-terms)
+            (and (not (zero? sum))
+                 (< (m/abs (/ term sum)) 1e-15)))
+      sum
+      (let [;; term_{n+1} = term_n * (a+n)(b+n) * z / ((c+n)(n+1))
+            next-term (* term
+                         (+ a n)
+                         (+ b n)
+                         z
+                         (/ (* (+ c n) (inc n))))]
+        (recur (inc n) next-term (+ sum next-term))))))
+
+(defn hypergeometric-2f1
+  "Computes the Gaussian hypergeometric function ₂F₁(`a`, `b`; `c`; `z`).
+
+  Defined by:
+  ₂F₁(a, b; c; z) = Σ_{n=0}^∞ (a)_n (b)_n z^n / ((c)_n n!)
+
+  The series converges for |z| < 1. For |z| ≥ 1, various transformations
+  are used (Euler, Pfaff, etc.).
+
+  Parameters:
+    `a`, `b` - numerator parameters (any real numbers)
+    `c` - denominator parameter (must not be zero or negative integer)
+    `z` - the argument (real number, |z| < 1 for convergence)
+
+  Special cases:
+    ₂F₁(a, b; c; 0) = 1
+    ₂F₁(1, 1; 2; z) = -ln(1-z)/z
+    ₂F₁(1, b; b; z) = 1/(1-z)
+
+  Examples:
+    (hypergeometric-2f1 1 1 2 0.5) ;=> 2*ln(2) ≈ 1.386294
+    (hypergeometric-2f1 0.5 0.5 1.5 0.5) ;=> (2/√π)*arcsin(√0.5)"
+  [a b c z]
+  (cond
+    ;; c is non-positive integer: undefined (pole)
+    ;; unless a or b is also non-positive integer with |a| or |b| < |c|
+    (and (m/roughly-round-non+? c m/sgl-close)
+         (not (or (and (m/roughly-round-non+? a m/sgl-close) (> a c))
+                  (and (m/roughly-round-non+? b m/sgl-close) (> b c)))))
+    m/nan
+
+    ;; z = 0: result is 1
+    (zero? z)
+    1.0
+
+    ;; a = 0 or b = 0: result is 1
+    (or (m/roughly? a 0.0 m/sgl-close)
+        (m/roughly? b 0.0 m/sgl-close))
+    1.0
+
+    ;; a = c or b = c: reduces to ₁F₀ = (1-z)^(-b) or (1-z)^(-a)
+    (m/roughly? a c m/sgl-close)
+    (m/pow (- 1.0 z) (- b))
+
+    (m/roughly? b c m/sgl-close)
+    (m/pow (- 1.0 z) (- a))
+
+    ;; |z| < 1: direct series
+    (< (m/abs z) 1.0)
+    (hypergeometric-2f1-series a b c z 300)
+
+    ;; z = 1: Gauss summation theorem (when c > a + b)
+    (and (m/roughly? z 1.0 m/sgl-close)
+         (> c (+ a b)))
+    (/ (* (gamma c) (gamma (- c a b)))
+       (* (gamma (- c a)) (gamma (- c b))))
+
+    ;; z > 1 or z < 0: use linear transformation
+    ;; ₂F₁(a,b;c;z) = (1-z)^(-a) * ₂F₁(a, c-b; c; z/(z-1))  [Pfaff transformation]
+    (or (> z 1.0) (< z 0.0))
+    (let [z-transformed (/ z (- z 1.0))]
+      (if (< (m/abs z-transformed) 1.0)
+        (* (m/pow (- 1.0 z) (- a))
+           (hypergeometric-2f1 a (- c b) c z-transformed))
+        ;; Try alternative: (1-z)^(-b) * ₂F₁(c-a, b; c; z/(z-1))
+        (* (m/pow (- 1.0 z) (- b))
+           (hypergeometric-2f1 (- c a) b c z-transformed))))
+
+    :else
+    m/nan))
+
+(s/fdef hypergeometric-2f1
+  :args (s/cat :a ::m/num
+               :b ::m/num
+               :c ::m/num
+               :z ::m/num)
+  :ret ::m/num)

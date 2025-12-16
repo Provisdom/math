@@ -92,14 +92,14 @@
     (t/is (t/spec-check tensor/rnd-tensor!)))
   (t/with-instrument :all
     (random/bind-seed 0
-      (t/is= 0.8833108082136426 (tensor/rnd-tensor! [])))
+      (t/is= 0.2961287401299688 (tensor/rnd-tensor! [])))
     (random/bind-seed 0
       (t/is= [] (tensor/rnd-tensor! [0])))
     (random/bind-seed 0
       (t/is= [[]] (tensor/rnd-tensor! [1 0])))
     (random/bind-seed 0
-      (t/is= [[0.8833108082136426 0.026433771592597743 0.10634669156721244]
-              [0.17386786595968284 0.24568894884013137 0.39646797562881353]]
+      (t/is= [[0.2961287401299688 0.8622994122994543 0.07868284113948965]
+              [0.548683671433349 0.11620266042486127 0.5772125043785624]]
         (tensor/rnd-tensor! [2 3])))))
 
 ;;INFO

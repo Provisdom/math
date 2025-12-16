@@ -9,24 +9,153 @@
   - Multivariate distributions
 
   Uses splittable random number generators for reproducible parallel computation.
-  All functions support both seeded and unseeded generation."
+  All functions support both seeded and unseeded generation.
+
+  Algorithm options (use with `rng` function):
+  - :default - L64X128MixRandom (best balance of speed/quality, Oracle recommended)
+  - :fast - L32X64MixRandom (fastest, smaller state)
+  - :quality - L128X256MixRandom (higher quality, 4-dim equidistribution)
+  - :max-quality - L128X1024MixRandom (highest quality, 16-dim equidistribution)
+  - :legacy - SplittableRandom (Java 8 algorithm)
+  - :secure - SecureRandom (cryptographically secure, NOT splittable)"
   (:refer-clojure :exclude [random-uuid])
   (:require
-    [clojure.core.reducers :as reducers]
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
-    [provisdom.math.internal-splittable-random :as split]
     [provisdom.math.intervals :as intervals]
     [provisdom.math.special-functions :as special-fns])
-  (:import (java.util UUID)))
+  (:import
+    [java.util UUID]
+    [java.util.random RandomGenerator$SplittableGenerator RandomGeneratorFactory]
+    [java.security SecureRandom]))
 
 (def mdl 6)
 
+;;;PROTOCOL AND IMPLEMENTATIONS
+(defprotocol IRandom
+  "Protocol for splittable random number generators."
+  (rand-long [rng]
+    "Returns a random long based on the given immutable RNG.
+    Note: to maintain independence you should not call more than one
+    function in the IRandom protocol with the same argument")
+  (rand-double [rng]
+    "Returns a random double between 0.0 (inclusive) and 1.0 (exclusive)
+    based on the given immutable RNG.
+    Note: to maintain independence you should not call more than one
+    function in the IRandom protocol with the same argument")
+  (split [rng]
+    "Returns two new RNGs [rng1 rng2], which should generate
+    sufficiently independent random data.
+    Note: to maintain independence you should not call more than one
+    function in the IRandom protocol with the same argument")
+  (split-n [rng n]
+    "Returns a collection of `n` RNGs, which should generate
+    sufficiently independent random data.
+    Note: to maintain independence you should not call more than one
+    function in the IRandom protocol with the same argument"))
+
+(def ^:const ^:private default-algorithm "L64X128MixRandom")
+
+(def algorithms
+  "Available splittable random algorithms.
+   :default - L64X128MixRandom (best balance, Oracle recommended)
+   :fast - L32X64MixRandom (fastest, 32-bit)
+   :quality - L128X256MixRandom (better quality, 4-dim equidistribution)
+   :max-quality - L128X1024MixRandom (best quality, 16-dim equidistribution)
+   :legacy - SplittableRandom (Java 8 algorithm)
+   :secure - SecureRandom (cryptographic, NOT splittable)"
+  {:default "L64X128MixRandom"
+   :fast "L32X64MixRandom"
+   :quality "L128X256MixRandom"
+   :max-quality "L128X1024MixRandom"
+   :legacy "SplittableRandom"
+   :secure :secure})
+
+(defn- ^RandomGenerator$SplittableGenerator create-gen
+  "Creates a mutable Java generator from algorithm name and seed."
+  [^String algo ^long seed]
+  (.create (RandomGeneratorFactory/of algo) seed))
+
+(set! *unchecked-math* :warn-on-boxed)
+
+(deftype Java17SplittableRandom [^String algorithm ^long seed]
+  IRandom
+  (rand-long [_]
+    (.nextLong (create-gen algorithm seed)))
+  (rand-double [_]
+    (.nextDouble (create-gen algorithm seed)))
+  (split [_]
+    (let [gen (create-gen algorithm seed)
+          child (.split gen)]
+      [(Java17SplittableRandom. algorithm (.nextLong gen))
+       (Java17SplittableRandom. algorithm (.nextLong child))]))
+  (split-n [this n]
+    (let [n (long n)]
+      (case n
+        0 []
+        1 [this]
+        (let [gen (create-gen algorithm seed)]
+          (loop [i (dec n)
+                 ret (transient [])]
+            (if (zero? i)
+              (-> ret
+                  (conj! (Java17SplittableRandom. algorithm (.nextLong gen)))
+                  persistent!)
+              (let [child (.split gen)]
+                (recur (dec i)
+                       (conj! ret (Java17SplittableRandom.
+                                    algorithm
+                                    (.nextLong child))))))))))))
+
+(set! *unchecked-math* false)
+
+(deftype SecureRandomWrapper [^SecureRandom secure-rng]
+  IRandom
+  (rand-long [_]
+    (.nextLong secure-rng))
+  (rand-double [_]
+    (.nextDouble secure-rng))
+  (split [_]
+    ;; Not truly splittable - creates independent secure instances
+    [(SecureRandomWrapper. (SecureRandom.))
+     (SecureRandomWrapper. (SecureRandom.))])
+  (split-n [_ n]
+    (repeatedly n #(SecureRandomWrapper. (SecureRandom.)))))
+
+(defn- make-rng
+  "Internal factory for creating RNG instances."
+  ([^long seed]
+   (Java17SplittableRandom. default-algorithm seed))
+  ([^long seed algorithm]
+   (if (= algorithm :secure)
+     (SecureRandomWrapper. (SecureRandom.))
+     (let [algo (if (keyword? algorithm)
+                  (get algorithms algorithm default-algorithm)
+                  (str algorithm))]
+       (Java17SplittableRandom. algo seed)))))
+
+(def next-rng
+  "Returns a random-number generator. Successive calls should return
+  independent results."
+  (let [a (atom (make-rng (System/currentTimeMillis)))
+        thread-local
+        (proxy [ThreadLocal] []
+          (initialValue []
+            (first (split (swap! a #(second (split %)))))))]
+    (fn []
+      (let [rng (.get ^ThreadLocal thread-local)
+            [rng1 rng2] (split rng)]
+        (.set ^ThreadLocal thread-local rng2)
+        rng1))))
+
+;;;SPECS
+(s/def ::algorithm (into #{} (keys algorithms)))
+
 (s/def ::rng
   (s/with-gen
-    (partial satisfies? split/IRandom)
-    #(gen/return (split/next-rng))))
+    (partial satisfies? IRandom)
+    #(gen/return (next-rng))))
 
 (s/def ::seed ::m/long)
 (s/def ::rnd ::m/prob)
@@ -115,16 +244,21 @@
 ;;;IMMUTABLE RNG
 (defn rng
   "Creates a new splittable random number generator from `seed`.
-  
+
   Parameters:
     `seed` - Long value to seed the generator
-  
+    `algorithm` - Optional algorithm keyword or string name (default: :default)
+                  Options: :default, :fast, :quality, :max-quality, :legacy, :secure
+
   Returns a new RNG instance that implements IRandom."
-  [seed]
-  (split/make-java-util-splittable-random seed))
+  ([seed]
+   (make-rng seed))
+  ([seed algorithm]
+   (make-rng seed algorithm)))
 
 (s/fdef rng
-        :args (s/cat :seed ::seed)
+        :args (s/cat :seed ::seed
+                     :algorithm (s/? ::algorithm))
         :ret ::rng)
 
 (defn rnd
@@ -136,12 +270,12 @@
   
   Returns a uniformly distributed double within the interval.
   Special case: if interval difference is infinite, uses scaled generation."
-  ([rng] (split/rand-double rng))
+  ([rng] (rand-double rng))
   ([rng [lower upper]]
    (let [diff (- (double upper) lower)]
      (if (m/inf+? diff)
        (* 2.0 (rnd rng [(* 0.5 lower) (* 0.5 upper)]))
-       (+ lower (* diff (split/rand-double rng)))))))
+       (+ lower (* diff (rand-double rng)))))))
 
 (s/fdef rnd
         :args (s/cat :rng ::rng
@@ -156,7 +290,7 @@
     `interval` - Optional [lower upper] bounds (default: all possible longs)
   
   Returns a uniformly distributed long within the interval."
-  ([rng] (split/rand-long rng))
+  ([rng] (rand-long rng))
   ([rng [lower upper]]
    (m/floor' (+ lower
                 (* (- (inc (double upper)) lower)
@@ -206,7 +340,7 @@
 
   Returns a random java.util.UUID."
   [rng]
-  (let [[rng1 rng2] (split/split rng)]
+  (let [[rng1 rng2] (split rng)]
     (random-uuid (rnd rng1) (rnd rng2))))
 
 (s/fdef rnd-uuid
@@ -224,7 +358,7 @@
   
   Returns a lazy sequence of RNG instances."
   [rng]
-  (iterate (comp first split/split) rng))
+  (iterate (comp first split) rng))
 
 (s/fdef rng-lazy
         :args (s/cat :rng ::rng)
@@ -238,7 +372,7 @@
   
   Returns a lazy sequence of doubles in [0, 1)."
   [rng]
-  (map split/rand-double (rng-lazy rng)))
+  (map rand-double (rng-lazy rng)))
 
 (s/fdef rnd-lazy
         :args (s/cat :rng ::rng)
@@ -252,7 +386,7 @@
   
   Returns a lazy sequence of random longs."
   [rng]
-  (map split/rand-long (rng-lazy rng)))
+  (map rand-long (rng-lazy rng)))
 
 (s/fdef rnd-long-lazy
         :args (s/cat :rng ::rng)
@@ -412,7 +546,7 @@
   
   Returns a new RNG instance."
   []
-  (split/next-rng))
+  (next-rng))
 
 (s/fdef rng$
         :args (s/cat)
@@ -464,70 +598,372 @@
      (set-seed! ~seed)
      ~@body))
 
-(comment "Not sure if any of the following will be useful in the future..."
+;;;INTROSPECTION
+(defn rng-algorithm
+  "Returns the algorithm name for the given RNG.
 
-         (defn split-random-lazy
-           "Returns tuple of a lazy-seq of `rnd-lazy` and a `rnd-lazy`.
-           Useful for parallelization.
-           There is an extremely tiny chance (2^-64 perhaps) of non-randomness per split."
-           [rnd-lazy]
-           [(map #(mersenne-rnd-lazy (rnd-long %)) (rest rnd-lazy))
-            (mersenne-rnd-lazy (rnd-long (first rnd-lazy)))])
+  Parameters:
+    `rng` - Random number generator
 
-         (defn split-random
-           "Returns tuple of rnd-lazy.
-           Useful for parallelization.
-           There is an extremely tiny chance (2^-64 perhaps) of non-randomness per split."
-           [rnd-lazy]
-           [(rest rnd-lazy) (mersenne-rnd-lazy (rnd-long (first rnd-lazy)))])
+  Returns the algorithm string (e.g., \"L64X128MixRandom\") or :secure for SecureRandom."
+  [rng]
+  (cond
+    (instance? Java17SplittableRandom rng) (.-algorithm ^Java17SplittableRandom rng)
+    (instance? SecureRandomWrapper rng) :secure
+    :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
 
-         (defn multi-sample
-           "Returns tuple of [sampled-values rnd-lazy].
-         Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)."
-           [samplef rnd-lazy ^long ntake]
-           (if-not (= :rnd (:r (meta samplef)))
-             (let [s (take ntake (iterate #(samplef (second %)) (samplef rnd-lazy)))]
-               [(map first s) (second (last s))])
-             [(map samplef (take ntake rnd-lazy))
-              (drop ntake rnd-lazy)]))
+(s/fdef rng-algorithm
+        :args (s/cat :rng ::rng)
+        :ret (s/or :algorithm string? :secure #{:secure}))
 
-         (defn multi-sample-indexed
-           "Returns tuple of [sampled-values rnd-lazy].
-           `samplef` should be function of index and either rnd or rnd-lazy.
-           Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
-           [samplef rnd-lazy ^long ntake]
-           (if-not (= :rnd (:r (meta samplef)))
-             (loop [coll []
-                    r rnd-lazy
-                    i 0]
-               (if (>= i ntake)
-                 [coll r]
-                 (let [[s laz] (samplef i r)]
-                   (recur (conj coll s) laz (inc i)))))
-             [(map-indexed samplef (take ntake rnd-lazy))
-              (drop ntake rnd-lazy)]))
+(defn rng-seed
+  "Returns the original seed for the given RNG.
 
-         (defn fold-random
-           "Returns tuple of value and rnd-lazy.
-           This fn is an extension of 'fold' in core.reducers for folding rnd-lazy or rnd.
-           Reduces a collection using a (potentially parallel) reduce-combine strategy.
-           The collection is partitioned into groups of approximately chunk-size (default 512), each of which is reduced
-           with reducef (with a seed value obtained by calling (combinef) with no arguments).
-           For rnd-lazy, the reducef should take the result and first part of the tuple from the samplef.
-           The results of these reductions are then reduced with combinef (default reducef).
-           combinef must be associative, and, when called with no arguments, (combinef) must produce its identity element.
-           These operations may be performed in parallel, but the results will preserve order.
-           Use :r meta-tag on samplef for inputting :rnd or :rnd-lazy (default)"
-           ([^long min-runs reducef samplef rnd-lazy]
-            (fold-random min-runs reducef reducef samplef rnd-lazy))
-           ([min-runs combinef reducef samplef rnd-lazy]
-            (let [chunk-size 512]
-              (fold-random chunk-size (m/ceil (/ min-runs chunk-size)) combinef reducef samplef rnd-lazy)))
-           ([chunk-size chunks combinef reducef samplef rnd-lazy]
-            (let [runs (* chunk-size chunks)]
-              (if (= :rnd (:r (meta samplef)))
-                [(reducers/fold chunk-size combinef #(reducef %1 (samplef %2)) (take runs rnd-lazy))
-                 (drop runs rnd-lazy)]
-                (let [[lazies laz] (split-random-lazy rnd-lazy)]
-                  [(reducers/fold chunk-size combinef #(reducef %1 (first (samplef %2))) (take runs lazies))
-                   laz]))))))
+  Parameters:
+    `rng` - Random number generator
+
+  Returns the seed (long) or nil for SecureRandom (which has no seed)."
+  [rng]
+  (cond
+    (instance? Java17SplittableRandom rng) (.-seed ^Java17SplittableRandom rng)
+    (instance? SecureRandomWrapper rng) nil
+    :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
+
+(s/fdef rng-seed
+        :args (s/cat :rng ::rng)
+        :ret (s/nilable ::seed))
+
+;;;BATCH GENERATION
+(defn rnd-doubles
+  "Generates a vector of `n` random doubles from `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `n` - Number of doubles to generate
+
+  Returns a vector of doubles in [0, 1)."
+  [rng n]
+  (mapv rand-double (take n (rng-lazy rng))))
+
+(s/fdef rnd-doubles
+        :args (s/cat :rng ::rng :n ::m/int-non-)
+        :ret ::rnd-vector)
+
+(defn rnd-doubles!
+  "Generates a vector of `n` random doubles using the bound RNG.
+
+  Parameters:
+    `n` - Number of doubles to generate
+
+  Returns a vector of doubles in [0, 1)."
+  [n]
+  (rnd-doubles (rng!) n))
+
+(s/fdef rnd-doubles!
+        :args (s/cat :n ::m/int-non-)
+        :ret ::rnd-vector)
+
+(defn rnd-longs
+  "Generates a vector of `n` random longs from `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `n` - Number of longs to generate
+
+  Returns a vector of random longs."
+  [rng n]
+  (mapv rand-long (take n (rng-lazy rng))))
+
+(s/fdef rnd-longs
+        :args (s/cat :rng ::rng :n ::m/int-non-)
+        :ret (s/coll-of ::m/long :kind vector?))
+
+(defn rnd-longs!
+  "Generates a vector of `n` random longs using the bound RNG.
+
+  Parameters:
+    `n` - Number of longs to generate
+
+  Returns a vector of random longs."
+  [n]
+  (rnd-longs (rng!) n))
+
+(s/fdef rnd-longs!
+        :args (s/cat :n ::m/int-non-)
+        :ret (s/coll-of ::m/long :kind vector?))
+
+(defn rnd-normals
+  "Generates a vector of `n` standard normal values from `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `n` - Number of normal values to generate
+
+  Returns a vector of standard normal values (mean=0, std=1)."
+  [rng n]
+  (mapv (comp random-normal rand-double) (take n (rng-lazy rng))))
+
+(s/fdef rnd-normals
+        :args (s/cat :rng ::rng :n ::m/int-non-)
+        :ret (s/coll-of ::m/num :kind vector?))
+
+(defn rnd-normals!
+  "Generates a vector of `n` standard normal values using the bound RNG.
+
+  Parameters:
+    `n` - Number of normal values to generate
+
+  Returns a vector of standard normal values (mean=0, std=1)."
+  [n]
+  (rnd-normals (rng!) n))
+
+(s/fdef rnd-normals!
+        :args (s/cat :n ::m/int-non-)
+        :ret (s/coll-of ::m/num :kind vector?))
+
+;;;CONVENIENCE FUNCTIONS
+(defn rnd-int
+  "Generates a random integer from `rng` in [0, upper).
+
+  Parameters:
+    `rng` - Random number generator
+    `upper` - Exclusive upper bound (positive integer)
+
+  Returns a random integer in [0, upper)."
+  [rng upper]
+  (int (m/floor (* upper (rand-double rng)))))
+
+(s/fdef rnd-int
+        :args (s/cat :rng ::rng :upper ::m/int+)
+        :ret ::m/int-non-)
+
+(defn rnd-int!
+  "Generates a random integer using the bound RNG in [0, upper).
+
+  Parameters:
+    `upper` - Exclusive upper bound (positive integer)
+
+  Returns a random integer in [0, upper)."
+  [upper]
+  (rnd-int (rng!) upper))
+
+(s/fdef rnd-int!
+        :args (s/cat :upper ::m/int+)
+        :ret ::m/int-non-)
+
+(defn rnd-gaussian
+  "Generates a Gaussian (normal) distributed value from `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `mean` - Mean of the distribution
+    `std` - Standard deviation of the distribution
+
+  Returns a normally distributed value with given mean and std."
+  [rng mean std]
+  (+ mean (* std (rnd-normal rng))))
+
+(s/fdef rnd-gaussian
+        :args (s/cat :rng ::rng :mean ::m/num :std ::m/non-)
+        :ret ::m/num)
+
+(defn rnd-gaussian!
+  "Generates a Gaussian (normal) distributed value using the bound RNG.
+
+  Parameters:
+    `mean` - Mean of the distribution
+    `std` - Standard deviation of the distribution
+
+  Returns a normally distributed value with given mean and std."
+  [mean std]
+  (rnd-gaussian (rng!) mean std))
+
+(s/fdef rnd-gaussian!
+        :args (s/cat :mean ::m/num :std ::m/non-)
+        :ret ::m/num)
+
+;;;COLLECTION UTILITIES
+(defn rnd-choice
+  "Picks a random element from `coll` using `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `coll` - Collection to pick from (must be non-empty)
+
+  Returns a random element from the collection."
+  [rng coll]
+  (let [v (vec coll)
+        n (count v)]
+    (when (pos? n)
+      (nth v (rnd-int rng n)))))
+
+(s/fdef rnd-choice
+        :args (s/cat :rng ::rng :coll (s/coll-of any?))
+        :ret any?)
+
+(defn rnd-choice!
+  "Picks a random element from `coll` using the bound RNG.
+
+  Parameters:
+    `coll` - Collection to pick from (must be non-empty)
+
+  Returns a random element from the collection."
+  [coll]
+  (rnd-choice (rng!) coll))
+
+(s/fdef rnd-choice!
+        :args (s/cat :coll (s/coll-of any?))
+        :ret any?)
+
+(defn rnd-shuffle
+  "Returns a randomly shuffled vector of `coll` using Fisher-Yates algorithm.
+
+  Parameters:
+    `rng` - Random number generator
+    `coll` - Collection to shuffle
+
+  Returns a new vector with elements in random order."
+  [rng coll]
+  (let [v (transient (vec coll))
+        n (count v)
+        rngs (rng-lazy rng)]
+    (loop [i (dec n)
+           rngs rngs]
+      (if (pos? i)
+        (let [j (rnd-int (first rngs) (inc i))
+              vi (get v i)
+              vj (get v j)]
+          (assoc! v i vj)
+          (assoc! v j vi)
+          (recur (dec i) (rest rngs)))
+        (persistent! v)))))
+
+(s/fdef rnd-shuffle
+        :args (s/cat :rng ::rng :coll (s/coll-of any?))
+        :ret vector?)
+
+(defn rnd-shuffle!
+  "Returns a randomly shuffled vector of `coll` using the bound RNG.
+
+  Parameters:
+    `coll` - Collection to shuffle
+
+  Returns a new vector with elements in random order."
+  [coll]
+  (rnd-shuffle (rng!) coll))
+
+(s/fdef rnd-shuffle!
+        :args (s/cat :coll (s/coll-of any?))
+        :ret vector?)
+
+(defn rnd-sample
+  "Samples `n` elements from `coll` without replacement using `rng`.
+
+  Parameters:
+    `rng` - Random number generator
+    `n` - Number of elements to sample
+    `coll` - Collection to sample from
+
+  Returns a vector of `n` randomly selected elements (or fewer if coll is smaller)."
+  [rng n coll]
+  (let [v (vec coll)
+        k (min n (count v))]
+    (subvec (rnd-shuffle rng v) 0 k)))
+
+(s/fdef rnd-sample
+        :args (s/cat :rng ::rng :n ::m/int-non- :coll (s/coll-of any?))
+        :ret vector?)
+
+(defn rnd-sample!
+  "Samples `n` elements from `coll` without replacement using the bound RNG.
+
+  Parameters:
+    `n` - Number of elements to sample
+    `coll` - Collection to sample from
+
+  Returns a vector of `n` randomly selected elements (or fewer if coll is smaller)."
+  [n coll]
+  (rnd-sample (rng!) n coll))
+
+(s/fdef rnd-sample!
+        :args (s/cat :n ::m/int-non- :coll (s/coll-of any?))
+        :ret vector?)
+
+(defn rnd-weighted-choice
+  "Picks a random element from `coll` with probability proportional to `weights`.
+
+  Parameters:
+    `rng` - Random number generator
+    `weights` - Sequence of non-negative weights (same length as coll)
+    `coll` - Collection to pick from
+
+  Returns a randomly selected element, with selection probability proportional to weight."
+  [rng weights coll]
+  (let [v (vec coll)
+        ws (vec weights)
+        total (reduce + ws)
+        r (* total (rand-double rng))]
+    (loop [i 0
+           cumsum 0.0]
+      (if (< i (count v))
+        (let [cumsum' (+ cumsum (double (nth ws i)))]
+          (if (< r cumsum')
+            (nth v i)
+            (recur (inc i) cumsum')))
+        (peek v)))))
+
+(s/fdef rnd-weighted-choice
+        :args (s/cat :rng ::rng
+                     :weights (s/coll-of ::m/non-)
+                     :coll (s/coll-of any?))
+        :ret any?)
+
+(defn rnd-weighted-choice!
+  "Picks a random element from `coll` with probability proportional to `weights`.
+
+  Parameters:
+    `weights` - Sequence of non-negative weights (same length as coll)
+    `coll` - Collection to pick from
+
+  Returns a randomly selected element, with selection probability proportional to weight."
+  [weights coll]
+  (rnd-weighted-choice (rng!) weights coll))
+
+(s/fdef rnd-weighted-choice!
+        :args (s/cat :weights (s/coll-of ::m/num-non-)
+                     :coll (s/coll-of any?))
+        :ret any?)
+
+;;;PARALLEL UTILITIES
+(defn parallel-sample
+  "Samples `n` values in parallel using split RNGs.
+
+  Parameters:
+    `rng` - Random number generator
+    `sample-fn` - Function that takes an RNG and returns a sample
+    `n` - Number of samples to generate
+
+  Returns a vector of `n` samples generated using independent RNGs."
+  [rng sample-fn n]
+  (let [rngs (split-n rng n)]
+    (into [] (pmap sample-fn rngs))))
+
+(s/fdef parallel-sample
+        :args (s/cat :rng ::rng :sample-fn fn? :n ::m/int-non-)
+        :ret vector?)
+
+(defn parallel-fold
+  "Parallel fold over `n` random samples using split RNGs.
+
+  Parameters:
+    `rng` - Random number generator
+    `n` - Number of samples
+    `combine-fn` - Associative combining function (called with 0 args for identity)
+    `reduce-fn` - Reducing function (acc, sample) -> acc
+    `sample-fn` - Function that takes an RNG and returns a sample
+
+  Returns the folded result."
+  [rng n combine-fn reduce-fn sample-fn]
+  (let [rngs (split-n rng n)
+        samples (pmap sample-fn rngs)]
+    (reduce reduce-fn (combine-fn) samples)))

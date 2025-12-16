@@ -2,14 +2,15 @@
  :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
                                    :git/sha "c4bcc1478fa8d866baff56ec1bf5c4bb353c5353"}}
  :aliases {:dev             {:extra-paths ["siderail"]}
-           :local           {:override-deps {provisdom/utility-belt {:local/root "../utility-belt"}}}
+           :local           {:override-deps {provisdom/test         {:local/root "../test"}
+                                             provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test" "siderail"]
                              :extra-deps  {org.apache.commons/commons-math3 {:mvn/version "3.6.1"}
                                            criterium/criterium              {:mvn/version "0.4.6"}
                                            org.clojure/test.check           {:mvn/version "1.1.2"}
                                            orchestra/orchestra              {:mvn/version "2021.01.01-1"}
                                            provisdom/test                   {:git/url "https://github.com/Provisdom/test.git"
-                                                                             :sha     "07d4970b5cd952559145d415c7d608a87b9115c8"}}}
+                                                                             :sha     "7f221a198e589758885863c38eb6c1cc9254db9f"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}

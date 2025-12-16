@@ -32,8 +32,8 @@
     (t/is (t/spec-check la/norm-spectral)))
   (t/with-instrument :all
     (t/is= 0.0 (la/norm-spectral [[]]))
-    (t/is (t/approx= 1.0 (la/norm-spectral [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10))
-    (t/is (t/approx= 4.0 (la/norm-spectral [[3.0 0.0] [0.0 4.0]]) :tolerance 1e-10))))
+    (t/is-approx= 1.0 (la/norm-spectral [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
+    (t/is-approx= 4.0 (la/norm-spectral [[3.0 0.0] [0.0 4.0]]) :tolerance 1e-10)))
 
 ;;;PSEUDOINVERSE
 (deftest pseudoinverse-test
@@ -148,8 +148,8 @@
   (t/with-instrument :all
     (t/is (Double/isNaN (la/determinant [[]])))
     (t/is= 4.0 (la/determinant [[4.0]]))
-    (t/is (t/approx= -2.0 (la/determinant [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10))
-    (t/is (t/approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10))))
+    (t/is-approx= -2.0 (la/determinant [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
+    (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)))
 
 ;;;CONDITION NUMBER
 (deftest condition-number-test
@@ -157,7 +157,7 @@
     (t/is (t/spec-check la/condition-number {:num-tests 15})))
   (t/with-instrument :all
     (t/is (Double/isNaN (la/condition-number [[]])))
-    (t/is (t/approx= 1.0 (la/condition-number [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10))
+    (t/is-approx= 1.0 (la/condition-number [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
     ;; Singular matrices have very high condition numbers
     (t/is (> (la/condition-number [[1.0 2.0] [2.0 4.0]]) 1e6))))
 
@@ -230,7 +230,7 @@
     (t/is= 3.0 (la/minor [[1.0 2.0] [3.0 4.0]] 0 1))
     (t/is= 2.0 (la/minor [[1.0 2.0] [3.0 4.0]] 1 0))
     (t/is= 1.0 (la/minor [[1.0 2.0] [3.0 4.0]] 1 1))
-    (t/is (t/approx= -3.0 (la/minor [[1.0 2.0 3.0] [4.0 5.0 6.0] [7.0 8.0 9.0]] 0 0) :tolerance 1e-10))))
+    (t/is-approx= -3.0 (la/minor [[1.0 2.0 3.0] [4.0 5.0 6.0] [7.0 8.0 9.0]] 0 0) :tolerance 1e-10)))
 
 ;;;COFACTOR
 (deftest cofactor-test
@@ -302,18 +302,18 @@
     (t/is (t/data-approx= [[1.0 0.0] [0.0 1.0]] (la/matrix-exp [[0.0 0.0] [0.0 0.0]]) :tolerance 1e-10))
     ;; Identity matrix -> e*I
     (let [result (la/matrix-exp [[1.0 0.0] [0.0 1.0]])]
-      (t/is (t/approx= Math/E (get-in result [0 0]) :tolerance 1e-6))
-      (t/is (t/approx= 0.0 (get-in result [0 1]) :tolerance 1e-6))
-      (t/is (t/approx= 0.0 (get-in result [1 0]) :tolerance 1e-6))
-      (t/is (t/approx= Math/E (get-in result [1 1]) :tolerance 1e-6)))
+      (t/is-approx= Math/E (get-in result [0 0]) :tolerance 1e-6)
+      (t/is-approx= 0.0 (get-in result [0 1]) :tolerance 1e-6)
+      (t/is-approx= 0.0 (get-in result [1 0]) :tolerance 1e-6)
+      (t/is-approx= Math/E (get-in result [1 1]) :tolerance 1e-6))
     ;; Diagonal matrix: exp([[a 0][0 b]]) = [[e^a 0][0 e^b]]
     (let [result (la/matrix-exp [[2.0 0.0] [0.0 3.0]])]
-      (t/is (t/approx= (Math/exp 2.0) (get-in result [0 0]) :tolerance 1e-6))
-      (t/is (t/approx= (Math/exp 3.0) (get-in result [1 1]) :tolerance 1e-6)))
+      (t/is-approx= (Math/exp 2.0) (get-in result [0 0]) :tolerance 1e-6)
+      (t/is-approx= (Math/exp 3.0) (get-in result [1 1]) :tolerance 1e-6))
     ;; Rotation matrix test: exp([[0 -t][t 0]]) = [[cos(t) -sin(t)][sin(t) cos(t)]]
     (let [t 0.5
           result (la/matrix-exp [[0.0 (- t)] [t 0.0]])]
-      (t/is (t/approx= (Math/cos t) (get-in result [0 0]) :tolerance 1e-4))
-      (t/is (t/approx= (- (Math/sin t)) (get-in result [0 1]) :tolerance 1e-4))
-      (t/is (t/approx= (Math/sin t) (get-in result [1 0]) :tolerance 1e-4))
-      (t/is (t/approx= (Math/cos t) (get-in result [1 1]) :tolerance 1e-4)))))
+      (t/is-approx= (Math/cos t) (get-in result [0 0]) :tolerance 1e-4)
+      (t/is-approx= (- (Math/sin t)) (get-in result [0 1]) :tolerance 1e-4)
+      (t/is-approx= (Math/sin t) (get-in result [1 0]) :tolerance 1e-4)
+      (t/is-approx= (Math/cos t) (get-in result [1 1]) :tolerance 1e-4))))

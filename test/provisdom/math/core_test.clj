@@ -729,8 +729,8 @@
     (t/is (t/spec-check m/atanh)))
   (t/with-instrument :all
     (t/is= 0.0 (m/atanh 0.0))
-    (t/is (t/approx= 0.5493061443340549 (m/atanh 0.5) :tolerance 1e-14))
-    (t/is (t/approx= -0.5493061443340549 (m/atanh -0.5) :tolerance 1e-14))
+    (t/is-approx= 0.5493061443340549 (m/atanh 0.5) :tolerance 1e-14)
+    (t/is-approx= -0.5493061443340549 (m/atanh -0.5) :tolerance 1e-14)
     (t/is= m/inf- (m/atanh -1.0))
     (t/is= m/inf+ (m/atanh 1.0))
     (t/is (m/nan? (m/atanh -2.0)))

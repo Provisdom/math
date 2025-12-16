@@ -1,13 +1,18 @@
 (ns provisdom.math.combinatorics
   "Combinatorial functions and sequence generation.
-  
+
   Provides efficient algorithms for:
-  - Factorials and subfactorials (derangements)
-  - Combinations and permutations
-  - Stirling numbers and Bell numbers  
+  - Factorials: factorial, subfactorial, double factorial
+  - Pochhammer symbols: rising and falling factorials
+  - Binomial coefficients: choose-k-from-n, multinomial
+  - Special numbers: Stirling (1st/2nd kind), Bell, Catalan
   - Binomial probability calculations
-  - Lazy sequence generators for combinatorial objects
-  
+  - Integer partitions (different from set partitions)
+  - Combinations and permutations (lazy sequence generators)
+  - K-permutations (partial permutations)
+  - Direct access: nth-combination, nth-permutation for random sampling
+  - Counting functions for combinatorial enumeration
+
   Includes both exact computations for small values and log-space calculations
   for larger values to avoid overflow."
   (:require
@@ -128,6 +133,82 @@
   :args (s/cat :x ::m/non-)
   :ret ::m/num)
 
+(defn double-factorial
+  "Computes the double factorial n!!.
+
+  Returns n!! = n × (n-2) × (n-4) × ... × 3 × 1 (for odd n)
+  or n!! = n × (n-2) × (n-4) × ... × 4 × 2 (for even n).
+
+  By convention: 0!! = 1, (-1)!! = 1.
+
+  Examples:
+    (double-factorial 7)  ;=> 105.0 (7 × 5 × 3 × 1)
+    (double-factorial 6)  ;=> 48.0 (6 × 4 × 2)
+    (double-factorial 0)  ;=> 1.0
+    (double-factorial 1)  ;=> 1.0"
+  [n]
+  (cond
+    (<= n 0) 1.0
+    (== n 1) 1.0
+    :else (reduce * 1.0 (range n 0 -2))))
+
+(s/fdef double-factorial
+  :args (s/cat :n ::m/int)
+  :ret ::m/num)
+
+(defn double-factorial'
+  "Like [[double-factorial]] but returns a long when possible."
+  [n]
+  (m/maybe-long-able (double-factorial n)))
+
+(s/fdef double-factorial'
+  :args (s/cat :n ::m/int)
+  :ret ::m/num)
+
+(defn rising-factorial
+  "Computes the rising factorial (Pochhammer symbol).
+
+  Returns x^(n) = x × (x+1) × (x+2) × ... × (x+n-1).
+  Also known as the Pochhammer symbol (x)_n in some notations.
+
+  Used extensively in hypergeometric functions and series expansions.
+
+  Examples:
+    (rising-factorial 3 4)  ;=> 360.0 (3 × 4 × 5 × 6)
+    (rising-factorial 1 5)  ;=> 120.0 (same as 5!)
+    (rising-factorial 5 0)  ;=> 1.0 (empty product)
+    (rising-factorial 0.5 3) ;=> 1.875 (0.5 × 1.5 × 2.5)"
+  [x n]
+  (if (zero? n)
+    1.0
+    (reduce * 1.0 (map #(+ (double x) %) (range n)))))
+
+(s/fdef rising-factorial
+  :args (s/cat :x ::m/num :n ::m/int-non-)
+  :ret ::m/num)
+
+(defn falling-factorial
+  "Computes the falling factorial.
+
+  Returns (x)_n = x × (x-1) × (x-2) × ... × (x-n+1).
+  Also known as the descending factorial or falling Pochhammer symbol.
+
+  Related to permutations: P(n,k) = (n)_k = n!/(n-k)!
+
+  Examples:
+    (falling-factorial 5 3)  ;=> 60.0 (5 × 4 × 3)
+    (falling-factorial 5 5)  ;=> 120.0 (same as 5!)
+    (falling-factorial 5 0)  ;=> 1.0 (empty product)
+    (falling-factorial 3.5 2) ;=> 8.75 (3.5 × 2.5)"
+  [x n]
+  (if (zero? n)
+    1.0
+    (reduce * 1.0 (map #(- (double x) %) (range n)))))
+
+(s/fdef falling-factorial
+  :args (s/cat :x ::m/num :n ::m/int-non-)
+  :ret ::m/num)
+
 ;;;CHOOSING
 (defn choose-k-from-n
   "Calculates binomial coefficient C(n,k) = n! / (k! × (n-k)!).
@@ -213,6 +294,46 @@
             (>= n k)))
   :ret ::m/num)
 
+(defn multinomial-coefficient
+  "Computes the multinomial coefficient.
+
+  Returns n! / (k₁! × k₂! × ... × kₘ!) where n = sum of ks.
+  This is the number of ways to partition n items into groups of sizes k₁, k₂, ..., kₘ.
+
+  The multinomial coefficient generalizes the binomial coefficient:
+  (multinomial-coefficient [k (- n k)]) = (choose-k-from-n k n)
+
+  Examples:
+    (multinomial-coefficient [2 3 1])  ;=> 60.0 (ways to arrange AABBBC)
+    (multinomial-coefficient [2 2])    ;=> 6.0 (same as C(4,2))
+    (multinomial-coefficient [3])      ;=> 1.0 (only one way)
+    (multinomial-coefficient [1 1 1])  ;=> 6.0 (3! permutations)"
+  [ks]
+  (let [n (reduce + 0 ks)]
+    (/ (factorial n)
+       (reduce * 1.0 (map factorial ks)))))
+
+(s/fdef multinomial-coefficient
+  :args (s/cat :ks (s/coll-of ::m/int-non-))
+  :ret ::m/num)
+
+(defn log-multinomial-coefficient
+  "Computes the natural logarithm of the multinomial coefficient.
+
+  More numerically stable than computing the coefficient directly for large values.
+
+  Examples:
+    (log-multinomial-coefficient [2 3 1])  ;=> 4.0943... (ln(60))
+    (log-multinomial-coefficient [50 50])  ;=> 66.7838... (ln(C(100,50)))"
+  [ks]
+  (let [n (reduce + 0 ks)]
+    (- (log-factorial n)
+       (reduce + 0.0 (map log-factorial ks)))))
+
+(s/fdef log-multinomial-coefficient
+  :args (s/cat :ks (s/coll-of ::m/non-))
+  :ret ::m/num)
+
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of `n` items into `k` subsets."
   [k n]
@@ -246,6 +367,92 @@
             (>= n k)))
   :ret ::m/number)
 
+(defn log-stirling-number-of-the-second-kind
+  "Computes the natural logarithm of the Stirling number of the second kind.
+
+  More numerically stable for large values where the direct computation
+  would overflow (k > 170).
+
+  Examples:
+    (log-stirling-number-of-the-second-kind 3 5)  ;=> 3.2188... (ln(25))
+    (log-stirling-number-of-the-second-kind 100 200) ;=> handles large values"
+  [k n]
+  (cond
+    (zero? k) (if (zero? n) 0.0 m/inf-)
+    (== k n) 0.0
+    (> k n) m/inf-
+    (<= k 170)
+    ;; For smaller values, compute directly and take log
+    (let [result (stirling-number-of-the-second-kind k n)]
+      (if (or (m/nan? result) (<= result 0))
+        m/inf-
+        (m/log result)))
+    :else
+    ;; For very large k, use log-space approximation
+    ;; This is approximate but avoids overflow
+    (let [;; Use Temme's asymptotic approximation for large k
+          ;; S(k,n) ~ k^n / k! for n >> k
+          ;; log(S(k,n)) ~ n*log(k) - log(k!)
+          approx (- (* n (m/log k)) (log-factorial k))]
+      approx)))
+
+(s/fdef log-stirling-number-of-the-second-kind
+  :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
+          (fn [{:keys [k n]}]
+            (>= n k)))
+  :ret ::m/num)
+
+(defn stirling-number-of-the-first-kind
+  "Computes the unsigned Stirling number of the first kind.
+
+  Returns s(n,k), the number of permutations of n elements with exactly k cycles.
+  Also counts the number of ways to arrange n objects into k non-empty cycles.
+
+  Uses the recurrence relation: s(n,k) = (n-1) × s(n-1,k) + s(n-1,k-1)
+
+  Examples:
+    (stirling-number-of-the-first-kind 1 4)  ;=> 6.0 (permutations of 4 with 1 cycle)
+    (stirling-number-of-the-first-kind 4 4)  ;=> 1.0 (identity permutation)
+    (stirling-number-of-the-first-kind 2 4)  ;=> 11.0
+    (stirling-number-of-the-first-kind 0 0)  ;=> 1.0 (by convention)"
+  [k n]
+  (cond
+    (and (zero? n) (zero? k)) 1.0
+    (or (zero? n) (zero? k)) 0.0
+    (== k n) 1.0
+    (> k n) 0.0
+    :else
+    ;; Use dynamic programming to compute
+    (let [table (reduce
+                  (fn [prev-row curr-n]
+                    (reduce
+                      (fn [row curr-k]
+                        (assoc row curr-k
+                          (+ (* (dec curr-n) (get prev-row curr-k 0.0))
+                             (get prev-row (dec curr-k) 0.0))))
+                      {}
+                      (range 1 (inc (min curr-n k)))))
+                  {0 1.0}
+                  (range 1 (inc n)))]
+      (get table k 0.0))))
+
+(s/fdef stirling-number-of-the-first-kind
+  :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
+          (fn [{:keys [k n]}]
+            (>= n k)))
+  :ret ::m/num)
+
+(defn stirling-number-of-the-first-kind'
+  "Like [[stirling-number-of-the-first-kind]] but returns a long when possible."
+  [k n]
+  (m/maybe-long-able (stirling-number-of-the-first-kind k n)))
+
+(s/fdef stirling-number-of-the-first-kind'
+  :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
+          (fn [{:keys [k n]}]
+            (>= n k)))
+  :ret ::m/number)
+
 (defn bell-number
   "Returns the number of partitions of a set of size `n`."
   [n]
@@ -258,6 +465,39 @@
 (s/fdef bell-number
   :args (s/cat :n ::m/long)
   :ret ::m/number)
+
+(defn catalan-number
+  "Computes the nth Catalan number.
+
+  Catalan numbers C_n = C(2n,n)/(n+1) count many combinatorial structures:
+  - Number of valid arrangements of n pairs of parentheses
+  - Number of different binary search trees with n nodes
+  - Number of paths from (0,0) to (n,n) staying below diagonal
+  - Number of triangulations of a convex polygon with n+2 sides
+  - Number of full binary trees with n+1 leaves
+
+  The sequence begins: 1, 1, 2, 5, 14, 42, 132, 429, 1430, ...
+
+  Examples:
+    (catalan-number 0)  ;=> 1.0
+    (catalan-number 3)  ;=> 5.0
+    (catalan-number 5)  ;=> 42.0
+    (catalan-number 10) ;=> 16796.0"
+  [n]
+  (/ (choose-k-from-n n (* 2 n)) (inc n)))
+
+(s/fdef catalan-number
+  :args (s/cat :n ::m/int-non-)
+  :ret ::m/num)
+
+(defn catalan-number'
+  "Like [[catalan-number]] but returns a long when possible."
+  [n]
+  (m/maybe-long-able (catalan-number n)))
+
+(s/fdef catalan-number'
+  :args (s/cat :n ::m/int-non-)
+  :ret ::m/num)
 
 (defn binomial-probability
   "Computes the binomial probability mass function.
@@ -305,6 +545,110 @@
           (fn [{:keys [trials successes]}]
             (>= trials successes)))
   :ret ::m/num)
+
+;;;COUNTING
+(defn count-combinations
+  "Returns the count of combinations of k items from n items.
+
+  This is equivalent to [[choose-k-from-n]] but with clearer naming
+  for use when counting rather than computing binomial coefficients.
+
+  Examples:
+    (count-combinations 2 5)  ;=> 10.0 (C(5,2))
+    (count-combinations 0 5)  ;=> 1.0"
+  [k n]
+  (choose-k-from-n k n))
+
+(s/fdef count-combinations
+  :args (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
+          n-no-less-than-k?)
+  :ret ::m/num)
+
+(defn count-permutations
+  "Returns the count of k-permutations from n items (or all permutations if k not given).
+
+  P(n,k) = n!/(n-k)! = n × (n-1) × ... × (n-k+1)
+
+  With one argument, returns n! (all permutations of n items).
+  With two arguments, returns P(n,k) (k-permutations from n items).
+
+  Examples:
+    (count-permutations 5)    ;=> 120.0 (5!)
+    (count-permutations 2 5)  ;=> 20.0 (5 × 4)
+    (count-permutations 5 5)  ;=> 120.0 (5!)"
+  ([n]
+   (factorial n))
+  ([k n]
+   (falling-factorial n k)))
+
+(s/fdef count-permutations
+  :args (s/or :one (s/cat :n ::m/int-non-)
+              :two (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
+                     n-no-less-than-k?))
+  :ret ::m/num)
+
+;;;INTEGER PARTITIONS
+(defn- integer-partitions-helper
+  "Helper to generate partitions of n with maximum part max-part."
+  [n max-part]
+  (cond
+    (zero? n) '(())
+    (neg? n) '()
+    (zero? max-part) '()
+    :else
+    (lazy-cat
+      (map #(cons max-part %)
+        (integer-partitions-helper (- n max-part) max-part))
+      (integer-partitions-helper n (dec max-part)))))
+
+(defn integer-partitions
+  "Generates all partitions of integer n as sums of positive integers.
+
+  An integer partition of n is a way of writing n as a sum of positive integers,
+  where order doesn't matter. Each partition is returned as a sequence of parts
+  in descending order.
+
+  Different from set partitions (Bell numbers) - here we partition a number, not a set.
+
+  Examples:
+    (integer-partitions 4)  ;=> ((4) (3 1) (2 2) (2 1 1) (1 1 1 1))
+    (integer-partitions 3)  ;=> ((3) (2 1) (1 1 1))
+    (integer-partitions 1)  ;=> ((1))
+    (integer-partitions 0)  ;=> (())
+
+  Optional second argument limits the maximum part size:
+    (integer-partitions 5 3) ;=> ((3 2) (3 1 1) (2 2 1) (2 1 1 1) (1 1 1 1 1))"
+  ([n]
+   (integer-partitions n n))
+  ([n max-part]
+   (integer-partitions-helper n (min n max-part))))
+
+(s/fdef integer-partitions
+  :args (s/cat :n ::m/int-non- :max-part (s/? ::m/int-non-))
+  :ret (s/coll-of (s/coll-of ::m/int-non-)))
+
+(defn count-integer-partitions
+  "Returns the number of integer partitions of n.
+
+  Uses dynamic programming for efficiency. This is the partition function p(n).
+
+  Examples:
+    (count-integer-partitions 5)   ;=> 7
+    (count-integer-partitions 10)  ;=> 42
+    (count-integer-partitions 100) ;=> 190569292"
+  [n]
+  (if (neg? n)
+    0
+    (let [table (long-array (inc n))]
+      (aset table 0 1)
+      (doseq [i (range 1 (inc n))]
+        (doseq [j (range i (inc n))]
+          (aset table j (+ (aget table j) (aget table (- j i))))))
+      (aget table n))))
+
+(s/fdef count-integer-partitions
+  :args (s/cat :n ::m/int)
+  :ret ::m/int-non-)
 
 ;;;UNORDERED COMBINATIONS
 
@@ -472,6 +816,37 @@
   :args (s/cat :items ::items)
   :ret ::groups-of-items)
 
+(defn k-permutations
+  "Generates all k-permutations of items (ordered selections of k items).
+
+  Returns all possible ways to select and arrange k items from the collection.
+  Unlike `permutations` which returns all n! permutations, this returns P(n,k)
+  arrangements.
+
+  When k equals the number of items, equivalent to [[permutations]].
+
+  Examples:
+    (k-permutations [1 2 3] 2)  ;=> ([1 2] [1 3] [2 1] [2 3] [3 1] [3 2])
+    (k-permutations [:a :b :c] 1)  ;=> ([:a] [:b] [:c])
+    (k-permutations [1 2] 2)  ;=> ([1 2] [2 1]) (same as permutations)
+    (k-permutations [1 2 3] 0)  ;=> ([]) (one empty arrangement)"
+  [items k]
+  (let [n (count items)]
+    (cond
+      (zero? k) (list (if (vector? items) [] '()))
+      (> k n) nil
+      (== k n) (permutations items)
+      :else
+      (mapcat (fn [combo]
+                (permutations (if (vector? items)
+                                (vec combo)
+                                combo)))
+        (combinations items k)))))
+
+(s/fdef k-permutations
+  :args (s/cat :items ::items :k ::m/int-non-)
+  :ret (s/nilable ::groups-of-items))
+
 (defn cartesian-product
   "All the ways to take one item from each sequence in `sequences-of-items`."
   [& sequences-of-items]
@@ -497,4 +872,120 @@
   :args (s/cat :items ::items
           :n ::replacement-count)
   :ret ::groups-of-items)
+
+;;;DIRECT ACCESS
+(defn nth-combination
+  "Returns the nth combination (0-indexed) of k items from the collection.
+
+  Computes the combination directly without generating all previous combinations.
+  Useful for random sampling from large combinatorial spaces.
+
+  Uses combinatorial number system (combinadics) to decode the index.
+
+  Examples:
+    (nth-combination [1 2 3 4 5] 2 0)  ;=> (1 2) first combination
+    (nth-combination [1 2 3 4 5] 2 9)  ;=> (4 5) last combination
+    (nth-combination [:a :b :c :d] 2 3) ;=> (:b :c)"
+  [items k idx]
+  (let [v-items (vec items)
+        n (count v-items)
+        total (choose-k-from-n' k n)]
+    (when (and (<= k n) (>= idx 0) (< idx total))
+      (loop [result []
+             remaining-k k
+             remaining-n n
+             remaining-idx idx
+             offset 0]
+        (if (zero? remaining-k)
+          (map v-items result)
+          ;; For each position, find which element goes there
+          (let [;; Count combinations if we skip elements
+                [chosen skip-count]
+                (loop [skip 0
+                       acc 0]
+                  (let [combos-without (choose-k-from-n' (dec remaining-k) (- remaining-n skip 1))]
+                    (if (< remaining-idx (+ acc combos-without))
+                      [(+ offset skip) acc]
+                      (recur (inc skip) (+ acc combos-without)))))]
+            (recur (conj result chosen)
+              (dec remaining-k)
+              (- remaining-n (- chosen offset) 1)
+              (- remaining-idx skip-count)
+              (inc chosen))))))))
+
+(s/fdef nth-combination
+  :args (s/cat :items ::items :k ::m/int-non- :idx ::m/int-non-)
+  :ret (s/nilable ::items))
+
+(defn nth-permutation
+  "Returns the nth permutation (0-indexed) of the collection.
+
+  Computes the permutation directly without generating all previous permutations.
+  Useful for random sampling from large permutation spaces.
+
+  Uses factorial number system (factoradic) to decode the index.
+
+  Examples:
+    (nth-permutation [1 2 3] 0)  ;=> (1 2 3) first permutation
+    (nth-permutation [1 2 3] 5)  ;=> (3 2 1) last permutation
+    (nth-permutation [:a :b :c] 2) ;=> (:b :a :c)"
+  [items idx]
+  (let [v-items (vec items)
+        n (count v-items)]
+    (when (and (>= idx 0) (< idx (factorial n)))
+      (loop [result []
+             remaining (vec (range n))
+             remaining-idx idx
+             divisor (factorial' (dec n))]
+        (if (empty? remaining)
+          (map v-items result)
+          (let [quot-val (long (quot remaining-idx divisor))
+                chosen-pos (nth remaining quot-val)
+                new-remaining (vec (concat (subvec remaining 0 quot-val)
+                                     (subvec remaining (inc quot-val))))]
+            (recur (conj result chosen-pos)
+              new-remaining
+              (rem remaining-idx divisor)
+              (if (> (count new-remaining) 0)
+                (/ divisor (count new-remaining))
+                1))))))))
+
+(s/fdef nth-permutation
+  :args (s/cat :items ::items :idx ::m/int-non-)
+  :ret (s/nilable ::items))
+
+(defn nth-k-permutation
+  "Returns the nth k-permutation (0-indexed) of the collection.
+
+  Computes the k-permutation directly without generating all previous arrangements.
+  Useful for random sampling from large P(n,k) spaces.
+
+  Examples:
+    (nth-k-permutation [1 2 3 4] 2 0)  ;=> (1 2) first 2-permutation
+    (nth-k-permutation [1 2 3 4] 2 11) ;=> (4 3) last 2-permutation
+    (nth-k-permutation [:a :b :c] 2 3) ;=> (:b :a)"
+  [items k idx]
+  (let [v-items (vec items)
+        n (count v-items)
+        total-count (falling-factorial n k)]
+    (when (and (<= k n) (>= idx 0) (< idx total-count))
+      (loop [result []
+             remaining (vec (range n))
+             remaining-k k
+             remaining-idx idx]
+        (if (zero? remaining-k)
+          (map v-items result)
+          (let [perms-per-choice (falling-factorial (dec (count remaining)) (dec remaining-k))
+                quot-val (long (quot remaining-idx perms-per-choice))
+                chosen-pos (nth remaining quot-val)
+                new-remaining (vec (concat (subvec remaining 0 quot-val)
+                                     (subvec remaining (inc quot-val))))]
+            (recur (conj result chosen-pos)
+              new-remaining
+              (dec remaining-k)
+              (rem remaining-idx perms-per-choice))))))))
+
+(s/fdef nth-k-permutation
+  :args (s/cat :items ::items :k ::m/int-non- :idx ::m/int-non-)
+  :ret (s/nilable ::items))
 

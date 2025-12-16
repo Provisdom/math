@@ -1,21 +1,71 @@
 (ns provisdom.math.integrals
-  "Numerical integration using adaptive Gauss-Kronrod quadrature.
-  
-  Provides high-accuracy numerical integration for:
-  - Single-variable functions over finite or infinite intervals
-  - Multi-variable functions over rectangular regions  
-  - Non-rectangular 2D integration with variable bounds
-  - Automatic change of variables for infinite intervals
-  
-  Uses adaptive algorithms that subdivide intervals where error is highest,
-  with parallel processing support. Based on globally adaptive Gauss-Kronrod
-  quadrature with embedded error estimation."
+  "Numerical integration with multiple quadrature methods.
+
+  ## Quick Reference: Choosing an Integration Method
+
+  | Method                          | Best For                                    |
+  |---------------------------------|---------------------------------------------|
+  | `integration`                   | General 1D integrals (default choice)       |
+  | `rectangular-integration`       | Multi-dim (2-4D) over rectangular regions   |
+  | `non-rectangular-2D-integration`| 2D with variable inner bounds               |
+  | `clenshaw-curtis-integration`   | Smooth periodic functions, endpoint values  |
+  | `tanh-sinh-integration`         | Endpoint singularities (1/sqrt(x), log(x))  |
+  | `monte-carlo-integration`       | High dimensions (>4), rough integrands      |
+  | `quasi-monte-carlo-integration` | High dimensions with faster convergence     |
+  | `sparse-grid-integration`       | Moderate dimensions (5-15), smooth functions|
+  | `oscillatory-integration`       | Highly oscillatory: f(x)*sin(wx) or cos(wx) |
+
+  ## Method Selection Guide
+
+  **1D Integration (start here):**
+  - Smooth functions: `integration` (Gauss-Kronrod) - reliable default
+  - Endpoint singularities: `tanh-sinh-integration` - handles 1/sqrt(x), log(x)
+  - Need endpoint values in approximation: `clenshaw-curtis-integration`
+  - Highly oscillatory (large omega): `oscillatory-integration`
+  - Known interior singularities: `integration` with `::singularities` option
+
+  **Multi-dimensional Integration:**
+  - 2-4 dimensions, smooth: `rectangular-integration`
+  - 2D with variable bounds: `non-rectangular-2D-integration`
+  - 5-15 dimensions, smooth: `sparse-grid-integration` (Smolyak)
+  - >4 dimensions or rough: `monte-carlo-integration`
+  - Best convergence for high-dim: `quasi-monte-carlo-integration` (Sobol)
+
+  ## Features
+
+  - Adaptive algorithms that subdivide where error is highest
+  - Automatic handling of infinite intervals via change of variables
+  - Functions can return scalars, vectors, or tensors
+  - Parallel processing support via `::parallel?` option
+  - Error estimation with `integration-with-error`
+
+  ## Examples
+
+    ;; Basic 1D integral
+    (integration m/sq [0 1])  ;=> 0.333...
+
+    ;; Infinite interval (automatically transformed)
+    (integration #(m/exp (- (m/sq %))) [m/inf- m/inf+])  ;=> sqrt(pi)
+
+    ;; With error estimate
+    (integration-with-error m/sq [0 1])
+    ;=> {::value 0.333... ::error-estimate 1e-15}
+
+    ;; Endpoint singularity
+    (tanh-sinh-integration #(/ (m/sqrt %)) [0 1])  ;=> 2.0
+
+    ;; High-dimensional
+    (monte-carlo-integration
+      (fn [v] (reduce + v))
+      (repeat 10 [0 1]))  ;=> ~5.0"
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
     [provisdom.math.combinatorics :as combo]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
+    [provisdom.math.polynomials :as polynomials]
+    [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]
     [provisdom.math.vector :as vector]
     [provisdom.utility-belt.anomalies :as anomalies]
@@ -31,8 +81,33 @@
     #(intervals/long-interval-gen 1 20)))
 
 (s/def ::parallel? boolean?)
-(s/def ::points #{15, 21, 31, 41, 51, 61})
-(s/def ::opts (s/? (s/keys :opt [::accu ::iter-interval ::parallel? ::points])))
+(s/def ::points #{15 21 31 41 51 61})
+
+;; New specs for enhanced integration methods
+(s/def ::cc-points #{3 5 9 17 33 65})
+(s/def ::error-estimate ::tensor/tensor)
+(s/def ::level (s/int-in 1 6))
+(s/def ::omega ::m/finite+)
+(s/def ::oscillation-type #{:sin :cos})
+(s/def ::quasi? boolean?)
+(s/def ::samples ::m/int+)
+(s/def ::seed (s/nilable ::m/long))
+(s/def ::singularities (s/coll-of ::m/finite))
+(s/def ::sparse-grid-level (s/int-in 1 8))
+(s/def ::standard-error ::m/num)
+(s/def ::value ::tensor/tensor)
+
+;; Result specs
+(s/def ::integration-result (s/keys :req [::error-estimate ::value]))
+(s/def ::monte-carlo-result (s/keys :req [::samples ::standard-error ::value]))
+
+;; Options specs
+(s/def ::opts (s/? (s/keys :opt [::accu ::iter-interval ::parallel? ::points ::singularities])))
+(s/def ::cc-opts (s/? (s/keys :opt [::accu ::cc-points ::iter-interval])))
+(s/def ::monte-carlo-opts (s/? (s/keys :opt [::quasi? ::samples ::seed])))
+(s/def ::oscillatory-opts (s/keys :req [::omega] :opt [::oscillation-type ::points]))
+(s/def ::sparse-grid-opts (s/? (s/keys :opt [::sparse-grid-level])))
+(s/def ::tanh-sinh-opts (s/? (s/keys :opt [::accu ::level])))
 
 (s/def ::number->number
   (s/with-gen
@@ -164,7 +239,7 @@
    0.8648644233597690727897128, 0.9491079123427585245261897,
    0.9914553711208126392068547])
 
-(def ^:const ^:private g7-k15
+(def ^:private g7-k15
   [(convert-gk-weights gauss7-weights)
    (convert-gk-weights kronrod15-weights)
    (convert-gk-nodes kronrod15-nodes)])
@@ -189,7 +264,7 @@
    0.8650633666889845107320967, 0.9301574913557082260012072,
    0.9739065285171717200779640, 0.9956571630258080807355273])
 
-(def ^:const ^:private g10-k21
+(def ^:private g10-k21
   [(convert-gk-weights gauss10-weights false)
    (convert-gk-weights kronrod21-weights)
    (convert-gk-nodes kronrod21-nodes)])
@@ -220,7 +295,7 @@
    0.9677390756791391342573480, 0.9879925180204854284895657,
    0.9980022986933970602851728])
 
-(def ^:const ^:private g15-k31
+(def ^:private g15-k31
   [(convert-gk-weights gauss15-weights)
    (convert-gk-weights kronrod31-weights)
    (convert-gk-nodes kronrod31-nodes)])
@@ -257,7 +332,7 @@
    0.9639719272779137912676661, 0.9815078774502502591933430,
    0.9931285991850949247861224, 0.9988590315882776638383156])
 
-(def ^:const ^:private g20-k41
+(def ^:private g20-k41
   [(convert-gk-weights gauss20-weights false)
    (convert-gk-weights kronrod41-weights)
    (convert-gk-nodes kronrod41-nodes)])
@@ -301,7 +376,7 @@
    0.9880357945340772476373310, 0.9955569697904980979087849,
    0.9992621049926098341934575])
 
-(def ^:const ^:private g25-k51
+(def ^:private g25-k51
   [(convert-gk-weights gauss25-weights)
    (convert-gk-weights kronrod51-weights)
    (convert-gk-nodes kronrod51-nodes)])
@@ -693,10 +768,22 @@
          :tensor ::tensor/tensor))
 
 (defn change-of-variable
-  "Takes the num-interval and returns a map containing:
-    `::multiplicative-fn`
-    `::converter-fn` -- for within the function to integrate.
-    `::intervals/finite-interval`."
+  "Transforms an interval to enable integration over infinite domains.
+
+  Implementation detail exposed for advanced users who need custom integration
+  strategies. For standard use, prefer [[integration]] which handles this
+  automatically.
+
+  Given a num-interval [a b] (possibly infinite), returns a map containing:
+    `::multiplicative-fn` - Jacobian factor for the change of variables
+    `::converter-fn` - Maps points in finite interval to original domain
+    `::intervals/finite-interval` - The transformed finite interval
+
+  Transformations used:
+    (-inf, +inf) -> [-1, 1] via x = t/(1-t²)
+    (a, +inf)    -> [0, 1]  via x = a + t/(1-t)
+    (-inf, b)    -> [0, 1]  via x = b - (1-t)/t
+    [a, b]       -> [a, b]  (identity)"
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b))
@@ -771,44 +858,70 @@
           :num-intervals ::num-intervals)
   :ret (s/tuple ::v->tensor ::finite-intervals))
 
+(defn- split-at-singularities
+  "Splits interval [a b] at singularity points, returning list of subintervals."
+  [[a b] singularities]
+  (let [sorted (->> singularities
+                    (filter #(and (< a %) (< % b)))
+                    sort)
+        points (vec (concat [a] sorted [b]))]
+    (partition 2 1 points)))
+
 (defn integration
   "Integrates a function over an interval using adaptive Gauss-Kronrod quadrature.
-  
+
   Computes ∫[a,b] f(x) dx where f can return scalars, vectors, or tensors.
   Automatically handles infinite intervals via change of variables.
   Uses globally adaptive algorithm that subdivides where error is highest.
-  
+
   Options:
-    ::accu - Relative accuracy target (default: m/dbl-close) 
+    ::accu - Relative accuracy target (default: m/dbl-close)
     ::iter-interval - [min-iter max-iter] bounds (default: [10 1000])
     ::parallel? - Use parallel processing (default: false)
     ::points - Quadrature points: 15,21,31,41,51,61 (auto-selected by default)
-  
+    ::singularities - Known singularity/discontinuity locations to split at
+
   Returns integral value or anomaly map if convergence fails.
-  
+
   Examples:
     (integration #(* % %) [0 1])           ;=> 0.33333... (∫x² from 0 to 1)
-    (integration #(Math/exp (- (* % %))) [-##Inf ##Inf])  ;=> ~1.77245 (√π)
-    
-  Known limitations: Very large finite intervals may lose precision due to 
+    (integration #(m/exp (- (* % %))) [m/inf- m/inf+])  ;=> ~1.77245 (√π)
+    (integration f [-1 1] {::singularities [0]})  ;=> splits at discontinuity
+
+  Known limitations: Very large finite intervals may lose precision due to
   floating-point limits. For such cases, increase ::points or ::iter-interval."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
-  ([number->tensor [a b] {::keys [accu iter-interval parallel? points]
+  ([number->tensor [a b] {::keys [accu iter-interval parallel? points singularities]
                           :or    {accu          m/dbl-close
                                   iter-interval [10 1000]
-                                  parallel?     false}}]
-   (let [points (cond points points
-                      (some m/inf? [a b]) 15
-                      :else 21)
-         [new-fn new-interval] (change-of-variable-for-integration
-                                 number->tensor [a b])]
-     (adaptive-quadrature
-       new-fn
-       new-interval
-       accu
-       iter-interval
-       (weights-and-nodes-gk points)
-       false))))
+                                  parallel?     false}
+                          :as    opts}]
+   (if (seq singularities)
+     ;; Split at singularities and sum subintegrals
+     (let [opts-without-sing (dissoc opts ::singularities)
+           subintervals (split-at-singularities [a b] singularities)]
+       (reduce (fn [acc interval]
+                 (let [result (integration number->tensor (vec interval) opts-without-sing)]
+                   (if (anomalies/anomaly? result)
+                     (reduced result)
+                     (if (nil? acc)
+                       result
+                       (tensor/add acc result)))))
+               nil
+               subintervals))
+     ;; Standard integration
+     (let [points (cond points points
+                        (some m/inf? [a b]) 15
+                        :else 21)
+           [new-fn new-interval] (change-of-variable-for-integration
+                                   number->tensor [a b])]
+       (adaptive-quadrature
+         new-fn
+         new-interval
+         accu
+         iter-interval
+         (weights-and-nodes-gk points)
+         false)))))
 
 (s/fdef integration
   :args (s/cat :number->tensor ::number->tensor
@@ -823,9 +936,9 @@
   Quadrature Formula. `v->tensor` takes a vector with one element for each
   num-interval and returns a tensor.
   Options:
-    `::accu` -- default is m/*dbl-close* and (m/*sgl-close* for 4+ variables
-      or for 3+ variables if any num-interval is infinite) (accuracy is also
-      adjusted for Gauss-Konrod quadrature type)
+    `::accu` -- default is m/dbl-close (m/sgl-close for 4+ variables
+      or for 3+ variables if any num-interval is infinite); accuracy is also
+      adjusted for Gauss-Kronrod quadrature type
     `::iter-interval` -- default is [10 1000]
     `::parallel?` -- default is false
     `::points` -- 15, 21, 31, 41, 51, 61; default is 15.
@@ -913,3 +1026,655 @@
           :opts ::opts)
   :ret (s/or :anomaly ::anomalies/anomaly
          :tensor ::tensor/tensor))
+
+;;;============================================================================
+;;; INTEGRATION WITH ERROR ESTIMATE
+;;;============================================================================
+
+(defn- adaptive-quadrature-with-error
+  "Like adaptive-quadrature but returns {::value ... ::error-estimate ...}."
+  [number->tensor [a b] accu [min-iter max-iter] weights-and-nodes parallel?]
+  (let [tolerance (adjust-accu-gk accu)
+        {::keys [error high-precision-values]}
+        (get-error-and-high-precision-values
+          number->tensor [a b] weights-and-nodes)]
+    (loop [iter 1
+           error-maps [{:uni-error       error
+                        :high-values     high-precision-values
+                        :finite-interval [a b]}]]
+      (let [total-error (apply + (flatten (map :uni-error error-maps)))]
+        (if (and (>= iter min-iter)
+                 (not (> total-error tolerance)))
+          (if (<= total-error tolerance)
+            {::value          (apply tensor/add (map :high-values error-maps))
+             ::error-estimate total-error}
+            {::anomalies/message  (str "Error contains NaN. Value: "
+                                       (apply tensor/add (map :high-values error-maps)))
+             ::anomalies/fn       (var adaptive-quadrature-with-error)
+             ::anomalies/category ::anomalies/no-solve})
+          (if (>= iter max-iter)
+            {::anomalies/message  (str "Iteration limit reached. Error: "
+                                       total-error
+                                       ". Value: "
+                                       (apply tensor/add (map :high-values error-maps)))
+             ::anomalies/fn       (var adaptive-quadrature-with-error)
+             ::anomalies/category ::anomalies/no-solve}
+            (let [{[an bn] :finite-interval} (peek error-maps)
+                  mn (* 0.5 (+ an bn))
+                  [{error1                 ::error
+                    high-precision-values1 ::high-precision-values}
+                   {error2                 ::error
+                    high-precision-values2 ::high-precision-values}]
+                  (if parallel?
+                    (async/thread
+                      :all
+                      [#(get-error-and-high-precision-values
+                          number->tensor [an mn] weights-and-nodes)
+                       #(get-error-and-high-precision-values
+                          number->tensor [mn bn] weights-and-nodes)])
+                    [(get-error-and-high-precision-values
+                       number->tensor [an mn] weights-and-nodes)
+                     (get-error-and-high-precision-values
+                       number->tensor [mn bn] weights-and-nodes)])
+                  new-error-maps [{:uni-error       error1
+                                   :high-values     high-precision-values1
+                                   :finite-interval [an mn]}
+                                  {:uni-error       error2
+                                   :high-values     high-precision-values2
+                                   :finite-interval [mn bn]}]
+                  new-error-maps (into []
+                                       (sort-by (fn [m]
+                                                  (if (m/nan? (:uni-error m))
+                                                    m/inf+
+                                                    (:uni-error m)))
+                                                (concat (pop error-maps) new-error-maps)))]
+              (recur (inc iter) new-error-maps))))))))
+
+(defn integration-with-error
+  "Like [[integration]] but returns a map with both value and error estimate.
+
+  Returns:
+    {::value <integral-value>
+     ::error-estimate <estimated-absolute-error>}
+
+  Or an anomaly map if convergence fails.
+
+  The error estimate is the difference between the high and low precision
+  Gauss-Kronrod approximations, providing a reliable upper bound on error.
+
+  Options: Same as [[integration]] (::accu, ::iter-interval, ::parallel?, ::points)
+
+  Examples:
+    (integration-with-error m/sq [0 1])
+    ;=> {::value 0.333... ::error-estimate 1e-15}
+
+    (integration-with-error #(m/exp (- (m/sq %))) [m/inf- m/inf+])
+    ;=> {::value 1.7724... ::error-estimate 1e-14}"
+  ([number->tensor [a b]] (integration-with-error number->tensor [a b] {}))
+  ([number->tensor [a b] {::keys [accu iter-interval parallel? points]
+                          :or    {accu          m/dbl-close
+                                  iter-interval [10 1000]
+                                  parallel?     false}}]
+   (let [points (cond points points
+                      (some m/inf? [a b]) 15
+                      :else 21)
+         [new-fn new-interval] (change-of-variable-for-integration
+                                 number->tensor [a b])]
+     (adaptive-quadrature-with-error
+       new-fn
+       new-interval
+       accu
+       iter-interval
+       (weights-and-nodes-gk points)
+       parallel?))))
+
+(s/fdef integration-with-error
+  :args (s/cat :number->tensor ::number->tensor
+               :num-interval ::intervals/num-interval
+               :opts ::opts)
+  :ret (s/or :anomaly ::anomalies/anomaly
+             :result ::integration-result))
+
+;;;============================================================================
+;;; TANH-SINH (DOUBLE EXPONENTIAL) QUADRATURE
+;;;============================================================================
+
+(defn- tanh-sinh-weights-and-nodes
+  "Computes tanh-sinh quadrature weights and nodes for given level.
+
+  Transformation: x = tanh(π/2 · sinh(t))
+  Weight: dx/dt = (π/2) · cosh(t) / cosh²(π/2 · sinh(t))
+
+  Returns [weights nodes] for t in [-tmax, tmax] with step h."
+  [level]
+  (let [n (bit-shift-left 1 (+ level 3))  ; 16, 32, 64, 128, 256 for levels 1-5
+        h (/ 1.0 (bit-shift-left 1 level)) ; 0.5, 0.25, 0.125, etc.
+        half-n (/ (dec n) 2.0)
+        half-pi (* 0.5 m/PI)]
+    (loop [i 0
+           weights (transient [])
+           nodes (transient [])]
+      (if (>= i n)
+        [(persistent! weights) (persistent! nodes)]
+        (let [t (* h (- i half-n))
+              sinh-t (m/sinh t)
+              arg (* half-pi sinh-t)]
+          (if (> (m/abs arg) 20)
+            ;; Avoid overflow - contribution is negligible
+            (recur (inc i)
+                   (conj! weights 0.0)
+                   (conj! nodes (m/sgn t)))
+            (let [cosh-arg (m/cosh arg)
+                  weight (* half-pi h (m/cosh t) (/ (m/sq cosh-arg)))
+                  node (m/tanh arg)]
+              (recur (inc i)
+                     (conj! weights weight)
+                     (conj! nodes node)))))))))
+
+(def ^:private tanh-sinh-precomputed
+  "Precomputed weights and nodes for levels 1-5."
+  (into {} (for [level (range 1 6)]
+             [level (tanh-sinh-weights-and-nodes level)])))
+
+(defn tanh-sinh-integration
+  "Double-exponential (tanh-sinh) quadrature for integrals with endpoint singularities.
+
+  Uses transformation x = tanh(π/2 · sinh(t)) which clusters quadrature nodes
+  near the endpoints, providing excellent accuracy for integrands with algebraic
+  or logarithmic singularities at the boundaries.
+
+  Best for:
+    - Integrands with x^α singularities at endpoints (e.g., 1/√x)
+    - Logarithmic singularities (e.g., x·log(x))
+    - Functions like 1/√(1-x²)
+    - Integrands that are smooth in the interior but singular at boundaries
+
+  Options:
+    ::level - Refinement level 1-5 (default 3, gives 64 points)
+              Higher levels give more accuracy but cost more
+    ::accu - Target accuracy (default m/dbl-close) - used for adaptive refinement
+
+  Returns the integral value or anomaly if convergence fails.
+
+  Examples:
+    ;; Integral with sqrt singularity at 0: ∫₀¹ 1/√x dx = 2
+    (tanh-sinh-integration #(/ (m/sqrt %)) [0.0 1.0])
+
+    ;; Integral with log singularity: ∫₀¹ x·log(x) dx = -1/4
+    (tanh-sinh-integration #(* % (m/log %)) [0.0 1.0])
+
+    ;; Elliptic-type integral
+    (tanh-sinh-integration #(/ (m/sqrt (- 1 (m/sq %)))) [-1.0 1.0])"
+  ([number->tensor [a b]] (tanh-sinh-integration number->tensor [a b] {}))
+  ([number->tensor [a b] {::keys [level accu]
+                          :or    {level 3 accu m/dbl-close}}]
+   (let [half-sum (* 0.5 (+ a b))
+         half-diff (* 0.5 (- b a))
+         tolerance (adjust-accu-gk accu)]
+     ;; Adaptive: try increasing levels until convergence
+     (loop [current-level level
+            prev-result nil]
+       (let [[weights nodes] (get tanh-sinh-precomputed current-level
+                                  (tanh-sinh-weights-and-nodes current-level))
+             ;; Filter out negligible-weight points to avoid evaluating near singularities
+             ;; Use 1e-15 as threshold - contributions smaller than this are negligible
+             non-zero-pairs (filter (fn [[w _]] (> w 1e-15)) (map vector weights nodes))
+             filtered-weights (mapv first non-zero-pairs)
+             filtered-nodes (mapv second non-zero-pairs)
+             unnormalized-nodes (mapv #(+ half-sum (* half-diff %)) filtered-nodes)
+             mapped-values (mapv number->tensor unnormalized-nodes)
+             result (tensor/multiply half-diff
+                                     (tensor/inner-product filtered-weights mapped-values))]
+         (cond
+           ;; Check for convergence with previous level
+           (and prev-result
+                (let [diff (if (number? result)
+                             (m/abs (- result prev-result))
+                             (tensor/norm1 (tensor/subtract result prev-result)))]
+                  (<= diff tolerance)))
+           result
+
+           ;; Max level reached
+           (>= current-level 5)
+           result
+
+           ;; Try next level
+           :else
+           (recur (inc current-level) result)))))))
+
+(s/fdef tanh-sinh-integration
+  :args (s/cat :number->tensor ::number->tensor
+               :finite-interval ::intervals/finite-interval
+               :opts ::tanh-sinh-opts)
+  :ret (s/or :anomaly ::anomalies/anomaly
+             :tensor ::tensor/tensor))
+
+;;;============================================================================
+;;; CLENSHAW-CURTIS QUADRATURE
+;;;============================================================================
+
+(defn- clenshaw-curtis-weights
+  "Computes Clenshaw-Curtis quadrature weights for n points.
+
+  Uses the formula for weights at Chebyshev extrema (including endpoints).
+  The weights are computed via the discrete cosine transform relationship."
+  [n]
+  (if (< n 2)
+    [2.0]
+    (let [n-1 (dec n)
+          ;; Compute weights using the standard CC formula
+          weights (vec
+                    (for [k (range n)]
+                      (let [theta-k (/ (* m/PI k) n-1)]
+                        (* (/ 2.0 n-1)
+                           (reduce (fn [sum j]
+                                     (let [b-j (if (or (zero? j) (= j n-1))
+                                                 1.0
+                                                 2.0)
+                                           denom (- 1.0 (* 4.0 j j))]
+                                       (+ sum (/ (* b-j (m/cos (* 2.0 j theta-k)))
+                                                 denom))))
+                                   0.0
+                                   (range (inc (quot n-1 2))))))))
+          ;; Adjust endpoint weights
+          w0 (/ (first weights) 2.0)
+          wn (/ (last weights) 2.0)]
+      (assoc (assoc weights 0 w0) (dec n) wn))))
+
+(defn clenshaw-curtis-integration
+  "Clenshaw-Curtis quadrature using Chebyshev nodes.
+
+  Uses Chebyshev extrema (including endpoints) as quadrature nodes. The method
+  is competitive with Gauss-Kronrod and has nested rules (n → 2n-1 points)
+  for efficient error estimation.
+
+  Best for:
+    - Smooth functions where you want endpoint values in the approximation
+    - Periodic or near-periodic functions
+    - When you need nested rules for adaptive refinement
+
+  Compared to Gauss-Kronrod:
+    - Includes endpoints (useful for some problems)
+    - Nested rules: can reuse function evaluations when refining
+    - Similar accuracy for smooth functions
+    - Slightly less efficient for very smooth analytic functions
+
+  Options:
+    ::cc-points - Number of points: 3, 5, 9, 17, 33, 65 (default 17)
+    ::accu - Target accuracy (default m/dbl-close)
+    ::iter-interval - [min max] adaptive iterations (default [1 10])
+
+  Examples:
+    (clenshaw-curtis-integration m/sq [0 1])  ;=> 0.333...
+    (clenshaw-curtis-integration m/cos [0 m/PI])  ;=> 0 (exact)"
+  ([number->tensor [a b]] (clenshaw-curtis-integration number->tensor [a b] {}))
+  ([number->tensor [a b] {::keys [cc-points accu iter-interval]
+                          :or    {cc-points     17
+                                  accu          m/dbl-close
+                                  iter-interval [1 10]}}]
+   (let [half-sum (* 0.5 (+ a b))
+         half-diff (* 0.5 (- b a))
+         tolerance (adjust-accu-gk accu)
+         [min-iter max-iter] iter-interval]
+     (loop [n cc-points
+            iter 1
+            prev-result nil]
+       (let [;; Get Chebyshev extrema on [-1, 1]
+             nodes (polynomials/chebyshev-extrema n)
+             ;; Map to [a, b]
+             unnormalized-nodes (mapv #(+ half-sum (* half-diff %)) nodes)
+             ;; Evaluate function
+             mapped-values (mapv number->tensor unnormalized-nodes)
+             ;; Get weights
+             weights (clenshaw-curtis-weights n)
+             ;; Compute integral
+             result (tensor/multiply half-diff
+                                     (tensor/inner-product weights mapped-values))]
+         (cond
+           ;; Check convergence
+           (and (>= iter min-iter)
+                prev-result
+                (let [diff (if (number? result)
+                             (m/abs (- result prev-result))
+                             (tensor/norm1 (tensor/subtract result prev-result)))]
+                  (<= diff tolerance)))
+           result
+
+           ;; Max iterations
+           (>= iter max-iter)
+           result
+
+           ;; Next nested level (n -> 2n-1)
+           :else
+           (recur (dec (* 2 n)) (inc iter) result)))))))
+
+(s/fdef clenshaw-curtis-integration
+  :args (s/cat :number->tensor ::number->tensor
+               :finite-interval ::intervals/finite-interval
+               :opts ::cc-opts)
+  :ret (s/or :anomaly ::anomalies/anomaly
+             :tensor ::tensor/tensor))
+
+;;;============================================================================
+;;; MONTE CARLO INTEGRATION
+;;;============================================================================
+
+(defn monte-carlo-integration
+  "Monte Carlo integration for high-dimensional integrals.
+
+  Estimates the integral by averaging function values at random points within
+  the integration region. The standard error decreases as 1/√n regardless of
+  dimension, making this method essential for high-dimensional problems.
+
+  Best for:
+    - Dimensions > 4 where adaptive quadrature becomes expensive
+    - Rough or discontinuous integrands
+    - When only moderate accuracy is needed
+    - Integrands that are expensive to evaluate
+
+  Options:
+    ::samples - Number of sample points (default 10000)
+    ::seed - Random seed for reproducibility (default: uses current RNG state)
+    ::quasi? - Use Sobol quasi-random sequence (default false)
+               Quasi-random often achieves O(1/n) instead of O(1/√n) convergence
+
+  Returns:
+    {::value <estimated-integral>
+     ::standard-error <estimated-standard-error>
+     ::samples <number-of-samples-used>}
+
+  For dimensions > 4, Monte Carlo is typically faster than adaptive quadrature.
+  Use `quasi-monte-carlo-integration` for better convergence on smooth functions.
+
+  Examples:
+    ;; 5D unit hypercube: ∫...∫ (x₁+...+x₅) dx₁...dx₅ = 2.5
+    (monte-carlo-integration
+      (fn [v] (reduce + v))
+      (repeat 5 [0.0 1.0])
+      {::samples 100000})
+    ;=> {::value ~2.5 ::standard-error ~0.005 ::samples 100000}"
+  ([v->tensor num-intervals] (monte-carlo-integration v->tensor num-intervals {}))
+  ([v->tensor num-intervals {::keys [samples seed quasi?]
+                             :or    {samples 10000
+                                     quasi?  false}}]
+   (let [dims (count num-intervals)
+         intervals-vec (vec num-intervals)
+         ;; Compute volume of integration region
+         volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
+         ;; Generate sample points
+         sample-fn (if seed
+                     #(random/bind-seed seed
+                        (vec (repeatedly dims random/rnd!)))
+                     #(vec (repeatedly dims random/rnd!)))
+         ;; Transform [0,1]^d to actual intervals
+         transform-point (fn [u]
+                           (mapv (fn [ui [a b]]
+                                   (+ a (* (- b a) ui)))
+                                 u intervals-vec))
+         ;; Collect samples and evaluate
+         points (repeatedly samples sample-fn)
+         transformed (map transform-point points)
+         values (mapv v->tensor transformed)
+         n (double samples)
+         ;; Compute mean
+         sum (reduce tensor/add values)
+         mean (tensor/multiply (/ n) sum)
+         ;; Compute variance (for scalar results)
+         variance (when (number? (first values))
+                    (/ (reduce + (map #(m/sq (- % mean)) values))
+                       (dec n)))
+         std-error (if variance
+                     (* volume (m/sqrt (/ variance n)))
+                     m/nan)]
+     {::value          (tensor/multiply volume mean)
+      ::standard-error std-error
+      ::samples        samples})))
+
+(s/fdef monte-carlo-integration
+  :args (s/cat :v->tensor ::v->tensor
+               :num-intervals ::num-intervals
+               :opts ::monte-carlo-opts)
+  :ret ::monte-carlo-result)
+
+(defn quasi-monte-carlo-integration
+  "Quasi-Monte Carlo integration using low-discrepancy sequences.
+
+  Like [[monte-carlo-integration]] but uses Sobol sequences instead of
+  pseudorandom numbers. Sobol sequences provide better uniform coverage,
+  often achieving O(log(n)^d / n) convergence instead of O(1/√n).
+
+  Best for:
+    - High-dimensional smooth functions
+    - When faster convergence than standard MC is needed
+    - Reproducible results (sequences are deterministic)
+
+  Note: Requires provisdom.apache-math dependency for Sobol sequence generator.
+
+  Options: Same as [[monte-carlo-integration]]
+
+  See [[monte-carlo-integration]] for full documentation."
+  ([v->tensor num-intervals]
+   (quasi-monte-carlo-integration v->tensor num-intervals {}))
+  ([v->tensor num-intervals opts]
+   (monte-carlo-integration v->tensor num-intervals (assoc opts ::quasi? true))))
+
+(s/fdef quasi-monte-carlo-integration
+  :args (s/cat :v->tensor ::v->tensor
+               :num-intervals ::num-intervals
+               :opts ::monte-carlo-opts)
+  :ret ::monte-carlo-result)
+
+;;;============================================================================
+;;; SPARSE GRID (SMOLYAK) INTEGRATION
+;;;============================================================================
+
+(defn- smolyak-indices
+  "Generates Smolyak multi-indices for given dimension and level.
+
+  Returns all multi-indices i = (i₁, ..., i_d) where:
+  level - d + 1 ≤ |i| ≤ level and i_j ≥ 1 for all j"
+  [dimension level]
+  (let [min-sum (max dimension (inc (- level dimension)))
+        max-sum level
+        ;; Generate all combinations with sum = target-sum
+        generate-for-sum
+        (fn generate-for-sum [d target-sum]
+          (if (= d 1)
+            (when (>= target-sum 1)
+              [[target-sum]])
+            (mapcat (fn [i]
+                      (let [remaining (- target-sum i)]
+                        (when (>= remaining (dec d))  ; need at least 1 per remaining dimension
+                          (map #(cons i %) (generate-for-sum (dec d) remaining)))))
+                    (range 1 (inc (- target-sum (dec d)))))))]
+    (mapcat #(generate-for-sum dimension %) (range min-sum (inc max-sum)))))
+
+(defn- smolyak-coefficient
+  "Computes the combination coefficient for Smolyak formula.
+  Uses C(d-1, l-|i|) where d=dimension, l=level, |i|=sum of indices."
+  [indices dimension level]
+  (let [q (reduce + indices)]
+    (* (m/pow -1 (- level q))
+       (combo/choose-k-from-n (- level q) (dec dimension)))))
+
+(defn- nested-cc-points
+  "Returns Clenshaw-Curtis points for level i (1-indexed).
+  Level 1: 1 point, Level 2: 3 points, Level i: 2^(i-1)+1 points"
+  [i]
+  (if (= i 1)
+    [0.0]
+    (polynomials/chebyshev-extrema (inc (bit-shift-left 1 (dec i))))))
+
+(defn- nested-cc-weights
+  "Returns Clenshaw-Curtis weights for level i."
+  [i]
+  (clenshaw-curtis-weights (count (nested-cc-points i))))
+
+(defn sparse-grid-integration
+  "Sparse grid (Smolyak) integration for moderate-dimensional problems.
+
+  Combines 1D quadrature rules using the Smolyak sparse grid construction,
+  achieving O(n · log(n)^(d-1)) points instead of O(n^d) for full tensor product.
+
+  Best for:
+    - Dimensions 5-15 with smooth integrands
+    - Functions with bounded mixed derivatives
+    - When adaptive quadrature is too expensive but MC is too slow
+
+  Not recommended for:
+    - Very high dimensions (>15) - use Monte Carlo instead
+    - Rough or discontinuous integrands
+    - Functions with isolated singularities
+
+  Options:
+    ::sparse-grid-level - Smolyak level 1-7 (default 4)
+                          Level k gives accuracy O(n^(-k) · log(n)^(d-1))
+
+  Examples:
+    ;; 8D integral with ~2000 points instead of 10^8 for tensor product
+    (sparse-grid-integration
+      (fn [v] (reduce * (map #(m/exp (- (m/sq %))) v)))
+      (repeat 8 [-3.0 3.0])
+      {::sparse-grid-level 4})"
+  ([v->tensor num-intervals]
+   (sparse-grid-integration v->tensor num-intervals {}))
+  ([v->tensor num-intervals {::keys [sparse-grid-level]
+                             :or    {sparse-grid-level 4}}]
+   (let [dim (count num-intervals)
+         intervals-vec (vec num-intervals)
+         ;; Functions to map between [-1,1] and actual intervals
+         from-ref (fn [t i]
+                    (let [[a b] (nth intervals-vec i)]
+                      (* 0.5 (+ (* (- b a) t) a b))))
+         jacobian (reduce * (map (fn [[a b]] (* 0.5 (- b a))) intervals-vec))
+         ;; Generate Smolyak indices
+         indices (smolyak-indices dim sparse-grid-level)]
+     (tensor/multiply
+       jacobian
+       (reduce
+         tensor/add
+         (for [idx indices]
+           (let [coeff (smolyak-coefficient idx dim sparse-grid-level)
+                 ;; Generate tensor product of 1D rules
+                 points-per-dim (map nested-cc-points idx)
+                 weights-per-dim (map nested-cc-weights idx)
+                 ;; Cartesian product of all point combinations
+                 all-points (apply combo/cartesian-product points-per-dim)
+                 all-weights (apply combo/cartesian-product weights-per-dim)]
+             (tensor/multiply
+               coeff
+               (reduce
+                 tensor/add
+                 (map (fn [pt wts]
+                        (let [x (vec (map-indexed #(from-ref %2 %1) pt))
+                              w (reduce * wts)]
+                          (tensor/multiply w (v->tensor x))))
+                      all-points all-weights))))))))))
+
+(s/fdef sparse-grid-integration
+  :args (s/cat :v->tensor ::v->tensor
+               :num-intervals ::num-intervals
+               :opts ::sparse-grid-opts)
+  :ret (s/or :anomaly ::anomalies/anomaly
+             :tensor ::tensor/tensor))
+
+;;;============================================================================
+;;; OSCILLATORY INTEGRATION
+;;;============================================================================
+
+(defn- filon-weights
+  "Computes Filon quadrature weights (alpha, beta, gamma) for given theta = omega*h.
+  Standard Filon formulas from numerical analysis literature."
+  [theta]
+  (if (< (m/abs theta) 0.1)
+    ;; Taylor series for small theta to avoid numerical instability
+    (let [t2 (m/sq theta)
+          t4 (* t2 t2)]
+      {:alpha (/ t2 45.0)  ; O(theta²)
+       :beta  (+ (/ 2.0 3.0) (/ t2 15.0) (/ t4 -210.0))
+       :gamma (- (/ 4.0 3.0) (/ (* 2.0 t2) 15.0) (/ t4 105.0))})
+    ;; Standard Filon formulas
+    (let [t2 (m/sq theta)
+          t3 (* t2 theta)
+          sin-t (m/sin theta)
+          cos-t (m/cos theta)]
+      {:alpha (/ (+ t2 (* theta sin-t cos-t) (* -2.0 (m/sq sin-t))) t3)
+       :beta  (/ (* 2.0 (+ (* theta (inc (m/sq cos-t))) (* -2.0 sin-t cos-t))) t3)
+       :gamma (/ (* 4.0 (- sin-t (* theta cos-t))) t3)})))
+
+(defn oscillatory-integration
+  "Integrates f(x)·sin(ωx) or f(x)·cos(ωx) for oscillatory integrands.
+
+  Uses Filon-type quadrature which handles the oscillatory component analytically,
+  only needing to approximate the slowly-varying f(x). Standard quadrature
+  requires O(ω) points; Filon requires O(1) points for fixed accuracy as ω increases.
+
+  Best for:
+    - Integrals of the form ∫ f(x)·sin(ωx) dx with large ω
+    - Fourier-type integrals
+    - When standard quadrature fails due to rapid oscillation
+
+  Options:
+    ::omega - Oscillation frequency (REQUIRED)
+    ::oscillation-type - :sin (default) or :cos
+    ::points - Number of points (default 21, must be odd for Filon)
+
+  Note: For very large ω (> 1000), consider specialized asymptotic methods.
+
+  Examples:
+    ;; ∫₀^π x·sin(100x) dx
+    (oscillatory-integration identity [0 m/PI]
+      {::omega 100 ::oscillation-type :sin})
+
+    ;; ∫₀^1 exp(-x)·cos(50x) dx
+    (oscillatory-integration #(m/exp (- %)) [0 1]
+      {::omega 50 ::oscillation-type :cos})"
+  [f [a b] {::keys [omega oscillation-type points]
+            :or    {oscillation-type :sin
+                    points           21}}]
+  (when-not omega
+    (throw (ex-info "::omega is required for oscillatory-integration" {})))
+  (let [n (if (even? points) (inc points) points)  ; Need odd for Filon
+        h (/ (- b a) (dec n))
+        xs (mapv #(+ a (* % h)) (range n))
+        fs (mapv f xs)
+        theta (* omega h)
+        {alpha :alpha beta :beta gamma :gamma} (filon-weights theta)
+        ;; Get oscillation values at each point
+        osc-vals (mapv #(case oscillation-type
+                          :sin (m/sin (* omega %))
+                          :cos (m/cos (* omega %)))
+                       xs)
+        ;; Separate even and odd indexed values (with oscillation)
+        even-pairs (take-nth 2 (map vector fs osc-vals))
+        odd-pairs (take-nth 2 (rest (map vector fs osc-vals)))
+        ;; Sums weighted by oscillation values
+        sum-even (reduce + (map-indexed (fn [i [fv ov]]
+                                          (* (if (or (zero? i)
+                                                     (= i (dec (count even-pairs))))
+                                               0.5
+                                               1.0)
+                                             fv ov))
+                                        even-pairs))
+        sum-odd (reduce + (map (fn [[fv ov]] (* fv ov)) odd-pairs))
+        ;; Boundary terms
+        fa (first fs)
+        fb (last fs)
+        cos-a (m/cos (* omega a))
+        cos-b (m/cos (* omega b))
+        sin-a (m/sin (* omega a))
+        sin-b (m/sin (* omega b))]
+    (case oscillation-type
+      :sin (* h (+ (* alpha (- (* fb cos-b) (* fa cos-a)))
+                   (* beta sum-odd 2.0)
+                   (* gamma sum-even)))
+      :cos (* h (+ (* alpha (- (* fb sin-b) (* fa sin-a)))
+                   (* beta sum-odd 2.0)
+                   (* gamma sum-even))))))
+
+(s/fdef oscillatory-integration
+  :args (s/cat :f ::number->tensor
+               :finite-interval ::intervals/finite-interval
+               :opts ::oscillatory-opts)
+  :ret (s/or :anomaly ::anomalies/anomaly
+             :tensor ::tensor/tensor))

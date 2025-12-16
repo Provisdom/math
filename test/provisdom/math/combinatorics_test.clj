@@ -297,3 +297,189 @@
     (t/is= '((1 1) (1 2) (1 3) (2 1) (2 2) (2 3) (3 1) (3 2) (3 3)) (combo/selections '(1 2 3) 2))
     (t/is= '((1 1) (1 3) (1 2) (3 1) (3 3) (3 2) (2 1) (2 3) (2 2)) (combo/selections #{1 2 3} 2))
     (t/is= '((1 1) (1 1) (1 2) (1 1) (1 1) (1 2) (2 1) (2 1) (2 2)) (combo/selections [1 1 2] 2))))
+
+;;;DOUBLE FACTORIALS
+(deftest double-factorial-test
+  (t/with-instrument `combo/double-factorial
+    (t/is (t/spec-check combo/double-factorial)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/double-factorial 0))
+    (t/is= 1.0 (combo/double-factorial 1))
+    (t/is= 2.0 (combo/double-factorial 2))
+    (t/is= 3.0 (combo/double-factorial 3))
+    (t/is= 8.0 (combo/double-factorial 4))
+    (t/is= 15.0 (combo/double-factorial 5))
+    (t/is= 48.0 (combo/double-factorial 6))
+    (t/is= 105.0 (combo/double-factorial 7))
+    (t/is= 1.0 (combo/double-factorial -1))))
+
+(deftest double-factorial'-test
+  (t/with-instrument `combo/double-factorial'
+    (t/is (t/spec-check combo/double-factorial')))
+  (t/with-instrument :all
+    (t/is= 1 (combo/double-factorial' 0))
+    (t/is= 105 (combo/double-factorial' 7))))
+
+;;;POCHHAMMER SYMBOLS
+(deftest rising-factorial-test
+  (t/with-instrument `combo/rising-factorial
+    (t/is (t/spec-check combo/rising-factorial)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/rising-factorial 5 0))
+    (t/is= 5.0 (combo/rising-factorial 5 1))
+    (t/is= 30.0 (combo/rising-factorial 5 2))     ;; 5 × 6
+    (t/is= 360.0 (combo/rising-factorial 3 4))    ;; 3 × 4 × 5 × 6
+    (t/is= 120.0 (combo/rising-factorial 1 5))    ;; same as 5!
+    (t/is= 1.875 (combo/rising-factorial 0.5 3)))) ;; 0.5 × 1.5 × 2.5
+
+(deftest falling-factorial-test
+  (t/with-instrument `combo/falling-factorial
+    (t/is (t/spec-check combo/falling-factorial)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/falling-factorial 5 0))
+    (t/is= 5.0 (combo/falling-factorial 5 1))
+    (t/is= 20.0 (combo/falling-factorial 5 2))    ;; 5 × 4
+    (t/is= 60.0 (combo/falling-factorial 5 3))    ;; 5 × 4 × 3
+    (t/is= 120.0 (combo/falling-factorial 5 5))   ;; same as 5!
+    (t/is= 8.75 (combo/falling-factorial 3.5 2)))) ;; 3.5 × 2.5
+
+;;;MULTINOMIAL COEFFICIENTS
+(deftest multinomial-coefficient-test
+  (t/with-instrument `combo/multinomial-coefficient
+    (t/is (t/spec-check combo/multinomial-coefficient)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/multinomial-coefficient [3]))
+    (t/is= 6.0 (combo/multinomial-coefficient [2 2]))     ;; same as C(4,2)
+    (t/is= 60.0 (combo/multinomial-coefficient [2 3 1]))  ;; 6!/(2!3!1!)
+    (t/is= 6.0 (combo/multinomial-coefficient [1 1 1])))) ;; 3!
+
+(deftest log-multinomial-coefficient-test
+  (t/with-instrument `combo/log-multinomial-coefficient
+    (t/is (t/spec-check combo/log-multinomial-coefficient)))
+  (t/with-instrument :all
+    (t/is= 0.0 (combo/log-multinomial-coefficient [3]))
+    (t/is-approx= 4.0943445622221 (combo/log-multinomial-coefficient [2 3 1]) :tolerance 1e-10)))
+
+;;;STIRLING NUMBERS
+(deftest log-stirling-number-of-the-second-kind-test
+  (t/with-instrument `combo/log-stirling-number-of-the-second-kind
+    (t/is (t/spec-check combo/log-stirling-number-of-the-second-kind)))
+  (t/with-instrument :all
+    (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 0 0))
+    (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 5 5))
+    (t/is-approx= 2.708050201102210 (combo/log-stirling-number-of-the-second-kind 2 5) :tolerance 1e-10))) ;; ln(15)
+
+(deftest stirling-number-of-the-first-kind-test
+  (t/with-instrument `combo/stirling-number-of-the-first-kind
+    (t/is (t/spec-check combo/stirling-number-of-the-first-kind)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/stirling-number-of-the-first-kind 0 0))
+    (t/is= 0.0 (combo/stirling-number-of-the-first-kind 0 3))
+    (t/is= 1.0 (combo/stirling-number-of-the-first-kind 4 4))
+    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 1 4))    ;; (4-1)! = 6
+    (t/is= 11.0 (combo/stirling-number-of-the-first-kind 2 4))
+    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 3 4))))
+
+(deftest stirling-number-of-the-first-kind'-test
+  (t/with-instrument `combo/stirling-number-of-the-first-kind'
+    (t/is (t/spec-check combo/stirling-number-of-the-first-kind')))
+  (t/with-instrument :all
+    (t/is= 1 (combo/stirling-number-of-the-first-kind' 0 0))
+    (t/is= 6 (combo/stirling-number-of-the-first-kind' 1 4))))
+
+;;;CATALAN NUMBERS
+(deftest catalan-number-test
+  (t/with-instrument `combo/catalan-number
+    (t/is (t/spec-check combo/catalan-number)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/catalan-number 0))
+    (t/is= 1.0 (combo/catalan-number 1))
+    (t/is= 2.0 (combo/catalan-number 2))
+    (t/is= 5.0 (combo/catalan-number 3))
+    (t/is= 14.0 (combo/catalan-number 4))
+    (t/is= 42.0 (combo/catalan-number 5))
+    (t/is= 16796.0 (combo/catalan-number 10))))
+
+(deftest catalan-number'-test
+  (t/with-instrument `combo/catalan-number'
+    (t/is (t/spec-check combo/catalan-number')))
+  (t/with-instrument :all
+    (t/is= 1 (combo/catalan-number' 0))
+    (t/is= 42 (combo/catalan-number' 5))))
+
+;;;COUNTING FUNCTIONS
+(deftest count-combinations-test
+  (t/with-instrument `combo/count-combinations
+    (t/is (t/spec-check combo/count-combinations)))
+  (t/with-instrument :all
+    (t/is= 1.0 (combo/count-combinations 0 5))
+    (t/is= 10.0 (combo/count-combinations 2 5))
+    (t/is= 1.0 (combo/count-combinations 5 5))))
+
+(deftest count-permutations-test
+  (t/with-instrument `combo/count-permutations
+    (t/is (t/spec-check combo/count-permutations)))
+  (t/with-instrument :all
+    (t/is= 120.0 (combo/count-permutations 5))
+    (t/is= 20.0 (combo/count-permutations 2 5))    ;; P(5,2) = 5 × 4
+    (t/is= 120.0 (combo/count-permutations 5 5)))) ;; P(5,5) = 5!
+
+;;;INTEGER PARTITIONS
+(deftest integer-partitions-test
+  (t/with-instrument `combo/integer-partitions
+    (t/is (t/spec-check combo/integer-partitions {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= '(()) (combo/integer-partitions 0))
+    (t/is= '((1)) (combo/integer-partitions 1))
+    (t/is= '((3) (2 1) (1 1 1)) (combo/integer-partitions 3))
+    (t/is= '((4) (3 1) (2 2) (2 1 1) (1 1 1 1)) (combo/integer-partitions 4))
+    ;; With max-part constraint
+    (t/is= '((2 2) (2 1 1) (1 1 1 1)) (combo/integer-partitions 4 2))
+    (t/is= '((3 2) (3 1 1) (2 2 1) (2 1 1 1) (1 1 1 1 1)) (combo/integer-partitions 5 3))))
+
+(deftest count-integer-partitions-test
+  (t/with-instrument `combo/count-integer-partitions
+    (t/is (t/spec-check combo/count-integer-partitions {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= 1 (combo/count-integer-partitions 0))
+    (t/is= 1 (combo/count-integer-partitions 1))
+    (t/is= 3 (combo/count-integer-partitions 3))
+    (t/is= 5 (combo/count-integer-partitions 4))
+    (t/is= 7 (combo/count-integer-partitions 5))
+    (t/is= 42 (combo/count-integer-partitions 10))
+    (t/is= 190569292 (combo/count-integer-partitions 100))))
+
+;;;K-PERMUTATIONS
+(deftest k-permutations-test
+  (t/with-instrument `combo/k-permutations
+    (t/is (t/spec-check combo/k-permutations {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= '([]) (combo/k-permutations [1 2 3] 0))
+    (t/is= '([1] [2] [3]) (combo/k-permutations [1 2 3] 1))
+    (t/is= '([1 2] [2 1] [1 3] [3 1] [2 3] [3 2]) (combo/k-permutations [1 2 3] 2))
+    (t/is= nil (combo/k-permutations [1 2] 3))))
+
+;;;DIRECT ACCESS
+(deftest nth-combination-test
+  (t/with-instrument `combo/nth-combination
+    (t/is (t/spec-check combo/nth-combination {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= '(1 2) (combo/nth-combination [1 2 3 4 5] 2 0))
+    (t/is= '(4 5) (combo/nth-combination [1 2 3 4 5] 2 9))
+    (t/is= nil (combo/nth-combination [1 2 3] 2 10))))
+
+(deftest nth-permutation-test
+  (t/with-instrument `combo/nth-permutation
+    (t/is (t/spec-check combo/nth-permutation {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= '(1 2 3) (combo/nth-permutation [1 2 3] 0))
+    (t/is= '(3 2 1) (combo/nth-permutation [1 2 3] 5))
+    (t/is= nil (combo/nth-permutation [1 2 3] 6))))
+
+(deftest nth-k-permutation-test
+  (t/with-instrument `combo/nth-k-permutation
+    (t/is (t/spec-check combo/nth-k-permutation {:num-tests 30})))
+  (t/with-instrument :all
+    (t/is= '(1 2) (combo/nth-k-permutation [1 2 3 4] 2 0))
+    (t/is= '(4 3) (combo/nth-k-permutation [1 2 3 4] 2 11))
+    (t/is= nil (combo/nth-k-permutation [1 2 3] 2 10))))
