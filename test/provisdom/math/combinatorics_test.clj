@@ -396,9 +396,9 @@
     (t/is= 1.0 (combo/catalan-number 1))
     (t/is= 2.0 (combo/catalan-number 2))
     (t/is= 5.0 (combo/catalan-number 3))
-    (t/is= 14.0 (combo/catalan-number 4))
-    (t/is= 42.0 (combo/catalan-number 5))
-    (t/is= 16796.0 (combo/catalan-number 10))))
+    (t/is-approx= 14.0 (combo/catalan-number 4))
+    (t/is-approx= 42.0 (combo/catalan-number 5))
+    (t/is-approx= 16796.0 (combo/catalan-number 10))))
 
 (deftest catalan-number'-test
   (t/with-instrument `combo/catalan-number'

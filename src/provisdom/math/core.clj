@@ -923,7 +923,7 @@
 
 (s/fdef dec-exp
   :args (s/cat :number ::number)
-  :ret ::nan-or-non-)
+  :ret ::number)
 
 (defn log
   "Returns log `number`."

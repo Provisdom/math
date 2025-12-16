@@ -493,7 +493,10 @@
 (defn catalan-number'
   "Like [[catalan-number]] but returns a long when possible."
   [n]
-  (m/maybe-long-able (catalan-number n)))
+  (let [result (catalan-number n)]
+    (if (m/roughly-round? result 1e-12)
+      (m/maybe-long-able (m/round result :away-from-zero))
+      result)))
 
 (s/fdef catalan-number'
   :args (s/cat :n ::m/int-non-)

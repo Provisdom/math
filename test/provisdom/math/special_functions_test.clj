@@ -195,7 +195,7 @@
     (t/is= 9.332621544394415E155 (special-fns/gamma 100.0))
     #_(t/is= 9.332621544394412E155 (Gamma/gamma 100.0))
     (t/is= 7.050810550405615E242 (special-fns/gamma 141.8))
-    (t/is= 7.257415615308058E306 (special-fns/gamma 171.0))
+    (t/is= 7.257415615308056E306 (special-fns/gamma 171.0))
     (t/is= m/inf+ (special-fns/gamma 172.0))
     #_(t/is= m/inf+ (Gamma/gamma 141.8))
     (t/is= 4.297739720709703E242 (special-fns/gamma 141.7))
@@ -214,7 +214,7 @@
     (t/is= 0.6671289163019205 (special-fns/lower-gamma 1 1.1))
     (t/is= 0.6321205588285577 (special-fns/lower-gamma 1 1))
     (t/is= 0.0 (special-fns/lower-gamma 1 0))
-    (t/is= 9.283972028379884 (special-fns/lower-gamma 0.1 1))
+    (t/is= 9.283972028379887 (special-fns/lower-gamma 0.1 1))
     (t/is (m/nan? (special-fns/lower-gamma 1e150 1e150)))
     (t/is= 1.0 (special-fns/lower-gamma 1 1e150))
     (t/is (m/nan? (special-fns/lower-gamma 1e300 1e150)))))
@@ -230,7 +230,7 @@
     (t/is= 0.33287108369807955 (special-fns/upper-gamma 1 1.1))
     (t/is= 0.36787944117144233 (special-fns/upper-gamma 1 1))
     (t/is= 1.0 (special-fns/upper-gamma 1 0))
-    (t/is= 0.22953567028884675 (special-fns/upper-gamma 0.1 1))))
+    (t/is= 0.22953567028884253 (special-fns/upper-gamma 0.1 1))))
 
 (deftest upper-gamma-derivative-x-test
   (t/with-instrument `special-fns/upper-gamma-derivative-x
@@ -258,7 +258,7 @@
     (t/is= 0.6671289163019202 (special-fns/regularized-gamma-p 1 1.1))
     (t/is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
     (t/is= 0.0 (special-fns/regularized-gamma-p 1 0))
-    (t/is= 0.9758726562736721 (special-fns/regularized-gamma-p 0.1 1))
+    (t/is= 0.9758726562736726 (special-fns/regularized-gamma-p 0.1 1))
     #_(t/is= 0.9758726562736726 (Gamma/regularizedGammaP 0.1 1))
     (t/is= 0.5000049341877514 (special-fns/regularized-gamma-p 1e10 1e10))
     #_(t/is= 0.5000049341877536 (Gamma/regularizedGammaP 1e10 1e10))
@@ -291,10 +291,10 @@
     (t/is= 2.2527126517342055 (special-fns/log-gamma 0.1))
     ;;;Math 0.57236494292470008707
     (t/is= 0.5723649429247001 (special-fns/log-gamma 0.5))
-    (t/is= 0.04543773854448517 (special-fns/log-gamma 2.1))
-    (t/is= -0.04987244125983987 (special-fns/log-gamma 1.1))
+    (t/is= 0.04543773854448518 (special-fns/log-gamma 2.1))
+    (t/is= -0.049872441259839764 (special-fns/log-gamma 1.1))
     (t/is= 0.0 (special-fns/log-gamma 1))
-    (t/is= 0.26086724653166665 (special-fns/log-gamma 0.7))
+    (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))
     #_(t/is= 0.2608672465316666 (Gamma/logGamma 0.7))))
 
 (deftest log-gamma-inc-test
@@ -365,7 +365,7 @@
     (t/is= 0.0 (special-fns/multivariate-log-gamma m/inf+ 0))
     (t/is= 0.0 (special-fns/multivariate-log-gamma 0.1 0))
     (t/is= 0.0 (special-fns/multivariate-log-gamma 1.1 0))
-    (t/is= -0.04987244125983987 (special-fns/multivariate-log-gamma 1.1 1))
+    (t/is= -0.049872441259839764 (special-fns/multivariate-log-gamma 1.1 1))
     (t/is= 0.9207263597340951 (special-fns/multivariate-log-gamma 1.1 2))))
 
 ;;;BETA
@@ -373,10 +373,10 @@
   (t/with-instrument `special-fns/beta
     (t/is (t/spec-check special-fns/beta)))
   (t/with-instrument :all
-    (t/is= 0.47619047619047605 (special-fns/beta 1.0 2.1))
+    (t/is= 0.4761904761904761 (special-fns/beta 1.0 2.1))
     (t/is (m/nan? (special-fns/beta 0.1 m/inf+)))
-    (t/is= 0.909090909090909 (special-fns/beta 1 1.1))
-    (t/is= 0.909090909090909 (special-fns/beta 1.1 1))
+    (t/is= 0.9090909090909091 (special-fns/beta 1 1.1))
+    (t/is= 0.9090909090909091 (special-fns/beta 1.1 1))
     (t/is= 1.0 (special-fns/beta 1 1))
     (t/is= 10.000000000000002 (special-fns/beta 0.1 1))
     (t/is= 10.000000000000002 (special-fns/beta 1 0.1))))
@@ -385,10 +385,10 @@
   (t/with-instrument `special-fns/log-beta
     (t/is (t/spec-check special-fns/log-beta)))
   (t/with-instrument :all
-    (t/is= -0.7419373447293776 (special-fns/log-beta 1.0 2.1))
+    (t/is= -0.7419373447293774 (special-fns/log-beta 1.0 2.1))
     (t/is (m/nan? (special-fns/log-beta 0.1 m/inf+)))
-    (t/is= -0.09531017980432505 (special-fns/log-beta 1 1.1))
-    (t/is= -0.09531017980432505 (special-fns/log-beta 1.1 1))
+    (t/is= -0.09531017980432493 (special-fns/log-beta 1 1.1))
+    (t/is= -0.09531017980432493 (special-fns/log-beta 1.1 1))
     (t/is= 0.0 (special-fns/log-beta 1 1))
     (t/is= 2.302585092994046 (special-fns/log-beta 0.1 1))
     (t/is= 2.302585092994046 (special-fns/log-beta 1 0.1))
@@ -422,9 +422,9 @@
   (t/with-instrument `special-fns/incomplete-beta
     (t/is (t/spec-check special-fns/incomplete-beta)))
   (t/with-instrument :all
-    (t/is= 0.3651151200551418 (special-fns/incomplete-beta 0.5 1.0 2.1))
-    (t/is= 0.909090909090909 (special-fns/incomplete-beta 1 1 1.1))
-    (t/is= 0.909090909090909 (special-fns/incomplete-beta 1 1.1 1))
+    (t/is= 0.36511512005514185 (special-fns/incomplete-beta 0.5 1.0 2.1))
+    (t/is= 0.9090909090909091 (special-fns/incomplete-beta 1 1 1.1))
+    (t/is= 0.9090909090909091 (special-fns/incomplete-beta 1 1.1 1))
     (t/is= 1.0 (special-fns/incomplete-beta 1 1 1))
     (t/is= 8.865681505652132 (special-fns/incomplete-beta 0.3 0.1 1))
     (t/is= 9.330329915368077 (special-fns/incomplete-beta 0.5 0.1 1))

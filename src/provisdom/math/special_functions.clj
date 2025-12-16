@@ -738,7 +738,8 @@
     (- (m/log-inc (inv-gamma1-pm1 a)))))
 
 (s/fdef log-gamma-inc
-  :args (s/cat :a (m/finite-spec {:min (m/next-up -1.0)}))
+  :args (s/cat :a (s/or :finite (m/finite-spec {:min (m/next-up -1.0)})
+                       :inf+ m/inf+?))
   :ret ::m/non-inf-)
 
 (defn log-gamma-derivative

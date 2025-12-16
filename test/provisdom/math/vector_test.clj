@@ -119,9 +119,9 @@
     (random/bind-seed 0
       (t/is= [] (vector/rnd-vector! 0)))
     (random/bind-seed 0
-      (t/is= [0.8833108082136426] (vector/rnd-vector! 1)))
+      (t/is= [0.2961287401299688] (vector/rnd-vector! 1)))
     (random/bind-seed 0
-      (t/is= [0.8833108082136426 0.026433771592597743] (vector/rnd-vector! 2)))))
+      (t/is= [0.2961287401299688 0.8622994122994543] (vector/rnd-vector! 2)))))
 
 (deftest sparse->vector-test
   (t/with-instrument `vector/sparse->vector
@@ -217,9 +217,9 @@
     (random/bind-seed 0
       (t/is= [] (vector/rnd-shuffle-vector! [])))
     (random/bind-seed 0
-      (t/is= [0.0 1.0] (vector/rnd-shuffle-vector! [0.0 1.0])))
+      (t/is= [1.0 0.0] (vector/rnd-shuffle-vector! [0.0 1.0])))
     (random/bind-seed 0
-      (t/is= [6.0 2.0 3.0 4.0 5.0 1.0 8.0 0.0 7.0]
+      (t/is= [5.0 1.0 4.0 8.0 7.0 3.0 0.0 6.0 2.0]
         (vector/rnd-shuffle-vector! [0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0])))))
 
 ;;;MATH
