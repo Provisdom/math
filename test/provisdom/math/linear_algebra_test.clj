@@ -38,7 +38,7 @@
 ;;;PSEUDOINVERSE
 (deftest pseudoinverse-test
   (t/with-instrument `la/pseudoinverse
-    (t/is (t/spec-check la/pseudoinverse {:num-tests 20})))
+    (t/is (t/spec-check la/pseudoinverse {:num-tests 20}))
   (t/with-instrument :all
     (t/is= nil (la/pseudoinverse [[]]))
     (let [result (la/pseudoinverse [[1.0 0.0] [0.0 2.0]])]
@@ -56,7 +56,7 @@
 ;;;SOLVE
 (deftest solve-test
   (t/with-instrument `la/solve
-    (t/is (t/spec-check la/solve {:num-tests 20})))
+    (t/is (t/spec-check la/solve {:num-tests 20}))
   (t/with-instrument :all
     (t/is= [] (la/solve [[]] []))
     (t/is (t/data-approx= [1.0 2.0] (la/solve [[1.0 0.0] [0.0 1.0]] [1.0 2.0]) :tolerance 1e-10))
@@ -82,7 +82,7 @@
 ;;;LU DECOMPOSITION
 (deftest lu-decomposition-test
   (t/with-instrument `la/lu-decomposition
-    (t/is (t/spec-check la/lu-decomposition {:num-tests 15})))
+    (t/is (t/spec-check la/lu-decomposition {:num-tests 15}))
   (t/with-instrument :all
     (t/is= nil (la/lu-decomposition [[]]))
     (let [m [[4.0 3.0] [6.0 3.0]]
@@ -95,7 +95,7 @@
 ;;;CHOLESKY DECOMPOSITION
 (deftest cholesky-decomposition-test
   (t/with-instrument `la/cholesky-decomposition
-    (t/is (t/spec-check la/cholesky-decomposition {:num-tests 15})))
+    (t/is (t/spec-check la/cholesky-decomposition {:num-tests 15}))
   (t/with-instrument :all
     (t/is= nil (la/cholesky-decomposition [[]]))
     (let [m [[4.0 2.0] [2.0 5.0]]
@@ -107,7 +107,7 @@
 ;;;QR DECOMPOSITION
 (deftest qr-decomposition-test
   (t/with-instrument `la/qr-decomposition
-    (t/is (t/spec-check la/qr-decomposition {:num-tests 15})))
+    (t/is (t/spec-check la/qr-decomposition {:num-tests 15}))
   (t/with-instrument :all
     (t/is= nil (la/qr-decomposition [[]]))
     (let [m [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
@@ -119,7 +119,7 @@
 ;;;EIGENDECOMPOSITION
 (deftest eigen-decomposition-test
   (t/with-instrument `la/eigen-decomposition
-    (t/is (t/spec-check la/eigen-decomposition {:num-tests 10})))
+    (t/is (t/spec-check la/eigen-decomposition {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/eigen-decomposition [[]]))
     (let [m [[2.0 0.0] [0.0 3.0]]
@@ -132,7 +132,7 @@
 ;;;SVD
 (deftest sv-decomposition-test
   (t/with-instrument `la/sv-decomposition
-    (t/is (t/spec-check la/sv-decomposition {:num-tests 10})))
+    (t/is (t/spec-check la/sv-decomposition {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/sv-decomposition [[]]))
     (let [m [[3.0 0.0] [0.0 4.0]]
@@ -154,7 +154,7 @@
 ;;;CONDITION NUMBER
 (deftest condition-number-test
   (t/with-instrument `la/condition-number
-    (t/is (t/spec-check la/condition-number {:num-tests 15})))
+    (t/is (t/spec-check la/condition-number {:num-tests 15}))
   (t/with-instrument :all
     (t/is (Double/isNaN (la/condition-number [[]])))
     (t/is-approx= 1.0 (la/condition-number [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
@@ -174,7 +174,7 @@
 ;;;LEAST SQUARES
 (deftest least-squares-test
   (t/with-instrument `la/least-squares
-    (t/is (t/spec-check la/least-squares {:num-tests 15})))
+    (t/is (t/spec-check la/least-squares {:num-tests 15}))
   (t/with-instrument :all
     (t/is= nil (la/least-squares [[]] []))
     (let [A [[1.0 1.0] [1.0 2.0] [1.0 3.0]]
@@ -204,7 +204,7 @@
 ;;;CORRELATION/COVARIANCE
 (deftest covariance-matrix->correlation-matrix-test
   (t/with-instrument `la/covariance-matrix->correlation-matrix
-    (t/is (t/spec-check la/covariance-matrix->correlation-matrix {:num-tests 10})))
+    (t/is (t/spec-check la/covariance-matrix->correlation-matrix {:num-tests 10}))
   (t/with-instrument :all
     (let [cov [[4.0 2.0] [2.0 9.0]]
           result (la/covariance-matrix->correlation-matrix cov)]
@@ -212,7 +212,7 @@
 
 (deftest correlation-matrix->covariance-matrix-test
   (t/with-instrument `la/correlation-matrix->covariance-matrix
-    (t/is (t/spec-check la/correlation-matrix->covariance-matrix {:num-tests 10})))
+    (t/is (t/spec-check la/correlation-matrix->covariance-matrix {:num-tests 10}))
   (t/with-instrument :all
     ;; variances argument is [var1 var2], not standard deviations
     (let [corr [[1.0 0.5] [0.5 1.0]]
@@ -223,7 +223,7 @@
 ;;;MINOR
 (deftest minor-test
   (t/with-instrument `la/minor
-    (t/is (t/spec-check la/minor {:num-tests 10})))
+    (t/is (t/spec-check la/minor {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/minor [[1.0]] 0 0))
     (t/is= 4.0 (la/minor [[1.0 2.0] [3.0 4.0]] 0 0))
@@ -235,7 +235,7 @@
 ;;;COFACTOR
 (deftest cofactor-test
   (t/with-instrument `la/cofactor
-    (t/is (t/spec-check la/cofactor {:num-tests 10})))
+    (t/is (t/spec-check la/cofactor {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/cofactor [[1.0]] 0 0))
     (t/is= 4.0 (la/cofactor [[1.0 2.0] [3.0 4.0]] 0 0))
@@ -246,7 +246,7 @@
 ;;;COFACTOR-MATRIX
 (deftest cofactor-matrix-test
   (t/with-instrument `la/cofactor-matrix
-    (t/is (t/spec-check la/cofactor-matrix {:num-tests 10})))
+    (t/is (t/spec-check la/cofactor-matrix {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/cofactor-matrix [[]]))
     (t/is= [[0.0]] (la/cofactor-matrix [[1.0]]))
@@ -256,7 +256,7 @@
 ;;;ADJUGATE
 (deftest adjugate-test
   (t/with-instrument `la/adjugate
-    (t/is (t/spec-check la/adjugate {:num-tests 10})))
+    (t/is (t/spec-check la/adjugate {:num-tests 10}))
   (t/with-instrument :all
     (t/is= nil (la/adjugate [[]]))
     (t/is= [[0.0]] (la/adjugate [[1.0]]))
@@ -272,7 +272,7 @@
 ;;;MATRIX POWER
 (deftest matrix-power-test
   (t/with-instrument `la/matrix-power
-    (t/is (t/spec-check la/matrix-power {:num-tests 10})))
+    (t/is (t/spec-check la/matrix-power {:num-tests 10}))
   (t/with-instrument :all
     ;; Empty matrix
     (t/is= [[]] (la/matrix-power [[]] 5))
@@ -294,7 +294,7 @@
 ;;;MATRIX EXPONENTIAL
 (deftest matrix-exp-test
   (t/with-instrument `la/matrix-exp
-    (t/is (t/spec-check la/matrix-exp {:num-tests 5})))
+    (t/is (t/spec-check la/matrix-exp {:num-tests 5}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (t/is= nil (la/matrix-exp [[]]))

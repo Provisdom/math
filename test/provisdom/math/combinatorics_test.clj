@@ -80,7 +80,7 @@
 (deftest choose-k-from-n'-test
   (t/with-instrument `combo/choose-k-from-n'
     (t/is (t/spec-check combo/choose-k-from-n'
-            {:num-tests 50})))
+            {:num-tests 50}))
   (t/with-instrument :all
     (t/is= 4 (combo/choose-k-from-n' 1 4))))
 
@@ -427,7 +427,7 @@
 ;;;INTEGER PARTITIONS
 (deftest integer-partitions-test
   (t/with-instrument `combo/integer-partitions
-    (t/is (t/spec-check combo/integer-partitions {:num-tests 30})))
+    (t/is (t/spec-check combo/integer-partitions {:num-tests 30}))
   (t/with-instrument :all
     (t/is= '(()) (combo/integer-partitions 0))
     (t/is= '((1)) (combo/integer-partitions 1))
@@ -439,7 +439,7 @@
 
 (deftest count-integer-partitions-test
   (t/with-instrument `combo/count-integer-partitions
-    (t/is (t/spec-check combo/count-integer-partitions {:num-tests 30})))
+    (t/is (t/spec-check combo/count-integer-partitions {:num-tests 30}))
   (t/with-instrument :all
     (t/is= 1 (combo/count-integer-partitions 0))
     (t/is= 1 (combo/count-integer-partitions 1))
@@ -452,7 +452,7 @@
 ;;;K-PERMUTATIONS
 (deftest k-permutations-test
   (t/with-instrument `combo/k-permutations
-    (t/is (t/spec-check combo/k-permutations {:num-tests 30})))
+    (t/is (t/spec-check combo/k-permutations {:num-tests 30}))
   (t/with-instrument :all
     (t/is= '([]) (combo/k-permutations [1 2 3] 0))
     (t/is= '([1] [2] [3]) (combo/k-permutations [1 2 3] 1))
@@ -462,7 +462,7 @@
 ;;;DIRECT ACCESS
 (deftest nth-combination-test
   (t/with-instrument `combo/nth-combination
-    (t/is (t/spec-check combo/nth-combination {:num-tests 30})))
+    (t/is (t/spec-check combo/nth-combination {:num-tests 30}))
   (t/with-instrument :all
     (t/is= '(1 2) (combo/nth-combination [1 2 3 4 5] 2 0))
     (t/is= '(4 5) (combo/nth-combination [1 2 3 4 5] 2 9))
@@ -470,7 +470,7 @@
 
 (deftest nth-permutation-test
   (t/with-instrument `combo/nth-permutation
-    (t/is (t/spec-check combo/nth-permutation {:num-tests 30})))
+    (t/is (t/spec-check combo/nth-permutation {:num-tests 30}))
   (t/with-instrument :all
     (t/is= '(1 2 3) (combo/nth-permutation [1 2 3] 0))
     (t/is= '(3 2 1) (combo/nth-permutation [1 2 3] 5))
@@ -478,7 +478,7 @@
 
 (deftest nth-k-permutation-test
   (t/with-instrument `combo/nth-k-permutation
-    (t/is (t/spec-check combo/nth-k-permutation {:num-tests 30})))
+    (t/is (t/spec-check combo/nth-k-permutation {:num-tests 30}))
   (t/with-instrument :all
     (t/is= '(1 2) (combo/nth-k-permutation [1 2 3 4] 2 0))
     (t/is= '(4 3) (combo/nth-k-permutation [1 2 3 4] 2 11))

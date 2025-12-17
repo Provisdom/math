@@ -341,7 +341,7 @@
 ;;;PARALLEL UTILITIES
 (deftest parallel-sample-test
   (t/with-instrument `random/parallel-sample
-    (t/is (t/spec-check random/parallel-sample {:num-tests 10})))
+    (t/is (t/spec-check random/parallel-sample {:num-tests 10}))
   (t/with-instrument :all)
   (let [samples (random/parallel-sample (random/rng 3) #(random/rnd-int % 100) 5)]
     (t/is= 5 (count samples))

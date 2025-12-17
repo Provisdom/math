@@ -472,7 +472,7 @@
 
 (deftest transpose-test
   (t/with-instrument `tensor/transpose
-    (t/is (t/spec-check tensor/transpose {:num-tests 50})))
+    (t/is (t/spec-check tensor/transpose {:num-tests 50}))
   ;; Use specific instrumentation since :all would instrument compute-tensor's
   ;; fspec which fails when spec-checking the inner lambda function
   (t/with-instrument `tensor/transpose

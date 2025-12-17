@@ -106,7 +106,7 @@
 
 (deftest wynn-epsilon-test
   (t/with-instrument `series/wynn-epsilon
-    (t/is (t/spec-check series/wynn-epsilon {:num-tests 20})))
+    (t/is (t/spec-check series/wynn-epsilon {:num-tests 20}))
   (t/with-instrument :all
     ;; Test on alternating harmonic series
     (let [terms (map #(/ (m/pow -1 %) (inc %)) (range 20))
@@ -126,7 +126,7 @@
 
 (deftest richardson-extrapolate-test
   (t/with-instrument `series/richardson-extrapolate
-    (t/is (t/spec-check series/richardson-extrapolate {:num-tests 20})))
+    (t/is (t/spec-check series/richardson-extrapolate {:num-tests 20}))
   (t/with-instrument :all
     ;; Test with simple approximation sequence
     (let [approxs [2.0 1.5 1.25 1.125]
@@ -136,7 +136,7 @@
 ;;;POWER SERIES OPERATIONS
 (deftest cauchy-product-test
   (t/with-instrument `series/cauchy-product
-    (t/is (t/spec-check series/cauchy-product {:num-tests 20})))
+    (t/is (t/spec-check series/cauchy-product {:num-tests 20}))
   (t/with-instrument :all
     ;; (1+x+x²)(1+x) = 1+2x+2x²+x³
     (t/is= [1.0 2.0 2.0 1.0] (series/cauchy-product [1 1 1] [1 1]))
@@ -147,7 +147,7 @@
 
 (deftest power-series-compose-test
   (t/with-instrument `series/power-series-compose
-    (t/is (t/spec-check series/power-series-compose {:num-tests 10})))
+    (t/is (t/spec-check series/power-series-compose {:num-tests 10}))
   (t/with-instrument :all
     ;; f(x)=1+x+x², g(x)=2x → f(2x)=1+2x+4x²
     (t/is= [1.0 2.0 4.0] (series/power-series-compose [1 1 1] [0 2]))
@@ -156,7 +156,7 @@
 
 (deftest power-series-inverse-test
   (t/with-instrument `series/power-series-inverse
-    (t/is (t/spec-check series/power-series-inverse {:num-tests 10})))
+    (t/is (t/spec-check series/power-series-inverse {:num-tests 10}))
   (t/with-instrument :all
     ;; Inverse of f(x)=x should be g(x)=x
     (let [result (series/power-series-inverse [0 1])]
@@ -170,7 +170,7 @@
 
 (deftest radius-of-convergence-test
   (t/with-instrument `series/radius-of-convergence
-    (t/is (t/spec-check series/radius-of-convergence {:num-tests 20})))
+    (t/is (t/spec-check series/radius-of-convergence {:num-tests 20}))
   (t/with-instrument :all
     ;; Geometric series [1,1,1,...] has R=1
     (let [result (series/radius-of-convergence [1 1 1 1 1 1 1 1 1 1])]
@@ -181,7 +181,7 @@
 ;;;PADÉ APPROXIMANTS
 (deftest pade-approximant-test
   (t/with-instrument `series/pade-approximant
-    (t/is (t/spec-check series/pade-approximant {:num-tests 20})))
+    (t/is (t/spec-check series/pade-approximant {:num-tests 20}))
   (t/with-instrument :all
     ;; [1/1] Padé for e^x ≈ (1+0.5x)/(1-0.5x)
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24)]
@@ -195,7 +195,7 @@
 
 (deftest evaluate-pade-test
   (t/with-instrument `series/evaluate-pade
-    (t/is (t/spec-check series/evaluate-pade {:num-tests 20})))
+    (t/is (t/spec-check series/evaluate-pade {:num-tests 20}))
   (t/with-instrument :all
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120)]
           pade22 (series/pade-approximant e-coeffs 2 2)]
@@ -207,7 +207,7 @@
 ;;;IMPROVED SUMMATION
 (deftest neumaier-sum-test
   (t/with-instrument `series/neumaier-sum
-    (t/is (t/spec-check series/neumaier-sum {:num-tests 20})))
+    (t/is (t/spec-check series/neumaier-sum {:num-tests 20}))
   (t/with-instrument :all
     ;; Standard case
     (t/is= 6.0 (series/neumaier-sum [1 2 3]))
@@ -218,7 +218,7 @@
 
 (deftest pairwise-sum-test
   (t/with-instrument `series/pairwise-sum
-    (t/is (t/spec-check series/pairwise-sum {:num-tests 20})))
+    (t/is (t/spec-check series/pairwise-sum {:num-tests 20}))
   (t/with-instrument :all
     ;; Sum of 1 to 1000 = 500500
     (t/is= 500500.0 (series/pairwise-sum (range 1 1001)))
@@ -229,7 +229,7 @@
 
 (deftest sum-with-diagnostics-test
   (t/with-instrument `series/sum-with-diagnostics
-    (t/is (t/spec-check series/sum-with-diagnostics {:num-tests 10})))
+    (t/is (t/spec-check series/sum-with-diagnostics {:num-tests 10}))
   (t/with-instrument :all
     ;; Geometric series converges to 2
     (let [terms (map #(m/pow 0.5 %) (range))
