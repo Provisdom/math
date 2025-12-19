@@ -4,14 +4,14 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;1 seconds
+;;1 second
 
 (set! *warn-on-reflection* true)
 
 ;;TYPE TESTS
 (deftest numbers?-test
   (t/with-instrument `m/numbers?
-    (t/is (t/spec-check m/numbers?)))
+    (t/is-spec-check m/numbers?))
   (t/with-instrument :all
     (t/is-not (m/numbers? 1))
     (t/is (m/numbers? '(1)))
@@ -21,7 +21,7 @@
 
 (deftest num?-test
   (t/with-instrument `m/num?
-    (t/is (t/spec-check m/num?)))
+    (t/is-spec-check m/num?))
   (t/with-instrument :all
     (t/is-not (m/num? "A"))
     (t/is (m/num? 3.3E30))
@@ -32,7 +32,7 @@
 
 (deftest nan?-test
   (t/with-instrument `m/nan?
-    (t/is (t/spec-check m/nan?)))
+    (t/is-spec-check m/nan?))
   (t/with-instrument :all
     (t/is-not (m/nan? 3.3))
     (t/is-not (m/nan? "A"))
@@ -42,7 +42,7 @@
 
 (deftest pos?-test
   (t/with-instrument `m/pos?
-    (t/is (t/spec-check m/pos?)))
+    (t/is-spec-check m/pos?))
   (t/with-instrument :all
     (t/is-not (m/pos? "A"))
     (t/is (m/pos? 3.3E30))
@@ -53,7 +53,7 @@
 
 (deftest neg?-test
   (t/with-instrument `m/neg?
-    (t/is (t/spec-check m/neg?)))
+    (t/is-spec-check m/neg?))
   (t/with-instrument :all
     (t/is-not (m/neg? "A"))
     (t/is-not (m/neg? 3.3E30))
@@ -64,7 +64,7 @@
 
 (deftest non-?-test
   (t/with-instrument `m/non-?
-    (t/is (t/spec-check m/non-?)))
+    (t/is-spec-check m/non-?))
   (t/with-instrument :all
     (t/is (m/non-? 0))
     (t/is (m/non-? 1))
@@ -76,7 +76,7 @@
 
 (deftest non+?-test
   (t/with-instrument `m/non+?
-    (t/is (t/spec-check m/non+?)))
+    (t/is-spec-check m/non+?))
   (t/with-instrument :all
     (t/is (m/non+? 0))
     (t/is-not (m/non+? 1))
@@ -88,7 +88,7 @@
 
 (deftest finite?-test
   (t/with-instrument `m/finite?
-    (t/is (t/spec-check m/finite?)))
+    (t/is-spec-check m/finite?))
   (t/with-instrument :all
     (t/is-not (m/finite? "A"))
     (t/is (m/finite? 3.3E30))
@@ -99,7 +99,7 @@
 
 (deftest finite+?-test
   (t/with-instrument `m/finite+?
-    (t/is (t/spec-check m/finite+?)))
+    (t/is-spec-check m/finite+?))
   (t/with-instrument :all
     (t/is-not (m/finite+? "A"))
     (t/is (m/finite+? 3.3E30))
@@ -110,7 +110,7 @@
 
 (deftest finite-?-test
   (t/with-instrument `m/finite-?
-    (t/is (t/spec-check m/finite-?)))
+    (t/is-spec-check m/finite-?))
   (t/with-instrument :all
     (t/is-not (m/finite-? "A"))
     (t/is-not (m/finite-? 3.3E30))
@@ -121,7 +121,7 @@
 
 (deftest finite-non-?-test
   (t/with-instrument `m/finite-non-?
-    (t/is (t/spec-check m/finite-non-?)))
+    (t/is-spec-check m/finite-non-?))
   (t/with-instrument :all
     (t/is (m/finite-non-? 0))
     (t/is (m/finite-non-? 1))
@@ -133,7 +133,7 @@
 
 (deftest finite-non+?-test
   (t/with-instrument `m/finite-non+?
-    (t/is (t/spec-check m/finite-non+?)))
+    (t/is-spec-check m/finite-non+?))
   (t/with-instrument :all
     (t/is (m/finite-non+? 0))
     (t/is-not (m/finite-non+? 1))
@@ -145,7 +145,7 @@
 
 (deftest double-finite?-test
   (t/with-instrument `m/double-finite?
-    (t/is (t/spec-check m/double-finite?)))
+    (t/is-spec-check m/double-finite?))
   (t/with-instrument :all
     (t/is-not (m/double-finite? "A"))
     (t/is-not (m/double-finite? 0))
@@ -158,20 +158,20 @@
 
 (deftest double-finite+?-test
   (t/with-instrument `m/double-finite+?
-    (t/is (t/spec-check m/double-finite+?)))
+    (t/is-spec-check m/double-finite+?))
   (t/with-instrument :all
-    (t/is-not (m/double-finite? "A"))
-    (t/is-not (m/double-finite? 0))
-    (t/is (m/double-finite? 0.0))
-    (t/is (m/double-finite? 3.3E300))
-    (t/is (m/double-finite? -3.3E300))
-    (t/is-not (m/double-finite? m/inf+))
-    (t/is-not (m/double-finite? m/inf-))
-    (t/is-not (m/double-finite? m/nan))))
+    (t/is-not (m/double-finite+? "A"))
+    (t/is-not (m/double-finite+? 0))
+    (t/is-not (m/double-finite+? 0.0))
+    (t/is (m/double-finite+? 3.3E300))
+    (t/is-not (m/double-finite+? -3.3E300))
+    (t/is-not (m/double-finite+? m/inf+))
+    (t/is-not (m/double-finite+? m/inf-))
+    (t/is-not (m/double-finite+? m/nan))))
 
 (deftest single?-test
   (t/with-instrument `m/single?
-    (t/is (t/spec-check m/single?)))
+    (t/is-spec-check m/single?))
   (t/with-instrument :all
     (t/is-not (m/single? "A"))
     (t/is-not (m/single? 0))
@@ -186,7 +186,7 @@
 
 (deftest single-finite?-test
   (t/with-instrument `m/single-finite?
-    (t/is (t/spec-check m/single-finite?)))
+    (t/is-spec-check m/single-finite?))
   (t/with-instrument :all
     (t/is-not (m/single-finite? "A"))
     (t/is-not (m/single-finite? 0))
@@ -201,7 +201,7 @@
 
 (deftest long?-test
   (t/with-instrument `m/long?
-    (t/is (t/spec-check m/long?)))
+    (t/is-spec-check m/long?))
   (t/with-instrument :all
     (t/is-not (m/long? 3.3))
     (t/is (m/long? 3))
@@ -214,7 +214,7 @@
 
 (deftest long+?-test
   (t/with-instrument `m/long+?
-    (t/is (t/spec-check m/long+?)))
+    (t/is-spec-check m/long+?))
   (t/with-instrument :all
     (t/is-not (m/long+? 3.3))
     (t/is (m/long+? 3))
@@ -228,7 +228,7 @@
 
 (deftest long-?-test
   (t/with-instrument `m/long-?
-    (t/is (t/spec-check m/long-?)))
+    (t/is-spec-check m/long-?))
   (t/with-instrument :all
     (t/is-not (m/long-? 3.3))
     (t/is-not (m/long-? 3))
@@ -242,7 +242,7 @@
 
 (deftest long-non-?-test
   (t/with-instrument `m/long-non-?
-    (t/is (t/spec-check m/long-non-?)))
+    (t/is-spec-check m/long-non-?))
   (t/with-instrument :all
     (t/is-not (m/long-non-? 3.3))
     (t/is (m/long-non-? 3))
@@ -257,7 +257,7 @@
 
 (deftest long-non+?-test
   (t/with-instrument `m/long-non+?
-    (t/is (t/spec-check m/long-non+?)))
+    (t/is-spec-check m/long-non+?))
   (t/with-instrument :all
     (t/is-not (m/long-non+? 3.3))
     (t/is-not (m/long-non+? 3))
@@ -272,7 +272,7 @@
 
 (deftest int?-test
   (t/with-instrument `m/int?
-    (t/is (t/spec-check m/int?)))
+    (t/is-spec-check m/int?))
   (t/with-instrument :all
     (t/is-not (m/int? 3.3))
     (t/is (m/int? 3))
@@ -285,7 +285,7 @@
 
 (deftest int+?-test
   (t/with-instrument `m/int+?
-    (t/is (t/spec-check m/int+?)))
+    (t/is-spec-check m/int+?))
   (t/with-instrument :all
     (t/is-not (m/int+? 3.3))
     (t/is (m/int+? 3))
@@ -299,7 +299,7 @@
 
 (deftest int-?-test
   (t/with-instrument `m/int-?
-    (t/is (t/spec-check m/int-?)))
+    (t/is-spec-check m/int-?))
   (t/with-instrument :all
     (t/is-not (m/int-? 3.3))
     (t/is-not (m/int-? 3))
@@ -313,7 +313,7 @@
 
 (deftest int-non-?-test
   (t/with-instrument `m/int-non-?
-    (t/is (t/spec-check m/int-non-?)))
+    (t/is-spec-check m/int-non-?))
   (t/with-instrument :all
     (t/is-not (m/int-non-? 3.3))
     (t/is (m/int-non-? 3))
@@ -328,7 +328,7 @@
 
 (deftest int-non+?-test
   (t/with-instrument `m/int-non+?
-    (t/is (t/spec-check m/int-non+?)))
+    (t/is-spec-check m/int-non+?))
   (t/with-instrument :all
     (t/is-not (m/int-non+? 3.3))
     (t/is-not (m/int-non+? 3))
@@ -343,7 +343,7 @@
 
 (deftest long-able?-test
   (t/with-instrument `m/long-able?
-    (t/is (t/spec-check m/long-able?)))
+    (t/is-spec-check m/long-able?))
   (t/with-instrument :all
     (t/is-not (m/long-able? 3.3))
     (t/is (m/long-able? 3))
@@ -356,7 +356,7 @@
 
 (deftest long-able+?-test
   (t/with-instrument `m/long-able+?
-    (t/is (t/spec-check m/long-able+?)))
+    (t/is-spec-check m/long-able+?))
   (t/with-instrument :all
     (t/is-not (m/long-able+? 3.3))
     (t/is-not (m/long-able+? 0.0))
@@ -366,7 +366,7 @@
 
 (deftest long-able-?-test
   (t/with-instrument `m/long-able-?
-    (t/is (t/spec-check m/long-able-?)))
+    (t/is-spec-check m/long-able-?))
   (t/with-instrument :all
     (t/is-not (m/long-able-? 3.3))
     (t/is-not (m/long-able-? 0.0))
@@ -376,7 +376,7 @@
 
 (deftest long-able-non+?-test
   (t/with-instrument `m/long-able-non+?
-    (t/is (t/spec-check m/long-able-non+?)))
+    (t/is-spec-check m/long-able-non+?))
   (t/with-instrument :all
     (t/is-not (m/long-able-non+? 3.3))
     (t/is (m/long-able-non+? 0.0))
@@ -386,7 +386,7 @@
 
 (deftest long-able-non-?-test
   (t/with-instrument `m/long-able-non-?
-    (t/is (t/spec-check m/long-able-non-?)))
+    (t/is-spec-check m/long-able-non-?))
   (t/with-instrument :all
     (t/is-not (m/long-able-non-? 3.3))
     (t/is (m/long-able-non-? 0.0))
@@ -396,7 +396,7 @@
 
 (deftest inf+?-test
   (t/with-instrument `m/inf+?
-    (t/is (t/spec-check m/inf+?)))
+    (t/is-spec-check m/inf+?))
   (t/with-instrument :all
     (t/is-not (m/inf+? 3.3))
     (t/is-not (m/inf+? "A"))
@@ -406,7 +406,7 @@
 
 (deftest inf-?-test
   (t/with-instrument `m/inf-?
-    (t/is (t/spec-check m/inf-?)))
+    (t/is-spec-check m/inf-?))
   (t/with-instrument :all
     (t/is-not (m/inf-? 3.3))
     (t/is-not (m/inf-? "A"))
@@ -416,7 +416,7 @@
 
 (deftest inf?-test
   (t/with-instrument `m/inf?
-    (t/is (t/spec-check m/inf?)))
+    (t/is-spec-check m/inf?))
   (t/with-instrument :all
     (t/is-not (m/inf? 3.3))
     (t/is-not (m/inf? "A"))
@@ -426,7 +426,7 @@
 
 (deftest one?-test
   (t/with-instrument `m/one?
-    (t/is (t/spec-check m/one?)))
+    (t/is-spec-check m/one?))
   (t/with-instrument :all
     (t/is (m/one? 1))
     (t/is (m/one? 1.0))
@@ -436,7 +436,7 @@
 
 (deftest prob?-test
   (t/with-instrument `m/prob?
-    (t/is (t/spec-check m/prob?)))
+    (t/is-spec-check m/prob?))
   (t/with-instrument :all
     (t/is-not (m/prob? -0.5))
     (t/is (m/prob? 0))
@@ -450,7 +450,7 @@
 
 (deftest open-prob?-test
   (t/with-instrument `m/open-prob?
-    (t/is (t/spec-check m/open-prob?)))
+    (t/is-spec-check m/open-prob?))
   (t/with-instrument :all
     (t/is-not (m/open-prob? -0.5))
     (t/is-not (m/open-prob? 0))
@@ -464,7 +464,7 @@
 
 (deftest corr?-test
   (t/with-instrument `m/corr?
-    (t/is (t/spec-check m/corr?)))
+    (t/is-spec-check m/corr?))
   (t/with-instrument :all
     (t/is (m/corr? -0.5))
     (t/is (m/corr? 0))
@@ -480,7 +480,7 @@
 
 (deftest open-corr?-test
   (t/with-instrument `m/open-corr?
-    (t/is (t/spec-check m/open-corr?)))
+    (t/is-spec-check m/open-corr?))
   (t/with-instrument :all
     (t/is (m/open-corr? -0.5))
     (t/is (m/open-corr? 0))
@@ -496,7 +496,7 @@
 
 (deftest maybe-long-able-test
   (t/with-instrument `m/maybe-long-able
-    (t/is (t/spec-check m/maybe-long-able)))
+    (t/is-spec-check m/maybe-long-able))
   (t/with-instrument :all
     (t/is (zero? (m/maybe-long-able 0.0)))
     (t/is (zero? (m/maybe-long-able 0)))
@@ -511,7 +511,7 @@
 ;;BASIC MATH TESTS
 (deftest ===-test
   (t/with-instrument `m/===
-    (t/is (t/spec-check m/===)))
+    (t/is-spec-check m/===))
   (t/with-instrument :all
     (t/is (m/=== m/nan))
     (t/is (m/=== m/nan m/nan))
@@ -521,7 +521,7 @@
 
 (deftest next-up-test
   (t/with-instrument `m/next-up
-    (t/is (t/spec-check m/next-up)))
+    (t/is-spec-check m/next-up))
   (t/with-instrument :all
     (t/is= 3.0000000000000004 (m/next-up 3))
     (t/is= -2.9999999999999996 (m/next-up -3))
@@ -532,7 +532,7 @@
 
 (deftest next-down-test
   (t/with-instrument `m/next-down
-    (t/is (t/spec-check m/next-down)))
+    (t/is-spec-check m/next-down))
   (t/with-instrument :all
     (t/is= 2.9999999999999996 (m/next-down 3))
     (t/is= -3.0000000000000004 (m/next-down -3))
@@ -543,7 +543,7 @@
 
 (deftest div-test
   (t/with-instrument `m/div
-    (t/is (t/spec-check m/div)))
+    (t/is-spec-check m/div))
   (t/with-instrument :all
     (t/is (ratio? (m/div 4)))
     (t/is= 0.25 (m/div 4.0))
@@ -560,7 +560,7 @@
 
 (deftest one--test
   (t/with-instrument `m/one-
-    (t/is (t/spec-check m/one-)))
+    (t/is-spec-check m/one-))
   (t/with-instrument :all
     (t/is= -2 (m/one- 3))
     (t/is= 0.0 (m/one- 3 -2))
@@ -573,7 +573,7 @@
 
 (deftest sq'-test
   (t/with-instrument `m/sq'
-    (t/is (t/spec-check m/sq')))
+    (t/is-spec-check m/sq'))
   (t/with-instrument :all
     (t/is= 9 (m/sq' 3))
     (t/is= 9 (m/sq' -3))
@@ -584,7 +584,7 @@
 
 (deftest cube'-test
   (t/with-instrument `m/cube'
-    (t/is (t/spec-check m/cube')))
+    (t/is-spec-check m/cube'))
   (t/with-instrument :all
     (t/is= 27 (m/cube' 3))
     (t/is (m/nan? (m/cube' m/nan)))
@@ -595,7 +595,7 @@
 
 (deftest sgn-test
   (t/with-instrument `m/sgn
-    (t/is (t/spec-check m/sgn)))
+    (t/is-spec-check m/sgn))
   (t/with-instrument :all
     (t/is= 1 (m/sgn 3))
     (t/is= -1 (m/sgn -3))
@@ -608,9 +608,9 @@
 
 (deftest log2-test
   (t/with-instrument `m/log2
-    (t/is (t/spec-check m/log2)))
+    (t/is-spec-check m/log2))
   (t/with-instrument :all
-    (t/is= 1.5849625007211563 (m/log2 3))
+    (t/is-approx= 1.5849625007211563 (m/log2 3))
     (t/is= m/inf- (m/log2 0))
     (t/is= m/inf+ (m/log2 m/inf+))
     (t/is (m/nan? (m/log2 m/nan)))
@@ -620,7 +620,7 @@
 
 (deftest logn-test
   (t/with-instrument `m/logn
-    (t/is (t/spec-check m/logn)))
+    (t/is-spec-check m/logn))
   (t/with-instrument :all
     (t/is= 1.0 (m/logn 3 3))
     (t/is= m/inf- (m/logn 0 3))
@@ -628,7 +628,7 @@
     (t/is (m/nan? (m/logn -3.0 3)))
     (t/is (m/nan? (m/logn m/nan 3)))
     (t/is= 0.0 (m/logn 1.0 3))
-    (t/is= -0.09590327428938458 (m/logn 0.9 3))
+    (t/is-approx= -0.09590327428938458 (m/logn 0.9 3))
     (t/is= m/inf- (m/logn 0.9 1))
     (t/is= 0.15200309344504997 (m/logn 0.9 0.5))
     (t/is= 0.0 (m/logn 0.9 0))
@@ -636,7 +636,7 @@
 
 (deftest abs'-test
   (t/with-instrument `m/abs'
-    (t/is (t/spec-check m/abs')))
+    (t/is-spec-check m/abs'))
   (t/with-instrument :all
     (t/is= 3.3 (m/abs' -3.3))
     (t/is= 3 (m/abs' -3))
@@ -649,7 +649,7 @@
 
 (deftest cbrt-test
   (t/with-instrument `m/cbrt
-    (t/is (t/spec-check m/cbrt)))
+    (t/is-spec-check m/cbrt))
   (t/with-instrument :all
     (t/is= 0.0 (m/cbrt 0.0))
     (t/is= 1.0 (m/cbrt 1.0))
@@ -662,19 +662,19 @@
 ;;TRIGONOMETRY
 (deftest sin-test
   (t/with-instrument `m/sin
-    (t/is (t/spec-check m/sin))))
+    (t/is-spec-check m/sin)))
 
 (deftest sinh-test
   (t/with-instrument `m/sinh
-    (t/is (t/spec-check m/sinh))))
+    (t/is-spec-check m/sinh)))
 
 (deftest asin-test
   (t/with-instrument `m/asin
-    (t/is (t/spec-check m/asin))))
+    (t/is-spec-check m/asin)))
 
 (deftest asinh-test
   (t/with-instrument `m/asinh
-    (t/is (t/spec-check m/asinh)))
+    (t/is-spec-check m/asinh))
   (t/with-instrument :all
     (t/is= 0.0 (m/asinh 0.0))
     (t/is= 0.48121182505960347 (m/asinh 0.5))
@@ -688,19 +688,19 @@
 
 (deftest cos-test
   (t/with-instrument `m/cos
-    (t/is (t/spec-check m/cos))))
+    (t/is-spec-check m/cos)))
 
 (deftest cosh-test
   (t/with-instrument `m/cosh
-    (t/is (t/spec-check m/cosh))))
+    (t/is-spec-check m/cosh)))
 
 (deftest acos-test
   (t/with-instrument `m/acos
-    (t/is (t/spec-check m/acos))))
+    (t/is-spec-check m/acos)))
 
 (deftest acosh-test
   (t/with-instrument `m/acosh
-    (t/is (t/spec-check m/acosh)))
+    (t/is-spec-check m/acosh))
   (t/with-instrument :all
     (t/is (m/nan? (m/acosh 0.0)))
     (t/is= 0.0 (m/acosh 1.0))
@@ -710,23 +710,23 @@
 
 (deftest tan-test
   (t/with-instrument `m/tan
-    (t/is (t/spec-check m/tan))))
+    (t/is-spec-check m/tan)))
 
 (deftest tanh-test
   (t/with-instrument `m/tanh
-    (t/is (t/spec-check m/tanh))))
+    (t/is-spec-check m/tanh)))
 
 (deftest atan-test
   (t/with-instrument `m/atan
-    (t/is (t/spec-check m/atan))))
+    (t/is-spec-check m/atan)))
 
 (deftest atan2-test
   (t/with-instrument `m/atan2
-    (t/is (t/spec-check m/atan2))))
+    (t/is-spec-check m/atan2)))
 
 (deftest atanh-test
   (t/with-instrument `m/atanh
-    (t/is (t/spec-check m/atanh)))
+    (t/is-spec-check m/atanh))
   (t/with-instrument :all
     (t/is= 0.0 (m/atanh 0.0))
     (t/is-approx= 0.5493061443340549 (m/atanh 0.5) :tolerance 1e-14)
@@ -738,12 +738,12 @@
 
 (deftest hypot-test
   (t/with-instrument `m/hypot
-    (t/is (t/spec-check m/hypot))))
+    (t/is-spec-check m/hypot)))
 
 ;;ROUNDING
 (deftest round-test
   (t/with-instrument `m/round
-    (t/is (t/spec-check m/round)))
+    (t/is-spec-check m/round))
   (t/with-instrument :all
     (t/is= 1 (m/round 0.5 :up))
     (t/is= 2.342342342342342E22 (m/round 2.342342342342342E22 :up))
@@ -760,7 +760,7 @@
 
 (deftest round-significant-test
   (t/with-instrument `m/round-significant
-    (t/is (t/spec-check m/round-significant)))
+    (t/is-spec-check m/round-significant))
   (t/with-instrument :all
     (t/is= 120.0 (m/round-significant 123.45 2 :down))
     (t/is= 123.5 (m/round-significant 123.45 4 :up))
@@ -787,7 +787,7 @@
 
 (deftest floor-test
   (t/with-instrument `m/floor
-    (t/is (t/spec-check m/floor)))
+    (t/is-spec-check m/floor))
   (t/with-instrument :all
     (t/is (zero? (m/floor 0.4)))
     (t/is= 2.3423423423423425E26 (m/floor 234234234234234234234343242N))
@@ -798,13 +798,13 @@
 
 (deftest floor'-test
   (t/with-instrument `m/floor'
-    (t/is (t/spec-check m/floor')))
+    (t/is-spec-check m/floor'))
   (t/with-instrument :all
     (t/is= -1 (m/floor' -0.4))))
 
 (deftest ceil-test
   (t/with-instrument `m/ceil
-    (t/is (t/spec-check m/ceil)))
+    (t/is-spec-check m/ceil))
   (t/with-instrument :all
     (t/is= 1.0 (m/ceil 0.4))
     (t/is= 2.3423423423423425E26 (m/ceil 234234234234234234234343242N))
@@ -815,13 +815,13 @@
 
 (deftest ceil'-test
   (t/with-instrument `m/ceil'
-    (t/is (t/spec-check m/ceil')))
+    (t/is-spec-check m/ceil'))
   (t/with-instrument :all
     (t/is= 1 (m/ceil' 0.4))))
 
 (deftest roughly-floor-test
   (t/with-instrument `m/roughly-floor
-    (t/is (t/spec-check m/roughly-floor)))
+    (t/is-spec-check m/roughly-floor))
   (t/with-instrument :all
     (t/is= 1.0 (m/roughly-floor 0.99 0.02))
     (t/is (zero? (m/roughly-floor 0.99 0.005)))
@@ -834,13 +834,13 @@
 
 (deftest roughly-floor'-test
   (t/with-instrument `m/roughly-floor'
-    (t/is (t/spec-check m/roughly-floor')))
+    (t/is-spec-check m/roughly-floor'))
   (t/with-instrument :all
     (t/is= 1 (m/roughly-floor' 0.99 0.02))))
 
 (deftest roughly-ceil-test
   (t/with-instrument `m/roughly-ceil
-    (t/is (t/spec-check m/roughly-ceil)))
+    (t/is-spec-check m/roughly-ceil))
   (t/with-instrument :all
     (t/is (zero? (m/roughly-ceil 0.01 0.02)))
     (t/is= 1.0 (m/roughly-ceil 0.01 0.005))
@@ -853,13 +853,13 @@
 
 (deftest roughly-ceil'-test
   (t/with-instrument `m/roughly-ceil'
-    (t/is (t/spec-check m/roughly-ceil')))
+    (t/is-spec-check m/roughly-ceil'))
   (t/with-instrument :all
     (t/is= 1 (m/roughly-ceil' 0.01 0.005))))
 
 (deftest roughly?-test
   (t/with-instrument `m/roughly?
-    (t/is (t/spec-check m/roughly?)))
+    (t/is-spec-check m/roughly?))
   (t/with-instrument :all
     (t/is-not (m/roughly? 0.01 0.02 0.005))
     (t/is (m/roughly? 0.01 0.02 0.01))
@@ -872,7 +872,7 @@
 
 (deftest roughly-round?-test
   (t/with-instrument `m/roughly-round?
-    (t/is (t/spec-check m/roughly-round?)))
+    (t/is-spec-check m/roughly-round?))
   (t/with-instrument :all
     (t/is (m/roughly-round? 0.01 0.02))
     (t/is-not (m/roughly-round? 0.01 0.005))
@@ -884,7 +884,7 @@
 
 (deftest roughly-round-non-?-test
   (t/with-instrument `m/roughly-round-non-?
-    (t/is (t/spec-check m/roughly-round-non-?)))
+    (t/is-spec-check m/roughly-round-non-?))
   (t/with-instrument :all
     (t/is (m/roughly-round-non-? 0 0.02))
     (t/is-not (m/roughly-round-non-? -0.01 0.02))
@@ -899,7 +899,7 @@
 
 (deftest roughly-round-non+?-test
   (t/with-instrument `m/roughly-round-non+?
-    (t/is (t/spec-check m/roughly-round-non+?)))
+    (t/is-spec-check m/roughly-round-non+?))
   (t/with-instrument :all
     (t/is (m/roughly-round-non+? 0 0.02))
     (t/is-not (m/roughly-round-non+? 0.01 0.02))
@@ -914,7 +914,7 @@
 
 (deftest roughly-round+?-test
   (t/with-instrument `m/roughly-round+?
-    (t/is (t/spec-check m/roughly-round+?)))
+    (t/is-spec-check m/roughly-round+?))
   (t/with-instrument :all
     (t/is-not (m/roughly-round+? 0 0.02))
     (t/is-not (m/roughly-round+? -0.01 0.02))
@@ -929,7 +929,7 @@
 
 (deftest roughly-round-?-test
   (t/with-instrument `m/roughly-round-?
-    (t/is (t/spec-check m/roughly-round-?)))
+    (t/is-spec-check m/roughly-round-?))
   (t/with-instrument :all
     (t/is-not (m/roughly-round-? 0 0.02))
     (t/is-not (m/roughly-round-? 0.01 0.02))
@@ -944,7 +944,7 @@
 
 (deftest roughly-non-?-test
   (t/with-instrument `m/roughly-non-?
-    (t/is (t/spec-check m/roughly-non-?)))
+    (t/is-spec-check m/roughly-non-?))
   (t/with-instrument :all
     (t/is-not (m/roughly-non-? -0.01 0.005))
     (t/is (m/roughly-non-? -0.02 0.02))
@@ -957,7 +957,7 @@
 
 (deftest roughly-non+?-test
   (t/with-instrument `m/roughly-non+?
-    (t/is (t/spec-check m/roughly-non+?)))
+    (t/is-spec-check m/roughly-non+?))
   (t/with-instrument :all
     (t/is-not (m/roughly-non+? 0.01 0.005))
     (t/is (m/roughly-non+? 0.02 0.02))
@@ -970,7 +970,7 @@
 
 (deftest roughly-prob?-test
   (t/with-instrument `m/roughly-prob?
-    (t/is (t/spec-check m/roughly-prob?)))
+    (t/is-spec-check m/roughly-prob?))
   (t/with-instrument :all
     (t/is (m/roughly-prob? 0.01 0.005))
     (t/is (m/roughly-prob? 0.02 0.02))
@@ -985,7 +985,7 @@
 
 (deftest roughly-corr?-test
   (t/with-instrument `m/roughly-corr?
-    (t/is (t/spec-check m/roughly-corr?)))
+    (t/is-spec-check m/roughly-corr?))
   (t/with-instrument :all
     (t/is-not (m/roughly-corr? -1.01 0.005))
     (t/is (m/roughly-corr? -1.02 0.02))
@@ -1001,7 +1001,7 @@
 ;;;QUOTIENTS
 (deftest quot'-test
   (t/with-instrument `m/quot'
-    (t/is (t/spec-check m/quot')))
+    (t/is-spec-check m/quot'))
   (t/with-instrument :all
     (t/is= 1 (m/quot' 3 2))
     (t/is= -1 (m/quot' -3 2))
@@ -1022,7 +1022,7 @@
 
 (deftest mod'-test
   (t/with-instrument `m/mod'
-    (t/is (t/spec-check m/mod')))
+    (t/is-spec-check m/mod'))
   (t/with-instrument :all
     (t/is= 1 (m/mod' 3 2))
     (t/is= 1 (m/mod' -3 2))
@@ -1043,7 +1043,7 @@
 
 (deftest rem'-test
   (t/with-instrument `m/rem'
-    (t/is (t/spec-check m/rem')))
+    (t/is-spec-check m/rem'))
   (t/with-instrument :all
     (t/is= 1 (m/rem' 3 2))
     (t/is= -1 (m/rem' -3 2))
@@ -1064,7 +1064,7 @@
 
 (deftest quot-and-rem'-test
   (t/with-instrument `m/quot-and-rem'
-    (t/is (t/spec-check m/quot-and-rem')))
+    (t/is-spec-check m/quot-and-rem'))
   (t/with-instrument :all
     (t/is= [4 0] (m/quot-and-rem' 16 4))
     (t/is= [1 1] (m/quot-and-rem' 3 2))
@@ -1087,7 +1087,7 @@
 
 (deftest quot-and-mod'-test
   (t/with-instrument `m/quot-and-mod'
-    (t/is (t/spec-check m/quot-and-mod')))
+    (t/is-spec-check m/quot-and-mod'))
   (t/with-instrument :all
     (t/is= [4 0] (m/quot-and-mod' 16 4))
     (t/is= [0 0] (m/quot-and-mod' 0 4))
@@ -1118,7 +1118,7 @@
 
 (deftest gcd-test
   (t/with-instrument `m/gcd
-    (t/is (t/spec-check m/gcd)))
+    (t/is-spec-check m/gcd))
   (t/with-instrument :all
     (t/is= 7 (m/gcd 271284701247 12467364728))
     (t/is= 6 (m/gcd 12 18))
@@ -1131,7 +1131,7 @@
 
 (deftest lcm'-test
   (t/with-instrument `m/lcm'
-    (t/is (t/spec-check m/lcm')))
+    (t/is-spec-check m/lcm'))
   (t/with-instrument :all
     (t/is= 36 (m/lcm' 12 18))
     (t/is= 36 (m/lcm' -12 18))
@@ -1146,7 +1146,7 @@
 ;;;ANGLES
 (deftest reduce-angle'-test
   (t/with-instrument `m/reduce-angle'
-    (t/is (t/spec-check m/reduce-angle')))
+    (t/is-spec-check m/reduce-angle'))
   (t/with-instrument :all
     (t/is= 30.4 (m/reduce-angle' 30.4))
     (t/is= 350.2 (m/reduce-angle' -9.8))
@@ -1158,7 +1158,7 @@
 
 (deftest reduce-radians'-test
   (t/with-instrument `m/reduce-radians'
-    (t/is (t/spec-check m/reduce-radians')))
+    (t/is-spec-check m/reduce-radians'))
   (t/with-instrument :all
     (t/is= 5.267258771281654 (m/reduce-radians' 30.4))
     (t/is (zero? (m/reduce-radians' m/two-pi)))
@@ -1170,7 +1170,7 @@
 
 (deftest radians->angle'-test
   (t/with-instrument `m/radians->angle'
-    (t/is (t/spec-check m/radians->angle')))
+    (t/is-spec-check m/radians->angle'))
   (t/with-instrument :all
     (t/is (zero? (m/radians->angle' 0)))
     (t/is= 194.8056503444799 (m/radians->angle' 3.4))
@@ -1183,7 +1183,7 @@
 
 (deftest angle->radians'-test
   (t/with-instrument `m/angle->radians'
-    (t/is (t/spec-check m/angle->radians')))
+    (t/is-spec-check m/angle->radians'))
   (t/with-instrument :all
     (t/is (zero? (m/angle->radians' 0)))
     (t/is= 0.059341194567807204 (m/angle->radians' 3.4))

@@ -3,13 +3,15 @@
     [clojure.test :refer :all]
     [provisdom.test.core :as t]
     [provisdom.math.polynomials :as poly]))
+
 ;;1 SECONDS
+
 (set! *warn-on-reflection* true)
 
 ;;;CHEBYSHEV POLYNOMIALS
 (deftest chebyshev-polynomial-fn-test
   (t/with-instrument `poly/chebyshev-polynomial-fn
-    (t/is (t/spec-check poly/chebyshev-polynomial-fn)))
+    (t/is-spec-check poly/chebyshev-polynomial-fn))
   (t/with-instrument :all
     (t/is= 1.0 ((poly/chebyshev-polynomial-fn 0) 1.0))
     (t/is= 1.0 ((poly/chebyshev-polynomial-fn 1) 1.0))
@@ -71,7 +73,7 @@
 
 (deftest chebyshev-derivative-fn-test
   (t/with-instrument `poly/chebyshev-derivative-fn
-    (t/is (t/spec-check poly/chebyshev-derivative-fn)))
+    (t/is-spec-check poly/chebyshev-derivative-fn))
   (t/with-instrument :all
     (t/is= 0.0 ((poly/chebyshev-derivative-fn 0 0) 1.0))
     (t/is= 0.0 ((poly/chebyshev-derivative-fn 0 1) 1.0))
@@ -92,7 +94,7 @@
 
 (deftest chebyshev-poly-factors-to-regular-poly-factors-test
   (t/with-instrument `poly/chebyshev-poly-factors-to-regular-poly-factors
-    (t/is (t/spec-check poly/chebyshev-poly-factors-to-regular-poly-factors)))
+    (t/is-spec-check poly/chebyshev-poly-factors-to-regular-poly-factors))
   (t/with-instrument :all
     (t/is= [3.0 4.999999999810711] (poly/chebyshev-poly-factors-to-regular-poly-factors [3.0 5.0]))
     (t/is= [3.0 10.000000000065512]
@@ -109,7 +111,7 @@
 ;;;POLYNOMIAL SERIES
 (deftest polynomial-fn-test
   (t/with-instrument `poly/polynomial-fn
-    (t/is (t/spec-check poly/polynomial-fn)))
+    (t/is-spec-check poly/polynomial-fn))
   (t/with-instrument :all
     (t/is= [1.0 4.0 16.0 64.0] ((poly/polynomial-fn 3) 4.0))
     (t/is= [4.0 16.0 64.0] ((poly/polynomial-fn 3 {::poly/start-degree 1}) 4.0))
@@ -118,7 +120,7 @@
 
 (deftest polynomial-fns-test
   (t/with-instrument `poly/polynomial-fns
-    (t/is (t/spec-check poly/polynomial-fns)))
+    (t/is-spec-check poly/polynomial-fns))
   (t/with-instrument :all
     (t/is= [1.0 4.0 16.0 64.0] (map #(% 4.0) (poly/polynomial-fns 3)))
     (t/is= [4.0 16.0 64.0] (map #(% 4.0) (poly/polynomial-fns 3 {::poly/start-degree 1})))
@@ -127,14 +129,14 @@
 
 (deftest polynomial-2D-count-test
   (t/with-instrument `poly/polynomial-2D-count
-    (t/is (t/spec-check poly/polynomial-2D-count)))
+    (t/is-spec-check poly/polynomial-2D-count))
   (t/with-instrument :all
     (t/is= 10 (poly/polynomial-2D-count 3))
     (t/is= 9 (poly/polynomial-2D-count 3 {::poly/start-degree 1}))))
 
 (deftest polynomial-2D-fn-by-degree-test
   (t/with-instrument `poly/polynomial-2D-fn-by-degree
-    (t/is (t/spec-check poly/polynomial-2D-fn-by-degree)))
+    (t/is-spec-check poly/polynomial-2D-fn-by-degree))
   (t/with-instrument :all
     (t/is= [1.0 2.0 4.0 4.0 8.0 16.0 8.0 16.0 32.0 64.0]
       ((poly/polynomial-2D-fn-by-degree 3) 4.0 2.0))
@@ -147,19 +149,19 @@
 
 (deftest polynomial-2D-fn-by-basis-count-test
   (t/with-instrument `poly/polynomial-2D-fn-by-basis-count
-    (t/is (t/spec-check poly/polynomial-2D-fn-by-basis-count)))
+    (t/is-spec-check poly/polynomial-2D-fn-by-basis-count))
   (t/with-instrument :all
     (t/is= [1.0 2.0 4.0 4.0] ((poly/polynomial-2D-fn-by-basis-count 4) 4.0 2.0))))
 
 (deftest polynomial-ND-fn-test
   (t/with-instrument `poly/polynomial-ND-fn
-    (t/is (t/spec-check poly/polynomial-ND-fn)))
+    (t/is-spec-check poly/polynomial-ND-fn))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0 4.0 4.0 6.0 8.0 9.0 12.0 16.0 12.0 16.0 18.0 24.0 32.0 36.0 48.0 36.0 48.0 64.0 72.0 96.0 144.0 144.0 192.0 288.0 576.0]
       ((poly/polynomial-ND-fn 2) [2.0 3.0 4.0]))))
 (deftest polynomial-ND-fn-without-cross-terms-test
   (t/with-instrument `poly/polynomial-ND-fn-without-cross-terms
-    (t/is (t/spec-check poly/polynomial-ND-fn-without-cross-terms)))
+    (t/is-spec-check poly/polynomial-ND-fn-without-cross-terms))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0 4.0 4.0 9.0 16.0 8.0 27.0 64.0]
       ((poly/polynomial-ND-fn-without-cross-terms 3) [2.0 3.0 4.0]))))
@@ -167,7 +169,7 @@
 ;;;POLYNOMIAL EVALUATION
 (deftest horner-eval-test
   (t/with-instrument `poly/horner-eval
-    (t/is (t/spec-check poly/horner-eval)))
+    (t/is-spec-check poly/horner-eval))
   (t/with-instrument :all
     ;; 1 + 2x + 3x² at x=2: 1 + 4 + 12 = 17
     (t/is= 17.0 (poly/horner-eval [1 2 3] 2.0))
@@ -182,7 +184,7 @@
 
 (deftest clenshaw-eval-test
   (t/with-instrument `poly/clenshaw-eval
-    (t/is (t/spec-check poly/clenshaw-eval)))
+    (t/is-spec-check poly/clenshaw-eval))
   (t/with-instrument :all
     ;; Single coefficient c₀T₀(x) = c₀
     (t/is= 5.0 (poly/clenshaw-eval [5] 0.5))
@@ -196,7 +198,7 @@
 ;;;POLYNOMIAL ARITHMETIC
 (deftest poly-add-test
   (t/with-instrument `poly/poly-add
-    (t/is (t/spec-check poly/poly-add)))
+    (t/is-spec-check poly/poly-add))
   (t/with-instrument :all
     (t/is= [5.0 7.0 3.0] (poly/poly-add [1 2 3] [4 5]))
     (t/is= [2.0 4.0 6.0] (poly/poly-add [1 2 3] [1 2 3]))
@@ -204,14 +206,14 @@
 
 (deftest poly-subtract-test
   (t/with-instrument `poly/poly-subtract
-    (t/is (t/spec-check poly/poly-subtract)))
+    (t/is-spec-check poly/poly-subtract))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0] (poly/poly-subtract [5 7 3] [4 5]))
     (t/is= [0.0 0.0 0.0] (poly/poly-subtract [1 2 3] [1 2 3]))))
 
 (deftest poly-multiply-test
   (t/with-instrument `poly/poly-multiply
-    (t/is (t/spec-check poly/poly-multiply)))
+    (t/is-spec-check poly/poly-multiply))
   (t/with-instrument :all
     ;; (1+x)² = 1 + 2x + x²
     (t/is= [1.0 2.0 1.0] (poly/poly-multiply [1 1] [1 1]))
@@ -224,7 +226,7 @@
 
 (deftest poly-scale-test
   (t/with-instrument `poly/poly-scale
-    (t/is (t/spec-check poly/poly-scale)))
+    (t/is-spec-check poly/poly-scale))
   (t/with-instrument :all
     (t/is= [2.0 4.0 6.0] (poly/poly-scale [1 2 3] 2.0))
     (t/is= [0.0 0.0 0.0] (poly/poly-scale [1 2 3] 0.0))
@@ -232,7 +234,7 @@
 
 (deftest poly-divide-test
   (t/with-instrument `poly/poly-divide
-    (t/is (t/spec-check poly/poly-divide)))
+    (t/is-spec-check poly/poly-divide))
   (t/with-instrument :all
     ;; (x² + 2x + 1) / (x + 1) = (x + 1), remainder 0
     (let [{:keys [quotient remainder]} (poly/poly-divide [1 2 1] [1 1])]
@@ -250,7 +252,7 @@
 ;;;CHEBYSHEV UTILITIES
 (deftest chebyshev-nodes-test
   (t/with-instrument `poly/chebyshev-nodes
-    (t/is (t/spec-check poly/chebyshev-nodes)))
+    (t/is-spec-check poly/chebyshev-nodes))
   (t/is= 3 (count (poly/chebyshev-nodes 3)))
   ;; Nodes should be in [-1, 1]
   (t/is (every? #(<= -1 % 1) (poly/chebyshev-nodes 5)))
@@ -263,7 +265,7 @@
 
 (deftest chebyshev-extrema-test
   (t/with-instrument `poly/chebyshev-extrema
-    (t/is (t/spec-check poly/chebyshev-extrema)))
+    (t/is-spec-check poly/chebyshev-extrema))
   (t/with-instrument `poly/chebyshev-extrema
     (t/is= 3 (count (poly/chebyshev-extrema 3)))
     ;; Extrema should include ±1
@@ -288,7 +290,7 @@
 ;;;ORTHOGONAL POLYNOMIALS
 (deftest legendre-polynomial-fn-test
   (t/with-instrument `poly/legendre-polynomial-fn
-    (t/is (t/spec-check poly/legendre-polynomial-fn)))
+    (t/is-spec-check poly/legendre-polynomial-fn))
   (t/with-instrument :all
     ;; P₀(x) = 1
     (t/is= 1.0 ((poly/legendre-polynomial-fn 0) 0.5))
@@ -304,7 +306,7 @@
 
 (deftest hermite-polynomial-fn-test
   (t/with-instrument `poly/hermite-polynomial-fn
-    (t/is (t/spec-check poly/hermite-polynomial-fn)))
+    (t/is-spec-check poly/hermite-polynomial-fn))
   (t/with-instrument :all
     ;; Physicist's: H₀(x) = 1
     (t/is= 1.0 ((poly/hermite-polynomial-fn 0) 2.0))
@@ -321,7 +323,7 @@
 
 (deftest laguerre-polynomial-fn-test
   (t/with-instrument `poly/laguerre-polynomial-fn
-    (t/is (t/spec-check poly/laguerre-polynomial-fn)))
+    (t/is-spec-check poly/laguerre-polynomial-fn))
   (t/with-instrument :all
     ;; L₀(x) = 1
     (t/is= 1.0 ((poly/laguerre-polynomial-fn 0) 2.0))
@@ -335,7 +337,7 @@
 ;;;INTERPOLATION
 (deftest lagrange-interpolation-fn-test
   (t/with-instrument `poly/lagrange-interpolation-fn
-    (t/is (t/spec-check poly/lagrange-interpolation-fn)))
+    (t/is-spec-check poly/lagrange-interpolation-fn))
   (t/with-instrument `poly/lagrange-interpolation-fn
     ;; Points on y = x²: (0,0), (1,1), (2,4)
     (let [f (poly/lagrange-interpolation-fn [[0 0] [1 1] [2 4]])]

@@ -368,18 +368,20 @@
 
 (defn row-matrix?
   "Returns true if x is a single-row matrix.
-  
-  A row matrix has exactly one row containing only numbers.
-  
+
+  A row matrix has exactly one row containing only numbers,
+  or is an empty matrix.
+
   Examples:
     (row-matrix? [[1 2 3]]) ;=> true
     (row-matrix? [[1] [2]]) ;=> false
-    (row-matrix? [[]]) ;=> false"
+    (row-matrix? [[]]) ;=> true"
   [x]
-  (and (vector? x)
-    (m/one? (count x))
-    (vector? (first x))
-    (every? number? (first x))))
+  (or (empty-matrix? x)
+    (and (vector? x)
+      (m/one? (count x))
+      (vector? (first x))
+      (every? number? (first x)))))
 
 (s/fdef row-matrix?
   :args (s/cat :x any?)
@@ -436,7 +438,7 @@
     (s/coll-of (s/coll-of zero? :kind vector? :into [])
       :kind vector?
       :into [])
-    #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 0 mdl)))
+    #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 1 mdl)))
 
 (defn square-matrix?
   "Returns true if x is a square matrix.
@@ -516,7 +518,7 @@
   [x]
   (and (square-matrix? x)
     (nil? (some-kv (fn [i j e]
-                     (not (or (<= i j) (zero? e))))
+                     (not (or (<= i j) (m/roughly? e 0.0 m/sgl-close))))
             x))))
 
 (s/fdef upper-triangular-matrix?
@@ -546,7 +548,7 @@
   [x]
   (and (square-matrix? x)
     (nil? (some-kv (fn [i j e]
-                     (not (or (>= i j) (zero? e))))
+                     (not (or (>= i j) (m/roughly? e 0.0 m/sgl-close))))
             x))))
 
 (s/fdef lower-triangular-matrix?
@@ -1491,15 +1493,16 @@
 
 (defn some-kv
   "Finds the first matrix element satisfying a predicate.
-  
+
   The predicate function receives (row column element) and should return
-  a truthy value. Returns the first truthy result, or nil if none found.
-  
+  a truthy value. Returns the first element for which the predicate is truthy,
+  or nil if none found.
+
   Options:
   - ::by-row? (default true) - traverse by rows first, then columns
-  
+
   Examples:
-    (some-kv #(when (> %3 5) %3) [[1 2] [6 3]]) ;=> 6"
+    (some-kv #(> %3 5) [[1 2] [6 3]]) ;=> 6"
   ([pred m] (some-kv pred m {::by-row? true}))
   ([pred m {::keys [by-row?] :or {by-row? true}}]
    (let [mt (if by-row?
@@ -1857,10 +1860,10 @@
 
 (defn remove-column
   "Removes the specified column from the matrix.
-  
+
   Returns the original matrix if column index is out of bounds.
   Returns empty matrix [[]] if removing the last column.
-  
+
   Examples:
     (remove-column [[1 2] [3 4]] 0) ;=> [[2] [4]]
     (remove-column [[1] [2]] 0) ;=> [[]]"
@@ -1869,7 +1872,9 @@
     (let [m2 (mapv (fn [r]
                      (vector/removev r column))
                m)]
-      (if (empty? m2) [[]] m2))
+      (if (or (empty? m2) (empty? (first m2)))
+        [[]]
+        m2))
     m))
 
 (s/fdef remove-column

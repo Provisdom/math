@@ -35,7 +35,9 @@
 (s/def ::U ::mx/upper-triangular-matrix)
 (s/def ::cholesky-L ::mx/lower-triangular-matrix)
 (s/def ::cholesky-LT ::mx/upper-triangular-matrix)
+(s/def ::rectangular-root ::mx/matrix)
 (s/def ::Q ::mx/matrix)
+(s/def ::RRQR-permutation ::mx/square-matrix)
 (s/def ::R ::mx/matrix)
 (s/def ::eigenvalues ::vector/vector)
 (s/def ::eigenvalues-matrix ::mx/diagonal-matrix)
@@ -45,11 +47,16 @@
 (s/def ::singular-values-matrix ::mx/matrix)
 (s/def ::svd-left ::mx/matrix)
 (s/def ::svd-right ::mx/matrix)
+(s/def ::condition-number ::m/number)
+(s/def ::norm-spectral ::m/non-)
 (s/def ::max-iterations pos-int?)
 (s/def ::tolerance ::m/finite+)
 (s/def ::rank-tolerance ::m/finite-non-)
 
 ;;;LU DECOMPOSITION
+;; Forward declarations for functions used in compute-inverse-from-lu
+(declare forward-substitution back-substitution)
+
 (defn- swap-rows
   "Swaps rows i and j in matrix m."
   [m i j]
@@ -111,6 +118,40 @@
                       (range (inc k) n))]
                 (recur (inc k) new-U new-L P is-singular?)))))))))
 
+(defn- compute-determinant-from-lu
+  "Computes determinant from L, U, P matrices."
+  [U LU-permutation]
+  (let [diag-product (reduce * (mx/diagonal U))
+        n (mx/rows LU-permutation)
+        perm-vec (mapv (fn [row]
+                         (first (keep-indexed (fn [col val]
+                                                (when (m/one? val) col))
+                                  (get LU-permutation row))))
+                   (range n))
+        inversions (reduce + (for [i (range n)
+                                   j (range (inc i) n)
+                                   :when (> (get perm-vec i) (get perm-vec j))]
+                               1))
+        sign (if (even? inversions) 1.0 -1.0)]
+    (* sign diag-product)))
+
+(defn- compute-inverse-from-lu
+  "Computes inverse from L, U, P matrices. Returns nil if singular."
+  [L U LU-permutation singular?]
+  (when-not singular?
+    (let [n (mx/rows U)
+          inv-columns
+          (mapv (fn [col]
+                  (let [e-i (assoc (vec (repeat n 0.0)) col 1.0)
+                        Pe-i (mapv (fn [row]
+                                     (reduce + (map * (get LU-permutation row) e-i)))
+                               (range n))
+                        y (forward-substitution L Pe-i)
+                        x (back-substitution U y)]
+                    x))
+            (range n))]
+      (mx/transpose inv-columns))))
+
 (defn lu-decomposition
   "Computes LU decomposition with partial pivoting.
 
@@ -126,30 +167,63 @@
   - ::U - upper triangular matrix
   - ::LU-permutation - permutation matrix P
   - ::singular? - true if matrix is singular (not invertible)
+  - ::determinant - the determinant of the matrix
+  - ::inverse - the inverse matrix (nil if singular)
 
-  Returns nil for non-square or empty matrices.
+  Returns nil for non-square, empty, non-finite, or numerically unstable matrices
+  (where the decomposition fails to produce valid triangular matrices).
 
   Examples:
     (lu-decomposition [[4 3] [6 3]])
     ;=> {::L [[1.0 0.0] [0.667 1.0]]
     ;    ::U [[6.0 3.0] [0.0 1.0]]
     ;    ::LU-permutation [[0.0 1.0] [1.0 0.0]]
-    ;    ::singular? false}
+    ;    ::singular? false
+    ;    ::determinant -6.0
+    ;    ::inverse [[-0.5 0.5] [1.0 -0.667]]}
 
   See also: determinant, inverse, solve"
   [square-m]
-  (when (and (mx/square-matrix? square-m) (not (mx/empty-matrix? square-m)))
+  (when (and (mx/square-matrix? square-m)
+          (not (mx/empty-matrix? square-m))
+          (mx/matrix-finite? square-m))
     (let [[L U P singular?] (lu-decomposition-impl square-m)]
-      {::L              L
-       ::U              U
-       ::LU-permutation P
-       ::singular?      singular?})))
+      (when (and (mx/lower-triangular-matrix? L)
+              (mx/upper-triangular-matrix? U))
+        (let [det (compute-determinant-from-lu U P)
+              inv (compute-inverse-from-lu L U P singular?)]
+          {::L              L
+           ::U              U
+           ::LU-permutation P
+           ::singular?      singular?
+           ::determinant    det
+           ::inverse        inv})))))
 
 (s/fdef lu-decomposition
   :args (s/cat :square-m ::mx/square-matrix)
-  :ret (s/nilable (s/keys :req [::L ::U ::LU-permutation ::singular?])))
+  :ret (s/nilable (s/keys :req [::L ::U ::LU-permutation ::singular? ::determinant ::inverse])))
 
 ;;;DETERMINANT
+(defn determinant-from-lu
+  "Extracts the determinant from an existing LU decomposition result.
+
+  This avoids redundant computation when you need both the LU decomposition
+  and the determinant.
+
+  Takes the map returned by `lu-decomposition` which includes ::determinant.
+
+  Examples:
+    (let [lu (lu-decomposition [[4 3] [6 3]])]
+      (determinant-from-lu lu)) ;=> -6.0
+
+  See also: lu-decomposition, determinant"
+  [{::keys [determinant]}]
+  determinant)
+
+(s/fdef determinant-from-lu
+  :args (s/cat :lu-result (s/keys :req [::determinant]))
+  :ret ::determinant)
+
 (defn determinant
   "Computes the determinant of a square matrix.
 
@@ -165,26 +239,12 @@
     (determinant [[1 0] [0 1]]) ;=> 1.0
     (determinant [[1 2] [2 4]]) ;=> 0.0 (singular)
 
-  See also: inverse, lu-decomposition"
+  See also: inverse, lu-decomposition, determinant-from-lu"
   [square-m]
   (cond
     (not (mx/square-matrix? square-m)) nil
     (mx/empty-matrix? square-m) m/nan
-    :else
-    (let [{::keys [U LU-permutation]} (lu-decomposition square-m)
-          diag-product (reduce * (mx/diagonal U))
-          n (mx/rows LU-permutation)
-          perm-vec (mapv (fn [row]
-                           (first (keep-indexed (fn [col val]
-                                                  (when (m/one? val) col))
-                                    (get LU-permutation row))))
-                    (range n))
-          inversions (reduce + (for [i (range n)
-                                     j (range (inc i) n)
-                                     :when (> (get perm-vec i) (get perm-vec j))]
-                                 1))
-          sign (if (even? inversions) 1.0 -1.0)]
-      (* sign diag-product))))
+    :else (determinant-from-lu (lu-decomposition square-m))))
 
 (s/fdef determinant
   :args (s/cat :square-m ::mx/square-matrix)
@@ -328,6 +388,33 @@
       (reverse (range n)))))
 
 ;;;INVERSE
+(defn inverse-from-lu
+  "Extracts the inverse from an existing LU decomposition result.
+
+  This avoids redundant computation when you need both the LU decomposition
+  and the inverse.
+
+  Takes the map returned by `lu-decomposition` which includes ::inverse and ::singular?.
+
+  Returns:
+  - The inverse matrix on success
+  - Anomaly with ::anom/no-solve if the matrix is singular (not invertible)
+
+  Examples:
+    (let [lu (lu-decomposition [[4 7] [2 6]])]
+      (inverse-from-lu lu)) ;=> [[0.6 -0.7] [-0.2 0.4]]
+
+  See also: lu-decomposition, inverse"
+  [{::keys [inverse singular?]}]
+  (if singular?
+    {::anom/category ::anom/no-solve
+     ::anom/message  "Matrix is singular (not invertible)"}
+    inverse))
+
+(s/fdef inverse-from-lu
+  :args (s/cat :lu-result (s/keys :req [::inverse ::singular?]))
+  :ret (s/or :matrix ::mx/square-matrix :anomaly ::anom/anomaly))
+
 (defn inverse
   "Computes the inverse of a square matrix.
 
@@ -344,26 +431,11 @@
     (inverse [[4 7] [2 6]]) ;=> [[0.6 -0.7] [-0.2 0.4]]
     (inverse [[1 2] [2 4]]) ;=> anomaly (singular matrix)
 
-  See also: pseudoinverse, determinant, solve"
+  See also: pseudoinverse, determinant, solve, inverse-from-lu"
   [square-m]
   (if (mx/empty-matrix? square-m)
     square-m
-    (let [{::keys [L U LU-permutation singular?]} (lu-decomposition square-m)]
-      (if singular?
-        {::anom/category ::anom/no-solve
-         ::anom/message  "Matrix is singular (not invertible)"}
-        (let [n (mx/rows square-m)
-              inv-columns
-              (mapv (fn [col]
-                      (let [e-i (assoc (vec (repeat n 0.0)) col 1.0)
-                            Pe-i (mapv (fn [row]
-                                         (reduce + (map * (get LU-permutation row) e-i)))
-                                   (range n))
-                            y (forward-substitution L Pe-i)
-                            x (back-substitution U y)]
-                        x))
-                (range n))]
-          (mx/transpose inv-columns))))))
+    (inverse-from-lu (lu-decomposition square-m))))
 
 (s/fdef inverse
   :args (s/cat :square-m ::mx/square-matrix)
@@ -511,9 +583,84 @@
   :args (s/cat :symmetric-pos-def-m ::mx/symmetric-matrix)
   :ret (s/nilable (s/keys :req [::cholesky-L ::cholesky-LT])))
 
-;;;POSITIVE DEFINITE TESTS
 (declare eigen-decomposition)
 
+(defn rectangular-cholesky-decomposition
+  "Computes the rectangular Cholesky decomposition of a positive semi-definite matrix.
+
+  For a symmetric positive semi-definite matrix A, finds a rectangular matrix B
+  (n rows, r columns where r = rank) such that A ≈ B × B^T within tolerance.
+
+  This is useful for:
+  - Generating correlated random vectors from a covariance matrix that is only
+    positive semi-definite (not positive definite)
+  - Working with rank-deficient covariance matrices
+
+  Uses eigendecomposition: A = V × D × V^T, then B = V × sqrt(D) for positive
+  eigenvalues only.
+
+  Parameters:
+  - pos-semidefinite-m: symmetric positive semi-definite matrix
+  - tolerance: eigenvalues below this threshold are considered zero
+
+  Returns a map with keys:
+  - ::rectangular-root - n×r matrix B where A ≈ B × B^T
+  - ::rank - number of columns with positive eigenvalues (r)
+
+  Returns nil for non-symmetric or empty matrices.
+  Returns anomaly if matrix is not positive semi-definite.
+
+  Examples:
+    ;; Full rank (2x2 positive definite)
+    (rectangular-cholesky-decomposition [[4 2] [2 2]] 1e-10)
+    ;=> {::rectangular-root [[...] [...]] ::rank 2}
+
+    ;; Rank deficient (singular covariance)
+    (rectangular-cholesky-decomposition [[1 1] [1 1]] 1e-10)
+    ;=> {::rectangular-root [[...] [...]] ::rank 1}
+
+  See also: cholesky-decomposition, pos-semidefinite-matrix-finite?, eigen-decomposition"
+  [pos-semidefinite-m tolerance]
+  (when (and (mx/symmetric-matrix? pos-semidefinite-m)
+          (not (mx/empty-matrix? pos-semidefinite-m)))
+    (if-let [eigen-result (eigen-decomposition pos-semidefinite-m)]
+      (let [eigenvalues (::eigenvalues eigen-result)
+            V (::eigenvectors eigen-result)
+            n (count eigenvalues)
+            ;; Check for negative eigenvalues (not positive semi-definite)
+            min-eigenvalue (apply min eigenvalues)]
+        (if (< min-eigenvalue (- tolerance))
+          {::anom/category ::anom/incorrect
+           ::anom/message  (str "Matrix is not positive semi-definite. "
+                             "Eigenvalue " min-eigenvalue " is negative.")}
+          ;; Find positive eigenvalues and their indices
+          (let [positive-indices (filterv #(> (get eigenvalues %) tolerance) (range n))
+                r (count positive-indices)]
+            (if (zero? r)
+              {::rectangular-root [[]]
+               ::rank             0}
+              ;; B = V × sqrt(D) for positive eigenvalues only
+              ;; B[i,j] = V[i, positive-indices[j]] * sqrt(eigenvalues[positive-indices[j]])
+              (let [B (mapv (fn [i]
+                              (mapv (fn [j-idx]
+                                      (let [orig-col (get positive-indices j-idx)
+                                            v-ij (get-in V [i orig-col])
+                                            lambda (get eigenvalues orig-col)]
+                                        (* v-ij (m/sqrt lambda))))
+                                (range r)))
+                        (range n))]
+                {::rectangular-root B
+                 ::rank             r})))))
+      ;; Eigendecomposition failed
+      nil)))
+
+(s/fdef rectangular-cholesky-decomposition
+  :args (s/cat :pos-semidefinite-m ::mx/symmetric-matrix
+          :tolerance ::m/finite-non-)
+  :ret (s/nilable (s/or :result (s/keys :req [::rectangular-root ::rank])
+                    :anomaly ::anom/anomaly)))
+
+;;;POSITIVE DEFINITE TESTS
 (defn pos-definite-matrix-finite?
   "Returns true if the matrix is symmetric, positive definite, and finite.
 
@@ -814,6 +961,8 @@
           Q
           (range n))))))
 
+(s/def ::least-squares-solution (s/nilable ::vector/vector))
+
 (defn qr-decomposition
   "Computes QR decomposition using Householder reflections.
 
@@ -823,37 +972,180 @@
 
   Complexity: O(mn²) for m×n matrix
 
-  Returns a map with keys ::Q and ::R, or nil for empty matrices.
+  1-arity: Returns a map with keys ::Q and ::R, or nil for empty matrices.
+
+  2-arity: Also computes the least-squares solution for Ax = b, returning
+  ::least-squares-solution in addition to ::Q and ::R. The solution is nil
+  if the matrix has more columns than rows.
 
   Examples:
     (qr-decomposition [[1 2] [3 4] [5 6]])
     ;=> Q is 3x3 orthogonal, R is 3x2 upper triangular
 
+    ;; With least-squares: fit line y = mx + c to points (1,1), (2,2), (3,4)
+    (qr-decomposition [[1 1] [2 1] [3 1]] [1 2 4])
+    ;=> includes ::least-squares-solution [1.5 -0.333]
+
   See also: least-squares, eigen-decomposition"
-  [m]
+  ([m]
+   (when (and (mx/matrix? m) (not (mx/empty-matrix? m)))
+     (let [nr (mx/rows m)
+           nc (mx/columns m)
+           min-dim (min nr nc)
+           initial-Q (mx/identity-matrix nr)
+           initial-R (mapv #(mapv double %) m)
+           [Q R]
+           (reduce
+             (fn [[Q-acc R-acc] k]
+               (let [col-k (mapv #(get-in R-acc [% k] 0.0)
+                             (range k nr))
+                     v (householder-vector col-k)
+                     R-new (apply-householder R-acc v k k)
+                     Q-new (accumulate-Q Q-acc v k)]
+                 [Q-new R-new]))
+             [initial-Q initial-R]
+             (range min-dim))]
+       {::Q Q
+        ::R R})))
+  ([m b]
+   (when-let [qr-result (qr-decomposition m)]
+     (let [{::keys [Q R]} qr-result
+           nr (mx/rows m)
+           nc (mx/columns m)
+           solution (when (and (>= nr nc) (= nr (count b)))
+                      (let [Qt (mx/transpose Q)
+                            Qtb (mapv (fn [row]
+                                        (reduce + (map * (get Qt row) b)))
+                                  (range nr))
+                            R-square (mapv #(subvec % 0 nc) (subvec R 0 nc))
+                            b-truncated (subvec (vec Qtb) 0 nc)]
+                        (back-substitution R-square b-truncated)))]
+       (assoc qr-result ::least-squares-solution solution)))))
+
+(s/fdef qr-decomposition
+  :args (s/cat :m ::mx/matrix
+          :b (s/? ::vector/vector))
+  :ret (s/nilable (s/keys :req [::Q ::R]
+                    :opt [::least-squares-solution])))
+
+(defn- column-norms-squared
+  "Computes squared norms of columns from row start-row to end."
+  [m start-row]
+  (let [nr (mx/rows m)
+        nc (mx/columns m)]
+    (mapv (fn [col]
+            (reduce + (map (fn [row] (m/sq (get-in m [row col] 0.0)))
+                        (range start-row nr))))
+      (range nc))))
+
+(defn rank-revealing-qr-decomposition
+  "Computes the rank-revealing QR decomposition of a matrix with column pivoting.
+
+  The rank-revealing QR decomposition of matrix A consists of three matrices
+  Q, R, and P (permutation) such that: A × P = Q × R
+
+  - Q is orthogonal (Q^T × Q = I)
+  - R is upper triangular with diagonal elements in decreasing order of magnitude
+  - P is a permutation matrix
+
+  Column pivoting selects the column with the largest remaining norm at each step,
+  which reveals the numerical rank of the matrix.
+
+  Parameters:
+    m         - Input matrix (m × n)
+    tolerance - Threshold for determining rank. Diagonal elements of R with
+                absolute value below this are considered zero.
+
+  Returns a map containing:
+    ::Q                - Orthogonal matrix (m × m)
+    ::R                - Upper triangular matrix (m × n)
+    ::RRQR-permutation - Permutation matrix (n × n), such that A × P = Q × R
+    ::rank             - Numerical rank of the matrix
+
+  Returns nil for empty matrices.
+
+  Complexity: O(mn²) for m×n matrix
+
+  Example:
+    (rank-revealing-qr-decomposition [[1 2 3] [4 5 6] [7 8 9]] 1e-10)
+    ;=> reveals rank 2 (matrix is rank-deficient)"
+  [m tolerance]
   (when (and (mx/matrix? m) (not (mx/empty-matrix? m)))
     (let [nr (mx/rows m)
           nc (mx/columns m)
-          min-dim (min nr nc)
-          initial-Q (mx/identity-matrix nr)
-          initial-R (mapv #(mapv double %) m)
-          [Q R]
-          (reduce
-            (fn [[Q-acc R-acc] k]
-              (let [col-k (mapv #(get-in R-acc [% k] 0.0)
-                            (range k nr))
-                    v (householder-vector col-k)
-                    R-new (apply-householder R-acc v k k)
-                    Q-new (accumulate-Q Q-acc v k)]
-                [Q-new R-new]))
-            [initial-Q initial-R]
-            (range min-dim))]
-      {::Q Q
-       ::R R})))
+          min-dim (min nr nc)]
+      (if (zero? min-dim)
+        {::Q                (mx/identity-matrix nr)
+         ::R                m
+         ::RRQR-permutation (mx/identity-matrix nc)
+         ::rank             0}
+        ;; Apply column pivoting during Householder QR
+        (loop [k 0
+               R (mapv #(mapv double %) m)
+               Q (mx/identity-matrix nr)
+               perm (vec (range nc))  ; track column permutation as indices
+               col-norms-sq (column-norms-squared m 0)]
+          (if (>= k min-dim)
+            ;; Build permutation matrix and compute rank
+            (let [P (mx/compute-matrix nc nc
+                      (fn [i j] (if (= (get perm j) i) 1.0 0.0)))
+                  rank (count (filter (fn [i]
+                                        (and (< i nr)
+                                             (> (m/abs (get-in R [i i] 0.0)) tolerance)))
+                                (range min-dim)))]
+              {::Q                Q
+               ::R                R
+               ::RRQR-permutation P
+               ::rank             rank})
+            ;; Find column with maximum remaining norm (from k to nc-1)
+            (let [remaining-norms (mapv (fn [col]
+                                          (if (< col k)
+                                            0.0  ; already processed
+                                            (get col-norms-sq col 0.0)))
+                                    (range nc))
+                  max-col (reduce (fn [best col]
+                                    (if (> (get remaining-norms col)
+                                          (get remaining-norms best))
+                                      col
+                                      best))
+                            k (range k nc))
+                  ;; Swap columns k and max-col in R
+                  [R perm] (if (= k max-col)
+                             [R perm]
+                             (let [R-swapped (mapv (fn [row]
+                                                     (let [v-k (get row k)
+                                                           v-max (get row max-col)]
+                                                       (-> row
+                                                           (assoc k v-max)
+                                                           (assoc max-col v-k))))
+                                               R)
+                                   perm-swapped (-> perm
+                                                    (assoc k (get perm max-col))
+                                                    (assoc max-col (get perm k)))]
+                               [R-swapped perm-swapped]))
+                  ;; Also swap in col-norms-sq
+                  col-norms-sq (if (= k max-col)
+                                 col-norms-sq
+                                 (-> col-norms-sq
+                                     (assoc k (get col-norms-sq max-col))
+                                     (assoc max-col (get col-norms-sq k))))
+                  ;; Compute Householder reflection for column k using helper functions
+                  col-k (mapv #(get-in R [% k] 0.0) (range k nr))
+                  v (householder-vector col-k)
+                  R-new (apply-householder R v k k)
+                  Q-new (accumulate-Q Q v k)
+                  ;; Update column norms for remaining columns (subtract contribution from row k)
+                  col-norms-sq-updated (mapv (fn [col]
+                                               (if (<= col k)
+                                                 (get col-norms-sq col)
+                                                 (max 0.0 (- (get col-norms-sq col)
+                                                            (m/sq (get-in R-new [k col] 0.0))))))
+                                         (range nc))]
+              (recur (inc k) R-new Q-new perm col-norms-sq-updated))))))))
 
-(s/fdef qr-decomposition
-  :args (s/cat :m ::mx/matrix)
-  :ret (s/nilable (s/keys :req [::Q ::R])))
+(s/fdef rank-revealing-qr-decomposition
+  :args (s/cat :m ::mx/matrix :tolerance ::m/accu)
+  :ret (s/nilable (s/keys :req [::Q ::R ::RRQR-permutation ::rank])))
 
 ;;;LEAST SQUARES
 (defn least-squares
@@ -1007,7 +1299,7 @@
   Complexity: O(min(mn², m²n))
 
   Returns a map with ::svd-left (U), ::singular-values, ::singular-values-matrix (Σ),
-  ::svd-right (V^T), ::rank, or nil if fails.
+  ::svd-right (V^T), ::rank, ::condition-number, ::norm-spectral, or nil if fails.
 
   Examples:
     (sv-decomposition [[1 2] [3 4] [5 6]])
@@ -1027,7 +1319,6 @@
          (let [eigenvalues (::eigenvalues eigen-result)
                V (::eigenvectors eigen-result)
                singular-values (mapv #(if (> % 0) (m/sqrt %) 0.0) eigenvalues)
-               num-nonzero (count (filter #(> % rank-tolerance) singular-values))
                U-columns
                (mapv (fn [i]
                        (let [sigma (get singular-values i)
@@ -1059,20 +1350,47 @@
                                 (if (= i j)
                                   (get singular-values i 0.0)
                                   0.0)))
-               numerical-rank (count (filter #(> % rank-tolerance) singular-values))]
-           {::svd-left              U
-            ::singular-values       singular-values
+               numerical-rank (count (filter #(> % rank-tolerance) singular-values))
+               max-sigma (apply max singular-values)
+               min-sigma (apply min singular-values)
+               cond-num (if (m/roughly? min-sigma 0.0 m/dbl-close)
+                          m/inf+
+                          (/ max-sigma min-sigma))]
+           {::svd-left               U
+            ::singular-values        singular-values
             ::singular-values-matrix sigma-matrix
-            ::svd-right             (mx/transpose V)
-            ::rank                  numerical-rank}))))))
+            ::svd-right              (mx/transpose V)
+            ::rank                   numerical-rank
+            ::condition-number       cond-num
+            ::norm-spectral          max-sigma}))))))
 
 (s/fdef sv-decomposition
   :args (s/cat :m ::mx/matrix
           :opts (s/? (s/keys :opt-un [::rank-tolerance])))
-  :ret (s/nilable (s/keys :req [::svd-left ::singular-values
-                                ::singular-values-matrix ::svd-right ::rank])))
+  :ret (s/nilable (s/keys :req [::svd-left ::singular-values ::singular-values-matrix
+                                ::svd-right ::rank ::condition-number ::norm-spectral])))
 
 ;;;CONDITION NUMBER
+(defn condition-number-from-svd
+  "Extracts the condition number from an existing SVD result.
+
+  This avoids redundant computation when you need both the SVD
+  and the condition number.
+
+  Takes the map returned by `sv-decomposition` which includes ::condition-number.
+
+  Examples:
+    (let [svd (sv-decomposition [[1 2] [3 4]])]
+      (condition-number-from-svd svd)) ;=> ~14.93
+
+  See also: sv-decomposition, condition-number"
+  [{::keys [condition-number]}]
+  condition-number)
+
+(s/fdef condition-number-from-svd
+  :args (s/cat :svd-result (s/keys :req [::condition-number]))
+  :ret ::condition-number)
+
 (defn condition-number
   "Computes the condition number of a matrix using SVD.
 
@@ -1083,19 +1401,13 @@
     (condition-number [[1 0] [0 1]]) ;=> 1.0
     (condition-number [[1 1] [1 1.001]]) ;=> ~2001
 
-  See also: sv-decomposition, matrix-rank"
+  See also: sv-decomposition, matrix-rank, condition-number-from-svd"
   [m]
   (if (mx/empty-matrix? m)
     m/nan
-    (let [svd-result (sv-decomposition m)]
-      (if svd-result
-        (let [sigmas (::singular-values svd-result)
-              max-sigma (apply max sigmas)
-              min-sigma (apply min sigmas)]
-          (if (m/roughly? min-sigma 0.0 m/dbl-close)
-            m/inf+
-            (/ max-sigma min-sigma)))
-        m/nan))))
+    (if-let [svd-result (sv-decomposition m)]
+      (condition-number-from-svd svd-result)
+      m/nan)))
 
 (s/fdef condition-number
   :args (s/cat :m ::mx/matrix)
@@ -1145,7 +1457,7 @@
     (apply max 0.0 (map #(reduce + (map m/abs %)) (mx/transpose m)))))
 
 (s/fdef norm-1
-  :args (s/cat :m ::mx/matrix)
+  :args (s/cat :m ::mx/matrix-finite)
   :ret ::m/finite-non-)
 
 (defn norm-inf-matrix
@@ -1162,8 +1474,28 @@
     (apply max 0.0 (map #(reduce + (map m/abs %)) m))))
 
 (s/fdef norm-inf-matrix
-  :args (s/cat :m ::mx/matrix)
+  :args (s/cat :m ::mx/matrix-finite)
   :ret ::m/finite-non-)
+
+(defn norm-spectral-from-svd
+  "Extracts the spectral norm from an existing SVD result.
+
+  This avoids redundant computation when you need both the SVD
+  and the spectral norm.
+
+  Takes the map returned by `sv-decomposition` which includes ::norm-spectral.
+
+  Examples:
+    (let [svd (sv-decomposition [[3 0] [0 4]])]
+      (norm-spectral-from-svd svd)) ;=> 4.0
+
+  See also: sv-decomposition, norm-spectral"
+  [{::keys [norm-spectral]}]
+  norm-spectral)
+
+(s/fdef norm-spectral-from-svd
+  :args (s/cat :svd-result (s/keys :req [::norm-spectral]))
+  :ret ::norm-spectral)
 
 (defn norm-spectral
   "Computes the spectral norm (induced 2-norm, largest singular value).
@@ -1174,12 +1506,12 @@
     (norm-spectral [[1 0] [0 1]]) ;=> 1.0
     (norm-spectral [[3 0] [0 4]]) ;=> 4.0
 
-  See also: norm-1, norm-inf-matrix, sv-decomposition"
+  See also: norm-1, norm-inf-matrix, sv-decomposition, norm-spectral-from-svd"
   [m]
   (if (mx/empty-matrix? m)
     0.0
     (if-let [svd-result (sv-decomposition m)]
-      (apply max 0.0 (::singular-values svd-result))
+      (norm-spectral-from-svd svd-result)
       m/nan)))
 
 (s/fdef norm-spectral
@@ -1187,6 +1519,47 @@
   :ret ::m/number)
 
 ;;;PSEUDOINVERSE
+(defn pseudoinverse-from-svd
+  "Computes the Moore-Penrose pseudoinverse from an existing SVD result.
+
+  This avoids redundant computation when you need both the SVD
+  and the pseudoinverse.
+
+  For A = U * Σ * V^T, the pseudoinverse is A+ = V * Σ+ * U^T.
+
+  Takes the map returned by `sv-decomposition` which includes
+  ::svd-left, ::singular-values, and ::svd-right.
+
+  Options:
+  - :tolerance - threshold for zero singular values (default 1e-10)
+
+  Note: For best results, call sv-decomposition with {:rank-tolerance 0.0}
+  to get all singular values, then use this function's :tolerance option.
+
+  Examples:
+    (let [svd (sv-decomposition [[1 0] [0 2]] {:rank-tolerance 0.0})]
+      (pseudoinverse-from-svd svd)) ;=> [[1.0 0.0] [0.0 0.5]]
+
+  See also: sv-decomposition, pseudoinverse"
+  ([svd-result] (pseudoinverse-from-svd svd-result {}))
+  ([{::keys [svd-left singular-values svd-right]} {:keys [tolerance] :or {tolerance 1e-10}}]
+   (let [nr (mx/rows svd-left)
+         nc (mx/columns svd-right)
+         sigma-plus-diag (mapv #(if (> % tolerance) (/ 1.0 %) 0.0) singular-values)
+         sigma-plus (mx/compute-matrix nc nr
+                      (fn [i j]
+                        (if (= i j)
+                          (get sigma-plus-diag i 0.0)
+                          0.0)))
+         V (mx/transpose svd-right)
+         Ut (mx/transpose svd-left)]
+     (mx/mx* V sigma-plus Ut))))
+
+(s/fdef pseudoinverse-from-svd
+  :args (s/cat :svd-result (s/keys :req [::svd-left ::singular-values ::svd-right])
+          :opts (s/? (s/keys :opt-un [::tolerance])))
+  :ret ::mx/matrix)
+
 (defn pseudoinverse
   "Computes the Moore-Penrose pseudoinverse using SVD.
 
@@ -1203,23 +1576,12 @@
   Examples:
     (pseudoinverse [[1 0] [0 2]]) ;=> [[1.0 0.0] [0.0 0.5]]
 
-  See also: inverse, sv-decomposition, solve"
+  See also: inverse, sv-decomposition, solve, pseudoinverse-from-svd"
   ([m] (pseudoinverse m {}))
-  ([m {:keys [tolerance] :or {tolerance 1e-10}}]
+  ([m opts]
    (when-not (mx/empty-matrix? m)
      (when-let [svd-result (sv-decomposition m {:rank-tolerance 0.0})]
-       (let [{::keys [svd-left singular-values svd-right]} svd-result
-             nr (mx/rows m)
-             nc (mx/columns m)
-             sigma-plus-diag (mapv #(if (> % tolerance) (/ 1.0 %) 0.0) singular-values)
-             sigma-plus (mx/compute-matrix nc nr
-                          (fn [i j]
-                            (if (= i j)
-                              (get sigma-plus-diag i 0.0)
-                              0.0)))
-             V (mx/transpose svd-right)
-             Ut (mx/transpose svd-left)]
-         (mx/mx* V sigma-plus Ut))))))
+       (pseudoinverse-from-svd svd-result opts)))))
 
 (s/fdef pseudoinverse
   :args (s/cat :m ::mx/matrix

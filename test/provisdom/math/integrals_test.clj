@@ -17,7 +17,7 @@
 ;;;INTEGRATION TESTS
 (deftest change-of-variable-test
   (t/with-instrument `integrals/change-of-variable
-    (t/is (t/spec-check integrals/change-of-variable)))
+    (t/is-spec-check integrals/change-of-variable))
   (t/with-instrument :all
     (let [cov (integrals/change-of-variable [m/inf- m/inf+])]
       (t/is= 1.0 ((::integrals/multiplicative-fn cov) 0.0))
@@ -38,7 +38,7 @@
 
 (deftest integration-test
   (t/with-instrument `integrals/integration
-    (t/is (t/spec-check integrals/integration)))
+    (t/is-spec-check integrals/integration))
   (t/with-instrument `integrals/integration
     ;;ordinary
     (t/is= 69.33333333333331 (integrals/integration m/sq [2.0 6.0]))
@@ -81,7 +81,7 @@
 
 (deftest rectangular-integration-test
   (t/with-instrument `integrals/rectangular-integration
-    (t/is (t/spec-check integrals/rectangular-integration)))
+    (t/is-spec-check integrals/rectangular-integration))
   (t/with-instrument `integrals/rectangular-integration
     (t/is= 1.0
       (integrals/rectangular-integration
@@ -167,7 +167,7 @@
 
 (deftest non-rectangular-2D-integration-test
   (t/with-instrument `integrals/non-rectangular-2D-integration
-    (t/is (t/spec-check integrals/non-rectangular-2D-integration)))
+    (t/is-spec-check integrals/non-rectangular-2D-integration))
   (t/with-instrument `integrals/non-rectangular-2D-integration
     (t/is= 1.0
       (integrals/non-rectangular-2D-integration
@@ -225,7 +225,7 @@
 
 (deftest integration-with-error-test
   (t/with-instrument `integrals/integration-with-error
-    (t/is (t/spec-check integrals/integration-with-error)))
+    (t/is-spec-check integrals/integration-with-error))
   (t/with-instrument `integrals/integration-with-error
     ;; Basic test - integral of x^2 from 0 to 1 = 1/3
     (let [result (integrals/integration-with-error m/sq [0.0 1.0])]
@@ -267,7 +267,7 @@
 
 (deftest tanh-sinh-integration-test
   (t/with-instrument `integrals/tanh-sinh-integration
-    (t/is (t/spec-check integrals/tanh-sinh-integration)))
+    (t/is-spec-check integrals/tanh-sinh-integration))
   (t/with-instrument `integrals/tanh-sinh-integration
     ;; Integral with sqrt singularity at 0: ∫₀¹ 1/√x dx = 2
     (t/is (m/roughly? 2.0
@@ -295,7 +295,7 @@
 
 (deftest clenshaw-curtis-integration-test
   (t/with-instrument `integrals/clenshaw-curtis-integration
-    (t/is (t/spec-check integrals/clenshaw-curtis-integration)))
+    (t/is-spec-check integrals/clenshaw-curtis-integration))
   (t/with-instrument `integrals/clenshaw-curtis-integration
     ;; Basic polynomial
     (t/is (m/roughly? 0.333333

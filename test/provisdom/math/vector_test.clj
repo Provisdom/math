@@ -1,20 +1,19 @@
 (ns provisdom.math.vector-test
   (:require
-
     [clojure.test :refer :all]
-    [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
-    [provisdom.math.vector :as vector]))
+    [provisdom.math.vector :as vector]
+    [provisdom.test.core :as t]))
 
-;;1 SECONDS
+;;16 SECONDS
 
 (set! *warn-on-reflection* true)
 
 ;;;TYPES
 (deftest vector?-test
   (t/with-instrument `vector/vector?
-    (t/is (t/spec-check vector/vector?)))
+    (t/is-spec-check vector/vector?))
   (t/with-instrument :all
     (t/is-not (vector/vector? 1))
     (t/is-not (vector/vector? '(1)))
@@ -24,7 +23,7 @@
 
 (deftest vector-prob?-test
   (t/with-instrument `vector/vector-prob?
-    (t/is (t/spec-check vector/vector-prob?)))
+    (t/is-spec-check vector/vector-prob?))
   (t/with-instrument :all
     (t/is-not (vector/vector-prob? 1))
     (t/is (vector/vector-prob? []))
@@ -33,7 +32,7 @@
 
 (deftest vector-open-prob?-test
   (t/with-instrument `vector/vector-open-prob?
-    (t/is (t/spec-check vector/vector-open-prob?)))
+    (t/is-spec-check vector/vector-open-prob?))
   (t/with-instrument :all
     (t/is-not (vector/vector-open-prob? 1))
     (t/is (vector/vector-open-prob? []))
@@ -42,7 +41,7 @@
 
 (deftest vector-roughly-prob?-test
   (t/with-instrument `vector/vector-roughly-prob?
-    (t/is (t/spec-check vector/vector-roughly-prob?)))
+    (t/is-spec-check vector/vector-roughly-prob?))
   (t/with-instrument :all
     (t/is-not (vector/vector-roughly-prob? 1 0.01))
     (t/is (vector/vector-roughly-prob? [] 0.01))
@@ -52,7 +51,7 @@
 
 (deftest probs?-test
   (t/with-instrument `vector/probs?
-    (t/is (t/spec-check vector/probs?)))
+    (t/is-spec-check vector/probs?))
   (t/with-instrument :all
     (t/is-not (vector/probs? 1 0.01))
     (t/is-not (vector/probs? [] 0.01))
@@ -62,7 +61,7 @@
 
 (deftest open-probs?-test
   (t/with-instrument `vector/open-probs?
-    (t/is (t/spec-check vector/open-probs?)))
+    (t/is-spec-check vector/open-probs?))
   (t/with-instrument :all
     (t/is-not (vector/open-probs? 1 0.01))
     (t/is-not (vector/open-probs? [] 0.01))
@@ -73,7 +72,7 @@
 
 (deftest roughly-probs?-test
   (t/with-instrument `vector/roughly-probs?
-    (t/is (t/spec-check vector/roughly-probs?)))
+    (t/is-spec-check vector/roughly-probs?))
   (t/with-instrument :all
     (t/is-not (vector/roughly-probs? 1 0.01 0.02))
     (t/is-not (vector/roughly-probs? [] 0.01 0.02))
@@ -85,7 +84,7 @@
 ;;;CONSTRUCTORS
 (deftest to-vector-test
   (t/with-instrument `vector/to-vector
-    (t/is (t/spec-check vector/to-vector)))
+    (t/is-spec-check vector/to-vector))
   (t/with-instrument :all
     (t/is= [1] (vector/to-vector 1))
     (t/is= [1] (vector/to-vector '(1)))
@@ -96,7 +95,7 @@
 
 (deftest compute-vector-test
   (t/with-instrument `vector/compute-vector
-    (t/is (t/spec-check vector/compute-vector)))
+    (t/is-spec-check vector/compute-vector))
   (t/with-instrument :all
     (t/is= [0] (vector/compute-vector 1 identity))
     (t/is= [0 1] (vector/compute-vector 2 identity))
@@ -105,7 +104,7 @@
 
 (deftest compute-coll-test
   (t/with-instrument `vector/compute-coll
-    (t/is (t/spec-check vector/compute-coll)))
+    (t/is-spec-check vector/compute-coll))
   (t/with-instrument :all
     (t/is= '(0) (vector/compute-coll 1 identity))
     (t/is= '(0 1) (vector/compute-coll 2 identity))
@@ -114,7 +113,7 @@
 
 (deftest rnd-vector!-test
   (t/with-instrument `vector/rnd-vector!
-    (t/is (t/spec-check vector/rnd-vector!)))
+    (t/is-spec-check vector/rnd-vector!))
   (t/with-instrument :all
     (random/bind-seed 0
       (t/is= [] (vector/rnd-vector! 0)))
@@ -125,7 +124,7 @@
 
 (deftest sparse->vector-test
   (t/with-instrument `vector/sparse->vector
-    (t/is (t/spec-check vector/sparse->vector)))
+    (t/is-spec-check vector/sparse->vector))
   (t/with-instrument :all
     (t/is= [3.0 0.0 4.0 0.0] (vector/sparse->vector '([2 4.0] [0 3.0]) (vec (repeat 4 0.0))))
     (t/is= [0.0 0.0] (vector/sparse->vector [] (vec (repeat 2 0.0))))
@@ -134,7 +133,7 @@
 ;;;INFO
 (deftest indexes-of-test
   (t/with-instrument `vector/indexes-of
-    (t/is (t/spec-check vector/indexes-of)))
+    (t/is-spec-check vector/indexes-of))
   (t/with-instrument :all
     (t/is= [] (vector/indexes-of 3.0 [1.0]))
     (t/is= [2] (vector/indexes-of 3.0 [1.0 2.0 3.0]))
@@ -142,7 +141,7 @@
 
 (deftest filter-kv-test
   (t/with-instrument `vector/filter-kv
-    (t/is (t/spec-check vector/filter-kv)))
+    (t/is-spec-check vector/filter-kv))
   (t/with-instrument :all
     (t/is= [] (vector/filter-kv (fn [k v] (> v k)) []))
     (t/is= [] (vector/filter-kv (fn [k v] (> v k)) [0]))
@@ -150,16 +149,17 @@
 
 (deftest some-kv-test
   (t/with-instrument `vector/some-kv
-    (t/is (t/spec-check vector/some-kv)))
+    (t/is-spec-check vector/some-kv))
   (t/with-instrument :all
     (t/is= nil (vector/some-kv (fn [k v] (> v k)) []))
     (t/is= nil (vector/some-kv (fn [k v] (> v k)) [0]))
-    (t/is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6]))))
+    (t/is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6]))
+    (t/is= 0 (vector/some-kv (fn [k v] (>= v 0)) [0 1 2]))))
 
 ;;;MANIPULATION
 (deftest insertv-test
   (t/with-instrument `vector/insertv
-    (t/is (t/spec-check vector/insertv)))
+    (t/is-spec-check vector/insertv))
   (t/with-instrument :all
     (t/is= [9 0 2 4 6] (vector/insertv [0 2 4 6] 0 9))
     (t/is= [0 9 2 4 6] (vector/insertv [0 2 4 6] 1 9))
@@ -171,7 +171,7 @@
 
 (deftest removev-test
   (t/with-instrument `vector/removev
-    (t/is (t/spec-check vector/removev)))
+    (t/is-spec-check vector/removev))
   (t/with-instrument :all
     (t/is= [] (vector/removev [] 0))
     (t/is= [] (vector/removev [] 1))
@@ -180,7 +180,7 @@
 
 (deftest concat-by-index-test
   (t/with-instrument `vector/concat-by-index
-    (t/is (t/spec-check vector/concat-by-index)))
+    (t/is-spec-check vector/concat-by-index))
   (t/with-instrument :all
     (t/is= '() (vector/concat-by-index [] [] 0))
     (t/is= '(4.0 5.0 6.0 nil 1.0 2.0 3.0)
@@ -194,7 +194,7 @@
 
 (deftest replace-nan-test
   (t/with-instrument `vector/replace-nan
-    (t/is (t/spec-check vector/replace-nan)))
+    (t/is-spec-check vector/replace-nan))
   (t/with-instrument :all
     (t/is= [] (vector/replace-nan 0 []))
     (t/is= [0 1 2 0] (vector/replace-nan 0 [m/nan 1 2 m/nan]))
@@ -202,7 +202,7 @@
 
 (deftest round-roughly-vector-prob-test
   (t/with-instrument `vector/round-roughly-vector-prob
-    (t/is (t/spec-check vector/round-roughly-vector-prob)))
+    (t/is-spec-check vector/round-roughly-vector-prob))
   (t/with-instrument :all
     (t/is= [] (vector/round-roughly-vector-prob [] 0.01))
     (t/is= [0.0 1.0] (vector/round-roughly-vector-prob [0.0 1.0] 0.01))
@@ -212,7 +212,7 @@
 
 (deftest rnd-shuffle-vector!-test
   (t/with-instrument `vector/rnd-shuffle-vector!
-    (t/is (t/spec-check vector/rnd-shuffle-vector!)))
+    (t/is-spec-check vector/rnd-shuffle-vector!))
   (t/with-instrument :all
     (random/bind-seed 0
       (t/is= [] (vector/rnd-shuffle-vector! [])))
@@ -225,7 +225,7 @@
 ;;;MATH
 (deftest kahan-sum-test
   (t/with-instrument `vector/kahan-sum
-    (t/is (t/spec-check vector/kahan-sum)))
+    (t/is-spec-check vector/kahan-sum))
   (t/with-instrument :all
     (t/is= m/inf+ (vector/kahan-sum [m/inf+ m/inf+]))
     (t/is (m/nan? (vector/kahan-sum [m/inf+ m/inf-])))
@@ -236,7 +236,7 @@
 
 (deftest dot-product-test
   (t/with-instrument `vector/dot-product
-    (t/is (t/spec-check vector/dot-product)))
+    (t/is-spec-check vector/dot-product))
   (t/with-instrument :all
     (t/is= 0 (vector/dot-product [] []))
     (t/is= 9.0 (vector/dot-product [3] [3]))
@@ -244,7 +244,7 @@
 
 (deftest cross-product-test
   (t/with-instrument `vector/cross-product
-    (t/is (t/spec-check vector/cross-product)))
+    (t/is-spec-check vector/cross-product))
   (t/with-instrument :all
     (t/is= 0.0 (vector/cross-product [3 4] [3 4]))
     (t/is= -2.0 (vector/cross-product [3 4] [5 6]))
@@ -254,7 +254,7 @@
 
 (deftest projection-test
   (t/with-instrument `vector/projection
-    (t/is (t/spec-check vector/projection)))
+    (t/is-spec-check vector/projection))
   (t/with-instrument :all
     (t/is= [] (vector/projection [] []))
     (t/is= [3.0] (vector/projection [3] [3]))
@@ -268,7 +268,7 @@
 
 (deftest orthogonal?-test
   (t/with-instrument `vector/orthogonal?
-    (t/is (t/spec-check vector/orthogonal?)))
+    (t/is-spec-check vector/orthogonal?))
   (t/with-instrument :all
     (t/is (vector/orthogonal? [1 0] [0 1] 1e-8))
     (t/is (vector/orthogonal? [1 1] [1 -1] 1e-8))
@@ -279,7 +279,7 @@
 
 (deftest angle-between-test
   (t/with-instrument `vector/angle-between
-    (t/is (t/spec-check vector/angle-between)))
+    (t/is-spec-check vector/angle-between))
   (t/with-instrument :all
     (t/is= 0.0 (vector/angle-between [1 0] [1 0]))
     (t/is= m/PI (vector/angle-between [1 0] [-1 0]))
@@ -289,7 +289,7 @@
 
 (deftest distance-test
   (t/with-instrument `vector/distance
-    (t/is (t/spec-check vector/distance)))
+    (t/is-spec-check vector/distance))
   (t/with-instrument :all
     (t/is= 0.0 (vector/distance [1 2 3] [1 2 3]))
     (t/is= 5.0 (vector/distance [0 0] [3 4]))

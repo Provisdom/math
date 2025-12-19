@@ -476,7 +476,7 @@
          s v]
     (when (sequential? s)
       (let [h (first s)]
-        (when h
+        (when (some? h)
           (if (index+number->bool i h)
             h
             (recur (inc i) (next s))))))))
@@ -592,7 +592,7 @@
   
   Examples:
     (round-roughly-vector-prob [1.01 -0.01 0.5] 0.02) ;=> [1.0 0.0 0.5]
-    (round-roughly-vector-prob [0.99 0.01] 0.02) ;=> [1.0 0.0]"
+    (round-roughly-vector-prob [0.99 0.01] 0.02) ;=> [0.99 0.01]"
   [v accu]
   (mapv (fn [p]
           (if (m/roughly-prob? p accu)

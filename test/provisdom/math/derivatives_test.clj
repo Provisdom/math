@@ -18,7 +18,7 @@
 
 (deftest derivative-fn-test
   (t/with-instrument `deriv/derivative-fn
-    (t/is (t/spec-check deriv/derivative-fn)))
+    (t/is-spec-check deriv/derivative-fn))
   (t/with-instrument :all
     (t/is= 28922.598150033144
       ((deriv/derivative-fn der-f {::deriv/derivative 0}) 4.0))
@@ -120,13 +120,13 @@
 
 (deftest gradient-fn-test
   (t/with-instrument `deriv/gradient-fn
-    (t/is (t/spec-check deriv/gradient-fn)))
+    (t/is-spec-check deriv/gradient-fn))
   (t/with-instrument :all
     (t/is= [16.000000002236447 51.0000000062405] ((deriv/gradient-fn gf) [3.0 4.0])))) ;[16,51]
 
 (deftest jacobian-fn-test
   (t/with-instrument `deriv/jacobian-fn
-    (t/is (t/spec-check deriv/jacobian-fn)))
+    (t/is-spec-check deriv/jacobian-fn))
   (t/with-instrument :all
     (t/is= [[16.00000000745058 51.00000000745058] [96.00000001490116 72.0]] ;[[16,51][96,72]]
       ((deriv/jacobian-fn
@@ -141,7 +141,7 @@
 
 (deftest hessian-fn-test
   (t/with-instrument `deriv/hessian-fn
-    (t/is (t/spec-check deriv/hessian-fn)))
+    (t/is-spec-check deriv/hessian-fn))
   (t/with-instrument :all
     ;;type 'joint-central' is the default
     (t/is= [[4.00000004674439 1.00000003833145]
@@ -166,31 +166,31 @@
 
 (deftest partial-derivative-x-of-fxy-test
   (t/with-instrument `deriv/partial-derivative-x-of-fxy
-    (t/is (t/spec-check deriv/partial-derivative-x-of-fxy)))
+    (t/is-spec-check deriv/partial-derivative-x-of-fxy))
   (t/with-instrument :all
     (t/is= 8.999999998593466 ((deriv/partial-derivative-x-of-fxy fxy) 3.0 3.0)))) ;9
 
 (deftest partial-derivative-y-of-fxy-test
   (t/with-instrument `deriv/partial-derivative-y-of-fxy
-    (t/is (t/spec-check deriv/partial-derivative-y-of-fxy)))
+    (t/is-spec-check deriv/partial-derivative-y-of-fxy))
   (t/with-instrument :all
     (t/is= 15.000000001208491 ((deriv/partial-derivative-y-of-fxy fxy) 3.0 3.0)))) ;15
 
 (deftest second-partial-derivative-xx-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-xx-of-fxy
-    (t/is (t/spec-check deriv/second-partial-derivative-xx-of-fxy)))
+    (t/is-spec-check deriv/second-partial-derivative-xx-of-fxy))
   (t/with-instrument :all
     (t/is= 2.000000023372195 ((deriv/second-partial-derivative-xx-of-fxy fxy) 3.0 3.0)))) ;2
 
 (deftest second-partial-derivative-yy-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-yy-of-fxy
-    (t/is (t/spec-check deriv/second-partial-derivative-yy-of-fxy)))
+    (t/is-spec-check deriv/second-partial-derivative-yy-of-fxy))
   (t/with-instrument :all
     (t/is= 3.999999975690116 ((deriv/second-partial-derivative-yy-of-fxy fxy) 3.0 3.0)))) ;4
 
 (deftest second-partial-derivative-xy-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-xy-of-fxy
-    (t/is (t/spec-check deriv/second-partial-derivative-xy-of-fxy)))
+    (t/is-spec-check deriv/second-partial-derivative-xy-of-fxy))
   (t/with-instrument :all
     (t/is= 1.0000000294496658 ((deriv/second-partial-derivative-xy-of-fxy fxy) 3.0 3.0)))) ;1
 
