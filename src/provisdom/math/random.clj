@@ -1,12 +1,12 @@
 (ns provisdom.math.random
-  "Random number generation and probability distributions.
+  "Random number generation with splittable generators.
 
-  Provides high-quality random number generators and implementations of
-  common probability distributions including:
-  - Uniform, normal (Gaussian), exponential, gamma distributions
-  - Beta, chi-squared, Student's t, F distributions
-  - Discrete distributions (binomial, Poisson, etc.)
-  - Multivariate distributions
+  Provides high-quality random number generators with support for:
+  - Uniform random doubles and longs
+  - Normal (Gaussian) distribution via inverse CDF
+  - UUID generation (RFC 4122 version 4)
+  - Collection utilities (shuffle, sample, weighted choice)
+  - Parallel random sampling with split RNGs
 
   Uses splittable random number generators for reproducible parallel computation.
   All functions support both seeded and unseeded generation.
@@ -65,12 +65,12 @@
    :max-quality - L128X1024MixRandom (best quality, 16-dim equidistribution)
    :legacy - SplittableRandom (Java 8 algorithm)
    :secure - SecureRandom (cryptographic, NOT splittable)"
-  {:default "L64X128MixRandom"
-   :fast "L32X64MixRandom"
-   :quality "L128X256MixRandom"
+  {:default     "L64X128MixRandom"
+   :fast        "L32X64MixRandom"
+   :quality     "L128X256MixRandom"
    :max-quality "L128X1024MixRandom"
-   :legacy "SplittableRandom"
-   :secure :secure})
+   :legacy      "SplittableRandom"
+   :secure      :secure})
 
 (defn- ^RandomGenerator$SplittableGenerator create-gen
   "Creates a mutable Java generator from algorithm name and seed."
@@ -100,13 +100,13 @@
                  ret (transient [])]
             (if (zero? i)
               (-> ret
-                  (conj! (Java17SplittableRandom. algorithm (.nextLong gen)))
-                  persistent!)
+                (conj! (Java17SplittableRandom. algorithm (.nextLong gen)))
+                persistent!)
               (let [child (.split gen)]
                 (recur (dec i)
-                       (conj! ret (Java17SplittableRandom.
-                                    algorithm
-                                    (.nextLong child))))))))))))
+                  (conj! ret (Java17SplittableRandom.
+                               algorithm
+                               (.nextLong child))))))))))))
 
 (set! *unchecked-math* false)
 
@@ -157,6 +157,10 @@
     (partial satisfies? IRandom)
     #(gen/return (next-rng))))
 
+(s/fdef next-rng
+  :args (s/cat)
+  :ret ::rng)
+
 (s/def ::seed ::m/long)
 (s/def ::rnd ::m/prob)
 (s/def ::rnd-lazy (s/every ::rnd))
@@ -165,6 +169,11 @@
   (s/with-gen
     (s/coll-of ::rnd :kind clojure.core/vector? :into [])
     #(gen/vector (s/gen ::rnd) 0 mdl)))
+
+(s/def ::n
+  (s/with-gen
+    ::m/int-non-
+    #(gen/choose 0 mdl)))
 
 (def ^:dynamic *rng-gen* nil)
 
@@ -182,9 +191,9 @@
    (m/floor' (+ lower (* (- (inc (double upper)) lower) rnd)))))
 
 (s/fdef random-long
-        :args (s/cat :rnd ::rnd
-                     :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :rnd ::rnd
+          :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn random-bool
   "Converts random double `rnd` to a boolean with 50% probability.
@@ -197,8 +206,8 @@
   (<= rnd 0.5))
 
 (s/fdef random-bool
-        :args (s/cat :rnd ::rnd)
-        :ret boolean?)
+  :args (s/cat :rnd ::rnd)
+  :ret boolean?)
 
 (defn random-normal
   "Converts uniform random value `rnd` to a standard normal distribution.
@@ -214,8 +223,8 @@
   (special-fns/inv-cdf-standard-normal rnd))
 
 (s/fdef random-normal
-        :args (s/cat :rnd ::rnd)
-        :ret ::m/num)
+  :args (s/cat :rnd ::rnd)
+  :ret ::m/num)
 
 (defn random-uuid
   "Converts two random doubles to a UUID (version 4).
@@ -230,16 +239,16 @@
   Returns a random java.util.UUID."
   [rnd1 rnd2]
   (let [msb (-> (random-long rnd1)
-                (bit-and (unchecked-long 0xffffffffffff0fff))
-                (bit-or (unchecked-long 0x0000000000004000)))
+              (bit-and (unchecked-long 0xffffffffffff0fff))
+              (bit-or (unchecked-long 0x0000000000004000)))
         lsb (-> (random-long rnd2)
-                (bit-and (unchecked-long 0x3fffffffffffffff))
-                (bit-or (unchecked-long 0x8000000000000000)))]
+              (bit-and (unchecked-long 0x3fffffffffffffff))
+              (bit-or (unchecked-long 0x8000000000000000)))]
     (UUID. msb lsb)))
 
 (s/fdef random-uuid
-        :args (s/cat :rnd1 ::rnd :rnd2 ::rnd)
-        :ret uuid?)
+  :args (s/cat :rnd1 ::rnd :rnd2 ::rnd)
+  :ret uuid?)
 
 ;;;IMMUTABLE RNG
 (defn rng
@@ -257,9 +266,9 @@
    (make-rng seed algorithm)))
 
 (s/fdef rng
-        :args (s/cat :seed ::seed
-                     :algorithm (s/? ::algorithm))
-        :ret ::rng)
+  :args (s/cat :seed ::seed
+          :algorithm (s/? ::algorithm))
+  :ret ::rng)
 
 (defn rnd
   "Generates a random double from `rng` within the specified `interval`.
@@ -278,9 +287,9 @@
        (+ lower (* diff (rand-double rng)))))))
 
 (s/fdef rnd
-        :args (s/cat :rng ::rng
-                     :interval (s/? ::intervals/finite-interval))
-        :ret ::m/finite)
+  :args (s/cat :rng ::rng
+          :interval (s/? ::intervals/finite-interval))
+  :ret ::m/finite)
 
 (defn rnd-long
   "Generates a random long from `rng` within the specified `interval`.
@@ -293,13 +302,13 @@
   ([rng] (rand-long rng))
   ([rng [lower upper]]
    (m/floor' (+ lower
-                (* (- (inc (double upper)) lower)
-                   (rnd rng))))))
+               (* (- (inc (double upper)) lower)
+                 (rnd rng))))))
 
 (s/fdef rnd-long
-        :args (s/cat :rng ::rng
-                     :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :rng ::rng
+          :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn rnd-bool
   "Generates a random boolean from `rng`.
@@ -312,8 +321,8 @@
   (random-bool (rnd rng)))
 
 (s/fdef rnd-bool
-        :args (s/cat :rng ::rng)
-        :ret boolean?)
+  :args (s/cat :rng ::rng)
+  :ret boolean?)
 
 (defn rnd-normal
   "Generates a normally distributed value from `rng`.
@@ -326,8 +335,8 @@
   (random-normal (rnd rng)))
 
 (s/fdef rnd-normal
-        :args (s/cat :rng ::rng)
-        :ret ::m/num)
+  :args (s/cat :rng ::rng)
+  :ret ::m/num)
 
 (defn rnd-uuid
   "Generates a random UUID (version 4) from `rng`.
@@ -344,8 +353,8 @@
     (random-uuid (rnd rng1) (rnd rng2))))
 
 (s/fdef rnd-uuid
-        :args (s/cat :rng ::rng)
-        :ret uuid?)
+  :args (s/cat :rng ::rng)
+  :ret uuid?)
 
 (defn rng-lazy
   "Creates a lazy sequence of independent RNG instances.
@@ -361,8 +370,8 @@
   (iterate (comp first split) rng))
 
 (s/fdef rng-lazy
-        :args (s/cat :rng ::rng)
-        :ret (s/every ::rng))
+  :args (s/cat :rng ::rng)
+  :ret (s/every ::rng))
 
 (defn rnd-lazy
   "Creates a lazy sequence of random doubles from independent RNGs.
@@ -375,8 +384,8 @@
   (map rand-double (rng-lazy rng)))
 
 (s/fdef rnd-lazy
-        :args (s/cat :rng ::rng)
-        :ret ::rnd-lazy)
+  :args (s/cat :rng ::rng)
+  :ret ::rnd-lazy)
 
 (defn rnd-long-lazy
   "Creates a lazy sequence of random longs from independent RNGs.
@@ -389,8 +398,8 @@
   (map rand-long (rng-lazy rng)))
 
 (s/fdef rnd-long-lazy
-        :args (s/cat :rng ::rng)
-        :ret (s/every ::m/long))
+  :args (s/cat :rng ::rng)
+  :ret (s/every ::m/long))
 
 ;;;BOUND RNG
 (defn rng!
@@ -402,18 +411,18 @@
   (*rng-gen*))
 
 (s/fdef rng!
-        :args (s/cat)
-        :ret ::rng)
+  :args (s/cat)
+  :ret ::rng)
 
 (defn rng-gen
   "Creates a stateful RNG generator function from an initial RNG.
-  
+
   The returned function maintains an internal sequence of split RNGs
   to ensure each call produces an independent generator.
-  
+
   Parameters:
     rng - Initial random number generator
-  
+
   Returns a function that produces fresh RNG instances on each call."
   [rng]
   (let [gens (atom (rng-lazy rng))]
@@ -422,18 +431,26 @@
         (swap! gens rest)
         rng))))
 
+(s/fdef rng-gen
+  :args (s/cat :rng ::rng)
+  :ret fn?)
+
 (defn set-seed!
   "Sets the global RNG generator to use the specified seed.
-  
+
   This mutates the global *rng-gen* var, affecting all subsequent
   calls to bound RNG functions (rnd!, rnd-long!, etc.).
-  
+
   Parameters:
     seed - Long value to seed the generator
-  
+
   Side effects: Modifies global *rng-gen* state."
   [seed]
   (alter-var-root (var *rng-gen*) (constantly (rng-gen (rng seed)))))
+
+(s/fdef set-seed!
+  :args (s/cat :seed ::seed)
+  :ret fn?)
 
 (defn rnd!
   "Generates a random double using the bound RNG.
@@ -447,8 +464,8 @@
   ([[lower upper]] (rnd (rng!) [lower upper])))
 
 (s/fdef rnd!
-        :args (s/cat :interval (s/? ::intervals/finite-interval))
-        :ret ::m/finite)
+  :args (s/cat :interval (s/? ::intervals/finite-interval))
+  :ret ::m/finite)
 
 (defn rnd-long!
   "Generates a random long using the bound RNG.
@@ -462,8 +479,8 @@
   ([[lower upper]] (rnd-long (rng!) [lower upper])))
 
 (s/fdef rnd-long!
-        :args (s/cat :interval (s/? ::intervals/long-interval))
-        :ret ::m/long)
+  :args (s/cat :interval (s/? ::intervals/long-interval))
+  :ret ::m/long)
 
 (defn rnd-bool!
   "Generates a random boolean using the bound RNG.
@@ -474,8 +491,8 @@
   (rnd-bool (rng!)))
 
 (s/fdef rnd-bool!
-        :args (s/cat)
-        :ret boolean?)
+  :args (s/cat)
+  :ret boolean?)
 
 (defn rnd-normal!
   "Generates a normally distributed value using the bound RNG.
@@ -486,8 +503,8 @@
   (rnd-normal (rng!)))
 
 (s/fdef rnd-normal!
-        :args (s/cat)
-        :ret ::m/num)
+  :args (s/cat)
+  :ret ::m/num)
 
 (defn rnd-uuid!
   "Generates a random UUID (version 4) using the bound RNG.
@@ -498,8 +515,8 @@
   (rnd-uuid (rng!)))
 
 (s/fdef rnd-uuid!
-        :args (s/cat)
-        :ret uuid?)
+  :args (s/cat)
+  :ret uuid?)
 
 (defn rng-lazy!
   "Creates a lazy sequence of independent RNGs using the bound RNG.
@@ -510,8 +527,8 @@
   (rng-lazy (rng!)))
 
 (s/fdef rng-lazy!
-        :args (s/cat)
-        :ret (s/every ::rng))
+  :args (s/cat)
+  :ret (s/every ::rng))
 
 (defn rnd-lazy!
   "Creates a lazy sequence of random doubles using the bound RNG.
@@ -522,8 +539,8 @@
   (rnd-lazy (rng!)))
 
 (s/fdef rnd-lazy!
-        :args (s/cat)
-        :ret ::rnd-lazy)
+  :args (s/cat)
+  :ret ::rnd-lazy)
 
 (defn rnd-long-lazy!
   "Creates a lazy sequence of random longs using the bound RNG.
@@ -534,8 +551,8 @@
   (rnd-long-lazy (rng!)))
 
 (s/fdef rnd-long-lazy!
-        :args (s/cat)
-        :ret (s/every ::m/long))
+  :args (s/cat)
+  :ret (s/every ::m/long))
 
 ;;;USE CLOCK
 (defn rng$
@@ -549,8 +566,8 @@
   (next-rng))
 
 (s/fdef rng$
-        :args (s/cat)
-        :ret ::rng)
+  :args (s/cat)
+  :ret ::rng)
 
 (defn seed$
   "Generates a random seed from the current system time.
@@ -563,18 +580,22 @@
   (rnd-long (rng$)))
 
 (s/fdef seed$
-        :args (s/cat)
-        :ret ::seed)
+  :args (s/cat)
+  :ret ::seed)
 
 (defn set-seed!$
   "Sets the global RNG generator using the current system time.
-  
+
   Equivalent to calling set-seed! with a time-based seed.
   Provides non-reproducible random behavior.
-  
+
   Side effects: Modifies global *rng-gen* state."
   []
   (set-seed! (System/currentTimeMillis)))
+
+(s/fdef set-seed!$
+  :args (s/cat)
+  :ret fn?)
 
 ;; TODO: Is there a better way to set the default value for *rng-gen*?
 ;; This is needed due to a circular dependency on functions when initially
@@ -613,8 +634,8 @@
     :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
 
 (s/fdef rng-algorithm
-        :args (s/cat :rng ::rng)
-        :ret (s/or :algorithm string? :secure #{:secure}))
+  :args (s/cat :rng ::rng)
+  :ret (s/or :algorithm string? :secure #{:secure}))
 
 (defn rng-seed
   "Returns the original seed for the given RNG.
@@ -630,8 +651,8 @@
     :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
 
 (s/fdef rng-seed
-        :args (s/cat :rng ::rng)
-        :ret (s/nilable ::seed))
+  :args (s/cat :rng ::rng)
+  :ret (s/nilable ::seed))
 
 ;;;BATCH GENERATION
 (defn rnd-doubles
@@ -646,8 +667,8 @@
   (mapv rand-double (take n (rng-lazy rng))))
 
 (s/fdef rnd-doubles
-        :args (s/cat :rng ::rng :n ::m/int-non-)
-        :ret ::rnd-vector)
+  :args (s/cat :rng ::rng :n ::n)
+  :ret ::rnd-vector)
 
 (defn rnd-doubles!
   "Generates a vector of `n` random doubles using the bound RNG.
@@ -660,8 +681,8 @@
   (rnd-doubles (rng!) n))
 
 (s/fdef rnd-doubles!
-        :args (s/cat :n ::m/int-non-)
-        :ret ::rnd-vector)
+  :args (s/cat :n ::n)
+  :ret ::rnd-vector)
 
 (defn rnd-longs
   "Generates a vector of `n` random longs from `rng`.
@@ -675,8 +696,8 @@
   (mapv rand-long (take n (rng-lazy rng))))
 
 (s/fdef rnd-longs
-        :args (s/cat :rng ::rng :n ::m/int-non-)
-        :ret (s/coll-of ::m/long :kind vector?))
+  :args (s/cat :rng ::rng :n ::n)
+  :ret (s/coll-of ::m/long :kind vector?))
 
 (defn rnd-longs!
   "Generates a vector of `n` random longs using the bound RNG.
@@ -689,8 +710,8 @@
   (rnd-longs (rng!) n))
 
 (s/fdef rnd-longs!
-        :args (s/cat :n ::m/int-non-)
-        :ret (s/coll-of ::m/long :kind vector?))
+  :args (s/cat :n ::n)
+  :ret (s/coll-of ::m/long :kind vector?))
 
 (defn rnd-normals
   "Generates a vector of `n` standard normal values from `rng`.
@@ -704,8 +725,8 @@
   (mapv (comp random-normal rand-double) (take n (rng-lazy rng))))
 
 (s/fdef rnd-normals
-        :args (s/cat :rng ::rng :n ::m/int-non-)
-        :ret (s/coll-of ::m/num :kind vector?))
+  :args (s/cat :rng ::rng :n ::n)
+  :ret (s/coll-of ::m/num :kind vector?))
 
 (defn rnd-normals!
   "Generates a vector of `n` standard normal values using the bound RNG.
@@ -718,8 +739,8 @@
   (rnd-normals (rng!) n))
 
 (s/fdef rnd-normals!
-        :args (s/cat :n ::m/int-non-)
-        :ret (s/coll-of ::m/num :kind vector?))
+  :args (s/cat :n ::n)
+  :ret (s/coll-of ::m/num :kind vector?))
 
 ;;;CONVENIENCE FUNCTIONS
 (defn rnd-int
@@ -734,8 +755,8 @@
   (int (m/floor (* upper (rand-double rng)))))
 
 (s/fdef rnd-int
-        :args (s/cat :rng ::rng :upper ::m/int+)
-        :ret ::m/int-non-)
+  :args (s/cat :rng ::rng :upper ::m/int+)
+  :ret ::m/int-non-)
 
 (defn rnd-int!
   "Generates a random integer using the bound RNG in [0, upper).
@@ -748,8 +769,8 @@
   (rnd-int (rng!) upper))
 
 (s/fdef rnd-int!
-        :args (s/cat :upper ::m/int+)
-        :ret ::m/int-non-)
+  :args (s/cat :upper ::m/int+)
+  :ret ::m/int-non-)
 
 (defn rnd-gaussian
   "Generates a Gaussian (normal) distributed value from `rng`.
@@ -764,8 +785,8 @@
   (+ mean (* std (rnd-normal rng))))
 
 (s/fdef rnd-gaussian
-        :args (s/cat :rng ::rng :mean ::m/num :std ::m/non-)
-        :ret ::m/num)
+  :args (s/cat :rng ::rng :mean ::m/num :std ::m/non-)
+  :ret ::m/num)
 
 (defn rnd-gaussian!
   "Generates a Gaussian (normal) distributed value using the bound RNG.
@@ -779,8 +800,8 @@
   (rnd-gaussian (rng!) mean std))
 
 (s/fdef rnd-gaussian!
-        :args (s/cat :mean ::m/num :std ::m/non-)
-        :ret ::m/num)
+  :args (s/cat :mean ::m/num :std ::m/non-)
+  :ret ::m/num)
 
 ;;;COLLECTION UTILITIES
 (defn rnd-choice
@@ -798,8 +819,8 @@
       (nth v (rnd-int rng n)))))
 
 (s/fdef rnd-choice
-        :args (s/cat :rng ::rng :coll (s/coll-of any?))
-        :ret any?)
+  :args (s/cat :rng ::rng :coll (s/coll-of any?))
+  :ret any?)
 
 (defn rnd-choice!
   "Picks a random element from `coll` using the bound RNG.
@@ -812,8 +833,8 @@
   (rnd-choice (rng!) coll))
 
 (s/fdef rnd-choice!
-        :args (s/cat :coll (s/coll-of any?))
-        :ret any?)
+  :args (s/cat :coll (s/coll-of any?))
+  :ret any?)
 
 (defn rnd-shuffle
   "Returns a randomly shuffled vector of `coll` using Fisher-Yates algorithm.
@@ -839,8 +860,8 @@
         (persistent! v)))))
 
 (s/fdef rnd-shuffle
-        :args (s/cat :rng ::rng :coll (s/coll-of any?))
-        :ret vector?)
+  :args (s/cat :rng ::rng :coll (s/coll-of any?))
+  :ret vector?)
 
 (defn rnd-shuffle!
   "Returns a randomly shuffled vector of `coll` using the bound RNG.
@@ -853,8 +874,8 @@
   (rnd-shuffle (rng!) coll))
 
 (s/fdef rnd-shuffle!
-        :args (s/cat :coll (s/coll-of any?))
-        :ret vector?)
+  :args (s/cat :coll (s/coll-of any?))
+  :ret vector?)
 
 (defn rnd-sample
   "Samples `n` elements from `coll` without replacement using `rng`.
@@ -871,8 +892,8 @@
     (subvec (rnd-shuffle rng v) 0 k)))
 
 (s/fdef rnd-sample
-        :args (s/cat :rng ::rng :n ::m/int-non- :coll (s/coll-of any?))
-        :ret vector?)
+  :args (s/cat :rng ::rng :n ::n :coll (s/coll-of any?))
+  :ret vector?)
 
 (defn rnd-sample!
   "Samples `n` elements from `coll` without replacement using the bound RNG.
@@ -886,8 +907,8 @@
   (rnd-sample (rng!) n coll))
 
 (s/fdef rnd-sample!
-        :args (s/cat :n ::m/int-non- :coll (s/coll-of any?))
-        :ret vector?)
+  :args (s/cat :n ::n :coll (s/coll-of any?))
+  :ret vector?)
 
 (defn rnd-weighted-choice
   "Picks a random element from `coll` with probability proportional to `weights`.
@@ -901,22 +922,32 @@
   [rng weights coll]
   (let [v (vec coll)
         ws (vec weights)
-        total (reduce + ws)
+        total (reduce + 0.0 ws)
         r (* total (rand-double rng))]
     (loop [i 0
-           cumsum 0.0]
+           cum-sum 0.0]
       (if (< i (count v))
-        (let [cumsum' (+ cumsum (double (nth ws i)))]
-          (if (< r cumsum')
+        (let [cum-sum' (+ cum-sum (double (nth ws i)))]
+          (if (< r cum-sum')
             (nth v i)
-            (recur (inc i) cumsum')))
+            (recur (inc i) cum-sum')))
         (peek v)))))
 
+(s/def ::weighted-choice-args
+  (s/with-gen
+    (s/and (s/cat :rng ::rng
+             :weights (s/coll-of ::m/non- :min-count 1)
+             :coll (s/coll-of any? :min-count 1))
+      #(= (count (:weights %)) (count (:coll %))))
+    #(gen/bind (gen/choose 1 mdl)
+       (fn [n]
+         (gen/tuple (s/gen ::rng)
+           (gen/vector (s/gen ::m/non-) n)
+           (gen/vector (s/gen any?) n))))))
+
 (s/fdef rnd-weighted-choice
-        :args (s/cat :rng ::rng
-                     :weights (s/coll-of ::m/non-)
-                     :coll (s/coll-of any?))
-        :ret any?)
+  :args ::weighted-choice-args
+  :ret any?)
 
 (defn rnd-weighted-choice!
   "Picks a random element from `coll` with probability proportional to `weights`.
@@ -929,10 +960,19 @@
   [weights coll]
   (rnd-weighted-choice (rng!) weights coll))
 
+(s/def ::weighted-choice!-args
+  (s/with-gen
+    (s/and (s/cat :weights (s/coll-of ::m/non- :min-count 1)
+             :coll (s/coll-of any? :min-count 1))
+      #(= (count (:weights %)) (count (:coll %))))
+    #(gen/bind (gen/choose 1 mdl)
+       (fn [n]
+         (gen/tuple (gen/vector (s/gen ::m/non-) n)
+           (gen/vector (s/gen any?) n))))))
+
 (s/fdef rnd-weighted-choice!
-        :args (s/cat :weights (s/coll-of ::m/num-non-)
-                     :coll (s/coll-of any?))
-        :ret any?)
+  :args ::weighted-choice!-args
+  :ret any?)
 
 ;;;PARALLEL UTILITIES
 (defn parallel-sample
@@ -949,8 +989,8 @@
     (into [] (pmap sample-fn rngs))))
 
 (s/fdef parallel-sample
-        :args (s/cat :rng ::rng :sample-fn fn? :n ::m/int-non-)
-        :ret vector?)
+  :args (s/cat :rng ::rng :sample-fn fn? :n ::n)
+  :ret vector?)
 
 (defn parallel-fold
   "Parallel fold over `n` random samples using split RNGs.
@@ -967,3 +1007,11 @@
   (let [rngs (split-n rng n)
         samples (pmap sample-fn rngs)]
     (reduce reduce-fn (combine-fn) samples)))
+
+(s/fdef parallel-fold
+  :args (s/cat :rng ::rng
+          :n ::n
+          :combine-fn fn?
+          :reduce-fn fn?
+          :sample-fn fn?)
+  :ret any?)

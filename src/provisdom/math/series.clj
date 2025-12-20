@@ -25,9 +25,13 @@
 (s/def ::kahan? boolean?)
 (s/def ::neumaier? boolean?)
 
-(s/def ::rel-accu ::m/finite+)
+(s/def ::denominator ::coefficients)
 (s/def ::max-iter ::m/int+)
+(s/def ::num-terms ::m/int+)
+(s/def ::numerator ::coefficients)
 (s/def ::order ::m/int+)
+(s/def ::rel-accu ::m/finite+)
+(s/def ::threshold ::m/int+)
 
 (s/def ::number->term-series
   (s/fspec :args (s/cat :number ::m/number)
@@ -199,7 +203,8 @@
   :ret ::term-series)
 
 (defn multiplicative-generalized-continued-fraction
-  "Computes generalized continued fraction for `a-term-series` and `b-term-series` using multiplicative algorithm.
+  "Computes generalized continued fraction for `a-term-series` and `b-term-series` using
+  multiplicative algorithm.
   
   More numerically stable than standard algorithm, especially useful for
   special functions. Based on Didonato and Morris (1992) Algorithm 708.
@@ -265,7 +270,7 @@
                           s2
                           (- s0 (m/div (m/sq d1) denom)))
                     (f (cons s1 (cons s2 rest))))))))]
-    (f partial-sums)))
+    (or (f partial-sums) '())))
 
 (s/fdef aitken-accelerate
   :args (s/cat :partial-sums ::term-series)
@@ -304,7 +309,8 @@
                        (recur (inc k)
                          (assoc tbl [n k] (+ prev-k (/ diff))))))))))]
      (let [sums (vec (take (+ max-iter 3) partial-sums))]
-       (when (seq sums)
+       (if (empty? sums)
+         []
          (loop [n 0
                 tbl {}
                 results []]
@@ -356,7 +362,7 @@
                   (lazy-seq
                     (cons term
                       (transform (rest ts) (binomial-row binomial-coeffs) (inc n))))))))]
-    (transform terms [1 1] 1)))
+    (or (transform terms [1 1] 1) '())))
 
 (s/fdef euler-transform
   :args (s/cat :terms ::term-series)

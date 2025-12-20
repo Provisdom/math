@@ -1,6 +1,6 @@
 (ns provisdom.math.derivatives-test
   (:require
-    [clojure.test :refer :all]
+    [clojure.test :as ct]
     [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.derivatives :as deriv]))
@@ -16,7 +16,7 @@
     (* 3 (m/pow number 3))
     number))
 
-(deftest derivative-fn-test
+(ct/deftest derivative-fn-test
   (t/with-instrument `deriv/derivative-fn
     (t/is-spec-check deriv/derivative-fn))
   (t/with-instrument :all
@@ -118,13 +118,13 @@
       (* 2 (m/sq a))
       (m/cube b))))
 
-(deftest gradient-fn-test
+(ct/deftest gradient-fn-test
   (t/with-instrument `deriv/gradient-fn
     (t/is-spec-check deriv/gradient-fn))
   (t/with-instrument :all
     (t/is= [16.000000002236447 51.0000000062405] ((deriv/gradient-fn gf) [3.0 4.0])))) ;[16,51]
 
-(deftest jacobian-fn-test
+(ct/deftest jacobian-fn-test
   (t/with-instrument `deriv/jacobian-fn
     (t/is-spec-check deriv/jacobian-fn))
   (t/with-instrument :all
@@ -139,7 +139,7 @@
               (+ (* (m/sq a) (m/sq b)))])))
        [3.0 4.0]))))
 
-(deftest hessian-fn-test
+(ct/deftest hessian-fn-test
   (t/with-instrument `deriv/hessian-fn
     (t/is-spec-check deriv/hessian-fn))
   (t/with-instrument :all
@@ -164,31 +164,31 @@
     (* 2.0 y y)
     (* (double x) y)))
 
-(deftest partial-derivative-x-of-fxy-test
+(ct/deftest partial-derivative-x-of-fxy-test
   (t/with-instrument `deriv/partial-derivative-x-of-fxy
     (t/is-spec-check deriv/partial-derivative-x-of-fxy))
   (t/with-instrument :all
     (t/is= 8.999999998593466 ((deriv/partial-derivative-x-of-fxy fxy) 3.0 3.0)))) ;9
 
-(deftest partial-derivative-y-of-fxy-test
+(ct/deftest partial-derivative-y-of-fxy-test
   (t/with-instrument `deriv/partial-derivative-y-of-fxy
     (t/is-spec-check deriv/partial-derivative-y-of-fxy))
   (t/with-instrument :all
     (t/is= 15.000000001208491 ((deriv/partial-derivative-y-of-fxy fxy) 3.0 3.0)))) ;15
 
-(deftest second-partial-derivative-xx-of-fxy-test
+(ct/deftest second-partial-derivative-xx-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-xx-of-fxy
     (t/is-spec-check deriv/second-partial-derivative-xx-of-fxy))
   (t/with-instrument :all
     (t/is= 2.000000023372195 ((deriv/second-partial-derivative-xx-of-fxy fxy) 3.0 3.0)))) ;2
 
-(deftest second-partial-derivative-yy-of-fxy-test
+(ct/deftest second-partial-derivative-yy-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-yy-of-fxy
     (t/is-spec-check deriv/second-partial-derivative-yy-of-fxy))
   (t/with-instrument :all
     (t/is= 3.999999975690116 ((deriv/second-partial-derivative-yy-of-fxy fxy) 3.0 3.0)))) ;4
 
-(deftest second-partial-derivative-xy-of-fxy-test
+(ct/deftest second-partial-derivative-xy-of-fxy-test
   (t/with-instrument `deriv/second-partial-derivative-xy-of-fxy
     (t/is-spec-check deriv/second-partial-derivative-xy-of-fxy))
   (t/with-instrument :all
@@ -196,7 +196,7 @@
 
 ;;;IMPROVED DERIVATIVE FUNCTIONS TESTS
 
-(deftest richardson-derivative-fn-test
+(ct/deftest richardson-derivative-fn-test
   ;; sin'(0) = cos(0) = 1
   (t/is-approx= 1.0 ((deriv/richardson-derivative-fn m/sin) 0.0) :tolerance 1e-10)
   ;; sin'(PI) = cos(PI) = -1
@@ -213,7 +213,7 @@
     ;; With 6 levels of Richardson, we should get good accuracy
     (t/is-approx= true-deriv richardson-6 :tolerance 1e-8)))
 
-(deftest adaptive-derivative-fn-test
+(ct/deftest adaptive-derivative-fn-test
   ;; sin'(PI) = -1
   (t/is-approx= -1.0 ((deriv/adaptive-derivative-fn m/sin) m/PI) :tolerance 1e-7)
   ;; x^2 derivative at x=5 is 10
@@ -223,7 +223,7 @@
           ((deriv/adaptive-derivative-fn m/sin {::deriv/rel-tol 1e-12}) 2.0)
           :tolerance 1e-7))
 
-(deftest derivative-with-error-fn-test
+(ct/deftest derivative-with-error-fn-test
   (let [result ((deriv/derivative-with-error-fn m/sin) m/PI)]
     ;; Value should be close to -1
     (t/is-approx= -1.0 (::deriv/value result) :tolerance 1e-7)
@@ -236,7 +236,7 @@
 
 ;;;VECTOR CALCULUS TESTS
 
-(deftest directional-derivative-fn-test
+(ct/deftest directional-derivative-fn-test
   ;; f(x,y) = x^2 + y^2, grad = [2x, 2y]
   ;; Direction [1,0] at (3,4) -> 2*3 = 6
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
@@ -255,7 +255,7 @@
         df-zero (deriv/directional-derivative-fn f [0.0 0.0])]
     (t/is (m/nan? (df-zero [3.0 4.0])))))
 
-(deftest laplacian-fn-test
+(ct/deftest laplacian-fn-test
   ;; f(x,y) = x^2 + y^2, Laplacian = 2 + 2 = 4
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         lap (deriv/laplacian-fn f)]
@@ -266,7 +266,7 @@
         lap (deriv/laplacian-fn f)]
     (t/is-approx= 12.0 (lap [1.0 1.0 1.0]) :tolerance 1e-5)))
 
-(deftest divergence-fn-test
+(ct/deftest divergence-fn-test
   ;; F(x,y) = [x, y], div = 1 + 1 = 2
   (let [F (fn [[x y]] [x y])
         divF (deriv/divergence-fn F)]
@@ -280,7 +280,7 @@
         divF (deriv/divergence-fn F)]
     (t/is-approx= 12.0 (divF [1.0 2.0 3.0]) :tolerance 1e-6))) ;; 2+4+6 = 12
 
-(deftest curl-fn-test
+(ct/deftest curl-fn-test
   ;; F(x,y,z) = [y, -x, 0], curl = [0, 0, -1-1] = [0, 0, -2]
   (let [F (fn [[x y _z]] [y (- x) 0.0])
         curlF (deriv/curl-fn F)
@@ -303,7 +303,7 @@
 
 ;;;HIGHER-ORDER MIXED PARTIALS TEST
 
-(deftest mixed-partial-fn-test
+(ct/deftest mixed-partial-fn-test
   ;; f(x,y) = x^2 * y^3
   ;; df/dx = 2xy^3, d^2f/dx^2 = 2y^3
   ;; d^3f/(dx^2 dy) = 6y^2
@@ -322,7 +322,7 @@
 
 ;;;SPARSE JACOBIAN AND HESSIAN TESTS
 
-(deftest sparse-jacobian-fn-test
+(ct/deftest sparse-jacobian-fn-test
   ;; F(x,y) = [x^2, y^2], diagonal Jacobian entries: [2x, 2y]
   (let [F (fn [[x y]] [(m/sq x) (m/sq y)])
         sJ (deriv/sparse-jacobian-fn F #{[0 0] [1 1]})
@@ -341,7 +341,7 @@
         entry01 (first result)]
     (t/is-approx= 2.0 (nth entry01 2) :tolerance 1e-6)))
 
-(deftest sparse-hessian-fn-test
+(ct/deftest sparse-hessian-fn-test
   ;; f(x,y) = x^2 + y^2, Hessian diagonal = [2, 2]
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         sH (deriv/sparse-hessian-fn f #{[0 0] [1 1]})

@@ -15,6 +15,7 @@
   Gaussian quadrature, and regression."
   (:require
     [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
     [provisdom.math.combinatorics :as combinatorics]
     [provisdom.math.core :as m]
     [provisdom.math.derivatives :as derivatives]
@@ -58,15 +59,24 @@
 
 (s/def ::points
   (s/with-gen (s/coll-of (s/tuple ::m/finite ::m/finite) :min-count 1)
-    #(s/gen (s/coll-of (s/tuple (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)
-                         (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false))
-              :min-count 1 :max-count 5))))
+    #(gen/such-that
+       (fn [points] (= (count points) (count (distinct (map first points)))))
+       (gen/vector
+         (gen/tuple
+           (s/gen (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false))
+           (s/gen (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)))
+         1 5)
+       100)))
 
 (s/def ::node-count
   (s/with-gen (s/int-in 1 1000)
     #(s/gen (s/int-in 1 10))))
 
 (s/def ::physicist? boolean?)
+
+(s/def ::quotient ::coefficients)
+(s/def ::remainder ::coefficients)
+(s/def ::xs (s/coll-of ::m/finite :kind vector?))
 
 ;;;CONSTANTS
 (def ^:const ^:private chebyshev-polynomial-of-the-first-kind-fns
@@ -246,15 +256,15 @@
      chebyshev-factors {}))
   ([chebyshev-factors {::keys [second-kind?] :or {second-kind? false}}]
    (let [n (count chebyshev-factors)]
-     (map (fn [i]
-            ((derivatives/derivative-fn
-               #(vector/dot-product
-                  (vec chebyshev-factors)
-                  (vec ((polynomial-fn (dec n)
-                          {::chebyshev-kind (if second-kind? 2 1)})
-                        %)))
-               {::derivatives/derivative i})
-             0.0))
+     (mapv (fn [i]
+             ((derivatives/derivative-fn
+                #(vector/dot-product
+                   (vec chebyshev-factors)
+                   (vec ((polynomial-fn (dec n)
+                           {::chebyshev-kind (if second-kind? 2 1)})
+                         %)))
+                {::derivatives/derivative i})
+              0.0))
        (range n)))))
 
 (s/fdef chebyshev-poly-factors-to-regular-poly-factors
@@ -277,12 +287,6 @@
     2 (fn [x]
         (fn [degree]
           ((chebyshev-polynomial-fn degree {::second-kind? true}) x)))))
-
-(s/fdef polynomial-functions
-  :args (s/cat :chebyshev-kind ::chebyshev-kind)
-  :ret (s/fspec :args (s/cat :number ::m/number)
-         :ret (s/fspec :args (s/cat :degree ::degree)
-                :ret ::m/number)))
 
 (defn polynomial-fn
   "Creates a function that evaluates polynomial basis functions up to a degree.
@@ -383,7 +387,7 @@
   :ret ::m/long-non-)
 
 (defn- polynomial-2D-degrees
-  ^double [count]
+  [count]
   (- (m/sqrt (+ 0.25 (* 2.0 count))) 1.5))
 
 (defn polynomial-2D-fn-by-degree

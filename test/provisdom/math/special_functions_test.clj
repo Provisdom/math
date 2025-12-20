@@ -1,16 +1,16 @@
 (ns provisdom.math.special-functions-test
   (:require
-    [clojure.test :refer :all]
+    [clojure.test :as ct]
     [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
-;;9 seconds
+;;30 seconds
 
 (set! *warn-on-reflection* true)
 
 ;;;LOG-SUM-EXP
-(deftest log-sum-exp-test
+(ct/deftest log-sum-exp-test
   (t/with-instrument `special-fns/log-sum-exp
     (t/is-spec-check special-fns/log-sum-exp))
   (t/with-instrument :all
@@ -19,7 +19,7 @@
     (t/is= 1210.0 (special-fns/log-sum-exp [-1200.0 1210.0]))))
 
 ;;;ERROR FUNCTIONS
-(deftest erf-test
+(ct/deftest erf-test
   (t/with-instrument `special-fns/erf
     (t/is-spec-check special-fns/erf))
   (t/with-instrument :all
@@ -36,7 +36,7 @@
     ;;Math -0.11246291601828489220327507174396838322169629915970254753449
     (t/is= -0.11246291601828491 (special-fns/erf -0.1))))
 
-(deftest erf-diff-test
+(ct/deftest erf-diff-test
   (t/with-instrument `special-fns/erf-diff
     (t/is-spec-check special-fns/erf-diff))
   (t/with-instrument :all
@@ -50,7 +50,7 @@
     (t/is= 1.68540158589943 (special-fns/erf-diff -1.0 1.0))
     (t/is= 0.842700792949715 (special-fns/erf-diff 0.0 1.0))))
 
-(deftest erf-derivative-test
+(ct/deftest erf-derivative-test
   (t/with-instrument `special-fns/erf-derivative
     (t/is-spec-check special-fns/erf-derivative))
   (t/with-instrument :all
@@ -61,7 +61,7 @@
     (t/is= 0.013715649999806838 (special-fns/erf-derivative -2.1))
     (t/is= 0.9615412988393078 (special-fns/erf-derivative 0.4))))
 
-(deftest erfc-test
+(ct/deftest erfc-test
   (t/with-instrument `special-fns/erfc
     (t/is-spec-check special-fns/erfc))
   (t/with-instrument :all
@@ -82,7 +82,7 @@
     ;; Test underflow threshold
     (t/is= 0.0 (special-fns/erfc 27.0))))
 
-(deftest inv-erf-test
+(ct/deftest inv-erf-test
   (t/with-instrument `special-fns/inv-erf
     (t/is-spec-check special-fns/inv-erf))
   (t/with-instrument :all
@@ -106,7 +106,7 @@
     ;;Math 0.3708071585935579290582494775224491386043048831629311
     (t/is= 0.37080715859355795 (special-fns/inv-erf 0.4))))
 
-(deftest inv-erfc-test
+(ct/deftest inv-erfc-test
   (t/with-instrument `special-fns/inv-erfc
     (t/is-spec-check special-fns/inv-erfc))
   (t/with-instrument :all
@@ -118,7 +118,7 @@
     (t/is= -2.100000000000001 (special-fns/inv-erfc 1.997020533343667))))
 
 ;;;SIGMOID FUNCTIONS
-(deftest inv-cdf-standard-normal-test
+(ct/deftest inv-cdf-standard-normal-test
   (t/with-instrument `special-fns/inv-cdf-standard-normal
     (t/is-spec-check special-fns/inv-cdf-standard-normal))
   (t/with-instrument :all
@@ -129,7 +129,7 @@
     (t/is= -1.0056199694085204 (special-fns/inv-cdf-standard-normal 0.157299207050285))
     (t/is= 2.750032615602772 (special-fns/inv-cdf-standard-normal 0.997020533343667))))
 
-(deftest cdf-standard-normal-test
+(ct/deftest cdf-standard-normal-test
   (t/with-instrument `special-fns/cdf-standard-normal
     (t/is-spec-check special-fns/cdf-standard-normal))
   (t/with-instrument :all
@@ -139,7 +139,7 @@
     (t/is= 0.15729920705028516 (special-fns/cdf-standard-normal -1.0056199694085204))
     (t/is= 0.997020533343667 (special-fns/cdf-standard-normal 2.750032615602772))))
 
-(deftest logistic-test
+(ct/deftest logistic-test
   (t/with-instrument `special-fns/logistic
     (t/is-spec-check special-fns/logistic))
   (t/with-instrument :all
@@ -148,7 +148,7 @@
     (t/is= 0.5 (special-fns/logistic 0.0))
     (t/is= 0.10909682119561293 (special-fns/logistic -2.1))))
 
-(deftest logistic-derivative-test
+(ct/deftest logistic-derivative-test
   (t/with-instrument `special-fns/logistic-derivative
     (t/is-spec-check special-fns/logistic-derivative))
   (t/with-instrument :all
@@ -157,7 +157,7 @@
     (t/is= 0.25 (special-fns/logistic-derivative 0.0))
     (t/is= 0.09719470480062539 (special-fns/logistic-derivative -2.1))))
 
-(deftest logit-test
+(ct/deftest logit-test
   (t/with-instrument `special-fns/logit
     (t/is-spec-check special-fns/logit))
   (t/with-instrument :all
@@ -166,9 +166,9 @@
     (t/is= -0.4054651081081643 (special-fns/logit 0.4))
     (t/is= 0.0 (special-fns/logit 0.5))))
 
-(deftest logit-derivative-test
-  (t/with-instrument `special-fns/logistic-derivative
-    (t/is-spec-check special-fns/logistic-derivative))
+(ct/deftest logit-derivative-test
+  (t/with-instrument `special-fns/logit-derivative
+    (t/is-spec-check special-fns/logit-derivative))
   (t/with-instrument :all
     (t/is= m/inf+ (special-fns/logit-derivative 0.0))
     (t/is= m/inf+ (special-fns/logit-derivative 1.0))
@@ -176,7 +176,7 @@
     (t/is= 4.0 (special-fns/logit-derivative 0.5))))
 
 ;;;GAMMA
-(deftest gamma-test
+(ct/deftest gamma-test
   (t/with-instrument `special-fns/gamma
     (t/is-spec-check special-fns/gamma))
   (t/with-instrument :all
@@ -203,7 +203,7 @@
     (t/is= -6.3764985844038365E-245 (special-fns/gamma -141.7))
     #_(t/is= 6.3764985844038365E-245 (Gamma/gamma -141.7))))
 
-(deftest lower-gamma-test
+(ct/deftest lower-gamma-test
   (t/with-instrument `special-fns/lower-gamma
     (t/is-spec-check special-fns/lower-gamma))
   (t/with-instrument :all
@@ -219,7 +219,7 @@
     (t/is= 1.0 (special-fns/lower-gamma 1 1e150))
     (t/is (m/nan? (special-fns/lower-gamma 1e300 1e150)))))
 
-(deftest upper-gamma-test
+(ct/deftest upper-gamma-test
   (t/with-instrument `special-fns/upper-gamma
     (t/is-spec-check special-fns/upper-gamma))
   (t/with-instrument :all
@@ -232,7 +232,7 @@
     (t/is= 1.0 (special-fns/upper-gamma 1 0))
     (t/is= 0.22953567028884253 (special-fns/upper-gamma 0.1 1))))
 
-(deftest upper-gamma-derivative-x-test
+(ct/deftest upper-gamma-derivative-x-test
   (t/with-instrument `special-fns/upper-gamma-derivative-x
     (t/is-spec-check special-fns/upper-gamma-derivative-x))
   (t/with-instrument :all
@@ -247,7 +247,7 @@
     (t/is= 1.0 (special-fns/upper-gamma-derivative-x 1 0))
     (t/is= 0.03866916944030238 (special-fns/upper-gamma-derivative-x 0.1 1))))
 
-(deftest regularized-gamma-p-test
+(ct/deftest regularized-gamma-p-test
   (t/with-instrument `special-fns/regularized-gamma-p
     (t/is-spec-check special-fns/regularized-gamma-p))
   (t/with-instrument :all
@@ -264,7 +264,7 @@
     #_(t/is= 0.5000049341877536 (Gamma/regularizedGammaP 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-p 1e149 1e149)))))
 
-(deftest regularized-gamma-q-test
+(ct/deftest regularized-gamma-q-test
   (t/with-instrument `special-fns/regularized-gamma-q
     (t/is-spec-check special-fns/regularized-gamma-q))
   (t/with-instrument :all
@@ -283,7 +283,7 @@
     #_(t/is= 0.4999950658122464 (Gamma/regularizedGammaQ 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-q 1e149 1e149)))))
 
-(deftest log-gamma-test
+(ct/deftest log-gamma-test
   (t/with-instrument `special-fns/log-gamma
     (t/is-spec-check special-fns/log-gamma))
   (t/with-instrument :all
@@ -297,16 +297,16 @@
     (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))
     #_(t/is= 0.2608672465316666 (Gamma/logGamma 0.7))))
 
-(deftest log-gamma-inc-test
+(ct/deftest log-gamma-inc-test
   (t/with-instrument `special-fns/log-gamma-inc
     (t/is-spec-check special-fns/log-gamma-inc))
   (t/with-instrument :all
     (t/is= m/inf+ (special-fns/log-gamma-inc m/inf+))
     (t/is= -5.772156649015329E-18 (special-fns/log-gamma-inc 1e-17))))
 
-(deftest log-gamma-derivative-test                          ;same as digamma
+(ct/deftest log-gamma-derivative-test                          ;same as digamma
   (t/with-instrument `special-fns/log-gamma-derivative
-    (t/is-spec-check special-fns/log-gamma-derivative))
+    (t/is-spec-check special-fns/log-gamma-derivative {:num-tests 120}))
   (t/with-instrument :all
     (t/is= m/inf+ (special-fns/log-gamma-derivative m/inf+))
     (t/is= -10.423754943278134 (special-fns/log-gamma-derivative 0.1))
@@ -320,7 +320,7 @@
     (t/is= m/inf- (special-fns/digamma -2.0))
     (t/is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0))))
 
-(deftest gamma-derivative-test
+(ct/deftest gamma-derivative-test
   (t/with-instrument `special-fns/gamma-derivative
     (t/is-spec-check special-fns/gamma-derivative))
   (t/with-instrument :all
@@ -332,7 +332,7 @@
     (t/is= -1.0428235898368972 (special-fns/gamma-derivative -2.5))
     (t/is= -1.5836580833783633 (special-fns/gamma-derivative 0.7))))
 
-(deftest trigamma-test
+(ct/deftest trigamma-test
   (t/with-instrument `special-fns/trigamma
     (t/is-spec-check special-fns/trigamma))
   (t/with-instrument :all
@@ -347,7 +347,7 @@
     #_(t/is= 101.922539959477124 (Gamma/trigamma -0.1))
     (t/is= m/inf+ (special-fns/trigamma -2.0))))
 
-(deftest multivariate-gamma-test
+(ct/deftest multivariate-gamma-test
   (t/with-instrument `special-fns/multivariate-gamma
     (t/is-spec-check special-fns/multivariate-gamma))
   (t/with-instrument :all
@@ -358,7 +358,7 @@
     (t/is= 2.511113699545875 (special-fns/multivariate-gamma 1.1 2))
     (t/is= 75.05107616754478 (special-fns/multivariate-gamma 1.1 3))))
 
-(deftest multivariate-log-gamma-test
+(ct/deftest multivariate-log-gamma-test
   (t/with-instrument `special-fns/multivariate-log-gamma
     (t/is-spec-check special-fns/multivariate-log-gamma))
   (t/with-instrument :all
@@ -369,7 +369,7 @@
     (t/is= 0.9207263597340951 (special-fns/multivariate-log-gamma 1.1 2))))
 
 ;;;BETA
-(deftest beta-test
+(ct/deftest beta-test
   (t/with-instrument `special-fns/beta
     (t/is-spec-check special-fns/beta))
   (t/with-instrument :all
@@ -381,7 +381,7 @@
     (t/is= 10.000000000000002 (special-fns/beta 0.1 1))
     (t/is= 10.000000000000002 (special-fns/beta 1 0.1))))
 
-(deftest log-beta-test
+(ct/deftest log-beta-test
   (t/with-instrument `special-fns/log-beta
     (t/is-spec-check special-fns/log-beta))
   (t/with-instrument :all
@@ -396,7 +396,7 @@
     (t/is= -1.386294362144632E10 (special-fns/log-beta 1e10 1e10))
     #_(t/is= -1.386294362144632E10 (Beta/logBeta 1e10 1e10))))
 
-(deftest regularized-beta-test
+(ct/deftest regularized-beta-test
   (t/with-instrument `special-fns/regularized-beta
     (t/is-spec-check special-fns/regularized-beta))
   (t/with-instrument :all
@@ -418,7 +418,7 @@
     #_(t/is= 0.5 (Beta/regularizedBeta 0.5 1 1))
     (t/is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))))
 
-(deftest incomplete-beta-test
+(ct/deftest incomplete-beta-test
   (t/with-instrument `special-fns/incomplete-beta
     (t/is-spec-check special-fns/incomplete-beta))
   (t/with-instrument :all
@@ -434,7 +434,7 @@
     (t/is= 0.0 (special-fns/incomplete-beta 0 1 1))))
 
 ;;;BESSEL FUNCTIONS
-(deftest bessel-j-test
+(ct/deftest bessel-j-test
   (t/with-instrument `special-fns/bessel-j
     (t/is-spec-check special-fns/bessel-j))
   (t/with-instrument :all
@@ -458,7 +458,7 @@
     ;; Large argument (asymptotic expansion)
     (t/is-approx= 0.05581367346912376 (special-fns/bessel-j 0 50.0) :tolerance 1e-8)))
 
-(deftest bessel-y-test
+(ct/deftest bessel-y-test
   (t/with-instrument `special-fns/bessel-y
     (t/is-spec-check special-fns/bessel-y))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
@@ -478,7 +478,7 @@
     ;; Non-integer order: Y_0.5(x) = -sqrt(2/(πx)) * cos(x)
     (t/is-approx= -0.431098868018376 (special-fns/bessel-y 0.5 1.0) :tolerance 1e-14)))
 
-(deftest bessel-i-test
+(ct/deftest bessel-i-test
   (t/with-instrument `special-fns/bessel-i
     (t/is-spec-check special-fns/bessel-i))
   (t/with-instrument :all
@@ -499,7 +499,7 @@
     ;; Non-integer order: I_0.5(x) = sqrt(2/(πx)) * sinh(x)
     (t/is-approx= 0.9376748882454877 (special-fns/bessel-i 0.5 1.0) :tolerance 1e-14)))
 
-(deftest bessel-k-test
+(ct/deftest bessel-k-test
   (t/with-instrument `special-fns/bessel-k
     (t/is-spec-check special-fns/bessel-k))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
@@ -520,7 +520,7 @@
     (t/is-approx= 0.4610685044478948 (special-fns/bessel-k 0.5 1.0) :tolerance 1e-14)))
 
 ;;;HYPERGEOMETRIC FUNCTIONS
-(deftest hypergeometric-1f1-test
+(ct/deftest hypergeometric-1f1-test
   (t/with-instrument `special-fns/hypergeometric-1f1
     (t/is-spec-check special-fns/hypergeometric-1f1))
   ;; Pole at b = 0 or negative integer (outside instrumentation since NaN fails spec)
@@ -543,7 +543,7 @@
     ;; Kummer transformation test for large negative z
     (t/is-approx= 0.04 (special-fns/hypergeometric-1f1 1 2 -25) :tolerance 1e-10)))
 
-(deftest hypergeometric-2f1-test
+(ct/deftest hypergeometric-2f1-test
   (t/with-instrument `special-fns/hypergeometric-2f1
     (t/is-spec-check special-fns/hypergeometric-2f1))
   ;; Pole at c = 0 or negative integer (outside instrumentation since NaN fails spec)
@@ -566,4 +566,5 @@
     (t/is-approx= 0.8109302162163282 (special-fns/hypergeometric-2f1 1 1 2 -0.5) :tolerance 1e-14)
     (t/is-approx= 0.6931471805599445 (special-fns/hypergeometric-2f1 1 1 2 -1.0) :tolerance 1e-14)
     ;; Gauss summation at z=1 (when c > a + b)
-    (t/is-approx= 1.2732395447351625 (special-fns/hypergeometric-2f1 0.5 0.5 2 1.0) :tolerance 1e-14)))
+    (t/is-approx= 1.2732395447351625
+      (special-fns/hypergeometric-2f1 0.5 0.5 2 1.0) :tolerance 1e-14)))

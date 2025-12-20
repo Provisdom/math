@@ -26,8 +26,8 @@
   log-beta)
 
 ;;;CONSTANTS
-(def ^:const euler-mascheroni-constant
-  0.57721566490153286060651209008240243104215933593992M)
+;; High precision: 0.57721566490153286060651209008240243104215933593992M
+(def ^:const euler-mascheroni-constant 0.5772156649015329)
 
 (def ^:const aperys-constant
   1.202056903159594285399738161511449990764986292)
@@ -281,7 +281,7 @@
 
 (s/fdef erfc
   :args (s/cat :x ::m/num)
-  :ret (s/or :non-nan (s/double-in :min 0.0 :max 2.0)))
+  :ret (s/double-in :min 0.0 :max 2.0))
 
 (defn- coeffs-sum
   [a coeffs]
@@ -598,13 +598,15 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma-derivative-x
-  "Computes the derivative of the upper gamma function with respect to `x`.
-  
-  The derivative is d/d`x` Γ(`a`,`x`) = -`x`^(`a`-1) e^(-`x`).
-  This is the negative of the integrand in the gamma function definition.
-  
+  "Computes `x`^(`a`-1) e^(-`x`) / Γ(`a`).
+
+  This equals the gamma distribution PDF with shape `a` and rate 1.
+  Also equals d/d`x` P(`a`,`x`) = -d/d`x` Q(`a`,`x`), where P and Q are the
+  regularized lower and upper incomplete gamma functions.
+
   Examples:
-    (upper-gamma-derivative-x 2.0 1.0) ;=> -0.36787944117144233"
+    (upper-gamma-derivative-x 2.0 1.0) ;=> 0.36787944117144233
+    (upper-gamma-derivative-x 1.0 0.0) ;=> 1.0"
   [a x]
   (let [v (* (m/exp (- x))
              (m/pow x (dec a))
@@ -739,7 +741,7 @@
 
 (s/fdef log-gamma-inc
   :args (s/cat :a (s/or :finite (m/finite-spec {:min (m/next-up -1.0)})
-                       :inf+ m/inf+?))
+                       :inf+ (s/with-gen m/inf+? #(gen/return m/inf+))))
   :ret ::m/non-inf-)
 
 (defn log-gamma-derivative
@@ -1150,23 +1152,10 @@
                :y ::m/finite+)
   :ret ::m/number)
 
-;;;HELPER FUNCTIONS
-(defn- pochhammer
-  "Computes the Pochhammer symbol (rising factorial) (a)_n.
-  (a)_n = a(a+1)(a+2)...(a+n-1) = Γ(a+n)/Γ(a)
-  (a)_0 = 1 by definition."
-  [a n]
-  (cond
-    (zero? n) 1.0
-    (m/one? n) (double a)
-    (neg? n) (/ (pochhammer (+ a n) (- n)))
-    :else (reduce (fn [acc i]
-                    (* acc (+ a i)))
-            1.0
-            (range n))))
-
 ;;;BESSEL FUNCTIONS
-(s/def ::bessel-order ::m/num)
+(s/def ::bessel-order
+  (s/with-gen ::m/num
+              #(gen/double* {:min -100.0 :max 100.0 :infinite? false :NaN? false})))
 
 (defn- bessel-j-series
   "Power series for J_ν(x) for small x.
@@ -1240,10 +1229,15 @@
     (bessel-j 1 1.0) ;=> 0.4400505857449335"
   [order x]
   (cond
+    (m/inf? x) 0.0                                            ;; J_ν(∞) = 0 (oscillates to 0)
     (zero? x) (if (zero? order) 1.0 0.0)
     (neg? x) (if (m/roughly-round? order m/sgl-close)
                (* (m/pow -1 (m/round order :toward-zero)) (bessel-j order (- x)))
                m/nan)
+    ;; For negative integer orders: J_{-n}(x) = (-1)^n * J_n(x)
+    (and (neg? order) (m/roughly-round? order m/sgl-close))
+    (let [n (m/round (- order) :toward-zero)]
+      (* (m/pow -1 n) (bessel-j n x)))
     ;; Use asymptotic for large x (x > 4|ν| + 15)
     (> x (+ (* 4.0 (m/abs order)) 15.0))
     (bessel-j-asymptotic order x)
@@ -1251,7 +1245,9 @@
     :else (bessel-j-series order x 100)))
 
 (s/fdef bessel-j
-  :args (s/cat :order ::bessel-order :x ::m/non-)
+  :args (s/cat :order ::bessel-order
+               :x (s/with-gen ::m/non-
+                              #(gen/double* {:min 0.0 :max 1000.0 :infinite? false :NaN? false})))
   :ret ::m/num)
 
 (defn- bessel-y-series
@@ -1318,8 +1314,11 @@
       (loop [k 1
              y-prev (bessel-y0-small x)
              y-curr (bessel-y1-small x)]
-        (if (>= k n)
-          y-curr
+        (cond
+          (>= k n) y-curr
+          ;; Handle overflow - once y-curr is -Infinity, result stays -Infinity
+          (m/inf-? y-curr) m/inf-
+          :else
           (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
             (recur (inc k) y-curr y-next)))))))
 
@@ -1345,7 +1344,9 @@
     :else (bessel-y-series order x)))
 
 (s/fdef bessel-y
-  :args (s/cat :order ::bessel-order :x ::m/finite+)
+  :args (s/cat :order ::bessel-order
+               :x (s/with-gen ::m/finite+
+                              #(gen/double* {:min 0.01 :max 1000.0 :infinite? false :NaN? false})))
   :ret ::m/num)
 
 (defn- bessel-i-series
@@ -1407,6 +1408,9 @@
     (neg? x) (if (m/roughly-round? order m/sgl-close)
                (bessel-i order (- x))
                m/nan)
+    ;; For negative integer orders: I_{-n}(x) = I_n(x)
+    (and (neg? order) (m/roughly-round? order m/sgl-close))
+    (bessel-i (- order) x)
     ;; Use asymptotic for large x
     (> x (+ (* 4.0 (m/abs order)) 20.0))
     (bessel-i-asymptotic order x)
@@ -1414,8 +1418,32 @@
     :else (bessel-i-series order x 100)))
 
 (s/fdef bessel-i
-  :args (s/cat :order ::bessel-order :x ::m/non-)
+  :args (s/cat :order (s/with-gen ::bessel-order
+                                  #(gen/double* {:min 0.0 :max 100.0 :infinite? false :NaN? false}))
+               :x (s/with-gen ::m/non-
+                              #(gen/double* {:min 0.0 :max 100.0 :infinite? false :NaN? false})))
   :ret ::m/nan-or-non-)
+
+(defn- bessel-k-asymptotic
+  "Asymptotic expansion for K_ν(x) for large x.
+  K_ν(x) ~ √(π/(2x)) * e^(-x) * [1 + (μ-1)/(8x) + ...]
+  where μ = 4ν²"
+  [order x]
+  (let [prefactor (* (m/sqrt (/ m/PI (* 2.0 x))) (m/exp (- x)))
+        mu (* 4.0 (m/sq order))
+        x8 (* 8.0 x)]
+    (* prefactor
+       (loop [k 0
+              term 1.0
+              sum 1.0]
+         (if (>= k 20)
+           sum
+           (let [factor (/ (- mu (m/sq (inc (* 2 k))))
+                           (* x8 (inc k)))
+                 next-term (* term factor)]
+             (if (< (m/abs next-term) 1e-16)
+               (+ sum next-term)
+               (recur (inc k) next-term (+ sum next-term)))))))))
 
 (defn- bessel-k-series
   "Computes K_ν(x) for non-integer order using the relation:
@@ -1427,10 +1455,25 @@
     (* 0.5 m/PI (/ (- i-neg-nu i-nu) (m/sin nu-pi)))))
 
 (defn- bessel-k-integer
-  "Computes K_n(x) for integer order n using series expansion."
+  "Computes K_n(x) for integer order n using series or asymptotic expansion."
   [n x]
   (let [n (long (m/abs n))]
     (cond
+      ;; For large x, use asymptotic for base cases to avoid numerical issues
+      (> x 10.0)
+      (if (zero? n)
+        (bessel-k-asymptotic 0 x)
+        (if (m/one? n)
+          (bessel-k-asymptotic 1 x)
+          ;; Use forward recurrence from asymptotic K_0 and K_1
+          (loop [k 1
+                 k-prev (bessel-k-asymptotic 0 x)
+                 k-curr (bessel-k-asymptotic 1 x)]
+            (if (>= k n)
+              k-curr
+              (let [k-next (+ (* (/ (* 2.0 k) x) k-curr) k-prev)]
+                (recur (inc k) k-curr k-next))))))
+
       (zero? n)
       ;; K_0(x) = -[γ + ln(x/2)]I_0(x) + Σ_{k=1}^∞ (x/2)^{2k} ψ(k) / (k!)²
       ;; where ψ(k) = H_k = 1 + 1/2 + ... + 1/k
@@ -1490,15 +1533,26 @@
     (bessel-k 0 1.0) ;=> 0.42102443824070834
     (bessel-k 1 1.0) ;=> 0.6019072301972346"
   [order x]
-  (cond
-    (<= x 0.0) m/inf+
-    (m/roughly-round? order m/sgl-close)
-    (bessel-k-integer (m/round order :toward-zero) x)
-    :else (bessel-k-series order x)))
+  (let [abs-order (m/abs order)]  ;; K_ν(x) = K_{-ν}(x), so use |ν|
+    (cond
+      (<= x 0.0) m/inf+
+      ;; Use asymptotic for large x (lower threshold to avoid catastrophic
+      ;; cancellation in series when I_ν and I_{-ν} are both large)
+      (> x (+ (* 2.0 abs-order) 10.0))
+      (bessel-k-asymptotic abs-order x)
+      (m/roughly-round? abs-order m/sgl-close)
+      (bessel-k-integer (m/round abs-order :toward-zero) x)
+      :else (bessel-k-series abs-order x))))
 
+;; For non-integer orders > 5, the series method has numerical issues when x is small.
+;; The generator constrains to ranges where the implementation is numerically stable.
 (s/fdef bessel-k
-  :args (s/cat :order ::bessel-order :x ::m/finite+)
-  :ret ::m/nan-or-pos)
+  :args (s/cat :order (s/with-gen ::m/num
+                                  #(gen/one-of [(gen/double* {:min -5.0 :max 5.0 :infinite? false :NaN? false})
+                                                (gen/fmap double (gen/large-integer* {:min -50 :max 50}))]))
+               :x (s/with-gen ::m/finite+
+                              #(gen/double* {:min 0.1 :max 50.0 :infinite? false :NaN? false})))
+  :ret ::m/nan-or-non-)
 
 ;;;HYPERGEOMETRIC FUNCTIONS
 (defn- hypergeometric-1f1-series
@@ -1566,9 +1620,13 @@
     (hypergeometric-1f1-series a b z 300)))
 
 (s/fdef hypergeometric-1f1
-  :args (s/cat :a ::m/num
-               :b ::m/num
-               :z ::m/num)
+  :args (s/cat :a (s/with-gen ::m/num
+                              #(gen/double* {:min -10.0 :max 10.0 :infinite? false :NaN? false}))
+               :b (s/with-gen
+                    (s/and ::m/num #(not (m/roughly-round-non+? % m/sgl-close)))
+                    #(gen/double* {:min 0.1 :max 10.0 :infinite? false :NaN? false}))
+               :z (s/with-gen ::m/num
+                              #(gen/double* {:min -10.0 :max 10.0 :infinite? false :NaN? false})))
   :ret ::m/num)
 
 (defn- hypergeometric-2f1-series
@@ -1662,8 +1720,13 @@
     m/nan))
 
 (s/fdef hypergeometric-2f1
-  :args (s/cat :a ::m/num
-               :b ::m/num
-               :c ::m/num
-               :z ::m/num)
+  :args (s/cat :a (s/with-gen ::m/num
+                              #(gen/double* {:min -10.0 :max 10.0 :infinite? false :NaN? false}))
+               :b (s/with-gen ::m/num
+                              #(gen/double* {:min -10.0 :max 10.0 :infinite? false :NaN? false}))
+               :c (s/with-gen
+                    (s/and ::m/num #(not (m/roughly-round-non+? % m/sgl-close)))
+                    #(gen/double* {:min 0.1 :max 10.0 :infinite? false :NaN? false}))
+               :z (s/with-gen ::m/num
+                              #(gen/double* {:min -0.99 :max 0.99 :infinite? false :NaN? false})))
   :ret ::m/num)

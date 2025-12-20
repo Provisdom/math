@@ -52,6 +52,7 @@
 (s/def ::max-iterations pos-int?)
 (s/def ::tolerance ::m/finite+)
 (s/def ::rank-tolerance ::m/finite-non-)
+(s/def ::pade-order (s/int-in 1 14))
 
 ;;;LU DECOMPOSITION
 ;; Forward declarations for functions used in compute-inverse-from-lu
@@ -314,23 +315,30 @@
 
   Complexity: O(n⁵) for n×n matrix (n² cofactors, each O(n³))
 
-  Returns nil for empty matrices.
+  Returns nil for empty matrices or if any cofactor calculation fails
+  (e.g., for ill-conditioned submatrices). For 1×1 matrices, returns [[1.0]]
+  since the determinant of the empty 0×0 matrix is 1 by convention.
 
   Examples:
     (cofactor-matrix [[1 2] [3 4]]) ;=> [[4.0 -3.0] [-2.0 1.0]]
+    (cofactor-matrix [[5]]) ;=> [[1.0]]
 
   See also: cofactor, adjugate, inverse"
   [square-m]
   (let [n (mx/rows square-m)]
-    (when (pos? n)
-      (mapv (fn [i]
-              (mapv (fn [j]
-                      (or (cofactor square-m i j) 0.0))
-                (range n)))
-        (range n)))))
+    (cond
+      (zero? n) nil
+      (= n 1) [[1.0]]
+      :else (let [result (mapv (fn [i]
+                                 (mapv (fn [j]
+                                         (cofactor square-m i j))
+                                   (range n)))
+                           (range n))]
+              (when (every? (fn [row] (every? some? row)) result)
+                result)))))
 
 (s/fdef cofactor-matrix
-  :args (s/cat :square-m ::mx/square-matrix)
+  :args (s/cat :square-m ::mx/square-matrix-finite)
   :ret (s/nilable ::mx/matrix))
 
 (defn adjugate
@@ -352,7 +360,7 @@
     (mx/transpose cof)))
 
 (s/fdef adjugate
-  :args (s/cat :square-m ::mx/square-matrix)
+  :args (s/cat :square-m ::mx/square-matrix-finite)
   :ret (s/nilable ::mx/matrix))
 
 ;;;FORWARD/BACK SUBSTITUTION
@@ -406,7 +414,7 @@
 
   See also: lu-decomposition, inverse"
   [{::keys [inverse singular?]}]
-  (if singular?
+  (if (or singular? (nil? inverse))
     {::anom/category ::anom/no-solve
      ::anom/message  "Matrix is singular (not invertible)"}
     inverse))
@@ -435,10 +443,13 @@
   [square-m]
   (if (mx/empty-matrix? square-m)
     square-m
-    (inverse-from-lu (lu-decomposition square-m))))
+    (if-let [lu-result (lu-decomposition square-m)]
+      (inverse-from-lu lu-result)
+      {::anom/category ::anom/no-solve
+       ::anom/message  "LU decomposition failed (matrix may be ill-conditioned)"})))
 
 (s/fdef inverse
-  :args (s/cat :square-m ::mx/square-matrix)
+  :args (s/cat :square-m ::mx/square-matrix-finite)
   :ret (s/or :matrix ::mx/square-matrix :anomaly ::anom/anomaly))
 
 ;;;SOLVE LINEAR SYSTEM
@@ -446,17 +457,18 @@
 
 (defn- solve-square
   "Internal: Solves square system Ax = b using LU decomposition.
-  Returns solution vector or nil if singular."
+  Returns solution vector or nil if singular or decomposition fails."
   [square-m b]
-  (let [{::keys [L U LU-permutation singular?]} (lu-decomposition square-m)]
-    (when-not singular?
-      (let [n (mx/rows square-m)
-            Pb (mapv (fn [row]
-                       (reduce + (map * (get LU-permutation row) b)))
-                 (range n))
-            y (forward-substitution L Pb)
-            x (back-substitution U y)]
-        x))))
+  (when-let [lu-result (lu-decomposition square-m)]
+    (let [{::keys [L U LU-permutation singular?]} lu-result]
+      (when-not singular?
+        (let [n (mx/rows square-m)
+              Pb (mapv (fn [row]
+                         (reduce + (map * (get LU-permutation row) b)))
+                   (range n))
+              y (forward-substitution L Pb)
+              x (back-substitution U y)]
+          x)))))
 
 (defn solve
   "Solves the linear system Ax = b for x.
@@ -763,7 +775,7 @@
   [m accu]
   (and (pos-semidefinite-matrix-finite? m accu)
     (every? #(m/roughly? % 1.0 accu) (mx/diagonal m))
-    (every? #(<= (m/abs %) 1.0) (flatten m))))
+    (every? #(<= (m/abs %) 1.0) (apply concat m))))
 
 (s/fdef correlation-matrix?
   :args (s/cat :m any? :accu ::m/accu)
@@ -845,7 +857,7 @@
   [square-m]
   (let [n (mx/rows square-m)]
     (if (zero? n)
-      square-m
+      nil
       (when-let [corr (covariance-matrix->correlation-matrix
                         (pos-definite-matrix-finite-by-squaring square-m))]
         (loop [i 0
@@ -870,7 +882,7 @@
   "Generates a random positive definite matrix of given size."
   [size]
   (if (zero? size)
-    [[]]
+    nil
     (loop [i 0]
       (when (< i 100)
         (let [eigenvalues (vec (take size (random/rnd-lazy!)))
@@ -881,13 +893,17 @@
 
 (s/fdef rnd-pos-definite-matrix-finite!
   :args (s/cat :size ::vector/size)
-  :ret ::pos-definite-matrix-finite)
+  :ret (s/nilable ::pos-definite-matrix-finite))
 
 (defn rnd-correlation-matrix!
-  "Generates a random correlation matrix of given size."
+  "Generates a random correlation matrix of given size.
+
+  Returns nil if generation fails (e.g., if the underlying
+  rnd-pos-definite-matrix-finite! fails after 100 attempts or
+  covariance-to-correlation conversion fails)."
   [size]
   (if (zero? size)
-    [[]]
+    nil
     (covariance-matrix->correlation-matrix
       (rnd-pos-definite-matrix-finite! size))))
 
@@ -1519,6 +1535,18 @@
   :ret ::m/number)
 
 ;;;PSEUDOINVERSE
+(s/def ::svd-result
+  (s/with-gen
+    (s/keys :req [::svd-left ::singular-values ::svd-right])
+    #(gen/fmap (fn [m]
+                 (if-let [svd (sv-decomposition m {:rank-tolerance 0.0})]
+                   (select-keys svd [::svd-left ::singular-values ::svd-right])
+                   ;; Fallback for matrices where SVD fails
+                   {::svd-left         [[1.0]]
+                    ::singular-values  [1.0]
+                    ::svd-right        [[1.0]]}))
+       (s/gen ::mx/matrix-finite))))
+
 (defn pseudoinverse-from-svd
   "Computes the Moore-Penrose pseudoinverse from an existing SVD result.
 
@@ -1544,19 +1572,21 @@
   ([svd-result] (pseudoinverse-from-svd svd-result {}))
   ([{::keys [svd-left singular-values svd-right]} {:keys [tolerance] :or {tolerance 1e-10}}]
    (let [nr (mx/rows svd-left)
-         nc (mx/columns svd-right)
-         sigma-plus-diag (mapv #(if (> % tolerance) (/ 1.0 %) 0.0) singular-values)
-         sigma-plus (mx/compute-matrix nc nr
-                      (fn [i j]
-                        (if (= i j)
-                          (get sigma-plus-diag i 0.0)
-                          0.0)))
-         V (mx/transpose svd-right)
-         Ut (mx/transpose svd-left)]
-     (mx/mx* V sigma-plus Ut))))
+         nc (mx/columns svd-right)]
+     (if (empty? singular-values)
+       (mx/constant-matrix nc nr 0.0)
+       (let [sigma-plus-diag (mapv #(if (> % tolerance) (/ 1.0 %) 0.0) singular-values)
+             sigma-plus (mx/compute-matrix nc nr
+                          (fn [i j]
+                            (if (= i j)
+                              (get sigma-plus-diag i 0.0)
+                              0.0)))
+             V (mx/transpose svd-right)
+             Ut (mx/transpose svd-left)]
+         (mx/mx* V sigma-plus Ut))))))
 
 (s/fdef pseudoinverse-from-svd
-  :args (s/cat :svd-result (s/keys :req [::svd-left ::singular-values ::svd-right])
+  :args (s/cat :svd-result ::svd-result
           :opts (s/? (s/keys :opt-un [::tolerance])))
   :ret ::mx/matrix)
 
@@ -1723,6 +1753,6 @@
              (recur (mx/mx* result result) (inc k)))))))))
 
 (s/fdef matrix-exp
-  :args (s/cat :m ::mx/square-matrix
+  :args (s/cat :m ::mx/square-matrix-finite
           :opts (s/? (s/keys :opt-un [::pade-order])))
   :ret (s/nilable ::mx/square-matrix))

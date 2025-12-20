@@ -1,7 +1,7 @@
 (ns provisdom.math.format-test
   (:require
     [clojure.spec.test.alpha :as st]
-    [clojure.test :refer :all]
+    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.format :as format]
     [provisdom.math.random :as random]
@@ -13,7 +13,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;NUMBERS
-(deftest trim-number-as-string-test
+(ct/deftest trim-number-as-string-test
   (t/with-instrument `format/trim-number-as-string
     (t/is-spec-check format/trim-number-as-string))
   (t/with-instrument (st/instrumentable-syms)
@@ -23,7 +23,7 @@
     (t/is= "-300" (format/trim-number-as-string "-00300"))
     (t/is= "300" (format/trim-number-as-string "0000300"))))
 
-(deftest format-as-float-test
+(ct/deftest format-as-float-test
   (t/with-instrument `format/format-as-float
     (t/is-spec-check format/format-as-float))
   (t/with-instrument (st/instrumentable-syms)
@@ -34,7 +34,7 @@
     (t/is= "123.0000" (format/format-as-float 123 4))
     (t/is= "323234893849384900000.000" (format/format-as-float 3.232348938493849E20 3))))
 
-(deftest format-as-exponential-test
+(ct/deftest format-as-exponential-test
   (t/with-instrument `format/format-as-exponential
     (t/is-spec-check format/format-as-exponential))
   (t/with-instrument (st/instrumentable-syms)
@@ -50,7 +50,7 @@
     (t/is= "3.2323489384938490000E+20"
       (format/format-as-exponential 3.232348938493849E20 {::format/digits 20}))))
 
-(deftest format-number-test
+(ct/deftest format-number-test
   (t/with-instrument `format/format-number
     (t/is-spec-check format/format-number))
   (t/with-instrument (st/instrumentable-syms)
@@ -95,7 +95,7 @@
     (t/is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3}))))
 
 ;;;SHORTHAND
-(deftest unparse-shorthand-test
+(ct/deftest unparse-shorthand-test
   (t/with-instrument `format/unparse-shorthand
     (t/is-spec-check format/unparse-shorthand))
   (t/with-instrument (st/instrumentable-syms)
@@ -116,7 +116,7 @@
     (t/is= "$323M" (format/unparse-shorthand 323234324 3 {::format/money? true}))
     (t/is= "-$323M" (format/unparse-shorthand -323234324 3 {::format/money? true}))))
 
-(deftest parse-shorthand-test
+(ct/deftest parse-shorthand-test
   (t/with-instrument `format/parse-shorthand
     (t/is-spec-check format/parse-shorthand))
   (t/with-instrument (st/instrumentable-syms)
@@ -135,7 +135,7 @@
     (t/is= -12300.0 (format/parse-shorthand "-1.23E+4"))
     (t/is= 12300.0 (format/parse-shorthand "$1.23E+4"))))
 
-(deftest parse-shorthand-edge-cases-test
+(ct/deftest parse-shorthand-edge-cases-test
   (t/with-instrument `format/parse-shorthand
     ;; Empty string and whitespace return anomalies
     (t/is (anomalies/anomaly? (format/parse-shorthand "")))
@@ -145,14 +145,14 @@
     (t/is (anomalies/anomaly? (format/parse-shorthand "abc123")))
     (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
 
-(deftest parse-shorthand-security-test
+(ct/deftest parse-shorthand-security-test
   (t/with-instrument `format/parse-shorthand
     ;; These should not execute code, just return anomalies
     (t/is (anomalies/anomaly? (format/parse-shorthand "#=(+ 1 1)")))
     (t/is (anomalies/anomaly? (format/parse-shorthand "(println \"test\")")))
     (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
 
-(deftest unparse-shorthand-boundary-test
+(ct/deftest unparse-shorthand-boundary-test
   (t/with-instrument `format/unparse-shorthand
     ;; Test boundary between no suffix and K
     (t/is= "999.0" (format/unparse-shorthand 999 5))
@@ -161,7 +161,7 @@
     (t/is= "999K" (format/unparse-shorthand 999000 5))
     (t/is= "1M" (format/unparse-shorthand 1000000 5))))
 
-(deftest format-parse-roundtrip-test
+(ct/deftest format-parse-roundtrip-test
   (t/with-instrument :all
     ;; Test that parse(unparse(x)) approximately equals x for various values
     (random/bind-seed 42
@@ -172,7 +172,7 @@
             (t/is (m/roughly? x parsed (* (m/abs x) 0.01))
               (str "Roundtrip failed for " x " -> " formatted " -> " parsed))))))))
 
-(deftest format-number-max-length-test
+(ct/deftest format-number-max-length-test
   (t/with-instrument `format/format-number
     ;; max-length of 1 should still produce something
     (t/is (string? (format/format-number 123456 1)))
@@ -180,7 +180,7 @@
     (t/is= "123456.0" (format/format-number 123456 1000))))
 
 ;;;PERCENT
-(deftest format-percent-test
+(ct/deftest format-percent-test
   (t/with-instrument `format/format-percent
     (t/is-spec-check format/format-percent))
   (t/with-instrument (st/instrumentable-syms)
@@ -195,7 +195,7 @@
     (t/is= "-Inf" (format/format-percent m/inf-))))
 
 ;;;ENGINEERING NOTATION
-(deftest format-as-engineering-test
+(ct/deftest format-as-engineering-test
   (t/with-instrument `format/format-as-engineering
     (t/is-spec-check format/format-as-engineering))
   (t/with-instrument (st/instrumentable-syms)
@@ -208,7 +208,7 @@
     (t/is= "1.00E+0" (format/format-as-engineering 1))))
 
 ;;;EXTENDED FORMATTING
-(deftest format-number-extended-test
+(ct/deftest format-number-extended-test
   (t/with-instrument `format/format-number-extended
     (t/is-spec-check format/format-number-extended))
   (t/with-instrument (st/instrumentable-syms)
@@ -231,7 +231,7 @@
     (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
 
 ;;;CUSTOM SHORTHAND
-(deftest unparse-shorthand-custom-test
+(ct/deftest unparse-shorthand-custom-test
   (t/with-instrument `format/unparse-shorthand-custom
     (t/is-spec-check format/unparse-shorthand-custom))
   (t/with-instrument (st/instrumentable-syms)

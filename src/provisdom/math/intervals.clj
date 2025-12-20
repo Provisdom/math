@@ -66,8 +66,6 @@
 
 (s/def ::open-prob-interval (interval-spec ::m/open-prob))
 
-(s/def ::finite+-interval (interval-spec ::m/finite+))
-
 (s/def ::finite-non--interval (interval-spec ::m/finite-non-))
 
 (s/def ::int-interval (interval-spec ::m/int))
@@ -100,8 +98,8 @@
 (s/def ::open-upper? boolean?)
 
 (s/def ::bounds
-  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-    (fn [{::keys [lower upper open-lower? open-upper?]}]
+  (s/and (s/keys :req [::lower ::open-lower? ::open-upper? ::upper])
+    (fn [{::keys [lower open-lower? open-upper? upper]}]
       (or (and (m/nan? lower) (m/nan? upper))
         (> upper lower)
         (and (== upper lower)
@@ -109,16 +107,16 @@
           (not open-upper?))))))
 
 (s/def ::bounds-num
-  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-    (fn [{::keys [lower upper open-lower? open-upper?]}]
+  (s/and (s/keys :req [::lower ::open-lower? ::open-upper? ::upper])
+    (fn [{::keys [lower open-lower? open-upper? upper]}]
       (or (> upper lower)
         (and (== upper lower)
           (not open-lower?)
           (not open-upper?))))))
 
 (s/def ::bounds-finite
-  (s/and (s/keys :req [::lower ::upper ::open-lower? ::open-upper?])
-    (fn [{::keys [lower upper open-lower? open-upper?]}]
+  (s/and (s/keys :req [::lower ::open-lower? ::open-upper? ::upper])
+    (fn [{::keys [lower open-lower? open-upper? upper]}]
       (and (m/finite? lower)
         (m/finite? upper)
         (or (> upper lower)
@@ -241,7 +239,7 @@
     (in-bounds? (bounds 0 10) 5)           ;=> true
     (in-bounds? (bounds 0 10) 0)           ;=> true (closed lower)
     (in-bounds? (bounds 0 10 true false) 0) ;=> false (open lower)"
-  [{::keys [lower upper open-lower? open-upper?]} number]
+  [{::keys [lower open-lower? open-upper? upper]} number]
   (and (if open-lower?
          (> number lower)
          (>= number lower))
@@ -264,7 +262,7 @@
     (bound-by-bounds (bounds 0 10) 5)       ;=> 5 (unchanged)
     (bound-by-bounds (bounds 0 10) 15)      ;=> 10 (clamped to upper)
     (bound-by-bounds (bounds 0 10 true false) -1)  ;=> 4.9E-324 (just above 0)"
-  [{::keys [lower upper open-lower? open-upper?]} number]
+  [{::keys [lower open-lower? open-upper? upper]} number]
   (let [effective-lower (if open-lower? (m/next-up lower) lower)
         effective-upper (if open-upper? (m/next-down upper) upper)]
     (max effective-lower (min effective-upper number))))
@@ -293,7 +291,7 @@
     (bounds-midpoint (bounds 0 10))   ;=> 5.0
     (bounds-midpoint (bounds -5 5))   ;=> 0.0"
   [{::keys [lower upper]}]
-  (/ (+ lower upper) 2.0))
+  (/ (+ lower (double upper)) 2.0))
 
 (s/fdef bounds-midpoint
   :args (s/cat :bounds ::bounds)
@@ -324,8 +322,8 @@
     (contains-bounds? (bounds 0 10) (bounds 2 8))   ;=> true
     (contains-bounds? (bounds 0 10) (bounds -1 8))  ;=> false
     (contains-bounds? (bounds 0 10 true true) (bounds 0 10))  ;=> false"
-  [{o-lower ::lower o-upper ::upper o-open-lower? ::open-lower? o-open-upper? ::open-upper?}
-   {i-lower ::lower i-upper ::upper i-open-lower? ::open-lower? i-open-upper? ::open-upper?}]
+  [{o-lower ::lower o-open-lower? ::open-lower? o-open-upper? ::open-upper? o-upper ::upper}
+   {i-lower ::lower i-open-lower? ::open-lower? i-open-upper? ::open-upper? i-upper ::upper}]
   (and
     ;; Lower bound check: outer lower must be <= inner lower
     ;; If outer is open and inner is closed at same point, outer doesn't contain inner
@@ -367,9 +365,9 @@
    (bounds lower upper open-lower? open-upper?))
   ([lower upper open-lower? open-upper?]
    {::lower       lower
-    ::upper       upper
     ::open-lower? open-lower?
-    ::open-upper? open-upper?}))
+    ::open-upper? open-upper?
+    ::upper       upper}))
 
 (s/fdef bounds
   :args (s/or :zero (s/cat)
@@ -503,7 +501,7 @@
     (get-interval (bounds 0 10))              ;=> [0 10]
     (get-interval (bounds 0 10 true false))   ;=> [4.9E-324 10] (open lower)
     (get-interval (bounds 0 10 false true))   ;=> [0 9.999999999999998] (open upper)"
-  [{::keys [lower upper open-lower? open-upper?]}]
+  [{::keys [lower open-lower? open-upper? upper]}]
   (let [l (if open-lower? (m/next-up lower) lower)
         u (if open-upper? (m/next-down upper) upper)]
     [l u]))
@@ -577,9 +575,9 @@
   ([vector-bounds] (sort-bounds vector-bounds {}))
   ([vector-bounds {::keys [by-upper?] :or {by-upper? false}}]
    (let [f (if by-upper?
-             (fn [{::keys [lower upper open-lower? open-upper?]}]
+             (fn [{::keys [lower open-lower? open-upper? upper]}]
                (vector (- upper) (not open-upper?) (- lower) open-lower?))
-             (fn [{::keys [lower upper open-lower? open-upper?]}]
+             (fn [{::keys [lower open-lower? open-upper? upper]}]
                (vector lower (not open-lower?) upper open-upper?)))]
      (vec (sort-by f vector-bounds)))))
 

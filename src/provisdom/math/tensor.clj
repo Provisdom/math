@@ -18,7 +18,9 @@
 
 (declare transpose rank tensor?)
 
-(def mdl 6)                                                 ;max-dim-length for generators
+(def mdl
+  "Maximum dimension length used in generators for spec testing."
+  6)
 
 (s/def ::index
   (s/with-gen ::m/int-non-
@@ -674,7 +676,8 @@
                             tensor))
                         tensors
                         shapes))]
-    (recursive-emap-kv largest-shape f [] new-tensors)))
+    (when new-tensors
+      (recursive-emap-kv largest-shape f [] new-tensors))))
 
 (defn emap-kv
   "Applies a function element-wise with coordinate information.
@@ -798,15 +801,14 @@
 
 (defn subtract
   "Performs element-wise subtraction of tensors.
-  
+
   With one argument, negates all elements. With multiple arguments,
   subtracts subsequent tensors from the first. Supports broadcasting.
-  
+
   Examples:
     (subtract [5 3]) ;=> [-5 -3]
     (subtract [5 3] [1 2]) ;=> [4 1]
     (subtract [[5]] [1 2]) ;=> [[4 3]] (broadcasting)"
-  ([] 0.0)
   ([tensor] (emap - tensor))
   ([tensor1 tensor2]
    (emap (fn [i j]
@@ -818,8 +820,7 @@
      (apply emap - tensor3 more))))
 
 (s/fdef subtract
-  :args (s/or :zero (s/cat)
-          :one (s/cat :tensor ::tensor)
+  :args (s/or :one (s/cat :tensor ::tensor)
           :two+ (s/cat :tensor1 ::tensor
                   :tensor2 ::tensor
                   :more (s/* ::tensor)))
@@ -856,15 +857,14 @@
 
 (defn divide
   "Performs element-wise division of tensors.
-  
+
   With one argument, computes 1/x for each element. With multiple arguments,
   divides the first tensor by subsequent tensors. Supports broadcasting.
-  
+
   Examples:
     (divide [8 6]) ;=> [0.125 0.167...] (reciprocals)
     (divide [8 6] [2 3]) ;=> [4.0 2.0]
     (divide [[12]] [3 4]) ;=> [[4.0 3.0]] (broadcasting)"
-  ([] 1.0)
   ([tensor] (emap m/div tensor))
   ([tensor & more]
    (reduce (fn [tot e]
@@ -875,8 +875,9 @@
      more)))
 
 (s/fdef divide
-  :args (s/or :zero (s/cat)
-          :one+ (s/cat :tensor ::tensor
+  :args (s/or :one (s/cat :tensor ::tensor)
+          :two+ (s/cat :tensor1 ::tensor
+                  :tensor2 ::tensor
                   :more (s/* ::tensor)))
   :ret (s/nilable ::tensor))
 

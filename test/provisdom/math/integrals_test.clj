@@ -1,6 +1,6 @@
 (ns provisdom.math.integrals-test
   (:require
-    [clojure.test :refer :all]
+    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.integrals :as integrals]
     [provisdom.math.intervals :as intervals]
@@ -15,7 +15,7 @@
 (declare uni-integration-test)
 
 ;;;INTEGRATION TESTS
-(deftest change-of-variable-test
+(ct/deftest change-of-variable-test
   (t/with-instrument `integrals/change-of-variable
     (t/is-spec-check integrals/change-of-variable))
   (t/with-instrument :all
@@ -36,7 +36,7 @@
       (t/is= m/inf- ((::integrals/converter-fn cov4) 0.0))
       (t/is= [0.0 1.0] (::intervals/finite-interval cov4)))))
 
-(deftest integration-test
+(ct/deftest integration-test
   (t/with-instrument `integrals/integration
     (t/is-spec-check integrals/integration))
   (t/with-instrument `integrals/integration
@@ -79,7 +79,7 @@
         [5.0 m/inf+]
         {::integrals/parallel? true}))))
 
-(deftest rectangular-integration-test
+(ct/deftest rectangular-integration-test
   (t/with-instrument `integrals/rectangular-integration
     (t/is-spec-check integrals/rectangular-integration))
   (t/with-instrument `integrals/rectangular-integration
@@ -165,7 +165,7 @@
             [[c c] [c c]]))
         [[2.0 6.0] [m/inf- -5.0]]))))
 
-(deftest non-rectangular-2D-integration-test
+(ct/deftest non-rectangular-2D-integration-test
   (t/with-instrument `integrals/non-rectangular-2D-integration
     (t/is-spec-check integrals/non-rectangular-2D-integration))
   (t/with-instrument `integrals/non-rectangular-2D-integration
@@ -223,7 +223,7 @@
         (fn [_outer]
           [m/inf- -5.0])))))
 
-(deftest integration-with-error-test
+(ct/deftest integration-with-error-test
   (t/with-instrument `integrals/integration-with-error
     (t/is-spec-check integrals/integration-with-error))
   (t/with-instrument `integrals/integration-with-error
@@ -242,7 +242,7 @@
                    {::integrals/accu 1e-10})]
       (t/is (m/roughly? 0.0 (::integrals/value result) 1e-10)))))
 
-(deftest singularity-handling-test
+(ct/deftest singularity-handling-test
   (t/with-instrument `integrals/integration
     ;; Integral of 1/sqrt(|x|) from -1 to 1 with singularity at 0
     ;; Exact value = 4
@@ -265,7 +265,7 @@
               {::integrals/singularities [0.5]})
             0.1))))
 
-(deftest tanh-sinh-integration-test
+(ct/deftest tanh-sinh-integration-test
   (t/with-instrument `integrals/tanh-sinh-integration
     (t/is-spec-check integrals/tanh-sinh-integration))
   (t/with-instrument `integrals/tanh-sinh-integration
@@ -293,7 +293,7 @@
               {::integrals/level 4})
             0.001))))
 
-(deftest clenshaw-curtis-integration-test
+(ct/deftest clenshaw-curtis-integration-test
   (t/with-instrument `integrals/clenshaw-curtis-integration
     (t/is-spec-check integrals/clenshaw-curtis-integration))
   (t/with-instrument `integrals/clenshaw-curtis-integration
@@ -319,7 +319,7 @@
             (integrals/clenshaw-curtis-integration m/cube [0.0 2.0])
             0.0001))))
 
-(deftest monte-carlo-integration-test
+(ct/deftest monte-carlo-integration-test
   ;; Skip spec-check - function takes function args, slow/problematic
   (t/with-instrument `integrals/monte-carlo-integration
     ;; 2D integral: ∫∫ (x+y) dxdy over [0,1]×[0,1] = 1
@@ -339,7 +339,7 @@
                      {::integrals/samples 50000})]
         (t/is (m/roughly? 2.5 (::integrals/value result) 0.1))))))
 
-(deftest quasi-monte-carlo-integration-test
+(ct/deftest quasi-monte-carlo-integration-test
   ;; Skip spec-check - function takes function args, slow/problematic
   (t/with-instrument `integrals/quasi-monte-carlo-integration
     ;; 2D integral
@@ -350,7 +350,7 @@
                      {::integrals/samples 10000})]
         (t/is (m/roughly? 1.0 (::integrals/value result) 0.1))))))
 
-(deftest sparse-grid-integration-test
+(ct/deftest sparse-grid-integration-test
   ;; Skip spec-check - function takes function args
   (t/with-instrument `integrals/sparse-grid-integration
     ;; 2D integral: ∫∫ (x+y) dxdy over [0,1]×[0,1] = 1
@@ -376,7 +376,7 @@
               {::integrals/sparse-grid-level 5})
             0.0001))))
 
-(deftest oscillatory-integration-test
+(ct/deftest oscillatory-integration-test
   ;; Note: Filon method is designed for high-frequency oscillations.
   ;; Low-frequency (omega=1) results have larger error.
   ;; Skip spec-check - function takes function args
