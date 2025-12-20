@@ -11,7 +11,8 @@
   - Element access and filtering (indexes-of, filter-kv, some-kv)
   - Manipulation (insertv, removev, concat-by-index, replace-nan)
   - Linear algebra (dot-product, cross-product, projection)
-  - Kahan summation for improved numerical accuracy"
+  - Kahan summation for improved numerical accuracy
+  - Softmax for converting vectors to probability distributions"
   (:refer-clojure :exclude [vector?])
   (:require
     [clojure.spec.alpha :as s]
@@ -62,6 +63,13 @@
                :kind clojure.core/vector?
                :into [])
     #(gen/vector (s/gen ::m/finite) 0 mdl)))
+
+(s/def ::vector-int-non-
+  (s/with-gen
+    (s/coll-of ::m/int-non-
+               :kind clojure.core/vector?
+               :into [])
+    #(gen/vector (s/gen ::m/int-non-) 0 mdl)))
 
 (defmacro vector-of-spec
   [{d?        :distinct?
@@ -657,6 +665,27 @@
 (s/fdef kahan-sum
   :args (s/cat :numbers ::m/numbers)
   :ret ::m/number)
+
+(defn softmax
+  "Computes the softmax function for a vector of numbers.
+
+   softmax(x)_i = exp(x_i) / ∑_j exp(x_j)
+
+   Uses the max-subtraction trick for numerical stability to avoid overflow.
+   Returns a vector of probabilities that sum to 1.
+
+   Examples:
+     (softmax [1.0 2.0 3.0]) ;=> [0.09003... 0.24472... 0.66524...]
+     (softmax [0.0 0.0]) ;=> [0.5 0.5]"
+  [numbers]
+  (let [max-val (double (apply max numbers))
+        exp-vals (mapv #(m/exp (- (double %) max-val)) numbers)
+        sum-exp (reduce + exp-vals)]
+    (mapv #(/ % sum-exp) exp-vals)))
+
+(s/fdef softmax
+  :args (s/cat :numbers (s/and ::vector-finite #(pos? (count %))))
+  :ret ::vector-probs)
 
 (defn dot-product
   "Computes the dot product (inner product) of vectors `v1` and `v2`.

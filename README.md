@@ -32,6 +32,7 @@ N-dimensional array operations:
 Specialized 1D tensor operations:
 - Dot products, cross products, projections
 - Kahan summation for improved numerical accuracy
+- Softmax for converting vectors to probability distributions
 - Probability vector validation and operations
 - Vector filtering and manipulation
 

@@ -234,6 +234,25 @@
     (t/is= 15550.883635269476 (vector/kahan-sum (map (partial * m/PI) (range 1 100))))
     (t/is= 15550.883635269474 (apply + (map (partial * m/PI) (range 1 100))))))
 
+(ct/deftest softmax-test
+  (t/with-instrument `vector/softmax
+    (t/is-spec-check vector/softmax))
+  (t/with-instrument :all
+    ;; Equal inputs -> uniform distribution
+    (t/is= [0.5 0.5] (vector/softmax [0.0 0.0]))
+    (t/is= [0.5 0.5] (vector/softmax [1.0 1.0]))
+    ;; Standard case
+    ;;Math 0.09003057317038046, 0.24472847105479767, 0.6652409557748219
+    (t/is-data-approx= [0.09003057317038046 0.24472847105479767 0.6652409557748219]
+      (vector/softmax [1.0 2.0 3.0]))
+    ;; Large values (tests numerical stability)
+    (t/is-data-approx= [0.5 0.5] (vector/softmax [1000.0 1000.0]))
+    ;; Negative values
+    (t/is-data-approx= [0.7310585786300049 0.2689414213699951]
+      (vector/softmax [0.0 -1.0]))
+    ;; Single element
+    (t/is= [1.0] (vector/softmax [5.0]))))
+
 (ct/deftest dot-product-test
   (t/with-instrument `vector/dot-product
     (t/is-spec-check vector/dot-product))
