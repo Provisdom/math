@@ -1,12 +1,9 @@
 (ns provisdom.math.combinatorics-test
   (:require [clojure.test :as ct]
             [provisdom.math.combinatorics :as combo]
-            [provisdom.test.core :as t])
-  (:import
-    [org.apache.commons.math3.util
-     CombinatoricsUtils]))
+            [provisdom.test.core :as t]))
 
-;;1 seconds
+;;6 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -25,8 +22,7 @@
     (t/is= 5.109094217170945E19 (combo/factorial 21))
     (t/is= 1.1240007277776072E21 (combo/factorial 22))
     (t/is= 2.585201673888498E22 (combo/factorial 23))
-    (t/is= 4.714723635992578E284 (combo/factorial 160))
-    (t/is= 4.7147236359931136E284 (CombinatoricsUtils/factorialDouble 160))))
+    (t/is= 4.714723635992578E284 (combo/factorial 160)))) ;;Math 4.7147236359920616E284
 
 (ct/deftest factorial'-test
   (t/with-instrument `combo/factorial'
@@ -79,8 +75,7 @@
 
 (ct/deftest choose-k-from-n'-test
   (t/with-instrument `combo/choose-k-from-n'
-    (t/is-spec-check combo/choose-k-from-n'
-            {:num-tests 50}))
+    (t/is-spec-check combo/choose-k-from-n' {:num-tests 50}))
   (t/with-instrument :all
     (t/is= 4 (combo/choose-k-from-n' 1 4))))
 
@@ -367,7 +362,8 @@
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 0 0))
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 5 5))
-    (t/is-approx= 2.708050201102210 (combo/log-stirling-number-of-the-second-kind 2 5) :tolerance 1e-10))) ;; ln(15)
+    (t/is-approx= 2.708050201102210
+      (combo/log-stirling-number-of-the-second-kind 2 5) :tolerance 1e-10))) ;; ln(15)
 
 (ct/deftest stirling-number-of-the-first-kind-test
   (t/with-instrument `combo/stirling-number-of-the-first-kind

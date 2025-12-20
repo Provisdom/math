@@ -18,7 +18,8 @@
     (t/is-spec-check la/lu-decomposition {:num-tests 200}))
   (t/with-instrument :all
     (t/is= nil (la/lu-decomposition [[]]))
-    ;; Match Apache test values for [[1.0 0.5] [2.0 4.0]]
+    ;;Math Det[{{1, 0.5}, {2, 4}}] = 3
+    ;;Math Inverse[{{1, 0.5}, {2, 4}}] = {{4/3, -1/6}, {-2/3, 1/3}}
     (let [m [[1.0 0.5] [2.0 4.0]]
           result (la/lu-decomposition m)
           {::la/keys [L U LU-permutation determinant inverse singular?]} result]
@@ -159,10 +160,10 @@
     (t/is-spec-check la/cholesky-decomposition {:num-tests 200}))
   (t/with-instrument :all
     (t/is= nil (la/cholesky-decomposition [[]]))
-    ;; Match Apache test values for [[4.0]] -> L = [[2.0]]
+    ;;Math CholeskyDecomposition[{{4}}] = {{2}}
     (t/is= {::la/cholesky-L [[2.0]] ::la/cholesky-LT [[2.0]]}
       (la/cholesky-decomposition [[4.0]]))
-    ;; Match Apache test values for [[1.0 0.5] [0.5 3.0]]
+    ;;Math CholeskyDecomposition[{{1, 0.5}, {0.5, 3}}] -> L22 = Sqrt[11/4] = 1.6583123951776998
     (t/is-data-approx= {::la/cholesky-L  [[1.0 0.0] [0.5 1.6583123951777]]
                         ::la/cholesky-LT [[1.0 0.5] [0.0 1.6583123951777]]}
       (la/cholesky-decomposition [[1.0 0.5] [0.5 3.0]]) :tolerance 1e-10)
@@ -308,7 +309,8 @@
     (t/is-spec-check la/qr-decomposition {:num-tests 200}))
   (t/with-instrument :all
     (t/is= nil (la/qr-decomposition [[]]))
-    ;; Match Apache test values for [[1.0 0.4 0.2] [0.6 0.3 0.9]]
+    ;;Math QRDecomposition[{{1, 0.4, 0.2}, {0.6, 0.3, 0.9}}]
+    ;;Math R11 = -Sqrt[1.36] = -1.16619037896906
     (let [m [[1.0 0.4 0.2] [0.6 0.3 0.9]]
           result (la/qr-decomposition m)
           {::la/keys [Q R]} result
@@ -336,7 +338,7 @@
   (t/with-instrument :all
     ;; Empty matrix
     (t/is= nil (la/rank-revealing-qr-decomposition [[]] 1e-6))
-    ;; Full rank 2x2 - match Apache values for [[1.0 0.5] [2.0 4.0]]
+    ;;Math MatrixRank[{{1, 0.5}, {2, 4}}] = 2
     (let [m [[1.0 0.5] [2.0 4.0]]
           result (la/rank-revealing-qr-decomposition m 1e-6)
           {::la/keys [Q R RRQR-permutation rank]} result

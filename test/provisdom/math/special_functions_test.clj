@@ -189,19 +189,17 @@
     (t/is= 0.9513507698668731 (special-fns/gamma 1.1))
     ;;Math 1.298055332647557785681171179152811617784141170553946247921645
     (t/is= 1.298055332647558 (special-fns/gamma 0.7))
-    ;;;Math -10.6862870211931935489730533569448077816983878506097317904937
+    ;;Math -10.6862870211931935489730533569448077816983878506097317904937
     (t/is= -10.686287021193191 (special-fns/gamma -0.1))
-    #_(t/is= -10.686287021193193 (Gamma/gamma -0.1))        ;;Gamma was Apache
+    ;;Math 9.33262154439441526816992388562667004907159682643816214685930E155
     (t/is= 9.332621544394415E155 (special-fns/gamma 100.0))
-    #_(t/is= 9.332621544394412E155 (Gamma/gamma 100.0))
     (t/is= 7.050810550405615E242 (special-fns/gamma 141.8))
     (t/is= 7.257415615308056E306 (special-fns/gamma 171.0))
     (t/is= m/inf+ (special-fns/gamma 172.0))
-    #_(t/is= m/inf+ (Gamma/gamma 141.8))
+    ;;Math 4.29773972070970312095164948653732010774576805605945678584551E242
     (t/is= 4.297739720709703E242 (special-fns/gamma 141.7))
-    #_(t/is= 4.297739720709703E242 (Gamma/gamma 141.7))
-    (t/is= -6.3764985844038365E-245 (special-fns/gamma -141.7))
-    #_(t/is= 6.3764985844038365E-245 (Gamma/gamma -141.7))))
+    ;;Math -6.37649858440383663079648226370796648791812206496011771507927E-245
+    (t/is= -6.3764985844038365E-245 (special-fns/gamma -141.7))))
 
 (ct/deftest lower-gamma-test
   (t/with-instrument `special-fns/lower-gamma
@@ -258,10 +256,9 @@
     (t/is= 0.6671289163019202 (special-fns/regularized-gamma-p 1 1.1))
     (t/is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
     (t/is= 0.0 (special-fns/regularized-gamma-p 1 0))
+    ;;Math GammaRegularized[0.1, 0, 1] = 0.97587265627367262096747892667942166095164779591809
     (t/is= 0.9758726562736726 (special-fns/regularized-gamma-p 0.1 1))
-    #_(t/is= 0.9758726562736726 (Gamma/regularizedGammaP 0.1 1))
     (t/is= 0.5000049341877514 (special-fns/regularized-gamma-p 1e10 1e10))
-    #_(t/is= 0.5000049341877536 (Gamma/regularizedGammaP 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-p 1e149 1e149)))))
 
 (ct/deftest regularized-gamma-q-test
@@ -277,10 +274,9 @@
     (t/is= 0.33287108369807983 (special-fns/regularized-gamma-q 1 1.1))
     (t/is= 0.3678794411714422 (special-fns/regularized-gamma-q 1 1))
     (t/is= 1.0 (special-fns/regularized-gamma-q 1 0))
+    ;;Math GammaRegularized[0.1, 1] = 0.02412734372632737903252107332057833904835220408191
     (t/is= 0.02412734372632741 (special-fns/regularized-gamma-q 0.1 1))
-    #_(t/is= 0.02412734372632741 (Gamma/regularizedGammaQ 0.1 1))
     (t/is= 0.4999950658122486 (special-fns/regularized-gamma-q 1e10 1e10))
-    #_(t/is= 0.4999950658122464 (Gamma/regularizedGammaQ 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-q 1e149 1e149)))))
 
 (ct/deftest log-gamma-test
@@ -294,8 +290,8 @@
     (t/is= 0.04543773854448518 (special-fns/log-gamma 2.1))
     (t/is= -0.049872441259839764 (special-fns/log-gamma 1.1))
     (t/is= 0.0 (special-fns/log-gamma 1))
-    (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))
-    #_(t/is= 0.2608672465316666 (Gamma/logGamma 0.7))))
+    ;;Math LogGamma[0.7] = 0.26086724653166651438715483082379164763455717621310
+    (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))))
 
 (ct/deftest log-gamma-inc-test
   (t/with-instrument `special-fns/log-gamma-inc
@@ -315,8 +311,8 @@
     (t/is= -0.4237549432781376 (special-fns/log-gamma-derivative 1.1))
     (t/is= -1.2200235564290471 (special-fns/log-gamma-derivative 0.7))
     (t/is= 0.7031566378697294 (special-fns/digamma 2.5))
+    ;;Math PolyGamma[-2.5] = 1.10315663786969725133498712848062671647481605379749
     (t/is= 1.1031566378697286 (special-fns/digamma -2.5))
-    #_(t/is= 1.1031566378697297 (Gamma/digamma -2.5))
     (t/is= m/inf- (special-fns/digamma -2.0))
     (t/is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0))))
 
@@ -343,8 +339,8 @@
     (t/is= 1.6449340657861162 (special-fns/trigamma 1))
     (t/is= m/inf+ (special-fns/trigamma 0.0))
     (t/is= 2.8340491557052214 (special-fns/trigamma 0.7))
+    ;;Math PolyGamma[1, -0.1] = 101.92253995947712366536098339457686606168266562299
     (t/is= 101.9225399585074 (special-fns/trigamma -0.1))
-    #_(t/is= 101.922539959477124 (Gamma/trigamma -0.1))
     (t/is= m/inf+ (special-fns/trigamma -2.0))))
 
 (ct/deftest multivariate-gamma-test
@@ -390,11 +386,10 @@
     (t/is= -0.09531017980432493 (special-fns/log-beta 1 1.1))
     (t/is= -0.09531017980432493 (special-fns/log-beta 1.1 1))
     (t/is= 0.0 (special-fns/log-beta 1 1))
+    ;;Math Log[Beta[0.1, 1]] = 2.30258509299404568401799145468436420760110148862877
     (t/is= 2.302585092994046 (special-fns/log-beta 0.1 1))
     (t/is= 2.302585092994046 (special-fns/log-beta 1 0.1))
-    #_(t/is= 2.302585092994046 (Beta/logBeta 1.0 0.1))
-    (t/is= -1.386294362144632E10 (special-fns/log-beta 1e10 1e10))
-    #_(t/is= -1.386294362144632E10 (Beta/logBeta 1e10 1e10))))
+    (t/is= -1.386294362144632E10 (special-fns/log-beta 1e10 1e10))))
 
 (ct/deftest regularized-beta-test
   (t/with-instrument `special-fns/regularized-beta
@@ -406,16 +401,13 @@
     (t/is= 1.0 (special-fns/regularized-beta 1 1 1))
     (t/is= 0.886568150565213 (special-fns/regularized-beta 0.3 0.1 1))
     (t/is= 0.9330329915368075 (special-fns/regularized-beta 0.5 0.1 1))
+    ;;Math BetaRegularized[0.7, 0.1, 1] = 0.96496109511981754950604555096603689045317265612888
     (t/is= 0.9649610951198176 (special-fns/regularized-beta 0.7 0.1 1))
-    #_(t/is= 0.9649610951198176 (Beta/regularizedBeta 0.7 0.1 1.0)) ;;old Apache
     (t/is= 1.0 (special-fns/regularized-beta 1 1 0.1))
+    ;;Math BetaRegularized[0.5, 0.5, 0.5] = 0.5
     (t/is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))
-    #_(t/is= 0.49999999999999983 (Beta/regularizedBeta 0.5 0.5 0.5))
     (t/is= 0.0 (special-fns/regularized-beta 0 1 1))
-    #_(t/is= 0.0 (Beta/regularizedBeta 0.0 1.0 1.0))
     (t/is= 0.5000004638553182 (special-fns/regularized-beta 0.5 1e10 1e10))
-    #_(t/is= 0.500000463837539 (Beta/regularizedBeta 0.5 1e10 1e10))
-    #_(t/is= 0.5 (Beta/regularizedBeta 0.5 1 1))
     (t/is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))))
 
 (ct/deftest incomplete-beta-test

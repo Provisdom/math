@@ -70,13 +70,6 @@
    "M" 1000000
    "T" 1000000000000})
 
-(def ^:private by-letter-sorted
-  "Shorthand letters sorted by value descending for iteration."
-  [["T" 1000000000000]
-   ["B" 1000000000]
-   ["M" 1000000]
-   ["K" 1000]])
-
 ;;;PRIVATE HELPERS
 (defn- safe-parse-number
   "Safely parses a string to a number without code execution risk.
@@ -109,16 +102,22 @@
              (> standard-digits digit-threshold))
         (< (m/abs shortened-number) small-number-exponential-threshold))))
 
-(defn- java-rounding-mode
-  "Converts keyword rounding mode to Java RoundingMode."
-  ^java.math.RoundingMode [mode]
-  (case mode
-    :ceiling java.math.RoundingMode/CEILING
-    :floor java.math.RoundingMode/FLOOR
-    :half-down java.math.RoundingMode/HALF_DOWN
-    :half-even java.math.RoundingMode/HALF_EVEN
-    :half-up java.math.RoundingMode/HALF_UP
-    java.math.RoundingMode/HALF_UP))
+(defn- round-to-decimal-places
+  "Rounds `number` to `decimal-places` using the specified `rounding-mode`.
+  Returns number unchanged if multiplication would overflow."
+  [number decimal-places rounding-mode]
+  (let [factor (m/pow 10.0 decimal-places)
+        scaled (* number factor)]
+    (if (m/inf? scaled)
+      number
+      (/ (case rounding-mode
+           :ceiling (m/ceil scaled)
+           :floor (m/floor scaled)
+           :half-down (m/round scaled :toward-zero)
+           :half-even (m/round scaled :toward-even)
+           :half-up (m/round scaled :away-from-zero)
+           (m/round scaled :away-from-zero))
+         factor))))
 
 (defn- add-thousands-separators
   "Adds thousand separators (commas) to the integer portion of a number string."
@@ -371,7 +370,7 @@
     (parse-shorthand \"42\")      ;=> 42
     (parse-shorthand \"invalid\") ;=> {::anomalies/category ::anomalies/incorrect ...}"
   [s]
-  (if (or (nil? s) (str/blank? s))
+  (if (str/blank? s)
     {::anomalies/category ::anomalies/incorrect
      ::anomalies/message "Cannot parse empty or blank string"
      ::anomalies/data {:input s}}
@@ -427,7 +426,7 @@
      (m/nan? decimal) "NaN"
      (m/inf+? decimal) "Inf"
      (m/inf-? decimal) "-Inf"
-     :else (str (format-as-float (* 100 decimal) precision) "%"))))
+     :else (str (format-as-float (* 100.0 (double decimal)) precision) "%"))))
 
 (s/fdef format-percent
   :args (s/cat :decimal ::m/number
@@ -504,17 +503,15 @@
        :else
        (let [;; Apply rounding mode if specified
              rounded (if (and max-decimal-places (not= rounding-mode :half-up))
-                       (let [bd (BigDecimal/valueOf number)
-                             scale max-decimal-places
-                             rm (java-rounding-mode rounding-mode)]
-                         (.doubleValue (.setScale bd scale rm)))
+                       (round-to-decimal-places number max-decimal-places rounding-mode)
                        number)
              ;; Use engineering notation if requested
              base-result (if engineering?
                            (format-as-engineering rounded {::digits (or max-digits 3)})
                            (format-number rounded max-length
                                           (cond-> {}
-                                            max-decimal-places (assoc ::max-decimal-places max-decimal-places)
+                                            max-decimal-places (assoc ::max-decimal-places
+                                                                 max-decimal-places)
                                             max-digits (assoc ::max-digits max-digits))))
              ;; Add thousand separators if requested (only for non-exponential)
              with-thousands (if (and thousands-sep?
@@ -581,7 +578,8 @@
                                             (/ x multiplier)
                                             (max 1 (dec max-length))))
                      without-ending (if (str/ends-with? adjusted-number ".0")
-                                      (subs adjusted-number 0 (- (count adjusted-number) 2))
+                                      (strings/butlast-string
+                                        (strings/butlast-string adjusted-number))
                                       adjusted-number)]
                  (str without-ending letter)))
            s (or (some (fn [[letter multiplier]]

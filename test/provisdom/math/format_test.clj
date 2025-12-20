@@ -1,6 +1,5 @@
 (ns provisdom.math.format-test
   (:require
-    [clojure.spec.test.alpha :as st]
     [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.format :as format]
@@ -8,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anomalies]))
 
-;;1 second
+;;3 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -16,7 +15,7 @@
 (ct/deftest trim-number-as-string-test
   (t/with-instrument `format/trim-number-as-string
     (t/is-spec-check format/trim-number-as-string))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "-.003" (format/trim-number-as-string "-00.00300"))
     (t/is= "-.003" (format/trim-number-as-string "-.00300"))
     (t/is= ".003" (format/trim-number-as-string "00.00300"))
@@ -26,7 +25,7 @@
 (ct/deftest format-as-float-test
   (t/with-instrument `format/format-as-float
     (t/is-spec-check format/format-as-float))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "123" (format/format-as-float 123.456 0))
     (t/is= "123.4560" (format/format-as-float 123.456 4))
     (t/is= "0.0000" (format/format-as-float 1.23456E-5 4))
@@ -37,7 +36,7 @@
 (ct/deftest format-as-exponential-test
   (t/with-instrument `format/format-as-exponential
     (t/is-spec-check format/format-as-exponential))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "2E+0" (format/format-as-exponential 2.0 {::format/digits 1}))
     (t/is= "2.3432E+4" (format/format-as-exponential 23432))
     (t/is= "2E+4" (format/format-as-exponential 23432 {::format/digits 1}))
@@ -53,7 +52,7 @@
 (ct/deftest format-number-test
   (t/with-instrument `format/format-number
     (t/is-spec-check format/format-number))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "23" (format/format-number 23.33 1))
     (t/is= "1.2E+6" (format/format-number 1234567 6))
     (t/is= "1234567" (format/format-number 1234567 8))
@@ -98,7 +97,7 @@
 (ct/deftest unparse-shorthand-test
   (t/with-instrument `format/unparse-shorthand
     (t/is-spec-check format/unparse-shorthand))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "3E+20" (format/unparse-shorthand 3.232348938493849E20 3))
     (t/is= "3T" (format/unparse-shorthand 3232394349923 3))
     (t/is= "32B" (format/unparse-shorthand 32323943499 3))
@@ -119,7 +118,7 @@
 (ct/deftest parse-shorthand-test
   (t/with-instrument `format/parse-shorthand
     (t/is-spec-check format/parse-shorthand))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= 2.3432343E16 (format/parse-shorthand "23432.343T"))
     (t/is= 2.3432343E13 (format/parse-shorthand "23432.343B"))
     (t/is= 2.3432343E10 (format/parse-shorthand "23432.343M"))
@@ -183,7 +182,7 @@
 (ct/deftest format-percent-test
   (t/with-instrument `format/format-percent
     (t/is-spec-check format/format-percent))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "15%" (format/format-percent 0.15))
     (t/is= "16%" (format/format-percent 0.156 {::format/precision 0}))
     (t/is= "15.6%" (format/format-percent 0.156 {::format/precision 1}))
@@ -198,7 +197,7 @@
 (ct/deftest format-as-engineering-test
   (t/with-instrument `format/format-as-engineering
     (t/is-spec-check format/format-as-engineering))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     (t/is= "12.35E+3" (format/format-as-engineering 12345))
     (t/is= "1.23E-3" (format/format-as-engineering 0.00123))
     (t/is= "123.46E+6" (format/format-as-engineering 123456789))
@@ -211,7 +210,7 @@
 (ct/deftest format-number-extended-test
   (t/with-instrument `format/format-number-extended
     (t/is-spec-check format/format-number-extended))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     ;; Thousand separators (note: integers formatted as doubles have .0 suffix)
     (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true}))
     (t/is= "-1,234,567.0" (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
@@ -234,7 +233,7 @@
 (ct/deftest unparse-shorthand-custom-test
   (t/with-instrument `format/unparse-shorthand-custom
     (t/is-spec-check format/unparse-shorthand-custom))
-  (t/with-instrument (st/instrumentable-syms)
+  (t/with-instrument :all
     ;; Custom letters
     (t/is= "1.5k" (format/unparse-shorthand-custom 1500 5 {::format/shorthand-letters {"k" 1000}}))
     ;; Default behavior matches unparse-shorthand

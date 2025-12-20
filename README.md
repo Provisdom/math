@@ -130,7 +130,7 @@ Numerical integration with multiple quadrature methods:
 - **Gauss-Kronrod**: `integration` - Default adaptive quadrature for 1D integrals
 - **Clenshaw-Curtis**: `clenshaw-curtis-integration` - Chebyshev-based, includes endpoints
 - **Tanh-sinh**: `tanh-sinh-integration` - Double-exponential for endpoint singularities
-- **Monte Carlo**: `monte-carlo-integration`, `quasi-monte-carlo-integration` - High-dimensional integrals
+- **Monte Carlo**: `monte-carlo-integration`, `quasi-monte-carlo-integration` (Halton) - High-dimensional integrals
 - **Sparse grids**: `sparse-grid-integration` - Smolyak algorithm for moderate dimensions (5-15)
 - **Oscillatory**: `oscillatory-integration` - Filon-type for f(x)·sin(ωx) integrands
 - Multi-dimensional integration: `rectangular-integration`, `non-rectangular-2D-integration`

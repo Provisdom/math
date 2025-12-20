@@ -22,8 +22,6 @@
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
-(declare log-choose-k-from-n)
-
 ;;;SPECS
 (def mdl 3)                                                 ;max-dim-length for generators
 
@@ -184,8 +182,14 @@
     (reduce * 1.0 (map #(+ (double x) %) (range n)))))
 
 (s/fdef rising-factorial
-  :args (s/cat :x ::m/num :n ::m/int-non-)
-  :ret ::m/num)
+  :args (s/with-gen
+          (s/cat :x ::m/num :n ::m/int-non-)
+          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:min 0 :max 20})))
+  :ret ::m/number)
+
+(def pochhammer-symbol
+  "Alias for [[rising-factorial]]. The Pochhammer symbol (x)_n."
+  rising-factorial)
 
 (defn falling-factorial
   "Computes the falling factorial.
@@ -206,8 +210,14 @@
     (reduce * 1.0 (map #(- (double x) %) (range n)))))
 
 (s/fdef falling-factorial
-  :args (s/cat :x ::m/num :n ::m/int-non-)
+  :args (s/with-gen
+          (s/cat :x ::m/num :n ::m/int-non-)
+          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:min 0 :max 20})))
   :ret ::m/num)
+
+(def falling-pochhammer-symbol
+  "Alias for [[falling-factorial]]. The falling Pochhammer symbol."
+  falling-factorial)
 
 ;;;CHOOSING
 (defn choose-k-from-n
@@ -220,7 +230,8 @@
   Constraints: k ≤ n, both non-negative integers
   
   Examples:
-    (choose-k-from-n 2 5)   ;=> 10.0 (choosing 2 from 5: {1,2},{1,3},{1,4},{1,5},{2,3},{2,4},{2,5},{3,4},{3,5},{4,5})
+    (choose-k-from-n 2 5)   ;=> 10.0 (choosing 2 from 5:
+                                        {1,2},{1,3},{1,4},{1,5},{2,3},{2,4},{2,5},{3,4},{3,5},{4,5})
     (choose-k-from-n 0 5)   ;=> 1.0  (only one way to choose nothing)
     (choose-k-from-n 5 5)   ;=> 1.0  (only one way to choose everything)"
   [k n]
@@ -283,7 +294,7 @@
   (let [lfn (log-factorial n)]
     (if (m/inf+? lfn)
       m/inf+
-      (- (log-factorial n)
+      (- lfn
         (log-factorial k)
         (log-factorial (- n k))))))
 
@@ -315,7 +326,7 @@
 
 (s/fdef multinomial-coefficient
   :args (s/cat :ks (s/coll-of ::m/int-non-))
-  :ret ::m/num)
+  :ret ::m/number)
 
 (defn log-multinomial-coefficient
   "Computes the natural logarithm of the multinomial coefficient.
@@ -332,7 +343,7 @@
 
 (s/fdef log-multinomial-coefficient
   :args (s/cat :ks (s/coll-of ::m/non-))
-  :ret ::m/num)
+  :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind
   "Returns the number of ways to partition a set of `n` items into `k` subsets."
@@ -437,9 +448,15 @@
       (get table k 0.0))))
 
 (s/fdef stirling-number-of-the-first-kind
-  :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+  :args (s/with-gen
+          (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
+            (fn [{:keys [k n]}]
+              (>= n k)))
+          #(gen/bind
+             (gen/large-integer* {:min 0 :max 15})
+             (fn [k]
+               (gen/fmap (fn [n] [k n])
+                 (gen/large-integer* {:min k :max 15})))))
   :ret ::m/num)
 
 (defn stirling-number-of-the-first-kind'
@@ -448,10 +465,16 @@
   (m/maybe-long-able (stirling-number-of-the-first-kind k n)))
 
 (s/fdef stirling-number-of-the-first-kind'
-  :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
-          (fn [{:keys [k n]}]
-            (>= n k)))
-  :ret ::m/number)
+  :args (s/with-gen
+          (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
+            (fn [{:keys [k n]}]
+              (>= n k)))
+          #(gen/bind
+             (gen/large-integer* {:min 0 :max 15})
+             (fn [k]
+               (gen/fmap (fn [n] [k n])
+                 (gen/large-integer* {:min k :max 15})))))
+  :ret ::m/num)
 
 (defn bell-number
   "Returns the number of partitions of a set of size `n`."
@@ -585,9 +608,17 @@
    (falling-factorial n k)))
 
 (s/fdef count-permutations
-  :args (s/or :one (s/cat :n ::m/int-non-)
-              :two (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
-                     n-no-less-than-k?))
+  :args (s/with-gen
+          (s/or :one (s/cat :n ::m/int-non-)
+            :two (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
+                   n-no-less-than-k?))
+          #(gen/one-of
+             [(gen/fmap vector (gen/large-integer* {:min 0 :max 20}))
+              (gen/bind
+                (gen/large-integer* {:min 0 :max 20})
+                (fn [k]
+                  (gen/fmap (fn [n] [k n])
+                    (gen/large-integer* {:min k :max 20}))))]))
   :ret ::m/num)
 
 ;;;INTEGER PARTITIONS
@@ -627,7 +658,14 @@
    (integer-partitions-helper n (min n max-part))))
 
 (s/fdef integer-partitions
-  :args (s/cat :n ::m/int-non- :max-part (s/? ::m/int-non-))
+  :args (s/with-gen
+          (s/cat :n ::m/int-non- :max-part (s/? ::m/int-non-))
+          #(gen/one-of
+             [(gen/fmap vector (gen/large-integer* {:min 0 :max 15}))
+              (gen/fmap (fn [[n mp]] [n mp])
+                (gen/tuple
+                  (gen/large-integer* {:min 0 :max 15})
+                  (gen/large-integer* {:min 0 :max 15})))]))
   :ret (s/coll-of (s/coll-of ::m/int-non-)))
 
 (defn count-integer-partitions
@@ -654,7 +692,6 @@
   :ret ::m/int-non-)
 
 ;;;UNORDERED COMBINATIONS
-
 ;taken from an old version of clojure.math.combinatorics
 (defn- unchunk
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
@@ -861,7 +898,9 @@
         (cons x more)))))
 
 (s/fdef cartesian-product
-  :args (s/cat :sequences-of-items (s/* ::items))
+  :args (s/with-gen
+          (s/cat :sequences-of-items (s/* ::items))
+          #(gen/vector (s/gen ::items) 0 mdl))
   :ret ::groups-of-items)
 
 (defn selections

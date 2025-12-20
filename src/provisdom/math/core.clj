@@ -1173,15 +1173,17 @@
   (s/with-gen ::non-
               #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
 
-(s/def ::round-type #{:up :down :away-from-zero :toward-zero})
+(s/def ::round-type #{:up :down :away-from-zero :toward-zero :toward-even})
 
 (defn round
-  "Returns a long if possible. Otherwise, returns `number`.
-    `round-type`:
-      `:up`
-      `:down`
-      `:away-from-zero`
-      `:toward-zero`."
+  "Rounds to nearest integer, with tie-breaking rule specified by `round-type`.
+  Returns a long if possible. Otherwise, returns `number`.
+    `round-type` (all round to nearest, differs only at halfway points):
+      `:up` - ties go toward +∞ (0.5 → 1, -0.5 → 0)
+      `:down` - ties go toward -∞ (0.5 → 0, -0.5 → -1)
+      `:away-from-zero` - ties go away from zero (0.5 → 1, -0.5 → -1)
+      `:toward-zero` - ties go toward zero (0.5 → 0, -0.5 → 0)
+      `:toward-even` - ties go to nearest even (0.5 → 0, 1.5 → 2, 2.5 → 2)"
   [number round-type]
   (if-not (long-range? number)
     number
@@ -1194,6 +1196,9 @@
 
                    :toward-zero
                    (* -1 (sgn number) (Math/round ^double (- (abs number))))
+
+                   :toward-even
+                   (long (Math/rint number))
 
                    (Math/round number))]
       number)))
