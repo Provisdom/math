@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-clojure -M:local:test:test-clj-runner "$@"
+if [ "$CI" = "true" ]; then
+  clojure -M:test:test-clj-runner "$@"
+else
+  clojure -M:local:test:test-clj-runner "$@"
+fi
