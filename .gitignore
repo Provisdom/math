@@ -32,6 +32,7 @@ public/build
 # ================================
 .idea/libraries
 .calva
+*.iml
 
 # ================================
 # Environment & Configuration
