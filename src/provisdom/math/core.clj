@@ -73,6 +73,7 @@
 (def ^:const ^double log-two-pi (+ log-two log-pi))
 (def ^:const ^double log-two-pi-e (+ (Math/log E) log-two-pi))
 (def ^:const ^double half-log-two-pi (* 0.5 log-two-pi))
+(def ^:const ^double half-pi (* 0.5 PI))
 (def ^:const ^double two-pi (* 2.0 PI))
 (def ^:const ^double two-pi-e (* two-pi E))
 (def ^:const ^double pi-squared (* PI PI))
@@ -84,6 +85,7 @@
 (def ^:const ^double inv-sqrt-pi (/ sqrt-pi))
 (def ^:const ^double inv-sqrt-two (/ sqrt-two))
 (def ^:const ^double inv-two-pi (* 0.5 inv-pi))
+(def ^:const ^double two-div-pi (* 2.0 inv-pi))
 (def ^:const ^double inv-sqrt-two-pi (* inv-sqrt-two inv-sqrt-pi))
 
 ;;;TEST FOR NUMERIC TYPES
