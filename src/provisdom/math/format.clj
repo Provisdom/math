@@ -90,8 +90,8 @@
   E+01 -> E+1, E-01 -> E-1, but E+0 and E-0 are preserved."
   [s]
   (-> s
-      (str/replace #"E\+0+(\d)" "E+$1")
-      (str/replace #"E-0+(\d)" "E-$1")))
+    (str/replace #"E\+0+(\d)" "E+$1")
+    (str/replace #"E-0+(\d)" "E-$1")))
 
 (defn- use-exponential?
   "Determines whether exponential notation should be used for the given number."
@@ -99,8 +99,8 @@
   (let [digit-threshold (+ exponential-threshold-base
                           (* exponential-sign-adjustment (m/sgn shortened-number)))]
     (or (and (> standard-digits new-max-length)
-             (> standard-digits digit-threshold))
-        (< (m/abs shortened-number) small-number-exponential-threshold))))
+          (> standard-digits digit-threshold))
+      (< (m/abs shortened-number) small-number-exponential-threshold))))
 
 (defn- round-to-decimal-places
   "Rounds `number` to `decimal-places` using the specified `rounding-mode`.
@@ -117,7 +117,7 @@
            :half-even (m/round scaled :toward-even)
            :half-up (m/round scaled :away-from-zero)
            (m/round scaled :away-from-zero))
-         factor))))
+        factor))))
 
 (defn- add-thousands-separators
   "Adds thousand separators (commas) to the integer portion of a number string."
@@ -176,8 +176,8 @@
         ;; Handle decimal trailing zeros
         s-trimmed (if (str/includes? s-abs ".")
                     (-> s-abs
-                        (strings/trim-end "0")
-                        (strings/trim-end "."))
+                      (strings/trim-end "0")
+                      (strings/trim-end "."))
                     s-abs)
         ;; Trim leading zeros (this removes all leading zeros)
         s-no-leading (strings/trim-start s-trimmed "0")
@@ -372,8 +372,8 @@
   [s]
   (if (str/blank? s)
     {::anomalies/category ::anomalies/incorrect
-     ::anomalies/message "Cannot parse empty or blank string"
-     ::anomalies/data {:input s}}
+     ::anomalies/message  "Cannot parse empty or blank string"
+     ::anomalies/data     {:input s}}
     (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
 
                           (str/starts-with? s "-$")
@@ -400,13 +400,13 @@
           (if (some? result)
             result
             {::anomalies/category ::anomalies/incorrect
-             ::anomalies/message "Failed to parse number string"
-             ::anomalies/data {:input s}}))))))
+             ::anomalies/message  "Failed to parse number string"
+             ::anomalies/data     {:input s}}))))))
 
 (s/fdef parse-shorthand
   :args (s/cat :s string?)
   :ret (s/or :anomaly ::anomalies/anomaly
-             :number ::m/number))
+         :number ::m/number))
 
 ;;;PERCENT
 (defn format-percent
@@ -430,7 +430,7 @@
 
 (s/fdef format-percent
   :args (s/cat :decimal ::m/number
-               :opts (s/? (s/keys :opt [::precision])))
+          :opts (s/? (s/keys :opt [::precision])))
   :ret string?)
 
 ;;;ENGINEERING NOTATION
@@ -453,15 +453,15 @@
      (if (zero? value)
        "0E+0"
        (let [exp (m/floor (m/log10 (m/abs value)))
-             eng-exp (* 3 (long (m/floor (/ exp 3))))
+             eng-exp (* 3 (m/floor' (/ exp 3)))
              mantissa (/ value (m/pow 10.0 eng-exp))
              decimal-places (max 0 (dec digits))]
          (str (format (str "%." decimal-places "f") mantissa)
-              "E" (if (>= eng-exp 0) "+" "") eng-exp))))))
+           "E" (if (>= eng-exp 0) "+" "") eng-exp))))))
 
 (s/fdef format-as-engineering
   :args (s/cat :finite ::m/finite
-               :opts (s/? (s/keys :opt [::digits])))
+          :opts (s/? (s/keys :opt [::digits])))
   :ret string?)
 
 ;;;EXTENDED FORMATTING
@@ -493,7 +493,7 @@
                                max-digits
                                rounding-mode
                                thousands-sep?]
-                       :or {rounding-mode :half-up}}]
+                       :or    {rounding-mode :half-up}}]
    (let [number (double number)]
      (cond
        (m/nan? number) "NaN"
@@ -509,33 +509,33 @@
              base-result (if engineering?
                            (format-as-engineering rounded {::digits (or max-digits 3)})
                            (format-number rounded max-length
-                                          (cond-> {}
-                                            max-decimal-places (assoc ::max-decimal-places
-                                                                 max-decimal-places)
-                                            max-digits (assoc ::max-digits max-digits))))
+                             (cond-> {}
+                               max-decimal-places (assoc ::max-decimal-places
+                                                    max-decimal-places)
+                               max-digits (assoc ::max-digits max-digits))))
              ;; Add thousand separators if requested (only for non-exponential)
              with-thousands (if (and thousands-sep?
-                                     (not (str/includes? base-result "E")))
+                                  (not (str/includes? base-result "E")))
                               (add-thousands-separators base-result)
                               base-result)
              ;; Apply localization
              localized (if (or decimal-symbol grouping-symbol)
                          (localize-number-string with-thousands
-                                                 {::decimal-symbol decimal-symbol
-                                                  ::grouping-symbol grouping-symbol})
+                           {::decimal-symbol  decimal-symbol
+                            ::grouping-symbol grouping-symbol})
                          with-thousands)]
          localized)))))
 
 (s/fdef format-number-extended
   :args (s/cat :number ::m/number
-               :max-length ::max-length
-               :opts (s/? (s/keys :opt [::decimal-symbol
-                                        ::engineering?
-                                        ::grouping-symbol
-                                        ::max-decimal-places
-                                        ::max-digits
-                                        ::rounding-mode
-                                        ::thousands-sep?])))
+          :max-length ::max-length
+          :opts (s/? (s/keys :opt [::decimal-symbol
+                                   ::engineering?
+                                   ::grouping-symbol
+                                   ::max-decimal-places
+                                   ::max-digits
+                                   ::rounding-mode
+                                   ::thousands-sep?])))
   :ret string?)
 
 ;;;CUSTOM SHORTHAND
@@ -553,7 +553,7 @@
     ;=> \"1.5k\""
   ([number max-length] (unparse-shorthand-custom number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits money? shorthand-letters]
-                       :or {shorthand-letters by-letter}}]
+                       :or    {shorthand-letters by-letter}}]
    (cond
      (m/nan? number) "NaN"
      (m/inf+? number) "Inf"
@@ -585,8 +585,8 @@
            s (or (some (fn [[letter multiplier]]
                          (when (>= absolute-value multiplier)
                            (f shortened-number letter multiplier)))
-                       sorted-letters)
-                 (format-number shortened-number max-length))]
+                   sorted-letters)
+               (format-number shortened-number max-length))]
        (if money?
          (if (neg? shortened-number)
            (str "-$" (strings/rest-string s))
@@ -595,9 +595,9 @@
 
 (s/fdef unparse-shorthand-custom
   :args (s/cat :number ::m/number
-               :max-length ::max-length
-               :opts (s/? (s/keys :opt [::max-decimal-places
-                                        ::max-digits
-                                        ::money?
-                                        ::shorthand-letters])))
+          :max-length ::max-length
+          :opts (s/? (s/keys :opt [::max-decimal-places
+                                   ::max-digits
+                                   ::money?
+                                   ::shorthand-letters])))
   :ret string?)

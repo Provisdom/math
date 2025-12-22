@@ -213,7 +213,8 @@
   (t/with-instrument :all
     ;; Thousand separators (note: integers formatted as doubles have .0 suffix)
     (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true}))
-    (t/is= "-1,234,567.0" (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
+    (t/is= "-1,234,567.0"
+      (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
     ;; With decimal places specified (format-number still adds .0 for round numbers)
     (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true
                                                                     ::format/max-decimal-places 0}))
