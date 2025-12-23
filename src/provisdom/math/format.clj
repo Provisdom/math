@@ -1,13 +1,13 @@
 (ns provisdom.math.format
   "Number formatting and parsing utilities.
-  
+
   Provides intelligent number formatting that automatically chooses between
   fixed-point and scientific notation based on magnitude and display constraints.
   Includes shorthand notation (K, M, B, T) for large numbers and money formatting.
-  
+
   Key features:
   - Adaptive formatting (fixed vs scientific notation)
-  - Shorthand notation parsing/unparsing (1.5K → 1500)  
+  - Shorthand notation parsing/unparsing (1.5K → 1500)
   - Money formatting with $ prefix
   - Configurable precision and length limits
   - Robust parsing that handles edge cases"
@@ -113,10 +113,10 @@
       (/ (case rounding-mode
            :ceiling (m/ceil scaled)
            :floor (m/floor scaled)
-           :half-down (m/round scaled :toward-zero)
-           :half-even (m/round scaled :toward-even)
-           :half-up (m/round scaled :away-from-zero)
-           (m/round scaled :away-from-zero))
+           :half-down (m/round' scaled :toward-zero)
+           :half-even (m/round' scaled :toward-even)
+           :half-up (m/round' scaled :away-from-zero)
+           (m/round' scaled :away-from-zero))
         factor))))
 
 (defn- add-thousands-separators
@@ -158,6 +158,7 @@
       s3)
     s))
 
+;;;PRIMITIVE FORMATTERS
 (defn trim-number-as-string
   "Removes unnecessary characters from a number string.
 
@@ -221,6 +222,37 @@
           :opts (s/? (s/keys :opt [::digits])))
   :ret string?)
 
+(defn format-as-engineering
+  "Formats `finite` into engineering notation (exponent divisible by 3).
+
+  Engineering notation uses exponents that are multiples of 3, making it
+  easier to read with SI prefixes (kilo, mega, giga, etc.).
+
+  Options:
+    ::digits - Number of significant digits (default 3)
+
+  Examples:
+    (format-as-engineering 12345)              ;=> \"12.345E+3\"
+    (format-as-engineering 0.00123)            ;=> \"1.23E-3\"
+    (format-as-engineering 1234567 {::digits 4}) ;=> \"1.235E+6\""
+  ([finite] (format-as-engineering finite {}))
+  ([finite {::keys [digits] :or {digits 3}}]
+   (let [value (double finite)]
+     (if (zero? value)
+       "0E+0"
+       (let [exp (m/floor (m/log10 (m/abs value)))
+             eng-exp (* 3 (m/floor' (/ exp 3)))
+             mantissa (/ value (m/pow 10.0 eng-exp))
+             decimal-places (max 0 (dec digits))]
+         (str (format (str "%." decimal-places "f") mantissa)
+           "E" (if (>= eng-exp 0) "+" "") eng-exp))))))
+
+(s/fdef format-as-engineering
+  :args (s/cat :finite ::m/finite
+          :opts (s/? (s/keys :opt [::digits])))
+  :ret string?)
+
+;;;NUMBER FORMATTING
 (defn format-number
   "Formats a number intelligently within length constraints.
 
@@ -261,7 +293,7 @@
                                         rounded-number))
              new-max-length (min max-length (count rounded-number-as-string))
              standard-digits (count
-                               (str (m/round shortened-number :toward-zero)))
+                               (str (m/round' shortened-number :toward-zero)))
              want-exponential? (use-exponential? standard-digits new-max-length shortened-number)]
          (loop [i (max new-max-length 1)]
            (let [s (if want-exponential?
@@ -277,23 +309,121 @@
           :opts (s/? (s/keys :opt [::max-decimal-places ::max-digits])))
   :ret string?)
 
+(defn format-number-extended
+  "Extended number formatting with additional options.
+
+  Builds on [[format-number]] with support for thousand separators,
+  engineering notation, rounding mode control, and localization.
+
+  Options:
+    ::max-decimal-places - Limit decimal precision
+    ::max-digits - Limit significant digits in scientific notation
+    ::engineering? - Use engineering notation (exponents divisible by 3)
+    ::thousands-sep? - Add thousand separators (commas)
+    ::rounding-mode - One of :ceiling, :floor, :half-down, :half-even, :half-up
+    ::decimal-symbol - Custom decimal separator character
+    ::grouping-symbol - Custom grouping separator character
+
+  Examples:
+    (format-number-extended 1234567 10 {::thousands-sep? true})
+    ;=> \"1,234,567\"
+    (format-number-extended 12345 8 {::engineering? true})
+    ;=> \"12.345E+3\""
+  ([number max-length] (format-number-extended number max-length {}))
+  ([number max-length {::keys [decimal-symbol
+                               engineering?
+                               grouping-symbol
+                               max-decimal-places
+                               max-digits
+                               rounding-mode
+                               thousands-sep?]
+                       :or    {rounding-mode :half-up}}]
+   (let [number (double number)]
+     (cond
+       (m/nan? number) "NaN"
+       (m/inf+? number) "Inf"
+       (m/inf-? number) "-Inf"
+
+       :else
+       (let [;; Apply rounding mode if specified
+             rounded (if (and max-decimal-places (not= rounding-mode :half-up))
+                       (round-to-decimal-places number max-decimal-places rounding-mode)
+                       number)
+             ;; Use engineering notation if requested
+             base-result (if engineering?
+                           (format-as-engineering rounded {::digits (or max-digits 3)})
+                           (format-number rounded max-length
+                             (cond-> {}
+                               max-decimal-places (assoc ::max-decimal-places
+                                                    max-decimal-places)
+                               max-digits (assoc ::max-digits max-digits))))
+             ;; Add thousand separators if requested (only for non-exponential)
+             with-thousands (if (and thousands-sep?
+                                  (not (str/includes? base-result "E")))
+                              (add-thousands-separators base-result)
+                              base-result)
+             ;; Apply localization
+             localized (if (or decimal-symbol grouping-symbol)
+                         (localize-number-string with-thousands
+                           {::decimal-symbol  decimal-symbol
+                            ::grouping-symbol grouping-symbol})
+                         with-thousands)]
+         localized)))))
+
+(s/fdef format-number-extended
+  :args (s/cat :number ::m/number
+          :max-length ::max-length
+          :opts (s/? (s/keys :opt [::decimal-symbol
+                                   ::engineering?
+                                   ::grouping-symbol
+                                   ::max-decimal-places
+                                   ::max-digits
+                                   ::rounding-mode
+                                   ::thousands-sep?])))
+  :ret string?)
+
+;;;PERCENT
+(defn format-percent
+  "Converts decimal to percentage string.
+
+  Options:
+    ::precision - Decimal places (default 0)
+
+  Examples:
+    (format-percent 0.15)                    ;=> \"15%\"
+    (format-percent 0.156 {::precision 1})   ;=> \"15.6%\"
+    (format-percent 1.5)                     ;=> \"150%\"
+    (format-percent ##NaN)                   ;=> \"NaN\""
+  ([decimal] (format-percent decimal {}))
+  ([decimal {::keys [precision] :or {precision 0}}]
+   (cond
+     (m/nan? decimal) "NaN"
+     (m/inf+? decimal) "Inf"
+     (m/inf-? decimal) "-Inf"
+     :else (str (format-as-float (* 100.0 (double decimal)) precision) "%"))))
+
+(s/fdef format-percent
+  :args (s/cat :decimal ::m/number
+          :opts (s/? (s/keys :opt [::precision])))
+  :ret string?)
+
 ;;;SHORTHAND
 (defn unparse-shorthand
   "Converts numbers to shorthand notation with K, M, B, T suffixes.
-  
-  Formats large numbers using shorthand suffixes (K=thousands, M=millions, 
+
+  Formats large numbers using shorthand suffixes (K=thousands, M=millions,
   B=billions, T=trillions) within the specified `max-length` character limit.
-  Automatically falls back to standard formatting for very large numbers or 
+  Automatically falls back to standard formatting for very large numbers or
   when shorthand doesn't provide space savings.
-  
+
   Parameters:
     max-length - Maximum number of characters in the output string
-  
+
   Options:
     ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits in scientific notation  
+    ::max-digits - Limit significant digits in scientific notation
     ::money? - Add $ prefix for currency formatting
-  
+
   Examples:
     (unparse-shorthand 1500 5)                    ;=> \"1.5K\"
     (unparse-shorthand 2300000 6)                 ;=> \"2.3M\"
@@ -408,137 +538,6 @@
   :ret (s/or :anomaly ::anomalies/anomaly
          :number ::m/number))
 
-;;;PERCENT
-(defn format-percent
-  "Converts decimal to percentage string.
-
-  Options:
-    ::precision - Decimal places (default 0)
-
-  Examples:
-    (format-percent 0.15)                    ;=> \"15%\"
-    (format-percent 0.156 {::precision 1})   ;=> \"15.6%\"
-    (format-percent 1.5)                     ;=> \"150%\"
-    (format-percent ##NaN)                   ;=> \"NaN\""
-  ([decimal] (format-percent decimal {}))
-  ([decimal {::keys [precision] :or {precision 0}}]
-   (cond
-     (m/nan? decimal) "NaN"
-     (m/inf+? decimal) "Inf"
-     (m/inf-? decimal) "-Inf"
-     :else (str (format-as-float (* 100.0 (double decimal)) precision) "%"))))
-
-(s/fdef format-percent
-  :args (s/cat :decimal ::m/number
-          :opts (s/? (s/keys :opt [::precision])))
-  :ret string?)
-
-;;;ENGINEERING NOTATION
-(defn format-as-engineering
-  "Formats `finite` into engineering notation (exponent divisible by 3).
-
-  Engineering notation uses exponents that are multiples of 3, making it
-  easier to read with SI prefixes (kilo, mega, giga, etc.).
-
-  Options:
-    ::digits - Number of significant digits (default 3)
-
-  Examples:
-    (format-as-engineering 12345)              ;=> \"12.345E+3\"
-    (format-as-engineering 0.00123)            ;=> \"1.23E-3\"
-    (format-as-engineering 1234567 {::digits 4}) ;=> \"1.235E+6\""
-  ([finite] (format-as-engineering finite {}))
-  ([finite {::keys [digits] :or {digits 3}}]
-   (let [value (double finite)]
-     (if (zero? value)
-       "0E+0"
-       (let [exp (m/floor (m/log10 (m/abs value)))
-             eng-exp (* 3 (m/floor' (/ exp 3)))
-             mantissa (/ value (m/pow 10.0 eng-exp))
-             decimal-places (max 0 (dec digits))]
-         (str (format (str "%." decimal-places "f") mantissa)
-           "E" (if (>= eng-exp 0) "+" "") eng-exp))))))
-
-(s/fdef format-as-engineering
-  :args (s/cat :finite ::m/finite
-          :opts (s/? (s/keys :opt [::digits])))
-  :ret string?)
-
-;;;EXTENDED FORMATTING
-(defn format-number-extended
-  "Extended number formatting with additional options.
-
-  Builds on [[format-number]] with support for thousand separators,
-  engineering notation, rounding mode control, and localization.
-
-  Options:
-    ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits in scientific notation
-    ::engineering? - Use engineering notation (exponents divisible by 3)
-    ::thousands-sep? - Add thousand separators (commas)
-    ::rounding-mode - One of :ceiling, :floor, :half-down, :half-even, :half-up
-    ::decimal-symbol - Custom decimal separator character
-    ::grouping-symbol - Custom grouping separator character
-
-  Examples:
-    (format-number-extended 1234567 10 {::thousands-sep? true})
-    ;=> \"1,234,567\"
-    (format-number-extended 12345 8 {::engineering? true})
-    ;=> \"12.345E+3\""
-  ([number max-length] (format-number-extended number max-length {}))
-  ([number max-length {::keys [decimal-symbol
-                               engineering?
-                               grouping-symbol
-                               max-decimal-places
-                               max-digits
-                               rounding-mode
-                               thousands-sep?]
-                       :or    {rounding-mode :half-up}}]
-   (let [number (double number)]
-     (cond
-       (m/nan? number) "NaN"
-       (m/inf+? number) "Inf"
-       (m/inf-? number) "-Inf"
-
-       :else
-       (let [;; Apply rounding mode if specified
-             rounded (if (and max-decimal-places (not= rounding-mode :half-up))
-                       (round-to-decimal-places number max-decimal-places rounding-mode)
-                       number)
-             ;; Use engineering notation if requested
-             base-result (if engineering?
-                           (format-as-engineering rounded {::digits (or max-digits 3)})
-                           (format-number rounded max-length
-                             (cond-> {}
-                               max-decimal-places (assoc ::max-decimal-places
-                                                    max-decimal-places)
-                               max-digits (assoc ::max-digits max-digits))))
-             ;; Add thousand separators if requested (only for non-exponential)
-             with-thousands (if (and thousands-sep?
-                                  (not (str/includes? base-result "E")))
-                              (add-thousands-separators base-result)
-                              base-result)
-             ;; Apply localization
-             localized (if (or decimal-symbol grouping-symbol)
-                         (localize-number-string with-thousands
-                           {::decimal-symbol  decimal-symbol
-                            ::grouping-symbol grouping-symbol})
-                         with-thousands)]
-         localized)))))
-
-(s/fdef format-number-extended
-  :args (s/cat :number ::m/number
-          :max-length ::max-length
-          :opts (s/? (s/keys :opt [::decimal-symbol
-                                   ::engineering?
-                                   ::grouping-symbol
-                                   ::max-decimal-places
-                                   ::max-digits
-                                   ::rounding-mode
-                                   ::thousands-sep?])))
-  :ret string?)
-
-;;;CUSTOM SHORTHAND
 (defn unparse-shorthand-custom
   "Like [[unparse-shorthand]] but with customizable shorthand letters.
 

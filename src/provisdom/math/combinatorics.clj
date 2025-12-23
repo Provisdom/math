@@ -124,8 +124,8 @@
     (subfactorial 1)  ;=> 0 (impossible to derange one item)"
   [x]
   (if (and (m/long-able? x) (< x 22))
-    (subfactorials (m/round x :up))
-    (m/round (/ (factorial x) m/E) :up)))
+    (subfactorials (m/round' x :up))
+    (m/round' (/ (factorial x) m/E) :up)))
 
 (s/fdef subfactorial
   :args (s/cat :x ::m/non-)
@@ -518,7 +518,7 @@
   [n]
   (let [result (catalan-number n)]
     (if (m/roughly-round? result 1e-12)
-      (m/maybe-long-able (m/round result :away-from-zero))
+      (m/maybe-long-able (m/round' result :away-from-zero))
       result)))
 
 (s/fdef catalan-number'

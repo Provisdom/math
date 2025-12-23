@@ -1177,7 +1177,7 @@
 
 (s/def ::round-type #{:up :down :away-from-zero :toward-zero :toward-even})
 
-(defn round
+(defn round'
   "Rounds to nearest integer, with tie-breaking rule specified by `round-type`.
   Returns a long if possible. Otherwise, returns `number`.
     `round-type` (all round to nearest, differs only at halfway points):
@@ -1205,10 +1205,14 @@
                    (Math/round number))]
       number)))
 
-(s/fdef round
+(s/fdef round'
   :args (s/cat :number ::number
                :round-type ::round-type)
   :ret ::number)
+
+(def round
+  "Alias for round'. See round' for documentation."
+  round')
 
 (defn round-significant
   "Round a number to the specified number of significant digits. This function
@@ -1220,7 +1224,7 @@
     (let [f (fn [n]
               (let [magnitude (floor (log10 (abs n)))
                     factor (pow 10 (- significant-digits magnitude 1))
-                    rounded (/ (round (* n factor) round-type) factor)]
+                    rounded (/ (round' (* n factor) round-type) factor)]
                 rounded))
           rounded (f number)]
       (cond (finite? rounded) rounded
@@ -1350,7 +1354,7 @@
   (cond (nan? number) false
         (inf+? accu) true
         (inf? number) false
-        :else (<= (abs (- (round number :up) (double number))) accu)))
+        :else (<= (abs (- (round' number :up) (double number))) accu)))
 
 (s/fdef roughly-round?
   :args (s/cat :number ::number :accu ::accu)

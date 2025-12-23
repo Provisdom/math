@@ -741,28 +741,28 @@
     (t/is-spec-check m/hypot)))
 
 ;;ROUNDING
-(ct/deftest round-test
-  (t/with-instrument `m/round
-    (t/is-spec-check m/round))
+(ct/deftest round'-test
+  (t/with-instrument `m/round'
+    (t/is-spec-check m/round'))
   (t/with-instrument :all
-    (t/is= 1 (m/round 0.5 :up))
-    (t/is= 2.342342342342342E22 (m/round 2.342342342342342E22 :up))
-    (t/is (zero? (m/round -0.5 :up)))
-    (t/is= -1 (m/round -0.5 :down))
-    (t/is= -1 (m/round -0.5 :away-from-zero))
-    (t/is (zero? (m/round -0.5 :toward-zero)))
-    (t/is (zero? (m/round 0.5 :down)))
-    (t/is= 1 (m/round 0.5 :away-from-zero))
-    (t/is (zero? (m/round 0.5 :toward-zero)))
-    (t/is (zero? (m/round 0.5 :toward-even)))
-    (t/is= 2 (m/round 1.5 :toward-even))
-    (t/is= 2 (m/round 2.5 :toward-even))
-    (t/is= 4 (m/round 3.5 :toward-even))
-    (t/is (zero? (m/round -0.5 :toward-even)))
-    (t/is= -2 (m/round -1.5 :toward-even))
-    (t/is= m/inf+ (m/round m/inf+ :up))
-    (t/is= m/inf- (m/round m/inf- :up))
-    (t/is (m/nan? (m/round m/nan :up)))))
+    (t/is= 1 (m/round' 0.5 :up))
+    (t/is= 2.342342342342342E22 (m/round' 2.342342342342342E22 :up))
+    (t/is (zero? (m/round' -0.5 :up)))
+    (t/is= -1 (m/round' -0.5 :down))
+    (t/is= -1 (m/round' -0.5 :away-from-zero))
+    (t/is (zero? (m/round' -0.5 :toward-zero)))
+    (t/is (zero? (m/round' 0.5 :down)))
+    (t/is= 1 (m/round' 0.5 :away-from-zero))
+    (t/is (zero? (m/round' 0.5 :toward-zero)))
+    (t/is (zero? (m/round' 0.5 :toward-even)))
+    (t/is= 2 (m/round' 1.5 :toward-even))
+    (t/is= 2 (m/round' 2.5 :toward-even))
+    (t/is= 4 (m/round' 3.5 :toward-even))
+    (t/is (zero? (m/round' -0.5 :toward-even)))
+    (t/is= -2 (m/round' -1.5 :toward-even))
+    (t/is= m/inf+ (m/round' m/inf+ :up))
+    (t/is= m/inf- (m/round' m/inf- :up))
+    (t/is (m/nan? (m/round' m/nan :up)))))
 
 (ct/deftest round-significant-test
   (t/with-instrument `m/round-significant

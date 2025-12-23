@@ -819,7 +819,7 @@
              tot 0.0]
         (let [inv2-x (m/pow x -2.0)]
           (cond (or (m/nan? x) (m/inf? x)) x
-                (< x -1.0e7) (let [r (m/round (+ x 9.0e6) :toward-zero)]
+                (< x -1.0e7) (let [r (m/round' (+ x 9.0e6) :toward-zero)]
                                (recur (- x r) (+ tot 1.1263618e-5))) ;approx
                 :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
                             (>= x 49.0) (let [inv-x (/ x)]
@@ -1232,11 +1232,11 @@
     (m/inf? x) 0.0                                            ;; J_ν(∞) = 0 (oscillates to 0)
     (zero? x) (if (zero? order) 1.0 0.0)
     (neg? x) (if (m/roughly-round? order m/sgl-close)
-               (* (m/pow -1 (m/round order :toward-zero)) (bessel-j order (- x)))
+               (* (m/pow -1 (m/round' order :toward-zero)) (bessel-j order (- x)))
                m/nan)
     ;; For negative integer orders: J_{-n}(x) = (-1)^n * J_n(x)
     (and (neg? order) (m/roughly-round? order m/sgl-close))
-    (let [n (m/round (- order) :toward-zero)]
+    (let [n (m/round' (- order) :toward-zero)]
       (* (m/pow -1 n) (bessel-j n x)))
     ;; Use asymptotic for large x (x > 4|ν| + 15)
     (> x (+ (* 4.0 (m/abs order)) 15.0))
@@ -1340,7 +1340,7 @@
   (cond
     (<= x 0.0) m/inf-
     (m/roughly-round? order m/sgl-close)
-    (bessel-y-integer (m/round order :toward-zero) x)
+    (bessel-y-integer (m/round' order :toward-zero) x)
     :else (bessel-y-series order x)))
 
 (s/fdef bessel-y
@@ -1541,7 +1541,7 @@
       (> x (+ (* 2.0 abs-order) 10.0))
       (bessel-k-asymptotic abs-order x)
       (m/roughly-round? abs-order m/sgl-close)
-      (bessel-k-integer (m/round abs-order :toward-zero) x)
+      (bessel-k-integer (m/round' abs-order :toward-zero) x)
       :else (bessel-k-series abs-order x))))
 
 ;; For non-integer orders > 5, the series method has numerical issues when x is small.
