@@ -4,75 +4,6 @@ A comprehensive Clojure mathematics library providing numerical computing primit
 
 ## Features
 
-### Core (`provisdom.math.core`)
-Foundational mathematical functions and constants:
-- Mathematical constants (PI, E, sqrt-two, log-two-pi, etc.)
-- Enhanced numeric type predicates that handle NaN/infinity correctly
-- Robust arithmetic with division-by-zero handling
-- High-precision rounding and comparison functions
-- Angle conversion utilities (radians/degrees)
-- Functions with apostrophe variants (e.g., `floor'`) that return longs when possible
-
-### Random (`provisdom.math.random`)
-Splittable random number generation for reproducible parallel computation:
-- Immutable RNG with `rng`, `rnd`, `rnd-long`, `rnd-normal`, `rnd-uuid`
-- Bound RNG via `bind-seed` macro for scoped randomness
-- Lazy infinite sequences of random values
-- Clock-seeded generators for non-reproducible randomness
-
-### Tensor (`provisdom.math.tensor`)
-N-dimensional array operations:
-- Tensor creation, validation, and manipulation
-- Element-wise operations with broadcasting (`emap`, `emap-kv`)
-- Tensor arithmetic (add, subtract, multiply, divide)
-- Norms (L1, L2, Lp) and normalization
-- Inner products and numerical stability utilities
-
-### Vector (`provisdom.math.vector`)
-Specialized 1D tensor operations:
-- Dot products, cross products, projections
-- Kahan summation for improved numerical accuracy
-- Softmax for converting vectors to probability distributions
-- Probability vector validation and operations
-- Vector filtering and manipulation
-
-### Matrix (`provisdom.math.matrix`)
-Comprehensive matrix operations:
-- Matrix creation (identity, diagonal, Toeplitz, random)
-- Specialized types (symmetric, triangular, sparse, positive-definite)
-- Matrix multiplication, transpose, Kronecker product
-- Slicing, filtering, and partitioning
-- Row/column manipulation (insert, remove, update)
-- Serialization/deserialization of triangular matrices
-- Matrix trace, outer product, and element-wise operations
-- Matrix rounding utilities
-
-### Linear Algebra (`provisdom.math.linear-algebra`)
-Matrix decompositions and linear system solving:
-- LU decomposition with partial pivoting
-- Cholesky decomposition for positive-definite matrices
-- QR decomposition using Householder reflections
-- Eigendecomposition for symmetric matrices
-- Singular Value Decomposition (SVD)
-- Linear system solving (exact and least squares)
-- Matrix inverse and Moore-Penrose pseudoinverse
-- Determinant, condition number, and matrix rank
-- Minors, cofactors, and adjugate matrices
-- Matrix power (including negative powers via inverse)
-- Matrix exponential (e^M) using Padé approximation
-- Induced matrix norms (1-norm, infinity-norm, spectral norm)
-- Positive definite/semi-definite utilities
-- Correlation/covariance matrix conversions
-
-### Special Functions (`provisdom.math.special-functions`)
-Advanced mathematical functions:
-- Gamma functions (gamma, log-gamma, digamma, trigamma)
-- Incomplete gamma functions (regularized P and Q)
-- Beta functions (beta, log-beta, regularized incomplete beta)
-- Error functions (erf, erfc, inverse erf)
-- Sigmoid functions (logistic, logit, probit)
-- Log-sum-exp for numerical stability
-
 ### Combinatorics (`provisdom.math.combinatorics`)
 Combinatorial computations:
 - Factorials: factorial, subfactorial (derangements), double factorial
@@ -88,29 +19,14 @@ Combinatorial computations:
 - Cartesian product and selections with replacement
 - Log-space calculations to avoid overflow
 
-### Series (`provisdom.math.series`)
-Infinite series summation and acceleration:
-- Adaptive convergence testing with diagnostics
-- Power series evaluation, multiplication, composition, and inversion
-- Continued fractions (standard, generalized, multiplicative)
-- Series acceleration: Aitken, Wynn epsilon, Euler transform, Richardson
-- Padé approximants for rational function approximation
-- Multiple summation algorithms: Kahan, Neumaier, pairwise
-- Radius of convergence estimation
-
-### Polynomials (`provisdom.math.polynomials`)
-Polynomial evaluation, orthogonal polynomials, and interpolation:
-- Polynomial evaluation using Horner's method (`horner-eval`)
-- Chebyshev series evaluation using Clenshaw algorithm (`clenshaw-eval`)
-- Polynomial arithmetic: add, subtract, multiply, scale, divide
-- Chebyshev polynomials (first and second kind) with derivatives
-- Bidirectional Chebyshev ↔ standard polynomial coefficient conversion
-- Chebyshev nodes and extrema for optimal interpolation
-- Legendre polynomials for Gaussian quadrature
-- Hermite polynomials (physicist's and probabilist's conventions)
-- Laguerre polynomials for exponential-weighted problems
-- Lagrange and Newton interpolation (functions and coefficients)
-- 1D, 2D, and N-dimensional polynomial basis functions
+### Core (`provisdom.math.core`)
+Foundational mathematical functions and constants:
+- Mathematical constants (PI, E, sqrt-two, log-two-pi, etc.)
+- Enhanced numeric type predicates that handle NaN/infinity correctly
+- Robust arithmetic with division-by-zero handling
+- High-precision rounding and comparison functions
+- Angle conversion utilities (radians/degrees)
+- Functions with apostrophe variants (e.g., `floor'`) that return longs when possible
 
 ### Derivatives (`provisdom.math.derivatives`)
 Numerical differentiation:
@@ -125,6 +41,23 @@ Numerical differentiation:
 - Vector calculus: directional derivatives, Laplacian, divergence, curl (3D)
 - Higher-order mixed partial derivatives
 - Sparse Jacobian and Hessian computation for efficiency
+
+### Format (`provisdom.math.format`)
+Number formatting and parsing utilities:
+- Intelligent formatting that auto-selects fixed-point vs scientific notation
+- Shorthand notation: K (thousands), M (millions), B (billions), T (trillions)
+- Bidirectional parsing/unparsing (`unparse-shorthand`, `parse-shorthand`)
+- Scientific notation parsing support (e.g., "1.23E+4")
+- Money formatting with $ prefix
+- Percentage formatting (`format-percent`)
+- Engineering notation (`format-as-engineering`) with exponents divisible by 3
+- Extended formatting options (`format-number-extended`):
+  - Thousand separators
+  - Custom rounding modes (half-up, half-even, floor, ceiling)
+  - Localization (custom decimal/grouping symbols)
+- Customizable shorthand letters (`unparse-shorthand-custom`)
+- Special value handling (NaN, Infinity)
+- Safe parsing (no code execution risk)
 
 ### Integrals (`provisdom.math.integrals`)
 Numerical integration with multiple quadrature methods:
@@ -150,22 +83,89 @@ Interval arithmetic and bounds manipulation:
 - Predefined bounds: `bounds-prob` [0,1], `bounds-open-prob` (0,1), `bounds+` (0,∞], `bounds-finite` (-∞,+∞)
 - Specialized bounds for optimization constraints and positive-definite matrices
 
-### Format (`provisdom.math.format`)
-Number formatting and parsing utilities:
-- Intelligent formatting that auto-selects fixed-point vs scientific notation
-- Shorthand notation: K (thousands), M (millions), B (billions), T (trillions)
-- Bidirectional parsing/unparsing (`unparse-shorthand`, `parse-shorthand`)
-- Scientific notation parsing support (e.g., "1.23E+4")
-- Money formatting with $ prefix
-- Percentage formatting (`format-percent`)
-- Engineering notation (`format-as-engineering`) with exponents divisible by 3
-- Extended formatting options (`format-number-extended`):
-  - Thousand separators
-  - Custom rounding modes (half-up, half-even, floor, ceiling)
-  - Localization (custom decimal/grouping symbols)
-- Customizable shorthand letters (`unparse-shorthand-custom`)
-- Special value handling (NaN, Infinity)
-- Safe parsing (no code execution risk)
+### Linear Algebra (`provisdom.math.linear-algebra`)
+Matrix decompositions and linear system solving:
+- LU decomposition with partial pivoting
+- Cholesky decomposition for positive-definite matrices
+- QR decomposition using Householder reflections
+- Eigendecomposition for symmetric matrices
+- Singular Value Decomposition (SVD)
+- Linear system solving (exact and least squares)
+- Matrix inverse and Moore-Penrose pseudoinverse
+- Determinant, condition number, and matrix rank
+- Minors, cofactors, and adjugate matrices
+- Matrix power (including negative powers via inverse)
+- Matrix exponential (e^M) using Padé approximation
+- Induced matrix norms (1-norm, infinity-norm, spectral norm)
+- Positive definite/semi-definite utilities
+- Correlation/covariance matrix conversions
+
+### Matrix (`provisdom.math.matrix`)
+Comprehensive matrix operations:
+- Matrix creation (identity, diagonal, Toeplitz, random)
+- Specialized types (symmetric, triangular, sparse, positive-definite)
+- Matrix multiplication, transpose, Kronecker product
+- Slicing, filtering, and partitioning
+- Row/column manipulation (insert, remove, update)
+- Serialization/deserialization of triangular matrices
+- Matrix trace, outer product, and element-wise operations
+- Matrix rounding utilities
+
+### Polynomials (`provisdom.math.polynomials`)
+Polynomial evaluation, orthogonal polynomials, and interpolation:
+- Polynomial evaluation using Horner's method (`horner-eval`)
+- Chebyshev series evaluation using Clenshaw algorithm (`clenshaw-eval`)
+- Polynomial arithmetic: add, subtract, multiply, scale, divide
+- Chebyshev polynomials (first and second kind) with derivatives
+- Bidirectional Chebyshev ↔ standard polynomial coefficient conversion
+- Chebyshev nodes and extrema for optimal interpolation
+- Legendre polynomials for Gaussian quadrature
+- Hermite polynomials (physicist's and probabilist's conventions)
+- Laguerre polynomials for exponential-weighted problems
+- Lagrange and Newton interpolation (functions and coefficients)
+- 1D, 2D, and N-dimensional polynomial basis functions
+
+### Random (`provisdom.math.random`)
+Splittable random number generation for reproducible parallel computation:
+- Immutable RNG with `rng`, `rnd`, `rnd-long`, `rnd-normal`, `rnd-uuid`
+- Bound RNG via `bind-seed` macro for scoped randomness
+- Lazy infinite sequences of random values
+- Clock-seeded generators for non-reproducible randomness
+
+### Series (`provisdom.math.series`)
+Infinite series summation and acceleration:
+- Adaptive convergence testing with diagnostics
+- Power series evaluation, multiplication, composition, and inversion
+- Continued fractions (standard, generalized, multiplicative)
+- Series acceleration: Aitken, Wynn epsilon, Euler transform, Richardson
+- Padé approximants for rational function approximation
+- Multiple summation algorithms: Kahan, Neumaier, pairwise
+- Radius of convergence estimation
+
+### Special Functions (`provisdom.math.special-functions`)
+Advanced mathematical functions:
+- Gamma functions (gamma, log-gamma, digamma, trigamma)
+- Incomplete gamma functions (regularized P and Q)
+- Beta functions (beta, log-beta, regularized incomplete beta)
+- Error functions (erf, erfc, inverse erf)
+- Sigmoid functions (logistic, logit, probit)
+- Log-sum-exp for numerical stability
+
+### Tensor (`provisdom.math.tensor`)
+N-dimensional array operations:
+- Tensor creation, validation, and manipulation
+- Element-wise operations with broadcasting (`emap`, `emap-kv`)
+- Tensor arithmetic (add, subtract, multiply, divide)
+- Norms (L1, L2, Lp) and normalization
+- Inner products and numerical stability utilities
+
+### Vector (`provisdom.math.vector`)
+Specialized 1D tensor operations:
+- Dot products, cross products, projections
+- Kahan summation for improved numerical accuracy
+- Softmax for converting vectors to probability distributions
+- Probability vector validation and operations
+- Vector filtering and manipulation
 
 ## Usage
 

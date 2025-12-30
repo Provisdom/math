@@ -1212,6 +1212,67 @@
                       :when (not= i j)]
                   (m/sq (get-in m [i j] 0.0)))))))
 
+(defn- find-unreduced-block
+  "Finds the largest unreduced block in a tridiagonal/symmetric matrix.
+  Returns [start end] indices of the block that still needs iteration.
+  If all converged, returns nil."
+  [A tolerance]
+  (let [n (mx/rows A)]
+    (when (> n 1)
+      ;; Find the last non-negligible subdiagonal from bottom
+      (loop [end (dec n)]
+        (if (< end 1)
+          nil  ; All converged
+          (let [sub-diag (m/abs (get-in A [(dec end) end] 0.0))
+                diag-sum (+ (m/abs (get-in A [(dec end) (dec end)] 0.0))
+                           (m/abs (get-in A [end end] 0.0)))]
+            (if (< sub-diag (* tolerance (max diag-sum 1.0)))
+              (recur (dec end))  ; This one converged, check earlier
+              ;; Found non-converged element, now find start
+              (loop [start (dec end)]
+                (if (< start 1)
+                  [0 end]  ; Block starts at 0
+                  (let [sub-diag (m/abs (get-in A [(dec start) start] 0.0))
+                        diag-sum (+ (m/abs (get-in A [(dec start) (dec start)] 0.0))
+                                   (m/abs (get-in A [start start] 0.0)))]
+                    (if (< sub-diag (* tolerance (max diag-sum 1.0)))
+                      [start end]  ; Block starts here
+                      (recur (dec start)))))))))))))
+
+(defn- qr-iteration-step-block
+  "Performs one step of QR iteration with Wilkinson shift on a subblock.
+  block-start and block-end define the unreduced portion [start, end] inclusive."
+  [A block-start block-end]
+  (let [n (mx/rows A)
+        ;; Compute Wilkinson shift from bottom-right 2x2 of the block
+        shift (if (= block-start block-end)
+                0.0
+                (let [a (get-in A [(dec block-end) (dec block-end)] 0.0)
+                      b (get-in A [(dec block-end) block-end] 0.0)
+                      c (get-in A [block-end block-end] 0.0)
+                      delta (/ (- a c) 2.0)
+                      sign (if (>= delta 0.0) 1.0 -1.0)
+                      denom (+ (m/abs delta) (m/sqrt (+ (m/sq delta) (m/sq b))))
+                      mu (if (m/roughly? denom 0.0 m/dbl-close)
+                           c
+                           (- c (/ (* sign b b) denom)))]
+                  mu))
+        ;; Apply shift only to the block
+        A-shifted (mx/compute-matrix n n
+                    (fn [i j]
+                      (if (and (= i j) (<= block-start i block-end))
+                        (- (get-in A [i j] 0.0) shift)
+                        (get-in A [i j] 0.0))))
+        {::keys [Q R]} (qr-decomposition A-shifted)
+        RQ (mx/mx* R Q)
+        ;; Add shift back
+        A-new (mx/compute-matrix n n
+                (fn [i j]
+                  (if (and (= i j) (<= block-start i block-end))
+                    (+ (get-in RQ [i j] 0.0) shift)
+                    (get-in RQ [i j] 0.0))))]
+    [A-new Q]))
+
 (defn- qr-iteration-step
   "Performs one step of QR iteration with Wilkinson shift for symmetric matrices."
   [A]
@@ -1244,9 +1305,9 @@
 (defn eigen-decomposition
   "Computes eigenvalue decomposition of a symmetric matrix.
 
-  Uses the QR algorithm with Wilkinson shifts. Decomposes a symmetric matrix
-  A into A = V * D * V^T where D is diagonal (eigenvalues) and V is orthogonal
-  (eigenvectors as columns).
+  Uses the QR algorithm with Wilkinson shifts and implicit deflation.
+  Decomposes a symmetric matrix A into A = V * D * V^T where D is diagonal
+  (eigenvalues) and V is orthogonal (eigenvectors as columns).
 
   Complexity: O(n³) per iteration, typically O(n³) total for convergence
 
@@ -1279,12 +1340,14 @@
                   iter 0]
              (if (>= iter max-iterations)
                [A V false]
-               (let [off-norm (off-diagonal-norm A)]
-                 (if (< off-norm tolerance)
-                   [A V true]
-                   (let [[A-new Q] (qr-iteration-step A)
-                         V-new (mx/mx* V Q)]
-                     (recur A-new V-new (inc iter)))))))]
+               ;; Use implicit deflation: find the unreduced block
+               (if-let [[block-start block-end] (find-unreduced-block A tolerance)]
+                 ;; Still have unreduced elements - iterate on the block
+                 (let [[A-new Q] (qr-iteration-step-block A block-start block-end)
+                       V-new (mx/mx* V Q)]
+                   (recur A-new V-new (inc iter)))
+                 ;; All converged
+                 [A V true])))]
        (when converged?
          (let [eigenvalues (mx/diagonal final-A)
                indexed (map-indexed vector eigenvalues)

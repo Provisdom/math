@@ -1,6 +1,5 @@
 (ns provisdom.math.integrals-test
   (:require
-    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.integrals :as integrals]
     [provisdom.math.intervals :as intervals]
@@ -13,7 +12,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;INTEGRATION TESTS
-(ct/deftest change-of-variable-test
+(t/deftest change-of-variable-test
   (t/with-instrument `integrals/change-of-variable
     (t/is-spec-check integrals/change-of-variable))
   (t/with-instrument :all
@@ -34,7 +33,7 @@
       (t/is= m/inf- ((::integrals/converter-fn cov4) 0.0))
       (t/is= [0.0 1.0] (::intervals/finite-interval cov4)))))
 
-(ct/deftest integration-test
+(t/deftest integration-test
   ;;No instrumentation with function inputs
   (t/is-spec-check integrals/integration {:num-tests 10})
   (t/with-instrument `integrals/integration
@@ -82,7 +81,7 @@
       {::integrals/singularities [0.0]})
     :tolerance 0.01))
 
-(ct/deftest rectangular-integration-test
+(t/deftest rectangular-integration-test
   ;;No instrumentation with function inputs
   (t/is-spec-check integrals/rectangular-integration {:num-tests 10})
   (t/with-instrument `integrals/rectangular-integration
@@ -168,7 +167,7 @@
             [[c c] [c c]]))
         [[2.0 6.0] [m/inf- -5.0]]))))
 
-(ct/deftest non-rectangular-2D-integration-test
+(t/deftest non-rectangular-2D-integration-test
   ;; Spec-check skipped: functions with function arguments cause unreliable
   ;; generative testing due to fspec validation issues
   (t/with-instrument `integrals/non-rectangular-2D-integration
@@ -226,7 +225,7 @@
         (fn [_outer]
           [m/inf- -5.0])))))
 
-(ct/deftest integration-with-error-test
+(t/deftest integration-with-error-test
   ;;No instrumentation with function inputs
   (t/is-spec-check integrals/integration-with-error {:num-tests 20})
   (t/with-instrument `integrals/integration-with-error
@@ -245,7 +244,7 @@
                    {::integrals/accu 1e-10})]
       (t/is-approx= 0.0 (::integrals/value result) :tolerance 1e-10))))
 
-(ct/deftest tanh-sinh-integration-test
+(t/deftest tanh-sinh-integration-test
   (t/with-instrument `integrals/tanh-sinh-integration
     (t/is-spec-check integrals/tanh-sinh-integration))
   (t/with-instrument `integrals/tanh-sinh-integration
@@ -275,7 +274,7 @@
     {::integrals/level 4})
   :tolerance 0.001)
 
-(ct/deftest clenshaw-curtis-integration-test
+(t/deftest clenshaw-curtis-integration-test
   ;;No instrumentation with function inputs
   (t/is-spec-check integrals/clenshaw-curtis-integration {:num-tests 3})
   (t/with-instrument `integrals/clenshaw-curtis-integration
@@ -301,7 +300,7 @@
       (integrals/clenshaw-curtis-integration m/cube [0.0 2.0])
       :tolerance 0.0001)))
 
-(ct/deftest monte-carlo-integration-test
+(t/deftest monte-carlo-integration-test
   ;;No instrumentation with function inputs
   ;; 2D integral: ∫∫ (x+y) dx*dy over [0,1]×[0,1] = 1
   (t/is-spec-check integrals/monte-carlo-integration {:num-tests 3})
@@ -322,7 +321,7 @@
                      {::integrals/samples 50000})]
         (t/is-approx= 2.5 (::integrals/value result) :tolerance 0.1)))))
 
-(ct/deftest quasi-monte-carlo-integration-test
+(t/deftest quasi-monte-carlo-integration-test
   ;;No instrumentation with function inputs
   ;; Halton sequences are deterministic, so no bind-seed needed
   ;; 2D integral: ∫∫ (x+y) dx*dy over [0,1]×[0,1] = 1
@@ -348,7 +347,7 @@
                    {::integrals/samples 1000 ::integrals/skip 100})]
       (t/is-approx= 0.333333 (::integrals/value result) :tolerance 0.05))))
 
-(ct/deftest sparse-grid-integration-test
+(t/deftest sparse-grid-integration-test
   ;; 2D integral: ∫∫ (x+y) dx*dy over [0,1]×[0,1] = 1
   ;; Note: sparse-grid-level must be >= dimension for meaningful results
   (t/with-instrument 'integrals/sparse-grid-integration
@@ -375,7 +374,7 @@
         {::integrals/sparse-grid-level 5})
       :tolerance 0.0001)))
 
-(ct/deftest oscillatory-integration-test
+(t/deftest oscillatory-integration-test
   ;; Note: Filon method is designed for high-frequency oscillations.
   ;; Low-frequency (omega=1) results have larger error.
   ;; High frequency: ∫₀^π sin(10x) dx = 0 (many complete oscillations)

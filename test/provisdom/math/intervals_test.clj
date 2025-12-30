@@ -1,6 +1,5 @@
 (ns provisdom.math.intervals-test
   (:require
-    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
     [provisdom.test.core :as t]))
@@ -10,7 +9,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;INTERVAL TEST
-(ct/deftest in-interval?-test
+(t/deftest in-interval?-test
   (t/with-instrument `intervals/in-interval?
     (t/is-spec-check intervals/in-interval?))
   (t/with-instrument :all
@@ -19,7 +18,7 @@
     (t/is (intervals/in-interval? [0.0 1.0] 1.0))
     (t/is-not (intervals/in-interval? [0.0 1.0] -0.5))))
 
-(ct/deftest in-interval-roughly?-test
+(t/deftest in-interval-roughly?-test
   (t/with-instrument `intervals/in-interval-roughly?
     (t/is-spec-check intervals/in-interval-roughly?))
   (t/with-instrument :all
@@ -30,7 +29,7 @@
     (t/is (intervals/in-interval-roughly? [0.0 1.0] 1.001 0.001))
     (t/is-not (intervals/in-interval-roughly? [0.0 1.0] -0.5 0.001))))
 
-(ct/deftest bound-by-interval-test
+(t/deftest bound-by-interval-test
   (t/with-instrument `intervals/bound-by-interval
     (t/is-spec-check intervals/bound-by-interval))
   (t/with-instrument :all
@@ -39,7 +38,7 @@
     (t/is= 1.0 (intervals/bound-by-interval [0.0 1.0] 1.5))
     (t/is= 0.0 (intervals/bound-by-interval [0.0 1.0] -0.5))))
 
-(ct/deftest bound-by-strict-interval-test
+(t/deftest bound-by-strict-interval-test
   (t/with-instrument `intervals/bound-by-strict-interval
     (t/is-spec-check intervals/bound-by-strict-interval))
   (t/with-instrument :all
@@ -48,7 +47,7 @@
     (t/is= (m/one- 1e-16) (intervals/bound-by-strict-interval [0.0 1.0] 1.5))
     (t/is= 4.9E-324 (intervals/bound-by-strict-interval [0.0 1.0] -0.5))))
 
-(ct/deftest interval-width-test
+(t/deftest interval-width-test
   (t/with-instrument `intervals/interval-width
     (t/is-spec-check intervals/interval-width))
   (t/with-instrument :all
@@ -56,7 +55,7 @@
     (t/is= 10.0 (intervals/interval-width [-5.0 5.0]))
     (t/is= 0.0 (intervals/interval-width [3.0 3.0]))))
 
-(ct/deftest interval-midpoint-test
+(t/deftest interval-midpoint-test
   (t/with-instrument `intervals/interval-midpoint
     (t/is-spec-check intervals/interval-midpoint))
   (t/with-instrument :all
@@ -65,7 +64,7 @@
     (t/is= 5.0 (intervals/interval-midpoint [2.0 8.0]))))
 
 ;;;BOUNDS TEST
-(ct/deftest in-bounds?-test
+(t/deftest in-bounds?-test
   (t/with-instrument `intervals/in-bounds?
     (t/is-spec-check intervals/in-bounds?))
   (t/with-instrument :all
@@ -78,7 +77,7 @@
     (t/is (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) 1.0))
     (t/is-not (intervals/in-bounds? (intervals/bounds 0.0 1.0 true false) -0.5))))
 
-(ct/deftest bound-by-bounds-test
+(t/deftest bound-by-bounds-test
   (t/with-instrument `intervals/bound-by-bounds
     (t/is-spec-check intervals/bound-by-bounds))
   (t/with-instrument :all
@@ -90,21 +89,21 @@
     (t/is= (m/next-down 10.0)
       (intervals/bound-by-bounds (intervals/bounds 0.0 10.0 false true) 15.0))))
 
-(ct/deftest bounds-width-test
+(t/deftest bounds-width-test
   (t/with-instrument `intervals/bounds-width
     (t/is-spec-check intervals/bounds-width))
   (t/with-instrument :all
     (t/is= 10.0 (intervals/bounds-width (intervals/bounds 0.0 10.0)))
     (t/is= 10.0 (intervals/bounds-width (intervals/bounds -5.0 5.0)))))
 
-(ct/deftest bounds-midpoint-test
+(t/deftest bounds-midpoint-test
   (t/with-instrument `intervals/bounds-midpoint
     (t/is-spec-check intervals/bounds-midpoint))
   (t/with-instrument :all
     (t/is= 5.0 (intervals/bounds-midpoint (intervals/bounds 0.0 10.0)))
     (t/is= 0.0 (intervals/bounds-midpoint (intervals/bounds -5.0 5.0)))))
 
-(ct/deftest overlaps?-test
+(t/deftest overlaps?-test
   (t/with-instrument `intervals/overlaps?
     (t/is-spec-check intervals/overlaps?))
   (t/with-instrument :all
@@ -115,7 +114,7 @@
     (t/is-not (intervals/overlaps? (intervals/bounds 0.0 5.0 false true)
                 (intervals/bounds 5.0 10.0 true false)))))
 
-(ct/deftest contains-bounds?-test
+(t/deftest contains-bounds?-test
   (t/with-instrument `intervals/contains-bounds?
     (t/is-spec-check intervals/contains-bounds?))
   (t/with-instrument :all
@@ -132,7 +131,7 @@
             (intervals/bounds 0.0 10.0 true true)))))
 
 ;;;BOUNDS CONSTRUCTORS
-(ct/deftest bounds-test
+(t/deftest bounds-test
   (t/with-instrument `intervals/bounds
     (t/is-spec-check intervals/bounds))
   (t/with-instrument :all
@@ -187,7 +186,7 @@
             ::intervals/upper       m/max-long}
       intervals/bounds-long-non-)))
 
-(ct/deftest vector-bounds-test
+(t/deftest vector-bounds-test
   (t/with-instrument `intervals/vector-bounds
     (t/is-spec-check intervals/vector-bounds))
   (t/with-instrument :all
@@ -214,7 +213,7 @@
              ::intervals/upper       m/inf+}]
       (intervals/vector-bounds 2 intervals/bounds+))))
 
-(ct/deftest pos-definite-matrix-bounds-test
+(t/deftest pos-definite-matrix-bounds-test
   (t/with-instrument `intervals/pos-definite-matrix-bounds
     (t/is-spec-check intervals/pos-definite-matrix-bounds))
   (t/with-instrument :all
@@ -232,7 +231,7 @@
              ::intervals/upper       m/inf+}]
       (intervals/pos-definite-matrix-bounds 2))))
 
-(ct/deftest finite-pos-definite-matrix-bounds-test
+(t/deftest finite-pos-definite-matrix-bounds-test
   (t/with-instrument `intervals/finite-pos-definite-matrix-bounds
     (t/is-spec-check intervals/finite-pos-definite-matrix-bounds))
   (t/with-instrument :all
@@ -250,7 +249,7 @@
              ::intervals/upper       m/inf+}]
       (intervals/finite-pos-definite-matrix-bounds 2))))
 
-(ct/deftest get-interval-test
+(t/deftest get-interval-test
   (t/with-instrument `intervals/get-interval
     (t/is-spec-check intervals/get-interval))
   (t/with-instrument :all
@@ -258,7 +257,7 @@
       (intervals/get-interval (intervals/bounds 1.0 2.0 true false)))))
 
 ;;;BOUNDS MANIPULATION
-(ct/deftest min-bound-test
+(t/deftest min-bound-test
   (t/with-instrument `intervals/min-bound
     (t/is-spec-check intervals/min-bound))
   (t/with-instrument :all
@@ -267,7 +266,7 @@
     (t/is= [3 true] (intervals/min-bound [[3 true] [3 true]]))
     (t/is= [m/inf+ false] (intervals/min-bound []))))
 
-(ct/deftest max-bound-test
+(t/deftest max-bound-test
   (t/with-instrument `intervals/max-bound
     (t/is-spec-check intervals/max-bound))
   (t/with-instrument :all
@@ -276,7 +275,7 @@
     (t/is= [7 true] (intervals/max-bound [[7 true] [7 true]]))
     (t/is= [m/inf- false] (intervals/max-bound []))))
 
-(ct/deftest sort-bounds-test
+(t/deftest sort-bounds-test
   (t/with-instrument `intervals/sort-bounds
     (t/is-spec-check intervals/sort-bounds))
   (t/with-instrument :all
@@ -302,7 +301,7 @@
                               (intervals/bounds -2.0 0.0 true true)]
         {::intervals/by-upper? true}))))
 
-(ct/deftest intersection-test
+(t/deftest intersection-test
   (t/with-instrument `intervals/intersection
     (t/is-spec-check intervals/intersection))
   (t/with-instrument :all
@@ -322,7 +321,7 @@
       (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
                                (intervals/bounds -3.0 1.0 false false)]))))
 
-(ct/deftest union-test
+(t/deftest union-test
   (t/with-instrument `intervals/union
     (t/is-spec-check intervals/union))
   (t/with-instrument :all
@@ -365,7 +364,7 @@
                         (intervals/bounds 2.0 5.0)
                         (intervals/bounds 4.0 8.0)]))))
 
-(ct/deftest encompassing-bounds-test
+(t/deftest encompassing-bounds-test
   (t/with-instrument `intervals/encompassing-bounds
     (t/is-spec-check intervals/encompassing-bounds))
   (t/with-instrument :all

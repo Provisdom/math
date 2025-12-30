@@ -1,6 +1,5 @@
 (ns provisdom.math.series-test
   (:require
-    [clojure.test :as ct]
     [clojure.test.check.generators :as gen]
     [provisdom.math.combinatorics :as cm]
     [provisdom.math.core :as m]
@@ -11,47 +10,47 @@
 
 (set! *warn-on-reflection* true)
 
-(ct/deftest power-series-fn-test
+(t/deftest power-series-fn-test
   (t/with-instrument `series/power-series-fn
     (t/is-spec-check series/power-series-fn))
   (t/with-instrument :all
     (t/is= [11.0 24.0 52.0] (vec ((series/power-series-fn [11 12 13]) 2.0)))))
 
-(ct/deftest power-series-derivative-fn-test
+(t/deftest power-series-derivative-fn-test
   (t/with-instrument `series/power-series-derivative-fn
     (t/is-spec-check series/power-series-derivative-fn))
   (t/with-instrument :all
     (t/is= [0.0 12.0 52.0] (vec ((series/power-series-derivative-fn [11 12 13]) 2.0)))))
 
-(ct/deftest power-series-integral-fn-test
+(t/deftest power-series-integral-fn-test
   (t/with-instrument `series/power-series-integral-fn
     (t/is-spec-check series/power-series-integral-fn))
   (t/with-instrument :all
     (t/is= [22.0 24.0 34.666666666666664]
       (vec ((series/power-series-integral-fn [11 12 13]) 2.0)))))
 
-(ct/deftest continued-fraction-test
+(t/deftest continued-fraction-test
   (t/with-instrument `series/continued-fraction
     (t/is-spec-check series/continued-fraction))
   (t/with-instrument :all
     (t/is= [1.0 -0.25 0.01 -1.96078431372549E-4]
       (vec (series/continued-fraction [1.0 3.0 6.0 8.0])))))
 
-(ct/deftest generalized-continued-fraction-test
+(t/deftest generalized-continued-fraction-test
   (t/with-instrument `series/generalized-continued-fraction
     (t/is-spec-check series/generalized-continued-fraction))
   (t/with-instrument :all
     (t/is= [1.0 0.6666666666666667 -0.09523809523809534 0.003284072249589487]
       (vec (series/generalized-continued-fraction [1.0 3.0 6.0 8.0] [2.0 3.0 2.0 6.0])))))
 
-(ct/deftest multiplicative-continued-fraction-test
+(t/deftest multiplicative-continued-fraction-test
   (t/with-instrument `series/multiplicative-continued-fraction
     (t/is-spec-check series/multiplicative-continued-fraction))
   (t/with-instrument :all
     (t/is= [1.0 1.3333333333333333 0.986842105263158 1.0002580645161292]
       (vec (series/multiplicative-continued-fraction [1.0 3.0 6.0 8.0])))))
 
-(ct/deftest multiplicative-generalized-continued-fraction-test
+(t/deftest multiplicative-generalized-continued-fraction-test
   (t/with-instrument `series/multiplicative-generalized-continued-fraction
     (t/is-spec-check series/multiplicative-generalized-continued-fraction))
   (t/with-instrument :all
@@ -67,7 +66,7 @@
            (m/pow (- (m/sq x)) %))
        (range)))
 
-(ct/deftest sum-convergent-series-test
+(t/deftest sum-convergent-series-test
   (t/with-instrument `series/sum-convergent-series
     (t/is-spec-check series/sum-convergent-series))
   (t/with-instrument :all
@@ -84,7 +83,7 @@
     (t/is= 0.9999999999999877
       (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))))
 
-(ct/deftest multiplicative-sum-convergent-series-test
+(t/deftest multiplicative-sum-convergent-series-test
   (t/with-instrument `series/multiplicative-sum-convergent-series
     (t/is-spec-check series/multiplicative-sum-convergent-series))
   (t/with-instrument :all
@@ -92,7 +91,7 @@
     (t/is= 21.0 (series/multiplicative-sum-convergent-series [1 3 7]))))
 
 ;;;SERIES ACCELERATION
-(ct/deftest aitken-accelerate-test
+(t/deftest aitken-accelerate-test
   (t/with-instrument `series/aitken-accelerate
     (t/is-spec-check series/aitken-accelerate {:num-tests 20}))
   (t/with-instrument :all
@@ -108,7 +107,7 @@
               0.6931668512550866 0.6931303775344023]
         accelerated))))
 
-(ct/deftest wynn-epsilon-test
+(t/deftest wynn-epsilon-test
   (t/with-instrument `series/wynn-epsilon
     (t/is-spec-check series/wynn-epsilon {:num-tests 20}))
   (t/with-instrument :all
@@ -124,7 +123,7 @@
               0.002631578947368318]
         accelerated))))
 
-(ct/deftest euler-transform-test
+(t/deftest euler-transform-test
   (t/with-instrument `series/euler-transform
     (t/is-spec-check series/euler-transform {:num-tests 20}))
   (t/with-instrument :all
@@ -134,7 +133,7 @@
               1.1160714285714246E-4 1.2400793650791438E-5]
         transformed))))
 
-(ct/deftest richardson-extrapolate-test
+(t/deftest richardson-extrapolate-test
   (t/with-instrument `series/richardson-extrapolate
     (t/is-spec-check series/richardson-extrapolate {:num-tests 20}))
   (t/with-instrument :all
@@ -143,7 +142,7 @@
       (t/is= [1.3333333333333333 1.0777777777777777] refined))))
 
 ;;;POWER SERIES OPERATIONS
-(ct/deftest cauchy-product-test
+(t/deftest cauchy-product-test
   (t/with-instrument `series/cauchy-product
     (t/is-spec-check series/cauchy-product {:num-tests 20}))
   (t/with-instrument :all
@@ -154,7 +153,7 @@
     ;; (1)(any) = any
     (t/is= [2.0 3.0 4.0] (series/cauchy-product [1] [2 3 4]))))
 
-(ct/deftest power-series-compose-test
+(t/deftest power-series-compose-test
   (t/with-instrument `series/power-series-compose
     (t/is-spec-check series/power-series-compose {:num-tests 10}))
   (t/with-instrument :all
@@ -163,7 +162,7 @@
     ;; f(x)=1+x, g(x)=x → f(x)=1+x
     (t/is= [1.0 1.0] (series/power-series-compose [1 1] [0 1]))))
 
-(ct/deftest power-series-inverse-test
+(t/deftest power-series-inverse-test
   (t/with-instrument `series/power-series-inverse
     (t/is-spec-check series/power-series-inverse {:num-tests 10}))
   (t/with-instrument :all
@@ -177,7 +176,7 @@
     ;; Invalid input: second coeff is 0
     (t/is (map? (series/power-series-inverse [0 0 1])))))
 
-(ct/deftest radius-of-convergence-test
+(t/deftest radius-of-convergence-test
   (t/with-instrument `series/radius-of-convergence
     (t/is-spec-check series/radius-of-convergence {:num-tests 20}))
   (t/with-instrument :all
@@ -188,7 +187,7 @@
       (t/is= 1.0 (::series/combined-estimate result)))))
 
 ;;;PADÉ APPROXIMANTS
-(ct/deftest pade-approximant-test
+(t/deftest pade-approximant-test
   (t/with-instrument `series/pade-approximant
     (t/is-spec-check series/pade-approximant
       {:num-tests 20
@@ -204,7 +203,7 @@
       (t/is= [5.0] (::series/numerator pade))
       (t/is= [1.0] (::series/denominator pade)))))
 
-(ct/deftest evaluate-pade-test
+(t/deftest evaluate-pade-test
   (t/with-instrument `series/evaluate-pade
     (t/is-spec-check series/evaluate-pade {:num-tests 20}))
   (t/with-instrument :all
@@ -216,7 +215,7 @@
       (t/is= 1.0 (series/evaluate-pade pade22 0.0)))))
 
 ;;;IMPROVED SUMMATION
-(ct/deftest neumaier-sum-test
+(t/deftest neumaier-sum-test
   (t/with-instrument `series/neumaier-sum
     (t/is-spec-check series/neumaier-sum {:num-tests 20}))
   (t/with-instrument :all
@@ -227,7 +226,7 @@
     ;; Empty sequence
     (t/is= 0.0 (series/neumaier-sum []))))
 
-(ct/deftest pairwise-sum-test
+(t/deftest pairwise-sum-test
   (t/with-instrument `series/pairwise-sum
     (t/is-spec-check series/pairwise-sum {:num-tests 20}))
   (t/with-instrument :all
@@ -238,7 +237,7 @@
     ;; Empty sequence
     (t/is= 0.0 (series/pairwise-sum []))))
 
-(ct/deftest sum-with-diagnostics-test
+(t/deftest sum-with-diagnostics-test
   (t/with-instrument `series/sum-with-diagnostics
     (t/is-spec-check series/sum-with-diagnostics {:num-tests 10}))
   (t/with-instrument :all

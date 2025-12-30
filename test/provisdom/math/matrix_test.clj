@@ -1,6 +1,5 @@
 (ns provisdom.math.matrix-test
   (:require
-    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.matrix :as mx]
     [provisdom.math.random :as random]
@@ -13,7 +12,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;TYPES
-(ct/deftest matrix?-test
+(t/deftest matrix?-test
   (t/with-instrument `mx/matrix?
     (t/is-spec-check mx/matrix?))
   (t/with-instrument :all
@@ -30,7 +29,7 @@
     (t/is (mx/matrix? [[m/inf+]]))
     (t/is (mx/matrix? [[0.0] [0.0]]))))
 
-(ct/deftest matrix-num?-test
+(t/deftest matrix-num?-test
   (t/with-instrument `mx/matrix-num?
     (t/is-spec-check mx/matrix-num?))
   (t/with-instrument :all
@@ -47,7 +46,7 @@
     (t/is (mx/matrix-num? [[m/inf+]]))
     (t/is (mx/matrix-num? [[0.0] [0.0]]))))
 
-(ct/deftest matrix-finite?-test
+(t/deftest matrix-finite?-test
   (t/with-instrument `mx/matrix-finite?
     (t/is-spec-check mx/matrix-finite?))
   (t/with-instrument :all
@@ -64,7 +63,7 @@
     (t/is-not (mx/matrix-finite? [[m/inf+]]))
     (t/is (mx/matrix-finite? [[0.0] [0.0]]))))
 
-(ct/deftest matrix-finite-non-?-test
+(t/deftest matrix-finite-non-?-test
   (t/with-instrument `mx/matrix-finite-non-?
     (t/is-spec-check mx/matrix-finite-non-?))
   (t/with-instrument :all
@@ -81,7 +80,7 @@
     (t/is-not (mx/matrix-finite-non-? [[m/inf+]]))
     (t/is (mx/matrix-finite-non-? [[0.0] [0.0]]))))
 
-(ct/deftest matrix-prob?-test
+(t/deftest matrix-prob?-test
   (t/with-instrument `mx/matrix-prob?
     (t/is-spec-check mx/matrix-prob?))
   (t/with-instrument :all
@@ -98,7 +97,7 @@
     (t/is-not (mx/matrix-prob? [[m/inf+]]))
     (t/is (mx/matrix-prob? [[0.0] [0.0]]))))
 
-(ct/deftest empty-matrix?-test
+(t/deftest empty-matrix?-test
   (t/with-instrument `mx/empty-matrix?
     (t/is-spec-check mx/empty-matrix?))
   (t/with-instrument :all
@@ -109,7 +108,7 @@
     (t/is-not (mx/empty-matrix? [[m/nan]]))
     (t/is-not (mx/empty-matrix? [[false]]))))
 
-(ct/deftest row-matrix?-test
+(t/deftest row-matrix?-test
   (t/with-instrument `mx/row-matrix?
     (t/is-spec-check mx/row-matrix?))
   (t/with-instrument :all
@@ -122,7 +121,7 @@
     (t/is (mx/row-matrix? [[0.0 0.0]]))
     (t/is (mx/row-matrix? [[m/nan]]))))
 
-(ct/deftest column-matrix?-test
+(t/deftest column-matrix?-test
   (t/with-instrument `mx/column-matrix?
     (t/is-spec-check mx/column-matrix?))
   (t/with-instrument :all
@@ -135,7 +134,7 @@
     (t/is (mx/column-matrix? [[0.0] [0.0]]))
     (t/is (mx/column-matrix? [[m/nan]]))))
 
-(ct/deftest zero-matrix?-test
+(t/deftest zero-matrix?-test
   (t/with-instrument `mx/zero-matrix?
     (t/is-spec-check mx/zero-matrix?))
   (t/with-instrument :all
@@ -145,7 +144,7 @@
     (t/is (mx/zero-matrix? [[0.0] [0.0]]))
     (t/is-not (mx/zero-matrix? [[0.0] [0.1]]))))
 
-(ct/deftest square-matrix?-test
+(t/deftest square-matrix?-test
   (t/with-instrument `mx/square-matrix?
     (t/is-spec-check mx/square-matrix?))
   (t/with-instrument :all
@@ -156,14 +155,14 @@
     (t/is (mx/square-matrix? [[m/nan]]))
     (t/is-not (mx/square-matrix? [[1 2]]))))
 
-(ct/deftest diagonal-matrix?-test
+(t/deftest diagonal-matrix?-test
   (t/with-instrument `mx/diagonal-matrix?
     (t/is-spec-check mx/diagonal-matrix?))
   (t/with-instrument :all
     (t/is-not (mx/diagonal-matrix? [[1.0 0.5] [2.0 4.0]]))
     (t/is (mx/diagonal-matrix? [[1.0 0.0] [0.0 2.0]]))))
 
-(ct/deftest upper-triangular-matrix?-test
+(t/deftest upper-triangular-matrix?-test
   (t/with-instrument `mx/upper-triangular-matrix?
     (t/is-spec-check mx/upper-triangular-matrix?))
   (t/with-instrument :all
@@ -175,7 +174,7 @@
     (t/is (mx/upper-triangular-matrix? [[1 0] [0 1]]))
     (t/is (mx/upper-triangular-matrix? [[1 1] [0 1]]))))
 
-(ct/deftest lower-triangular-matrix?-test
+(t/deftest lower-triangular-matrix?-test
   (t/with-instrument `mx/lower-triangular-matrix?
     (t/is-spec-check mx/lower-triangular-matrix?))
   (t/with-instrument :all
@@ -187,7 +186,7 @@
     (t/is (mx/lower-triangular-matrix? [[1 0] [0 1]]))
     (t/is (mx/lower-triangular-matrix? [[1 0] [1 1]]))))
 
-(ct/deftest symmetric-matrix?-test
+(t/deftest symmetric-matrix?-test
   (t/with-instrument `mx/symmetric-matrix?
     (t/is-spec-check mx/symmetric-matrix?))
   (t/with-instrument :all
@@ -195,7 +194,7 @@
     (t/is (mx/symmetric-matrix? [[1.0 0.5] [0.5 2.0]]))))
 
 ;;;CONSTRUCTORS
-(ct/deftest to-matrix-test
+(t/deftest to-matrix-test
   (t/with-instrument `mx/to-matrix
     (t/is-spec-check mx/to-matrix))
   (t/with-instrument :all
@@ -211,7 +210,7 @@
     (t/is= [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 0.0]]
       (mx/to-matrix [1.0 2.0 3.0 4.0 5.0 6.0 7.0] 2))))
 
-(ct/deftest constant-matrix-test
+(t/deftest constant-matrix-test
   (t/with-instrument `mx/constant-matrix
     (t/is-spec-check mx/constant-matrix))
   (t/with-instrument :all
@@ -219,7 +218,7 @@
     (t/is= [[]] (mx/constant-matrix 0 1 0.0))
     (t/is= [[1.0 1.0] [1.0 1.0]] (mx/constant-matrix 2 2 1.0))))
 
-(ct/deftest compute-matrix-test
+(t/deftest compute-matrix-test
   (t/with-instrument `mx/compute-matrix
     (t/is-spec-check mx/compute-matrix))
   (t/with-instrument :all
@@ -233,7 +232,7 @@
       (mx/compute-matrix 2 2 (fn [r c]
                                (+ r c))))))
 
-(ct/deftest identity-matrix-test
+(t/deftest identity-matrix-test
   (t/with-instrument `mx/identity-matrix
     (t/is-spec-check mx/identity-matrix))
   (t/with-instrument :all
@@ -241,7 +240,7 @@
     (t/is= [[1.0]] (mx/identity-matrix 1))
     (t/is= [[1.0 0.0] [0.0 1.0]] (mx/identity-matrix 2))))
 
-(ct/deftest row-matrix-test
+(t/deftest row-matrix-test
   (t/with-instrument `mx/row-matrix
     (t/is-spec-check mx/row-matrix))
   (t/with-instrument :all
@@ -251,7 +250,7 @@
     (t/is= [[0.0 1.0]] (mx/row-matrix 2 double))
     (t/is= [[3.0 3.0]] (mx/row-matrix 2 (constantly 3.0)))))
 
-(ct/deftest column-matrix-test
+(t/deftest column-matrix-test
   (t/with-instrument `mx/column-matrix
     (t/is-spec-check mx/column-matrix))
   (t/with-instrument :all
@@ -261,7 +260,7 @@
     (t/is= [[0.0] [1.0]] (mx/column-matrix 2 double))
     (t/is= [[3.0] [3.0]] (mx/column-matrix 2 (constantly 3.0)))))
 
-(ct/deftest diagonal-matrix-test
+(t/deftest diagonal-matrix-test
   (t/with-instrument `mx/diagonal-matrix
     (t/is-spec-check mx/diagonal-matrix))
   (t/with-instrument :all
@@ -272,7 +271,7 @@
     (t/is= [[1.0 0.0] [0.0 3.0]] (mx/diagonal-matrix [1.0 3.0]))
     (t/is= [[3.0 0.0] [0.0 3.0]] (mx/diagonal-matrix 2 (constantly 3.0)))))
 
-(ct/deftest deserialize-upper-triangular-matrix-test
+(t/deftest deserialize-upper-triangular-matrix-test
   (t/with-instrument `mx/deserialize-upper-triangular-matrix
     (t/is-spec-check mx/deserialize-upper-triangular-matrix))
   (t/with-instrument :all
@@ -294,7 +293,7 @@
     (t/is= [[1.0 2.0 3.0] [0.0 4.0 5.0] [0.0 0.0 6.0]]
       (mx/deserialize-upper-triangular-matrix [1.0 2.0 3.0 4.0 5.0 6.0]))))
 
-(ct/deftest deserialize-lower-triangular-matrix-test
+(t/deftest deserialize-lower-triangular-matrix-test
   (t/with-instrument `mx/deserialize-lower-triangular-matrix
     (t/is-spec-check mx/deserialize-lower-triangular-matrix))
   (t/with-instrument :all
@@ -317,7 +316,7 @@
     (t/is= [[1.0 0.0 0.0] [2.0 3.0 0.0] [4.0 5.0 6.0]]
       (mx/deserialize-lower-triangular-matrix [1.0 2.0 3.0 4.0 5.0 6.0]))))
 
-(ct/deftest deserialize-symmetric-matrix-test
+(t/deftest deserialize-symmetric-matrix-test
   (t/with-instrument `mx/deserialize-symmetric-matrix
     (t/is-spec-check mx/deserialize-symmetric-matrix))
   (t/with-instrument :all
@@ -327,7 +326,7 @@
       (mx/deserialize-symmetric-matrix [1.0 2.0 3.0]))))
 
 ;;also called [[diagonal-constant-matrix]]
-(ct/deftest toeplitz-matrix-test
+(t/deftest toeplitz-matrix-test
   (t/with-instrument `mx/toeplitz-matrix
     (t/is-spec-check mx/toeplitz-matrix))
   (t/with-instrument :all
@@ -338,7 +337,7 @@
     (t/is= [[1.0 2.0] [4.0 1.0] [5.0 4.0]] (mx/toeplitz-matrix [1.0 2.0] [1.0 4.0 5.0]))
     (t/is= [[1.0 2.0 3.0] [4.0 1.0 2.0]] (mx/toeplitz-matrix [1.0 2.0 3.0] [1.0 4.0]))))
 
-(ct/deftest outer-product-test
+(t/deftest outer-product-test
   (t/with-instrument `mx/outer-product
     (t/is-spec-check mx/outer-product))
   (t/with-instrument :all
@@ -349,7 +348,7 @@
     (t/is= [[1.0 0.5] [0.5 0.25]] (mx/outer-product [1.0 0.5]))
     (t/is= [[4.0 6.0] [6.0 9.0]] (mx/outer-product [2.0 3.0]))))
 
-(ct/deftest rnd-matrix!-test
+(t/deftest rnd-matrix!-test
   (t/with-instrument `mx/rnd-matrix!
     (t/is-spec-check mx/rnd-matrix!))
   (t/with-instrument :all
@@ -364,7 +363,7 @@
               [0.548683671433349 0.11620266042486127 0.5772125043785624]]
         (mx/rnd-matrix! 2 3)))))
 
-(ct/deftest rnd-reflection-matrix!-test
+(t/deftest rnd-reflection-matrix!-test
   (t/with-instrument `mx/rnd-reflection-matrix!
     (t/is-spec-check mx/rnd-reflection-matrix!))
   (t/with-instrument :all
@@ -377,7 +376,7 @@
               [-0.6143780292330612 -0.7890118105552668]]
         (mx/rnd-reflection-matrix! 2)))))
 
-(ct/deftest rnd-spectral-matrix!-test
+(t/deftest rnd-spectral-matrix!-test
   (t/with-instrument `mx/rnd-spectral-matrix!
     (t/is-spec-check mx/rnd-spectral-matrix!))
   (t/with-instrument :all
@@ -390,7 +389,7 @@
               [0.04986416644446639 1.0012439913047837]]
         (mx/rnd-spectral-matrix! [1.0 3.0])))))
 
-(ct/deftest sparse->matrix-test
+(t/deftest sparse->matrix-test
   (t/with-instrument `mx/sparse->matrix
     (t/is-spec-check mx/sparse->matrix))
   (t/with-instrument :all
@@ -401,7 +400,7 @@
       (mx/sparse->matrix [[0 0 3.0] [1 0 2.0] [0 1 5.0] [1 1 -1.0]] (mx/constant-matrix 2 2 0.0)))
     (t/is= [[0.0 0.0] [0.0 0.0]] (mx/sparse->matrix [[0 2 3.0]] (mx/constant-matrix 2 2 0.0)))))
 
-(ct/deftest sparse->symmetric-matrix-test
+(t/deftest sparse->symmetric-matrix-test
   (t/with-instrument `mx/sparse->symmetric-matrix
     (t/is-spec-check mx/sparse->symmetric-matrix))
   (t/with-instrument :all
@@ -410,7 +409,7 @@
       (mx/sparse->symmetric-matrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [2.0 4.0]]))))
 
 ;;;INFO
-(ct/deftest rows-test
+(t/deftest rows-test
   (t/with-instrument `mx/rows
     (t/is-spec-check mx/rows))
   (t/with-instrument :all
@@ -420,7 +419,7 @@
     (t/is= 2 (mx/rows [[1.0] [2.0]]))
     (t/is= 2 (mx/rows [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest columns-test
+(t/deftest columns-test
   (t/with-instrument `mx/columns
     (t/is-spec-check mx/columns))
   (t/with-instrument :all
@@ -430,7 +429,7 @@
     (t/is= 1 (mx/columns [[1.0] [2.0]]))
     (t/is= 2 (mx/columns [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest get-row-test
+(t/deftest get-row-test
   (t/with-instrument `mx/get-row
     (t/is-spec-check mx/get-row))
   (t/with-instrument :all
@@ -438,7 +437,7 @@
     (t/is= [2.0] (mx/get-row [[1.0] [2.0]] 1))
     (t/is= [1.0 0.5] (mx/get-row [[1.0 0.5] [2.0 4.0]] 0))))
 
-(ct/deftest get-column-test
+(t/deftest get-column-test
   (t/with-instrument `mx/get-column
     (t/is-spec-check mx/get-column))
   (t/with-instrument :all
@@ -446,7 +445,7 @@
     (t/is= [2.0] (mx/get-column [[1.0 2.0]] 1))
     (t/is= [1.0 2.0] (mx/get-column [[1.0 0.5] [2.0 4.0]] 0))))
 
-(ct/deftest diagonal-test
+(t/deftest diagonal-test
   (t/with-instrument `mx/diagonal
     (t/is-spec-check mx/diagonal))
   (t/with-instrument :all
@@ -460,7 +459,7 @@
     (t/is= [2.0] (mx/diagonal [[1.0 0.5] [2.0 4.0]] -1))
     (t/is= [] (mx/diagonal [[1.0 0.5] [2.0 4.0]] -2))))
 
-(ct/deftest serialize-symmetric-or-triangular-matrix-test
+(t/deftest serialize-symmetric-or-triangular-matrix-test
   (t/with-instrument `mx/serialize-symmetric-or-triangular-matrix
     (t/is-spec-check mx/serialize-symmetric-or-triangular-matrix))
   (t/with-instrument :all
@@ -481,7 +480,7 @@
       (mx/serialize-symmetric-or-triangular-matrix [[1.0] [0.5]] {::mx/by-row? false}))
     (t/is= [1.0] (mx/serialize-symmetric-or-triangular-matrix [[1.0] [0.5]]))))
 
-(ct/deftest size-of-symmetric-or-triangular-matrix-test
+(t/deftest size-of-symmetric-or-triangular-matrix-test
   (t/with-instrument `mx/size-of-symmetric-or-triangular-matrix
     (t/is-spec-check mx/size-of-symmetric-or-triangular-matrix))
   (t/with-instrument :all
@@ -490,7 +489,7 @@
     (t/is= 2 (mx/size-of-symmetric-or-triangular-matrix 3))
     (t/is= 3 (mx/size-of-symmetric-or-triangular-matrix 6))))
 
-(ct/deftest size-of-symmetric-or-triangular-matrix-without-diag-test
+(t/deftest size-of-symmetric-or-triangular-matrix-without-diag-test
   (t/with-instrument `mx/size-of-symmetric-or-triangular-matrix-without-diag
     (t/is-spec-check mx/size-of-symmetric-or-triangular-matrix-without-diag))
   (t/with-instrument :all
@@ -499,7 +498,7 @@
     (t/is= 3 (mx/size-of-symmetric-or-triangular-matrix-without-diag 3))
     (t/is= 4 (mx/size-of-symmetric-or-triangular-matrix-without-diag 6))))
 
-(ct/deftest ecount-of-symmetric-or-triangular-matrix-test
+(t/deftest ecount-of-symmetric-or-triangular-matrix-test
   (t/with-instrument `mx/ecount-of-symmetric-or-triangular-matrix
     (t/is-spec-check mx/ecount-of-symmetric-or-triangular-matrix))
   (t/with-instrument :all
@@ -508,7 +507,7 @@
     (t/is= 6 (mx/ecount-of-symmetric-or-triangular-matrix 3))
     (t/is= 21 (mx/ecount-of-symmetric-or-triangular-matrix 6))))
 
-(ct/deftest ecount-of-symmetric-or-triangular-matrix-without-diag-test
+(t/deftest ecount-of-symmetric-or-triangular-matrix-without-diag-test
   (t/with-instrument `mx/ecount-of-symmetric-or-triangular-matrix-without-diag
     (t/is-spec-check mx/ecount-of-symmetric-or-triangular-matrix-without-diag))
   (t/with-instrument :all
@@ -517,7 +516,7 @@
     (t/is= 3 (mx/ecount-of-symmetric-or-triangular-matrix-without-diag 3))
     (t/is= 15 (mx/ecount-of-symmetric-or-triangular-matrix-without-diag 6))))
 
-(ct/deftest trace-test
+(t/deftest trace-test
   (t/with-instrument `mx/trace
     (t/is-spec-check mx/trace))
   (t/with-instrument :all
@@ -527,7 +526,7 @@
     (t/is= 5.0 (mx/trace [[1.0 0.5] [2.0 4.0]]))
     (t/is= 6.0 (mx/trace [[1.0 0.0 0.0] [0.0 2.0 0.0] [0.0 0.0 3.0]]))))
 
-(ct/deftest get-slices-as-matrix-test
+(t/deftest get-slices-as-matrix-test
   (t/with-instrument `mx/get-slices-as-matrix
     (t/is-spec-check mx/get-slices-as-matrix))
   (t/with-instrument :all
@@ -571,7 +570,7 @@
         {::mx/row-indices    0
          ::mx/column-indices 0}))))
 
-(ct/deftest filter-by-row-test
+(t/deftest filter-by-row-test
   (t/with-instrument `mx/filter-by-row
     (t/is-spec-check mx/filter-by-row))
   (t/with-instrument :all
@@ -596,7 +595,7 @@
                           (< (apply + (tensor/emap m/sq row-v)) 2.0))
         [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest filter-by-column-test
+(t/deftest filter-by-column-test
   (t/with-instrument `mx/filter-by-column
     (t/is-spec-check mx/filter-by-column))
   (t/with-instrument :all
@@ -621,7 +620,7 @@
                              (< (apply + (tensor/emap m/sq column-v)) 6.0))
         [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest filter-symmetric-matrix-test
+(t/deftest filter-symmetric-matrix-test
   (t/with-instrument `mx/filter-symmetric-matrix
     (t/is-spec-check mx/filter-symmetric-matrix))
   (t/with-instrument :all
@@ -638,7 +637,7 @@
   [[1.0 2.0 3.0 4.0] [5.0 6.0 7.0 8.0]
    [9.0 10.0 11.0 12.0] [13.0 14.0 15.0 16.0]])
 
-(ct/deftest matrix-partition-test
+(t/deftest matrix-partition-test
   (t/with-instrument `mx/matrix-partition
     (t/is-spec-check mx/matrix-partition))
   (t/with-instrument :all
@@ -690,7 +689,7 @@
             ::mx/top-right    [[]]}
       (mx/matrix-partition s 4 4))))
 
-(ct/deftest some-kv-test
+(t/deftest some-kv-test
   (t/with-instrument `mx/some-kv
     (t/is-spec-check mx/some-kv))
   (t/with-instrument :all
@@ -704,7 +703,7 @@
         [[1.0 0.5] [2.0 4.0]]
         {::mx/by-row false}))))
 
-(ct/deftest ereduce-kv-test
+(t/deftest ereduce-kv-test
   (t/with-instrument `mx/ereduce-kv
     (t/is-spec-check mx/ereduce-kv))
   (t/with-instrument :all
@@ -747,7 +746,7 @@
         3.4
         [[1.0 0.5]] [[1.0 0.5]]))))
 
-(ct/deftest matrix->sparse-test
+(t/deftest matrix->sparse-test
   (t/with-instrument `mx/matrix->sparse
     (t/is-spec-check mx/matrix->sparse))
   (t/with-instrument :all
@@ -758,7 +757,7 @@
     (t/is= [] (mx/matrix->sparse [[1.0 0.5] [2.0 4.0]] neg?))
     (t/is= [[1 0 0.5]] (mx/matrix->sparse [[1.0] [0.5]] #(< % 0.7)))))
 
-(ct/deftest symmetric-matrix->sparse-test
+(t/deftest symmetric-matrix->sparse-test
   (t/with-instrument `mx/symmetric-matrix->sparse
     (t/is-spec-check mx/symmetric-matrix->sparse))
   (t/with-instrument :all
@@ -768,7 +767,7 @@
     (t/is= [[0 0 1.0] [0 1 0.5]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]] #(< % 2.1)))))
 
 ;;;MANIPULATION
-(ct/deftest transpose-test
+(t/deftest transpose-test
   (t/with-instrument `mx/transpose
     (t/is-spec-check mx/transpose))
   (t/with-instrument :all
@@ -779,7 +778,7 @@
     (t/is= [[1.0 0.5]] (mx/transpose [[1.0] [0.5]]))
     (t/is= [[1.0] [0.5]] (mx/transpose [[1.0 0.5]]))))
 
-(ct/deftest assoc-row-test
+(t/deftest assoc-row-test
   (t/with-instrument `mx/assoc-row
     (t/is-spec-check mx/assoc-row))
   (t/with-instrument :all
@@ -790,7 +789,7 @@
     (t/is= ::anom/incorrect (::anom/category (mx/assoc-row [[1]] 2 [2])))
     (t/is= [[8.0 9.0] [2.0 4.0]] (mx/assoc-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
-(ct/deftest assoc-column-test
+(t/deftest assoc-column-test
   (t/with-instrument `mx/assoc-column
     (t/is-spec-check mx/assoc-column))
   (t/with-instrument :all
@@ -801,7 +800,7 @@
     (t/is= ::anom/incorrect (::anom/category (mx/assoc-column [[1]] 2 [2])))
     (t/is= [[8.0 0.5] [9.0 4.0]] (mx/assoc-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
-(ct/deftest assoc-diagonal-test
+(t/deftest assoc-diagonal-test
   (t/with-instrument `mx/assoc-diagonal
     (t/is-spec-check mx/assoc-diagonal))
   (t/with-instrument :all
@@ -810,7 +809,7 @@
     (t/is= [[2]] (mx/assoc-diagonal [[1]] [2]))
     (t/is= [[8.0 0.5] [2.0 9.0]] (mx/assoc-diagonal [[1.0 0.5] [2.0 4.0]] [8.0 9.0]))))
 
-(ct/deftest insert-row-test
+(t/deftest insert-row-test
   (t/with-instrument `mx/insert-row
     (t/is-spec-check mx/insert-row))
   (t/with-instrument :all
@@ -822,7 +821,7 @@
     (t/is= [[8.0 9.0] [1.0 0.5] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))
     (t/is= [[1.0 0.5] [8.0 9.0] [2.0 4.0]] (mx/insert-row [[1.0 0.5] [2.0 4.0]] 1 [8.0 9.0]))))
 
-(ct/deftest insert-column-test
+(t/deftest insert-column-test
   (t/with-instrument `mx/insert-column
     (t/is-spec-check mx/insert-column))
   (t/with-instrument :all
@@ -833,7 +832,7 @@
     (t/is= ::anom/incorrect (::anom/category (mx/insert-column [[1]] 2 [2])))
     (t/is= [[8.0 1.0 0.5] [9.0 2.0 4.0]] (mx/insert-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
-(ct/deftest update-row-test
+(t/deftest update-row-test
   (t/with-instrument `mx/update-row
     (t/is-spec-check mx/update-row))
   (t/with-instrument :all
@@ -850,7 +849,7 @@
       (mx/update-row [[1.0 0.5] [2.0 4.0]] 0 (fn [column number]
                                                (+ column number 1))))))
 
-(ct/deftest update-column-test
+(t/deftest update-column-test
   (t/with-instrument `mx/update-column
     (t/is-spec-check mx/update-column))
   (t/with-instrument :all
@@ -867,7 +866,7 @@
       (mx/update-column [[1.0 0.5] [2.0 4.0]] 0 (fn [row number]
                                                   (+ row number 1))))))
 
-(ct/deftest update-diagonal-test
+(t/deftest update-diagonal-test
   (t/with-instrument `mx/update-diagonal
     (t/is-spec-check mx/update-diagonal))
   (t/with-instrument :all
@@ -881,7 +880,7 @@
       (mx/update-diagonal [[1.0 0.5] [2.0 4.0]] (fn [row number]
                                                   (+ row number 1))))))
 
-(ct/deftest remove-row-test
+(t/deftest remove-row-test
   (t/with-instrument `mx/remove-row
     (t/is-spec-check mx/remove-row))
   (t/with-instrument :all
@@ -893,7 +892,7 @@
     (t/is= [[1 2] [3 4]] (mx/remove-row [[1 2] [3 4]] 2))
     (t/is= [[1 2] [5 6]] (mx/remove-row [[1 2] [3 4] [5 6]] 1))))
 
-(ct/deftest remove-column-test
+(t/deftest remove-column-test
   (t/with-instrument `mx/remove-column
     (t/is-spec-check mx/remove-column))
   (t/with-instrument :all
@@ -905,7 +904,7 @@
     (t/is= [[1 2] [3 4]] (mx/remove-column [[1 2] [3 4]] 2))
     (t/is= [[1 3] [4 6]] (mx/remove-column [[1 2 3] [4 5 6]] 1))))
 
-(ct/deftest concat-rows-test
+(t/deftest concat-rows-test
   (t/with-instrument `mx/concat-rows
     (t/is-spec-check mx/concat-rows))
   (t/with-instrument :all
@@ -919,7 +918,7 @@
     (t/is= [[1.0 0.5] [1.0 0.5]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5]]))
     (t/is= [[1.0 0.5] [1.0 0.5] [1.0 0.5]] (mx/concat-rows [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]]))))
 
-(ct/deftest concat-columns-test
+(t/deftest concat-columns-test
   (t/with-instrument `mx/concat-columns
     (t/is-spec-check mx/concat-columns))
   (t/with-instrument :all
@@ -933,7 +932,7 @@
     (t/is= [[1.0 1.0 1.0] [0.5 0.5 0.5]]
       (mx/concat-columns [[1.0] [0.5]] [[1.0] [0.5]] [[1.0] [0.5]]))))
 
-(ct/deftest merge-matrices-test
+(t/deftest merge-matrices-test
   (t/with-instrument `mx/merge-matrices
     (t/is-spec-check mx/merge-matrices))
   (t/with-instrument :all
@@ -959,7 +958,7 @@
                           ::mx/bottom-left  [[1.0 0.5]]
                           ::mx/bottom-right [[1.0 0.5]]}))))
 
-(ct/deftest replace-submatrix-test
+(t/deftest replace-submatrix-test
   (t/with-instrument `mx/replace-submatrix
     (t/is-spec-check mx/replace-submatrix))
   (t/with-instrument :all
@@ -992,7 +991,7 @@
         -1
         3))))
 
-(ct/deftest symmetric-matrix-by-averaging-test
+(t/deftest symmetric-matrix-by-averaging-test
   (t/with-instrument `mx/symmetric-matrix-by-averaging
     (t/is-spec-check mx/symmetric-matrix-by-averaging))
   (t/with-instrument :all
@@ -1001,7 +1000,7 @@
     (t/is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]]))))
 
 ;;;MATH
-(ct/deftest mx*-test
+(t/deftest mx*-test
   (t/with-instrument `mx/mx*
     (t/is-spec-check mx/mx*))
   (t/with-instrument :all
@@ -1015,7 +1014,7 @@
         [[1.0 0.5] [2.0 4.0]]
         [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest kronecker-product-test
+(t/deftest kronecker-product-test
   (t/with-instrument `mx/kronecker-product
     (t/is-spec-check mx/kronecker-product))
   (t/with-instrument :all
@@ -1044,7 +1043,7 @@
       (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]]))))
 
 ;;;ROUNDING
-(ct/deftest round-roughly-zero-rows-test
+(t/deftest round-roughly-zero-rows-test
   (t/with-instrument `mx/round-roughly-zero-rows
     (t/is-spec-check mx/round-roughly-zero-rows))
   (t/with-instrument :all
@@ -1052,7 +1051,7 @@
     (t/is= [[1.0 0.5] [2.0 4.0]] (mx/round-roughly-zero-rows [[1.0 0.5] [2.0 4.0]] 1e-6))
     (t/is= [[0.0 0.0] [1.0 1.0E-17]] (mx/round-roughly-zero-rows [[1e-13 1e-8] [1.0 1e-17]] 1e-6))))
 
-(ct/deftest round-roughly-zero-columns-test
+(t/deftest round-roughly-zero-columns-test
   (t/with-instrument `mx/round-roughly-zero-columns
     (t/is-spec-check mx/round-roughly-zero-columns))
   (t/with-instrument :all

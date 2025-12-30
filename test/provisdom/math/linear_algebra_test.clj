@@ -1,6 +1,5 @@
 (ns provisdom.math.linear-algebra-test
   (:require
-    [clojure.test :as ct]
     [provisdom.math.core :as m]
     [provisdom.math.linear-algebra :as la]
     [provisdom.math.matrix :as mx]
@@ -13,7 +12,7 @@
 (set! *warn-on-reflection* true)
 
 ;;;LU DECOMPOSITION
-(ct/deftest lu-decomposition-test
+(t/deftest lu-decomposition-test
   (t/with-instrument `la/lu-decomposition
     (t/is-spec-check la/lu-decomposition {:num-tests 200}))
   (t/with-instrument :all
@@ -41,7 +40,7 @@
       (t/is-data-approx= m reconstructed :tolerance 1e-10))))
 
 ;;;DETERMINANT
-(ct/deftest determinant-from-lu-test
+(t/deftest determinant-from-lu-test
   (t/with-instrument `la/determinant-from-lu
     (t/is-spec-check la/determinant-from-lu {:num-tests 200}))
   (t/with-instrument :all
@@ -50,7 +49,7 @@
     (let [lu (la/lu-decomposition [[1.0 2.0] [3.0 4.0]])]
       (t/is-approx= -2.0 (la/determinant-from-lu lu) :tolerance 1e-10))))
 
-(ct/deftest determinant-test
+(t/deftest determinant-test
   (t/with-instrument `la/determinant
     (t/is-spec-check la/determinant {:num-tests 200}))
   (t/with-instrument :all
@@ -60,7 +59,7 @@
     (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)))
 
 ;;;MINORS AND COFACTORS
-(ct/deftest minor-test
+(t/deftest minor-test
   (t/with-instrument `la/minor
     (t/is-spec-check la/minor {:num-tests 200}))
   (t/with-instrument :all
@@ -72,7 +71,7 @@
     (t/is-approx= -3.0
       (la/minor [[1.0 2.0 3.0] [4.0 5.0 6.0] [7.0 8.0 9.0]] 0 0) :tolerance 1e-10)))
 
-(ct/deftest cofactor-test
+(t/deftest cofactor-test
   (t/with-instrument `la/cofactor
     (t/is-spec-check la/cofactor {:num-tests 200}))
   (t/with-instrument :all
@@ -82,7 +81,7 @@
     (t/is= -2.0 (la/cofactor [[1.0 2.0] [3.0 4.0]] 1 0))
     (t/is= 1.0 (la/cofactor [[1.0 2.0] [3.0 4.0]] 1 1))))
 
-(ct/deftest cofactor-matrix-test
+(t/deftest cofactor-matrix-test
   (t/with-instrument `la/cofactor-matrix
     (t/is-spec-check la/cofactor-matrix {:num-tests 200}))
   (t/with-instrument :all
@@ -91,7 +90,7 @@
     (t/is-data-approx= [[4.0 -3.0] [-2.0 1.0]]
       (la/cofactor-matrix [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)))
 
-(ct/deftest adjugate-test
+(t/deftest adjugate-test
   (t/with-instrument `la/adjugate
     (t/is-spec-check la/adjugate {:num-tests 200}))
   (t/with-instrument :all
@@ -107,7 +106,7 @@
       (t/is-data-approx= [[det 0.0] [0.0 det]] product :tolerance 1e-10))))
 
 ;;;INVERSE
-(ct/deftest inverse-from-lu-test
+(t/deftest inverse-from-lu-test
   (t/with-instrument `la/inverse-from-lu
     (t/is-spec-check la/inverse-from-lu {:num-tests 200}))
   (t/with-instrument :all
@@ -120,7 +119,7 @@
           result (la/inverse-from-lu lu)]
       (t/is= ::anom/no-solve (::anom/category result)))))
 
-(ct/deftest inverse-test
+(t/deftest inverse-test
   (t/with-instrument `la/inverse
     (t/is-spec-check la/inverse {:num-tests 75}))
   (t/with-instrument :all
@@ -133,7 +132,7 @@
     (t/is= ::anom/no-solve (::anom/category (la/inverse [[1.0 2.0] [2.0 4.0]])))))
 
 ;;;SOLVE LINEAR SYSTEM
-(ct/deftest solve-test
+(t/deftest solve-test
   (t/with-instrument `la/solve
     (t/is-spec-check la/solve {:num-tests 50}))
   (t/with-instrument :all
@@ -155,7 +154,7 @@
         (t/is (< residual 0.5))))))
 
 ;;;CHOLESKY DECOMPOSITION
-(ct/deftest cholesky-decomposition-test
+(t/deftest cholesky-decomposition-test
   (t/with-instrument `la/cholesky-decomposition
     (t/is-spec-check la/cholesky-decomposition {:num-tests 200}))
   (t/with-instrument :all
@@ -174,7 +173,7 @@
           reconstructed (mx/mx* L (mx/transpose L))]
       (t/is-data-approx= m reconstructed :tolerance 1e-10))))
 
-(ct/deftest rectangular-cholesky-decomposition-test
+(t/deftest rectangular-cholesky-decomposition-test
   (t/with-instrument `la/rectangular-cholesky-decomposition
     (t/is-spec-check la/rectangular-cholesky-decomposition {:num-tests 8}))
   (t/with-instrument :all
@@ -204,7 +203,7 @@
       (t/is-data-approx= m reconstructed :tolerance 1e-10))))
 
 ;;;POSITIVE DEFINITE TESTS
-(ct/deftest pos-definite-matrix-finite?-test
+(t/deftest pos-definite-matrix-finite?-test
   (t/with-instrument `la/pos-definite-matrix-finite?
     (t/is-spec-check la/pos-definite-matrix-finite? {:num-tests 200}))
   (t/with-instrument :all
@@ -212,7 +211,7 @@
     (t/is (la/pos-definite-matrix-finite? [[4.0 2.0] [2.0 5.0]]))
     (t/is-not (la/pos-definite-matrix-finite? [[1.0 2.0] [2.0 1.0]]))))
 
-(ct/deftest pos-semidefinite-matrix-finite?-test
+(t/deftest pos-semidefinite-matrix-finite?-test
   (t/with-instrument `la/pos-semidefinite-matrix-finite?
     (t/is-spec-check la/pos-semidefinite-matrix-finite? {:num-tests 200}))
   (t/with-instrument :all
@@ -221,7 +220,7 @@
     (t/is (la/pos-semidefinite-matrix-finite? [[1.0 1.0] [1.0 1.0]] 1e-10))
     (t/is-not (la/pos-semidefinite-matrix-finite? [[1.0 2.0] [2.0 1.0]] 1e-10))))
 
-(ct/deftest pos-semidefinite-matrix-finite-by-squaring-test
+(t/deftest pos-semidefinite-matrix-finite-by-squaring-test
   (t/with-instrument `la/pos-semidefinite-matrix-finite-by-squaring
     (t/is-spec-check la/pos-semidefinite-matrix-finite-by-squaring {:num-tests 200}))
   (t/with-instrument :all
@@ -231,7 +230,7 @@
     (let [result (la/pos-semidefinite-matrix-finite-by-squaring [[1.0 2.0] [3.0 4.0]])]
       (t/is (la/pos-semidefinite-matrix-finite? result 1e-10)))))
 
-(ct/deftest pos-definite-matrix-finite-by-squaring-test
+(t/deftest pos-definite-matrix-finite-by-squaring-test
   (t/with-instrument `la/pos-definite-matrix-finite-by-squaring
     (t/is-spec-check la/pos-definite-matrix-finite-by-squaring {:num-tests 200}))
   (t/with-instrument :all
@@ -243,7 +242,7 @@
       (t/is (la/pos-definite-matrix-finite? result)))))
 
 ;;;CORRELATION MATRIX
-(ct/deftest correlation-matrix?-test
+(t/deftest correlation-matrix?-test
   (t/with-instrument `la/correlation-matrix?
     (t/is-spec-check la/correlation-matrix? {:num-tests 50}))
   (t/with-instrument :all
@@ -257,7 +256,7 @@
     ;; Invalid: diagonal not 1
     (t/is-not (la/correlation-matrix? [[2.0 0.5] [0.5 1.0]] 1e-10))))
 
-(ct/deftest covariance-matrix->correlation-matrix-test
+(t/deftest covariance-matrix->correlation-matrix-test
   (t/with-instrument `la/covariance-matrix->correlation-matrix
     (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 20}))
   (t/with-instrument :all
@@ -265,7 +264,7 @@
           result (la/covariance-matrix->correlation-matrix cov)]
       (t/is-data-approx= [[1.0 (/ 2.0 6.0)] [(/ 2.0 6.0) 1.0]] result :tolerance 1e-10))))
 
-(ct/deftest correlation-matrix->covariance-matrix-test
+(t/deftest correlation-matrix->covariance-matrix-test
   (t/with-instrument `la/correlation-matrix->covariance-matrix
     (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 5}))
   (t/with-instrument :all
@@ -274,7 +273,7 @@
           result (la/correlation-matrix->covariance-matrix corr variances)]
       (t/is-data-approx= [[4.0 3.0] [3.0 9.0]] result :tolerance 1e-10))))
 
-(ct/deftest correlation-matrix-by-squaring-test
+(t/deftest correlation-matrix-by-squaring-test
   (t/with-instrument `la/correlation-matrix-by-squaring
     (t/is-spec-check la/correlation-matrix-by-squaring {:num-tests 200}))
   (t/with-instrument :all
@@ -283,7 +282,7 @@
       (t/is (some? result))
       (t/is (la/correlation-matrix? result 1e-6)))))
 
-(ct/deftest rnd-pos-definite-matrix-finite!-test
+(t/deftest rnd-pos-definite-matrix-finite!-test
   (t/with-instrument `la/rnd-pos-definite-matrix-finite!
     (t/is-spec-check la/rnd-pos-definite-matrix-finite! {:num-tests 200}))
   (t/with-instrument :all
@@ -293,7 +292,7 @@
         (t/is (some? result))
         (t/is (la/pos-definite-matrix-finite? result))))))
 
-(ct/deftest rnd-correlation-matrix!-test
+(t/deftest rnd-correlation-matrix!-test
   (t/with-instrument `la/rnd-correlation-matrix!
     (t/is-spec-check la/rnd-correlation-matrix! {:num-tests 200}))
   (t/with-instrument :all
@@ -304,7 +303,7 @@
           (t/is (la/correlation-matrix? result 1e-6)))))))
 
 ;;;QR DECOMPOSITION
-(ct/deftest qr-decomposition-test
+(t/deftest qr-decomposition-test
   (t/with-instrument `la/qr-decomposition
     (t/is-spec-check la/qr-decomposition {:num-tests 200}))
   (t/with-instrument :all
@@ -332,7 +331,7 @@
           QtQ (mx/mx* (mx/transpose Q) Q)]
       (t/is-data-approx= (mx/identity-matrix 3) QtQ :tolerance 1e-10))))
 
-(ct/deftest rank-revealing-qr-decomposition-test
+(t/deftest rank-revealing-qr-decomposition-test
   (t/with-instrument `la/rank-revealing-qr-decomposition
     (t/is-spec-check la/rank-revealing-qr-decomposition {:num-tests 200}))
   (t/with-instrument :all
@@ -373,7 +372,7 @@
       (t/is-data-approx= AP QR :tolerance 1e-10))))
 
 ;;;LEAST SQUARES
-(ct/deftest least-squares-test
+(t/deftest least-squares-test
   (t/with-instrument `la/least-squares
     (t/is-spec-check la/least-squares {:num-tests 200}))
   (t/with-instrument :all
@@ -388,7 +387,7 @@
       (t/is-approx= -0.6666666666666666 (second x) :tolerance 1e-10))))
 
 ;;;EIGENDECOMPOSITION
-(ct/deftest eigen-decomposition-test
+(t/deftest eigen-decomposition-test
   (t/with-instrument `la/eigen-decomposition
     (t/is-spec-check la/eigen-decomposition {:num-tests 8}))
   (t/with-instrument :all
@@ -417,7 +416,7 @@
         (t/is-data-approx= [[1.0 0.0] [0.0 1.0]] VtV :tolerance 1e-10)))))
 
 ;;;SVD (SINGULAR VALUE DECOMPOSITION)
-(ct/deftest sv-decomposition-test
+(t/deftest sv-decomposition-test
   (t/with-instrument `la/sv-decomposition
     (t/is-spec-check la/sv-decomposition {:num-tests 8}))
   (t/with-instrument :all
@@ -438,7 +437,7 @@
       (t/is-data-approx= m reconstructed :tolerance 1e-10))))
 
 ;;;CONDITION NUMBER
-(ct/deftest condition-number-from-svd-test
+(t/deftest condition-number-from-svd-test
   (t/with-instrument `la/condition-number-from-svd
     (t/is-spec-check la/condition-number-from-svd {:num-tests 8}))
   (t/with-instrument :all
@@ -447,7 +446,7 @@
     (let [svd (la/sv-decomposition [[3.0 0.0] [0.0 4.0]])]
       (t/is-approx= (/ 4.0 3.0) (la/condition-number-from-svd svd) :tolerance 1e-10))))
 
-(ct/deftest condition-number-test
+(t/deftest condition-number-test
   (t/with-instrument `la/condition-number
     (t/is-spec-check la/condition-number {:num-tests 8}))
   (t/with-instrument :all
@@ -460,7 +459,7 @@
     (t/is (> (la/condition-number [[1.0 2.0] [2.0 4.0]]) 1e6))))
 
 ;;;MATRIX RANK
-(ct/deftest matrix-rank-test
+(t/deftest matrix-rank-test
   (t/with-instrument `la/matrix-rank
     (t/is-spec-check la/matrix-rank {:num-tests 8}))
   (t/with-instrument :all
@@ -470,7 +469,7 @@
     (t/is= 1 (la/matrix-rank [[1.0 2.0] [2.0 4.0]]))))
 
 ;;;INDUCED MATRIX NORMS
-(ct/deftest norm-1-test
+(t/deftest norm-1-test
   (t/with-instrument `la/norm-1
     (t/is-spec-check la/norm-1 {:num-tests 200}))
   (t/with-instrument :all
@@ -479,7 +478,7 @@
     (t/is= 6.0 (la/norm-1 [[1.0 -2.0] [3.0 4.0]]))
     (t/is= 5.0 (la/norm-1 [[-5.0]]))))
 
-(ct/deftest norm-inf-matrix-test
+(t/deftest norm-inf-matrix-test
   (t/with-instrument `la/norm-inf-matrix
     (t/is-spec-check la/norm-inf-matrix {:num-tests 200}))
   (t/with-instrument :all
@@ -488,7 +487,7 @@
     (t/is= 7.0 (la/norm-inf-matrix [[1.0 -2.0] [3.0 4.0]]))
     (t/is= 5.0 (la/norm-inf-matrix [[-5.0]]))))
 
-(ct/deftest norm-spectral-from-svd-test
+(t/deftest norm-spectral-from-svd-test
   (t/with-instrument `la/norm-spectral-from-svd
     (t/is-spec-check la/norm-spectral-from-svd {:num-tests 8}))
   (t/with-instrument :all
@@ -497,7 +496,7 @@
     (let [svd (la/sv-decomposition [[1.0 0.0] [0.0 1.0]])]
       (t/is-approx= 1.0 (la/norm-spectral-from-svd svd) :tolerance 1e-10))))
 
-(ct/deftest norm-spectral-test
+(t/deftest norm-spectral-test
   (t/with-instrument `la/norm-spectral
     (t/is-spec-check la/norm-spectral {:num-tests 8}))
   (t/with-instrument :all
@@ -506,7 +505,7 @@
     (t/is-approx= 4.0 (la/norm-spectral [[3.0 0.0] [0.0 4.0]]) :tolerance 1e-10)))
 
 ;;;PSEUDOINVERSE
-(ct/deftest pseudoinverse-from-svd-test
+(t/deftest pseudoinverse-from-svd-test
   (t/with-instrument `la/pseudoinverse-from-svd
     (t/is-spec-check la/pseudoinverse-from-svd {:num-tests 8}))
   (t/with-instrument :all
@@ -520,7 +519,7 @@
           result (mx/mx* A (mx/mx* A+ A))]
       (t/is-data-approx= A result :tolerance 1e-10))))
 
-(ct/deftest pseudoinverse-test
+(t/deftest pseudoinverse-test
   (t/with-instrument `la/pseudoinverse
     (t/is-spec-check la/pseudoinverse {:num-tests 8}))
   (t/with-instrument :all
@@ -538,7 +537,7 @@
       (t/is= 1 (mx/columns A+)))))
 
 ;;;MATRIX POWER
-(ct/deftest matrix-power-test
+(t/deftest matrix-power-test
   (t/with-instrument `la/matrix-power
     (t/is-spec-check la/matrix-power {:num-tests 200}))
   (t/with-instrument :all
@@ -564,7 +563,7 @@
       (t/is-data-approx= [[0.5 0.0] [0.0 0.25]] A-inv :tolerance 1e-10))))
 
 ;;;MATRIX EXPONENTIAL
-(ct/deftest matrix-exp-test
+(t/deftest matrix-exp-test
   (t/with-instrument `la/matrix-exp
     (t/is-spec-check la/matrix-exp {:num-tests 10}))
   (t/with-instrument :all

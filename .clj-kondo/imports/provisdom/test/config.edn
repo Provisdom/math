@@ -2,4 +2,5 @@
  {:unresolved-symbol
   {:exclude [(cljs.test/is [spec-check])
              (clojure.test/is [spec-check])]}}
- :lint-as {provisdom.test.core/defspec-test clojure.test/deftest}}
+ :lint-as {provisdom.test.core/defspec-test clojure.test/deftest
+           provisdom.test.core/deftest clojure.test/deftest}}

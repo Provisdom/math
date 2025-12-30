@@ -1,7 +1,6 @@
 (ns provisdom.math.tensor-test
   (:require
 
-    [clojure.test :as ct]
     [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
@@ -12,7 +11,7 @@
 (set! *warn-on-reflection* true)
 
 ;;TYPES
-(ct/deftest tensor?-test
+(t/deftest tensor?-test
   (t/with-instrument `tensor/tensor?
     (t/is-spec-check tensor/tensor?))
   (t/with-instrument :all
@@ -28,7 +27,7 @@
     (t/is (tensor/tensor? 1))))
 
 ;;CONSTRUCTORS
-(ct/deftest to-tensor-test
+(t/deftest to-tensor-test
   (t/with-instrument `tensor/to-tensor
     (t/is-spec-check tensor/to-tensor))
   (t/with-instrument :all
@@ -40,7 +39,7 @@
     (t/is= nil (tensor/to-tensor [[2] [3 4]]))
     (t/is= [[2 3]] (tensor/to-tensor '((2 3))))))
 
-(ct/deftest compute-tensor-test
+(t/deftest compute-tensor-test
   (t/with-instrument `tensor/compute-tensor
     (t/is-spec-check tensor/compute-tensor))
   (t/with-instrument :all
@@ -62,7 +61,7 @@
                                        (or n2 -1)
                                        -2))))))
 
-(ct/deftest repeat-tensor-test
+(t/deftest repeat-tensor-test
   (t/with-instrument `tensor/repeat-tensor
     (t/is-spec-check tensor/repeat-tensor))
   (t/with-instrument :all
@@ -75,7 +74,7 @@
     (t/is= [[2]] (tensor/repeat-tensor [1] [2]))
     (t/is= [[[0 0]] [[0 0]]] (tensor/repeat-tensor [2 1] [0 0]))))
 
-(ct/deftest fill-tensor-test
+(t/deftest fill-tensor-test
   (t/with-instrument `tensor/fill-tensor
     (t/is-spec-check tensor/fill-tensor))
   (t/with-instrument :all
@@ -87,7 +86,7 @@
     (t/is= [[[1 2] [3 4] [5 6]] [[7 8] [9 10] [11 12]]]
       (tensor/fill-tensor [2 3 2] [1 2 3 4 5 6 7 8 9 10 11 12 13 14]))))
 
-(ct/deftest rnd-tensor!-test
+(t/deftest rnd-tensor!-test
   (t/with-instrument `tensor/rnd-tensor!
     (t/is-spec-check tensor/rnd-tensor! {:num-tests 20}))
   (t/with-instrument :all
@@ -103,7 +102,7 @@
         (tensor/rnd-tensor! [2 3])))))
 
 ;;INFO
-(ct/deftest first-number-test
+(t/deftest first-number-test
   (t/with-instrument `tensor/first-number
     (t/is-spec-check tensor/first-number))
   (t/with-instrument :all
@@ -112,7 +111,7 @@
     (t/is= 2 (tensor/first-number [2]))
     (t/is= 2 (tensor/first-number [[2]]))))
 
-(ct/deftest ecount-test
+(t/deftest ecount-test
   (t/with-instrument `tensor/ecount
     (t/is-spec-check tensor/ecount))
   (t/with-instrument :all
@@ -120,7 +119,7 @@
     (t/is= 0 (tensor/ecount [[]]))
     (t/is= 4 (tensor/ecount [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest rank-test
+(t/deftest rank-test
   (t/with-instrument `tensor/rank
     (t/is-spec-check tensor/rank))
   (t/with-instrument :all
@@ -128,7 +127,7 @@
     (t/is= 1 (tensor/rank []))
     (t/is= 0 (tensor/rank 1))))
 
-(ct/deftest shape-test
+(t/deftest shape-test
   (t/with-instrument `tensor/shape
     (t/is-spec-check tensor/shape))
   (t/with-instrument :all
@@ -137,7 +136,7 @@
     (t/is= [] (tensor/shape 1))
     (t/is= [2 2 1] (tensor/shape [[[1] [2]] [[3] [4]]]))))
 
-(ct/deftest every-kv?-test
+(t/deftest every-kv?-test
   (t/with-instrument `tensor/every-kv?
     (t/is-spec-check tensor/every-kv?))
   (t/with-instrument :all
@@ -154,7 +153,7 @@
                                          (> (second indices) (- v 2.1)))))
             [[1.0 0.5] [2.0 3.0]]))))
 
-(ct/deftest filter-kv-test
+(t/deftest filter-kv-test
   (t/with-instrument `tensor/filter-kv
     (t/is-spec-check tensor/filter-kv))
   (t/with-instrument :all
@@ -163,7 +162,7 @@
                           (odd? index))
         [[1 2] [3 4]]))))
 
-(ct/deftest emap-test
+(t/deftest emap-test
   (t/with-instrument `tensor/emap
     (t/is-spec-check tensor/emap))
   (t/with-instrument :all
@@ -209,7 +208,7 @@
         [[1.0 0.5] [2.0 4.0]]
         [[1.0 0.5] [2.0 4.0]]))))
 
-(ct/deftest emap-kv-test
+(t/deftest emap-kv-test
   (t/with-instrument `tensor/emap-kv
     (t/is-spec-check tensor/emap-kv))
   (t/with-instrument :all
@@ -233,7 +232,7 @@
         [[4 5] [6 7]]
         [[1 0] [2 4]]))))
 
-(ct/deftest partition-recursively-test
+(t/deftest partition-recursively-test
   (t/with-instrument `tensor/partition-recursively
     (t/is-spec-check tensor/partition-recursively))
   (t/with-instrument :all
@@ -247,7 +246,7 @@
       (tensor/partition-recursively 2 [[1 2 3] [4 5 6] [7 8 9] [10 11 12]]))))
 
 ;;MATH
-(ct/deftest ===-test
+(t/deftest ===-test
   (t/with-instrument `tensor/===
     (t/is-spec-check tensor/===))
   (t/with-instrument :all
@@ -256,7 +255,7 @@
             [[1.0 0.5] [2.0 m/nan]]
             [[1.0 0.5] [2.0 m/nan]]))))
 
-(ct/deftest add-test
+(t/deftest add-test
   (t/with-instrument `tensor/add
     (t/is-spec-check tensor/add))
   (t/with-instrument :all
@@ -266,7 +265,7 @@
     (t/is= [1.0 2.0] (tensor/add [1.0 2.0]))
     (t/is= 0.0 (tensor/add))))
 
-(ct/deftest subtract-test
+(t/deftest subtract-test
   (t/with-instrument `tensor/subtract
     (t/is-spec-check tensor/subtract))
   (t/with-instrument :all
@@ -274,7 +273,7 @@
     (t/is= [0.0 0.0] (tensor/subtract [1.0 0.5] [1.0 0.5]))
     (t/is= [[-1.0 -0.5]] (tensor/subtract [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]]))))
 
-(ct/deftest multiply-test
+(t/deftest multiply-test
   (t/with-instrument `tensor/multiply
     (t/is-spec-check tensor/multiply))
   (t/with-instrument :all
@@ -283,7 +282,7 @@
     (t/is= [[1.0 0.5]] (tensor/multiply [[1.0 0.5]]))
     (t/is= 1.0 (tensor/multiply))))
 
-(ct/deftest divide-test
+(t/deftest divide-test
   (t/with-instrument `tensor/divide
     (t/is-spec-check tensor/divide))
   (t/with-instrument :all
@@ -292,7 +291,7 @@
     (t/is= [1.0 2.0] (tensor/divide [1.0 0.5] [1.0 0.5] [1.0 0.5]))
     (t/is= [[1.0 2.0]] (tensor/divide [[1.0 0.5]]))))
 
-(ct/deftest average-test
+(t/deftest average-test
   (t/with-instrument `tensor/average
     (t/is-spec-check tensor/average))
   (t/with-instrument :all
@@ -300,7 +299,7 @@
     (t/is= 0.75 (tensor/average [[1.0 0.5]]))
     (t/is= 0.75 (tensor/average [1.0 0.5]))))
 
-(ct/deftest norm1-test
+(t/deftest norm1-test
   (t/with-instrument `tensor/norm1
     (t/is-spec-check tensor/norm1))
   (t/with-instrument :all
@@ -308,7 +307,7 @@
     (t/is= 1.5 (tensor/norm1 [[1.0 0.5]]))
     (t/is= 1.5 (tensor/norm1 [1.0 0.5]))))
 
-(ct/deftest norm-test
+(t/deftest norm-test
   (t/with-instrument `tensor/norm
     (t/is-spec-check tensor/norm))
   (t/with-instrument :all
@@ -316,7 +315,7 @@
     (t/is= 1.118033988749895 (tensor/norm [[1.0 0.5]]))
     (t/is= 1.118033988749895 (tensor/norm [1.0 0.5]))))
 
-(ct/deftest norm-p-test
+(t/deftest norm-p-test
   (t/with-instrument `tensor/norm-p
     (t/is-spec-check tensor/norm-p))
   (t/with-instrument :all
@@ -326,7 +325,7 @@
     (t/is= 1.1049918154523823 (tensor/norm-p [1.0 0.5] 2.1))
     (t/is= 1.5 (tensor/norm-p [1.0 0.5] 1.0))))
 
-(ct/deftest norm-inf-test
+(t/deftest norm-inf-test
   (t/with-instrument `tensor/norm-inf
     (t/is-spec-check tensor/norm-inf))
   (t/with-instrument :all
@@ -336,7 +335,7 @@
     (t/is= 5.0 (tensor/norm-inf [-3 4 -5]))
     (t/is= 3.0 (tensor/norm-inf -3))))
 
-(ct/deftest normalize1-test
+(t/deftest normalize1-test
   (t/with-instrument `tensor/normalize1
     (t/is-spec-check tensor/normalize1))
   (t/with-instrument :all
@@ -354,7 +353,7 @@
     (t/is= [0.6666666666666666 0.3333333333333333] (tensor/normalize1 [1.0 0.5]))
     (t/is= [0.6666666666666666 0.3333333333333333] (tensor/normalize1 [1.0 0.5]))))
 
-(ct/deftest normalize-test
+(t/deftest normalize-test
   (t/with-instrument `tensor/normalize
     (t/is-spec-check tensor/normalize))
   (t/with-instrument :all
@@ -365,7 +364,7 @@
     (t/is= [0.8944271909999159 0.4472135954999579] (tensor/normalize [1.0 0.5]))
     (t/is= [0.8944271909999159 0.4472135954999579] (tensor/normalize [1.0 0.5]))))
 
-(ct/deftest normalize-p-test
+(t/deftest normalize-p-test
   (t/with-instrument `tensor/normalize-p
     (t/is-spec-check tensor/normalize-p))
   (t/with-instrument :all
@@ -382,7 +381,7 @@
     (t/is= [0.6666666666666666 0.3333333333333333]
       (tensor/normalize-p [1.0 0.5] 1.0))))
 
-(ct/deftest normalize-inf-test
+(t/deftest normalize-inf-test
   (t/with-instrument `tensor/normalize-inf
     (t/is-spec-check tensor/normalize-inf))
   (t/with-instrument :all
@@ -397,14 +396,14 @@
     (t/is= [0 0]
       (tensor/normalize-inf [0 0]))))
 
-(ct/deftest inner-product-test
+(t/deftest inner-product-test
   (t/with-instrument `tensor/inner-product
     (t/is-spec-check tensor/inner-product))
   (t/with-instrument :all
     (t/is= [48.0 54.0 60.0] (tensor/inner-product [1 2 3] [[4 5 6] [7 8 9] [10 11 12]]))))
 
 ;;ROUNDING
-(ct/deftest roughly?-test
+(t/deftest roughly?-test
   (t/with-instrument `tensor/roughly?
     (t/is-spec-check tensor/roughly?))
   (t/with-instrument :all
@@ -415,7 +414,7 @@
     (t/is (tensor/roughly? [[1 2] [3 4]] [[1.01 2] [3 4]] 0.05))
     (t/is-not (tensor/roughly? [[1 2] [3 4]] [[1.01 2] [3 4]] 0.005))))
 
-(ct/deftest roughly-distinct-test
+(t/deftest roughly-distinct-test
   (t/with-instrument `tensor/roughly-distinct
     (t/is-spec-check tensor/roughly-distinct))
   (t/with-instrument :all
@@ -425,7 +424,7 @@
       (tensor/roughly-distinct [[1 1.01] [1.01 1] [1.01 1.01] [1.001 1.001]] 0.05))))
 
 ;;REDUCTION
-(ct/deftest flatten-tensor-test
+(t/deftest flatten-tensor-test
   (t/with-instrument `tensor/flatten-tensor
     (t/is-spec-check tensor/flatten-tensor))
   (t/with-instrument :all
@@ -436,7 +435,7 @@
     (t/is= [1 2 3 4 5 6 7 8]
       (tensor/flatten-tensor [[[1 2] [3 4]] [[5 6] [7 8]]]))))
 
-(ct/deftest sum-test
+(t/deftest sum-test
   (t/with-instrument `tensor/sum
     (t/is-spec-check tensor/sum))
   (t/with-instrument :all
@@ -446,7 +445,7 @@
     (t/is= 10.0 (tensor/sum [[1 2] [3 4]]))
     (t/is= 36.0 (tensor/sum [[[1 2] [3 4]] [[5 6] [7 8]]]))))
 
-(ct/deftest product-test
+(t/deftest product-test
   (t/with-instrument `tensor/product
     (t/is-spec-check tensor/product))
   (t/with-instrument :all
@@ -457,7 +456,7 @@
     (t/is= 40320.0 (tensor/product [[[1 2] [3 4]] [[5 6] [7 8]]]))))
 
 ;;SHAPE MANIPULATION
-(ct/deftest reshape-test
+(t/deftest reshape-test
   (t/with-instrument `tensor/reshape
     (t/is-spec-check tensor/reshape))
   (t/with-instrument :all
@@ -470,7 +469,7 @@
     (t/is= 5 (tensor/reshape 5 []))
     (t/is= [5] (tensor/reshape 5 [1]))))
 
-(ct/deftest transpose-test
+(t/deftest transpose-test
   (t/with-instrument `tensor/transpose
     (t/is-spec-check tensor/transpose {:num-tests 50}))
   ;; Use specific instrumentation since :all would instrument compute-tensor's

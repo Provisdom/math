@@ -1,0 +1,2 @@
+{:config-paths ["imports/provisdom/test"]
+ :linters {:unresolved-var {:exclude [provisdom.test.core/deftest]}}}
