@@ -11,8 +11,8 @@
   - Lagrange and Newton polynomial interpolation
   - Multi-dimensional polynomial basis functions (1D, 2D, N-D)
 
-  Useful for function approximation, spectral methods, numerical integration,
-  Gaussian quadrature, and regression."
+  Useful for function approximation, spectral methods, numerical integration, Gaussian quadrature,
+  and regression."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -88,10 +88,7 @@
    #(+ (* 16 (m/pow % 5)) (* -20 (m/cube %)) (* 5 %))
    #(+ (* 32 (m/pow % 6)) (* -48 (m/pow % 4)) (* 18 (m/sq %)) -1)
    #(+ (* 64 (m/pow % 7)) (* -112 (m/pow % 5)) (* 56 (m/cube %)) (* -7 %))
-   #(+ (* 128 (m/pow % 8))
-      (* -256 (m/pow % 6))
-      (* 160 (m/pow % 4))
-      (* -32 (m/sq %)) 1)
+   #(+ (* 128 (m/pow % 8)) (* -256 (m/pow % 6)) (* 160 (m/pow % 4)) (* -32 (m/sq %)) 1)
    #(+ (* 256 (m/pow % 9))
       (* -576 (m/pow % 7))
       (* 432 (m/pow % 5))
@@ -117,11 +114,7 @@
    #(+ (* 32 (m/pow % 5)) (* -32 (m/cube %)) (* 6 %))
    #(+ (* 64 (m/pow % 6)) (* -80 (m/pow % 4)) (* 24 (m/sq %)) -1)
    #(+ (* 128 (m/pow % 7)) (* -192 (m/pow % 5)) (* 80 (m/cube %)) (* -8 %))
-   #(+ (* 256 (m/pow % 8))
-      (* -448 (m/pow % 6))
-      (* 240 (m/pow % 4))
-      (* -40 (m/sq %))
-      1)
+   #(+ (* 256 (m/pow % 8)) (* -448 (m/pow % 6)) (* 240 (m/pow % 4)) (* -40 (m/sq %)) 1)
    #(+ (* 512 (m/pow % 9))
       (* -1024 (m/pow % 7))
       (* 672 (m/pow % 5))
@@ -132,10 +125,9 @@
 (defn chebyshev-polynomial-fn
   "Creates a Chebyshev polynomial function of the specified degree.
   
-  Chebyshev polynomials are orthogonal polynomials useful for function
-  approximation and numerical integration. First kind polynomials T_n(x)
-  are bounded on [-1,1], while second kind polynomials U_n(x) are their
-  derivatives scaled by (1-x²).
+  Chebyshev polynomials are orthogonal polynomials useful for function approximation and numerical
+  integration. First kind polynomials T_n(x) are bounded on [-1,1], while second kind polynomials
+  U_n(x) are their derivatives scaled by (1-x²).
   
   Parameters:
     degree - Non-negative integer degree of the polynomial
@@ -274,8 +266,7 @@
 
 ;;;POLYNOMIAL SERIES
 (defn- polynomial-functions
-  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular
-  polynomial."
+  "Cheybshev-kind can be 0 (default), 1, or 2, where 0 means a regular polynomial."
   [chebyshev-kind]
   (condp = chebyshev-kind
     0 (fn [x]
@@ -324,8 +315,8 @@
 (defn polynomial-fns
   "Creates a collection of individual polynomial basis functions.
   
-  Similar to polynomial-fn but returns separate functions rather than
-  a single function that returns a vector.
+  Similar to polynomial-fn but returns separate functions rather than a single function that
+  returns a vector.
   
   Parameters:
     end-degree - Maximum degree of polynomials to include
@@ -446,8 +437,8 @@
     ::start-degree - Minimum total degree to include (default 0)
     ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
-  Returns a function that takes (x, y) and returns a vector with exactly
-  basis-count polynomial evaluations.
+  Returns a function that takes (x, y) and returns a vector with exactly basis-count polynomial
+  evaluations.
   
   Example:
     ((polynomial-2D-fn-by-basis-count 4) 2.0 3.0) ; => [1.0 2.0 3.0 4.0]"
@@ -791,8 +782,7 @@
 (defn chebyshev-nodes
   "Returns the Chebyshev nodes (zeros of T_n) for polynomial interpolation.
 
-  These are the optimal interpolation points on [-1, 1] that minimize
-  the Runge phenomenon.
+  These are the optimal interpolation points on [-1, 1] that minimize the Runge phenomenon.
 
   Parameters:
     n - Number of nodes to generate

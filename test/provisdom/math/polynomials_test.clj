@@ -3,7 +3,7 @@
     [provisdom.math.polynomials :as poly]
     [provisdom.test.core :as t]))
 
-;;26 seconds
+;;22 seconds
 
 (set! *warn-on-reflection* true)
 

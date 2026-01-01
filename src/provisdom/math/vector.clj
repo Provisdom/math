@@ -283,8 +283,8 @@
 (defn probs?
   "Returns true if `x` is a valid probability distribution vector.
   
-  A probability distribution must contain only probability values and
-  sum to 1.0 within the specified tolerance `sum-accu`.
+  A probability distribution must contain only probability values and sum to 1.0 within the
+  specified tolerance `sum-accu`.
   
   Examples:
     (probs? [0.3 0.7] 1e-8) ;=> true
@@ -302,8 +302,8 @@
 (defn open-probs?
   "Returns true if `x` is a valid open probability distribution vector.
   
-  Like probs? but requires all elements to be in (0, 1), excluding
-  boundary values 0 and 1. Uses tolerance `sum-accu`.
+  Like probs? but requires all elements to be in (0, 1), excluding boundary values 0 and 1. Uses
+  tolerance `sum-accu`.
   
   Examples:
     (open-probs? [0.3 0.7] 1e-8) ;=> true
@@ -361,8 +361,7 @@
 (defn compute-vector
   "Creates a vector of `size` by computing elements using function `index->number`.
   
-  The function receives the index (0-based) and should return the
-  value for that position.
+  The function receives the index (0-based) and should return the value for that position.
   
   Examples:
     (compute-vector 3 identity) ;=> [0 1 2]
@@ -377,8 +376,8 @@
 (defn compute-coll
   "Creates a lazy collection of `size` by computing elements using function `index->any`.
   
-  Similar to compute-vector but returns a lazy sequence and allows
-  any return type from the function.
+  Similar to compute-vector but returns a lazy sequence and allows any return type from the
+  function.
   
   Examples:
     (compute-coll 3 str) ;=> (\"0\" \"1\" \"2\")
@@ -395,8 +394,8 @@
 (defn rnd-vector!
   "Creates a vector of `size` with random numbers.
   
-  Generates a vector of the specified size filled with uniformly
-  distributed random doubles between 0 and 1.
+  Generates a vector of the specified size filled with uniformly distributed random doubles between
+  0 and 1.
   
   Examples:
     (rnd-vector! 3) ;=> [0.123 0.456 0.789] (example values)"
@@ -410,8 +409,8 @@
 (defn sparse->vector
   "Constructs a vector from sparse representation `sparse` applied to vector `v`.
   
-  Takes a collection of [index value] pairs and applies them to an
-  existing vector. Later values override earlier ones for the same index.
+  Takes a collection of [index value] pairs and applies them to an existing vector. Later values
+  override earlier ones for the same index.
   
   Examples:
     (sparse->vector [[0 5] [2 7]] [1 1 1]) ;=> [5 1 7]
@@ -433,8 +432,7 @@
 (defn indexes-of
   "Returns a vector of indices where `number` appears in vector `v`.
   
-  Searches through the vector and returns all positions where
-  the exact number is found.
+  Searches through the vector and returns all positions where the exact number is found.
   
   Examples:
     (indexes-of 2 [1 2 3 2]) ;=> [1 3]
@@ -451,8 +449,8 @@
 (defn filter-kv
   "Filters vector `v` elements based on predicate `index+number->bool`.
   
-  The predicate function receives (index value) and should return true
-  to include the value in the result.
+  The predicate function receives (index value) and should return true to include the value in the
+  result.
   
   Examples:
     (filter-kv (fn [i v] (even? i)) [10 20 30 40]) ;=> [10 30]
@@ -471,7 +469,8 @@
   :ret ::vector)
 
 (defn some-kv
-  "Finds the first element in vector `v` where predicate `index+number->bool` returns a truthy value.
+  "Finds the first element in vector `v` where predicate `index+number->bool` returns a truthy
+  value.
   
   The predicate receives (index value) and the function returns the
   first value for which the predicate is truthy, or nil if none found.
@@ -595,8 +594,8 @@
 (defn round-roughly-vector-prob
   "Rounds values in vector `v` that are approximately valid probabilities within tolerance `accu`.
   
-  Values close to 0 are rounded to 0, values close to 1 are rounded to 1,
-  within the specified accuracy tolerance.
+  Values close to 0 are rounded to 0, values close to 1 are rounded to 1, within the specified
+  accuracy tolerance.
   
   Examples:
     (round-roughly-vector-prob [1.01 -0.01 0.5] 0.02) ;=> [1.0 0.0 0.5]

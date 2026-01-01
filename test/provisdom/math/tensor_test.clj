@@ -1,12 +1,11 @@
 (ns provisdom.math.tensor-test
   (:require
-
     [provisdom.test.core :as t]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
-;;73 seconds
+;;46 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -41,7 +40,7 @@
 
 (t/deftest compute-tensor-test
   (t/with-instrument `tensor/compute-tensor
-    (t/is-spec-check tensor/compute-tensor))
+    (t/is-spec-check tensor/compute-tensor {:num-tests 250}))
   (t/with-instrument :all
     (t/is= -2
       (tensor/compute-tensor [] (fn [[n]]
@@ -158,13 +157,13 @@
     (t/is-spec-check tensor/filter-kv))
   (t/with-instrument :all
     (t/is= [[3 4]]
-      (tensor/filter-kv (fn [index tensor]
+      (tensor/filter-kv (fn [index _tensor]
                           (odd? index))
         [[1 2] [3 4]]))))
 
 (t/deftest emap-test
   (t/with-instrument `tensor/emap
-    (t/is-spec-check tensor/emap))
+    (t/is-spec-check tensor/emap {:num-tests 250}))
   (t/with-instrument :all
     (t/is= [[6 6] [6 6]]
       (tensor/emap +
@@ -210,7 +209,7 @@
 
 (t/deftest emap-kv-test
   (t/with-instrument `tensor/emap-kv
-    (t/is-spec-check tensor/emap-kv))
+    (t/is-spec-check tensor/emap-kv {:num-tests 250}))
   (t/with-instrument :all
     ;;notice need to check indices for spec
     (t/is= [1.0 1.5]

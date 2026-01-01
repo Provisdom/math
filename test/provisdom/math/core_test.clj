@@ -3,7 +3,7 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;1 second
+;;3 seconds
 
 (set! *warn-on-reflection* true)
 

@@ -7,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anomalies]))
 
-;;32 seconds
+;;33 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -79,7 +79,41 @@
       #(/ (m/sqrt (m/abs %)))
       [-1.0 1.0]
       {::integrals/singularities [0.0]})
-    :tolerance 0.01))
+    :tolerance 0.01)
+  ;; polynomial with known closed-form solutions
+  ;; ∫₀¹ x³ dx = 1/4
+  (t/is-approx= 0.25
+    (integrals/integration (fn [x] (m/pow x 3)) [0.0 1.0])
+    :tolerance 1e-10)
+  ;; ∫₀² (x² + 2x + 1) dx = [x³/3 + x² + x]₀² = 8/3 + 4 + 2 = 26/3 ≈ 8.667
+  (t/is-approx= (/ 26.0 3)
+    (integrals/integration (fn [x] (+ (* x x) (* 2 x) 1)) [0.0 2.0])
+    :tolerance 1e-10)
+  ;; singularity at endpoint: ∫₀¹ 1/√x dx = 2
+  (t/is-approx= 2.0
+    (integrals/integration
+      #(/ (m/sqrt (max 1e-15 (m/abs %)))) ; avoid exact zero
+      [0.0 1.0])
+    :tolerance 0.1)
+  ;; transcendental functions
+  ;; ∫₀^π sin²(x) dx = π/2
+  (t/is-approx= (/ m/PI 2.0)
+    (integrals/integration (fn [x] (m/sq (m/sin x))) [0.0 m/PI])
+    :tolerance 1e-10)
+  ;; ∫₀¹ e^(-x) dx = 1 - 1/e ≈ 0.6321
+  (t/is-approx= (- 1 (/ m/E))
+    (integrals/integration (fn [x] (m/exp (- x))) [0.0 1.0])
+    :tolerance 1e-10)
+  ;; very small intervals
+  ;; ∫₀^(1e-8) x² dx = (1e-8)³/3 = 3.33e-25
+  (t/is-approx= 3.333333333333e-25
+    (integrals/integration m/sq [0.0 1e-8])
+    :tolerance 1e-27)
+  ;; ∫₀^(1e-6) sin(x) dx ≈ (1e-6)²/2 = 5e-13 (since sin(x) ≈ x for small x)
+  ;; Actually, ∫sin(x)dx = -cos(x), so ∫₀^a = 1 - cos(a) ≈ a²/2 for small a
+  (t/is-approx= 5e-13
+    (integrals/integration m/sin [0.0 1e-6])
+    :tolerance 1e-15))
 
 (t/deftest rectangular-integration-test
   ;;No instrumentation with function inputs
@@ -240,8 +274,7 @@
       (t/is= (::integrals/value result) 1.7724538509055163)
       (t/is (< (::integrals/error-estimate result) 1e-8)))
     ;; With options
-    (let [result (integrals/integration-with-error m/cos [0.0 m/PI]
-                   {::integrals/accu 1e-10})]
+    (let [result (integrals/integration-with-error m/cos [0.0 m/PI] {::integrals/accu 1e-10})]
       (t/is-approx= 0.0 (::integrals/value result) :tolerance 1e-10))))
 
 (t/deftest tanh-sinh-integration-test
@@ -261,18 +294,18 @@
          0.0                                                ; Avoid log(0)
          (* % (m/log %)))
       [0.0 1.0])
-    :tolerance 0.01))
-;; Integral with sqrt singularity at 0: ∫₀¹ 1/√x dx = 2
-(t/is-approx= 2.0
-  (integrals/tanh-sinh-integration #(/ (m/sqrt %)) [0.0 1.0])
-  :tolerance 0.01)
-;; With options
-(t/is-approx= 2.0
-  (integrals/tanh-sinh-integration
-    #(/ (m/sqrt %))
-    [0.0 1.0]
-    {::integrals/level 4})
-  :tolerance 0.001)
+    :tolerance 0.01)
+  ;; Integral with sqrt singularity at 0: ∫₀¹ 1/√x dx = 2
+  (t/is-approx= 2.0
+    (integrals/tanh-sinh-integration #(/ (m/sqrt %)) [0.0 1.0])
+    :tolerance 0.01)
+  ;; With options
+  (t/is-approx= 2.0
+    (integrals/tanh-sinh-integration
+      #(/ (m/sqrt %))
+      [0.0 1.0]
+      {::integrals/level 4})
+    :tolerance 0.001))
 
 (t/deftest clenshaw-curtis-integration-test
   ;;No instrumentation with function inputs
@@ -292,8 +325,7 @@
       :tolerance 0.0001)
     ;; With options
     (t/is-approx= 0.333333
-      (integrals/clenshaw-curtis-integration m/sq [0.0 1.0]
-        {::integrals/cc-points 33})
+      (integrals/clenshaw-curtis-integration m/sq [0.0 1.0] {::integrals/cc-points 33})
       :tolerance 0.0001)
     ;; Cubic: ∫₀² x³ dx = 4
     (t/is-approx= 4.0
@@ -401,4 +433,27 @@
         (fn [_] 1.0)
         [0.0 m/PI]
         {::integrals/omega 1.0 ::integrals/oscillation-type :sin})
-      :tolerance 1.0)))
+      :tolerance 1.0)
+    ;; High frequency oscillatory integration (omega=1000+)
+    ;; omega=1000: ∫₀^π sin(1000x) dx ≈ 0 (many complete cycles)
+    (t/is-approx= 0.0
+      (integrals/oscillatory-integration
+        (fn [_] 1.0)
+        [0.0 m/PI]
+        {::integrals/omega 1000.0 ::integrals/oscillation-type :sin})
+      :tolerance 0.01)
+    ;; omega=1000: ∫₀^π x·sin(1000x) dx = -π/1000
+    ;; Math: Integrate[x*Sin[1000*x], {x, 0, Pi}] = -Pi/1000
+    (t/is-approx= (- (/ m/PI 1000.0))
+      (integrals/oscillatory-integration
+        identity
+        [0.0 m/PI]
+        {::integrals/omega 1000.0 ::integrals/oscillation-type :sin})
+      :tolerance 0.01)
+    ;; omega=500 with cosine: ∫₀^(2π) cos(500x) dx = 0
+    (t/is-approx= 0.0
+      (integrals/oscillatory-integration
+        (fn [_] 1.0)
+        [0.0 (* 2.0 m/PI)]
+        {::integrals/omega 500.0 ::integrals/oscillation-type :cos})
+      :tolerance 0.01)))

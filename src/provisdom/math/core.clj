@@ -88,6 +88,9 @@
 (def ^:const ^double two-div-pi (* 2.0 inv-pi))
 (def ^:const ^double inv-sqrt-two-pi (* inv-sqrt-two inv-sqrt-pi))
 
+;; High precision: 0.57721566490153286060651209008240243104215933593992M
+(def ^:const ^double euler-mascheroni-constant 0.5772156649015329)
+
 ;;;TEST FOR NUMERIC TYPES
 (defn- long-range?
   "Returns true if x is within the range representable by a long."
@@ -1206,8 +1209,7 @@
       number)))
 
 (s/fdef round'
-  :args (s/cat :number ::number
-               :round-type ::round-type)
+  :args (s/cat :number ::number :round-type ::round-type)
   :ret ::number)
 
 (def round
@@ -1459,8 +1461,7 @@
           (quot numerator divisor))))))
 
 (s/fdef quot'
-  :args (s/cat :numerator ::number
-               :divisor ::number)
+  :args (s/cat :numerator ::number :divisor ::number)
   :ret ::number)
 
 (defn mod'
@@ -1477,8 +1478,7 @@
           (mod numerator divisor))))))
 
 (s/fdef mod'
-  :args (s/cat :numerator ::number
-               :divisor ::number)
+  :args (s/cat :numerator ::number :divisor ::number)
   :ret ::number)
 
 (defn rem'
@@ -1539,8 +1539,7 @@
       (recur b (mod' a b)))))
 
 (s/fdef gcd
-  :args (s/cat :long1 ::long
-               :long2 ::long)
+  :args (s/cat :long1 ::long :long2 ::long)
   :ret ::long-non-)
 
 (defn lcm'
@@ -1557,8 +1556,7 @@
       (maybe-long-able (* (double (quot' a (gcd a b))) b)))))
 
 (s/fdef lcm'
-  :args (s/cat :long1 ::long
-               :long2 ::long)
+  :args (s/cat :long1 ::long :long2 ::long)
   :ret ::non-)
 
 ;;;ANGLES

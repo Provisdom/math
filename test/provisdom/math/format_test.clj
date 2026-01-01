@@ -6,7 +6,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anomalies]))
 
-;;3 seconds
+;;2 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -215,14 +215,15 @@
     (t/is= "-1,234,567.0"
       (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
     ;; With decimal places specified (format-number still adds .0 for round numbers)
-    (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true
-                                                                    ::format/max-decimal-places 0}))
+    (t/is= "1,234,567.0"
+      (format/format-number-extended 1234567 15 {::format/thousands-sep?     true
+                                                 ::format/max-decimal-places 0}))
     ;; Engineering notation
     (t/is= "12.35E+3" (format/format-number-extended 12345 10 {::format/engineering? true}))
     ;; Localization (note: must escape decimal first to avoid double replacement)
     (t/is= "1.234,56" (format/format-number-extended 1234.56 15
-                        {::format/thousands-sep? true
-                         ::format/decimal-symbol \,
+                        {::format/thousands-sep?  true
+                         ::format/decimal-symbol  \,
                          ::format/grouping-symbol \.}))
     ;; Special values
     (t/is= "NaN" (format/format-number-extended m/nan 5))

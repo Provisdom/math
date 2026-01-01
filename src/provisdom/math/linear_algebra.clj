@@ -25,6 +25,15 @@
     [provisdom.math.vector :as vector]
     [provisdom.utility-belt.anomalies :as anom]))
 
+(declare back-substitution
+  correlation-matrix?
+  eigen-decomposition
+  forward-substitution
+  least-squares
+  pos-definite-matrix-finite?
+  pos-semidefinite-matrix-finite?
+  sv-decomposition)
+
 ;;;SPECS
 (s/def ::determinant ::m/number)
 (s/def ::inverse (s/nilable ::mx/square-matrix))
@@ -53,11 +62,59 @@
 (s/def ::tolerance ::m/finite+)
 (s/def ::rank-tolerance ::m/finite-non-)
 (s/def ::pade-order (s/int-in 1 14))
+(s/def ::schur-Q ::mx/square-matrix)
+(s/def ::schur-T ::mx/square-matrix)
+(s/def ::least-squares-solution (s/nilable ::vector/vector))
+
+(s/def ::correlation-matrix
+  (s/with-gen
+    #(correlation-matrix? % m/sgl-close)
+    #(gen/fmap (fn [m]
+                 (let [mt (mx/transpose m)
+                       cov (mx/mx* m mt)
+                       diag (mx/diagonal cov)
+                       n (count diag)]
+                   (if (or (zero? n) (some (fn [d] (<= d 0)) diag))
+                     (mx/identity-matrix (max 1 n))
+                     (mx/compute-matrix n n
+                       (fn [i j]
+                         (let [cov-ij (get-in cov [i j] 0.0)
+                               d-i (get diag i 1.0)
+                               d-j (get diag j 1.0)]
+                           (m/div cov-ij (m/sqrt (* d-i d-j)))))))))
+       (s/gen ::mx/square-matrix-finite))))
+
+(s/def ::pos-definite-matrix-finite
+  (s/with-gen
+    #(pos-definite-matrix-finite? %)
+    #(gen/fmap (fn [m]
+                 (let [mt (mx/transpose m)]
+                   (tensor/add (mx/mx* m mt)
+                     (mx/diagonal-matrix (mx/rows m) (constantly 0.1)))))
+       (s/gen ::mx/square-matrix-finite))))
+
+(s/def ::pos-semidefinite-matrix-finite
+  (s/with-gen
+    #(pos-semidefinite-matrix-finite? % m/sgl-close)
+    #(gen/fmap (fn [m]
+                 (let [mt (mx/transpose m)]
+                   (mx/mx* m mt)))
+       (s/gen ::mx/square-matrix-finite))))
+
+(s/def ::svd-result
+  (s/with-gen
+    (s/keys :req [::svd-left ::singular-values ::svd-right])
+    #(gen/fmap (fn [m]
+                 (if-let [svd (sv-decomposition m {:rank-tolerance 0.0})]
+                   (select-keys svd [::svd-left ::singular-values ::svd-right])
+                   ;; Fallback for matrices where SVD fails
+                   {::svd-left        [[1.0]]
+                    ::singular-values [1.0]
+                    ::svd-right       [[1.0]]}))
+       (s/gen ::mx/matrix-finite))))
 
 ;;;LU DECOMPOSITION
 ;; Forward declarations for functions used in compute-inverse-from-lu
-(declare forward-substitution back-substitution)
-
 (defn- swap-rows
   "Swaps rows i and j in matrix m."
   [m i j]
@@ -66,8 +123,8 @@
     (let [row-i (get m i)
           row-j (get m j)]
       (-> m
-          (assoc i row-j)
-          (assoc j row-i)))))
+        (assoc i row-j)
+        (assoc j row-i)))))
 
 (defn- lu-decomposition-impl
   "Implementation of LU decomposition with partial pivoting.
@@ -96,8 +153,8 @@
                     (let [L-row-k (subvec (get L k) 0 k)
                           L-row-pivot (subvec (get L pivot-row) 0 k)]
                       (-> L
-                          (update k #(vec (concat L-row-pivot (subvec % k))))
-                          (update pivot-row #(vec (concat L-row-k (subvec % k))))))
+                        (update k #(vec (concat L-row-pivot (subvec % k))))
+                        (update pivot-row #(vec (concat L-row-k (subvec % k))))))
                     L)
                 pivot-val (get-in U [k k])
                 is-singular? (or singular? (m/roughly? pivot-val 0.0 m/dbl-close))]
@@ -208,8 +265,7 @@
 (defn determinant-from-lu
   "Extracts the determinant from an existing LU decomposition result.
 
-  This avoids redundant computation when you need both the LU decomposition
-  and the determinant.
+  This avoids redundant computation when you need both the LU decomposition and the determinant.
 
   Takes the map returned by `lu-decomposition` which includes ::determinant.
 
@@ -399,8 +455,7 @@
 (defn inverse-from-lu
   "Extracts the inverse from an existing LU decomposition result.
 
-  This avoids redundant computation when you need both the LU decomposition
-  and the inverse.
+  This avoids redundant computation when you need both the LU decomposition and the inverse.
 
   Takes the map returned by `lu-decomposition` which includes ::inverse and ::singular?.
 
@@ -453,8 +508,6 @@
   :ret (s/or :matrix ::mx/square-matrix :anomaly ::anom/anomaly))
 
 ;;;SOLVE LINEAR SYSTEM
-(declare least-squares)
-
 (defn- solve-square
   "Internal: Solves square system Ax = b using LU decomposition.
   Returns solution vector or nil if singular or decomposition fails."
@@ -510,13 +563,13 @@
 
       (> nr nc)
       (or (least-squares A b)
-          {::anom/category ::anom/no-solve
-           ::anom/message  "Least squares failed (rank deficient)"})
+        {::anom/category ::anom/no-solve
+         ::anom/message  "Least squares failed (rank deficient)"})
 
       :else
       (or (solve-square A b)
-          {::anom/category ::anom/no-solve
-           ::anom/message  "Matrix is singular"}))))
+        {::anom/category ::anom/no-solve
+         ::anom/message  "Matrix is singular"}))))
 
 (s/fdef solve
   :args (s/cat :A ::mx/matrix
@@ -557,29 +610,24 @@
           result
           (reduce
             (fn [L i]
-              (if (nil? L)
-                nil
+              (when-not (nil? L)
                 (reduce
                   (fn [L j]
-                    (if (nil? L)
-                      nil
+                    (when-not (nil? L)
                       (if (= i j)
                         (let [sum (reduce (fn [acc k]
                                             (+ acc (m/sq (get-in L [i k]))))
                                     0.0
                                     (range i))
                               val (- (get-in symmetric-pos-def-m [i i]) sum)]
-                          (if (<= val 0.0)
-                            nil
+                          (when-not (<= val 0.0)
                             (assoc-in L [i i] (m/sqrt val))))
                         (let [sum (reduce (fn [acc k]
-                                            (+ acc (* (get-in L [i k])
-                                                     (get-in L [j k]))))
+                                            (+ acc (* (get-in L [i k]) (get-in L [j k]))))
                                     0.0
                                     (range j))
                               L-jj (get-in L [j j])]
-                          (if (m/roughly? L-jj 0.0 m/dbl-close)
-                            nil
+                          (when-not (m/roughly? L-jj 0.0 m/dbl-close)
                             (assoc-in L [i j]
                               (m/div (- (get-in symmetric-pos-def-m [i j]) sum)
                                 L-jj)))))))
@@ -595,8 +643,6 @@
   :args (s/cat :symmetric-pos-def-m ::mx/symmetric-matrix)
   :ret (s/nilable (s/keys :req [::cholesky-L ::cholesky-LT])))
 
-(declare eigen-decomposition)
-
 (defn rectangular-cholesky-decomposition
   "Computes the rectangular Cholesky decomposition of a positive semi-definite matrix.
 
@@ -608,8 +654,7 @@
     positive semi-definite (not positive definite)
   - Working with rank-deficient covariance matrices
 
-  Uses eigendecomposition: A = V × D × V^T, then B = V × sqrt(D) for positive
-  eigenvalues only.
+  Uses eigendecomposition: A = V × D × V^T, then B = V × sqrt(D) for positive eigenvalues only.
 
   Parameters:
   - pos-semidefinite-m: symmetric positive semi-definite matrix
@@ -643,8 +688,8 @@
             min-eigenvalue (apply min eigenvalues)]
         (if (< min-eigenvalue (- tolerance))
           {::anom/category ::anom/incorrect
-           ::anom/message  (str "Matrix is not positive semi-definite. "
-                             "Eigenvalue " min-eigenvalue " is negative.")}
+           ::anom/message  (str "Matrix is not positive semi-definite. Eigenvalue "
+                             min-eigenvalue " is negative.")}
           ;; Find positive eigenvalues and their indices
           (let [positive-indices (filterv #(> (get eigenvalues %) tolerance) (range n))
                 r (count positive-indices)]
@@ -676,8 +721,8 @@
 (defn pos-definite-matrix-finite?
   "Returns true if the matrix is symmetric, positive definite, and finite.
 
-  A matrix is positive definite if it is symmetric and all eigenvalues are
-  positive. Tests by attempting Cholesky decomposition.
+  A matrix is positive definite if it is symmetric and all eigenvalues are positive.
+  Tests by attempting Cholesky decomposition.
 
   Examples:
     (pos-definite-matrix-finite? [[2 1] [1 2]]) ;=> true
@@ -689,15 +734,6 @@
 (s/fdef pos-definite-matrix-finite?
   :args (s/cat :m any?)
   :ret boolean?)
-
-(s/def ::pos-definite-matrix-finite
-  (s/with-gen
-    pos-definite-matrix-finite?
-    #(gen/fmap (fn [m]
-                 (let [mt (mx/transpose m)]
-                   (tensor/add (mx/mx* m mt)
-                     (mx/diagonal-matrix (mx/rows m) (constantly 0.1)))))
-       (s/gen ::mx/square-matrix-finite))))
 
 (defn pos-semidefinite-matrix-finite?
   "Returns true if the matrix is symmetric, positive semi-definite, and finite.
@@ -717,14 +753,6 @@
 (s/fdef pos-semidefinite-matrix-finite?
   :args (s/cat :m any? :accu ::m/accu)
   :ret boolean?)
-
-(s/def ::pos-semidefinite-matrix-finite
-  (s/with-gen
-    #(pos-semidefinite-matrix-finite? % m/sgl-close)
-    #(gen/fmap (fn [m]
-                 (let [mt (mx/transpose m)]
-                   (mx/mx* m mt)))
-       (s/gen ::mx/square-matrix-finite))))
 
 (defn pos-semidefinite-matrix-finite-by-squaring
   "Creates a positive semi-definite matrix by computing M * M^T.
@@ -766,8 +794,8 @@
 (defn correlation-matrix?
   "Returns true if the matrix is a valid correlation matrix.
 
-  A correlation matrix must be symmetric, positive semi-definite,
-  have 1.0 on the diagonal, and elements in [-1, 1].
+  A correlation matrix must be symmetric, positive semi-definite, have 1.0 on the diagonal, and
+  elements in [-1, 1].
 
   Examples:
     (correlation-matrix? [[1.0 0.5] [0.5 1.0]] 1e-10) ;=> true
@@ -780,24 +808,6 @@
 (s/fdef correlation-matrix?
   :args (s/cat :m any? :accu ::m/accu)
   :ret boolean?)
-
-(s/def ::correlation-matrix
-  (s/with-gen
-    #(correlation-matrix? % m/sgl-close)
-    #(gen/fmap (fn [m]
-                 (let [mt (mx/transpose m)
-                       cov (mx/mx* m mt)
-                       diag (mx/diagonal cov)
-                       n (count diag)]
-                   (if (or (zero? n) (some (fn [d] (<= d 0)) diag))
-                     (mx/identity-matrix (max 1 n))
-                     (mx/compute-matrix n n
-                       (fn [i j]
-                         (let [cov-ij (get-in cov [i j] 0.0)
-                               d-i (get diag i 1.0)
-                               d-j (get diag j 1.0)]
-                           (m/div cov-ij (m/sqrt (* d-i d-j)))))))))
-       (s/gen ::mx/square-matrix-finite))))
 
 (defn covariance-matrix->correlation-matrix
   "Converts a covariance matrix to a correlation matrix.
@@ -898,12 +908,10 @@
 (defn rnd-correlation-matrix!
   "Generates a random correlation matrix of given size.
 
-  Returns nil if generation fails (e.g., if the underlying
-  rnd-pos-definite-matrix-finite! fails after 100 attempts or
-  covariance-to-correlation conversion fails)."
+  Returns nil if generation fails (e.g., if the underlying rnd-pos-definite-matrix-finite! fails
+  after 100 attempts or covariance-to-correlation conversion fails)."
   [size]
-  (if (zero? size)
-    nil
+  (when-not (zero? size)
     (covariance-matrix->correlation-matrix
       (rnd-pos-definite-matrix-finite! size))))
 
@@ -976,8 +984,6 @@
                 (range v-len))))
           Q
           (range n))))))
-
-(s/def ::least-squares-solution (s/nilable ::vector/vector))
 
 (defn qr-decomposition
   "Computes QR decomposition using Householder reflections.
@@ -1099,7 +1105,7 @@
         (loop [k 0
                R (mapv #(mapv double %) m)
                Q (mx/identity-matrix nr)
-               perm (vec (range nc))  ; track column permutation as indices
+               perm (vec (range nc))                        ; track column permutation as indices
                col-norms-sq (column-norms-squared m 0)]
           (if (>= k min-dim)
             ;; Build permutation matrix and compute rank
@@ -1107,7 +1113,7 @@
                       (fn [i j] (if (= (get perm j) i) 1.0 0.0)))
                   rank (count (filter (fn [i]
                                         (and (< i nr)
-                                             (> (m/abs (get-in R [i i] 0.0)) tolerance)))
+                                          (> (m/abs (get-in R [i i] 0.0)) tolerance)))
                                 (range min-dim)))]
               {::Q                Q
                ::R                R
@@ -1116,7 +1122,7 @@
             ;; Find column with maximum remaining norm (from k to nc-1)
             (let [remaining-norms (mapv (fn [col]
                                           (if (< col k)
-                                            0.0  ; already processed
+                                            0.0             ; already processed
                                             (get col-norms-sq col 0.0)))
                                     (range nc))
                   max-col (reduce (fn [best col]
@@ -1132,19 +1138,19 @@
                                                      (let [v-k (get row k)
                                                            v-max (get row max-col)]
                                                        (-> row
-                                                           (assoc k v-max)
-                                                           (assoc max-col v-k))))
+                                                         (assoc k v-max)
+                                                         (assoc max-col v-k))))
                                                R)
                                    perm-swapped (-> perm
-                                                    (assoc k (get perm max-col))
-                                                    (assoc max-col (get perm k)))]
+                                                  (assoc k (get perm max-col))
+                                                  (assoc max-col (get perm k)))]
                                [R-swapped perm-swapped]))
                   ;; Also swap in col-norms-sq
                   col-norms-sq (if (= k max-col)
                                  col-norms-sq
                                  (-> col-norms-sq
-                                     (assoc k (get col-norms-sq max-col))
-                                     (assoc max-col (get col-norms-sq k))))
+                                   (assoc k (get col-norms-sq max-col))
+                                   (assoc max-col (get col-norms-sq k))))
                   ;; Compute Householder reflection for column k using helper functions
                   col-k (mapv #(get-in R [% k] 0.0) (range k nr))
                   v (householder-vector col-k)
@@ -1167,8 +1173,8 @@
 (defn least-squares
   "Solves the linear least squares problem: find x that minimizes ||Ax - b||².
 
-  Uses QR decomposition for numerical stability. Works for overdetermined
-  systems (more rows than columns).
+  Uses QR decomposition for numerical stability. Works for overdetermined systems (more rows than
+  columns).
 
   Complexity: O(mn²) for m×n matrix
 
@@ -1201,17 +1207,230 @@
           :b ::vector/vector)
   :ret (s/nilable ::vector/vector))
 
-;;;EIGENDECOMPOSITION
-(defn- off-diagonal-norm
-  "Computes the Frobenius norm of off-diagonal elements."
-  [m]
-  (let [n (mx/rows m)]
-    (m/sqrt
-      (reduce + (for [i (range n)
-                      j (range n)
-                      :when (not= i j)]
-                  (m/sq (get-in m [i j] 0.0)))))))
+;;;SCHUR DECOMPOSITION
+(defn- hessenberg-reduction
+  "Reduces a square matrix to upper Hessenberg form using Householder reflections.
+  Returns [H Q] where H = Q^T * A * Q and H is upper Hessenberg.
+  An upper Hessenberg matrix has zeros below the first subdiagonal."
+  [A]
+  (let [n (mx/rows A)]
+    (if (< n 3)
+      [A (mx/identity-matrix n)]
+      (loop [k 0
+             H (mapv #(mapv double %) A)
+             Q (mx/identity-matrix n)]
+        (if (>= k (- n 2))
+          [H Q]
+          (let [;; Extract column below diagonal
+                col-below (mapv #(get-in H [% k] 0.0) (range (inc k) n))
+                norm-col (m/sqrt (reduce + (map m/sq col-below)))
+                ;; Skip if column is effectively zero
+                skip? (< norm-col m/dbl-close)]
+            (if skip?
+              (recur (inc k) H Q)
+              (let [;; Householder vector
+                    sign (if (>= (first col-below) 0.0) 1.0 -1.0)
+                    v0 (+ (first col-below) (* sign norm-col))
+                    v (into [v0] (rest col-below))
+                    v-norm-sq (reduce + (map m/sq v))
+                    ;; Apply Householder to H from left: H <- (I - 2vv^T/|v|^2) * H
+                    m-size (- n (inc k))
+                    H-after-left
+                    (reduce
+                      (fn [H-cur j]
+                        (let [dot-vH (reduce + (map-indexed
+                                                 (fn [i vi]
+                                                   (* vi (get-in H-cur [(+ (inc k) i) j] 0.0)))
+                                                 v))
+                              factor (/ (* 2.0 dot-vH) v-norm-sq)]
+                          (reduce
+                            (fn [H-inner i]
+                              (let [row (+ (inc k) i)]
+                                (update-in H-inner [row j]
+                                  #(- % (* factor (nth v i))))))
+                            H-cur
+                            (range m-size))))
+                      H
+                      (range n))
+                    ;; Apply Householder to H from right: H <- H * (I - 2vv^T/|v|^2)
+                    H-after-right
+                    (reduce
+                      (fn [H-cur i]
+                        (let [dot-Hv (reduce + (map-indexed
+                                                 (fn [j vj]
+                                                   (* vj (get-in H-cur [i (+ (inc k) j)] 0.0)))
+                                                 v))
+                              factor (/ (* 2.0 dot-Hv) v-norm-sq)]
+                          (reduce
+                            (fn [H-inner j]
+                              (let [col (+ (inc k) j)]
+                                (update-in H-inner [i col]
+                                  #(- % (* factor (nth v j))))))
+                            H-cur
+                            (range m-size))))
+                      H-after-left
+                      (range n))
+                    ;; Apply Householder to Q from right: Q <- Q * (I - 2vv^T/|v|^2)
+                    Q-new
+                    (reduce
+                      (fn [Q-cur i]
+                        (let [dot-Qv (reduce + (map-indexed
+                                                 (fn [j vj]
+                                                   (* vj (get-in Q-cur [i (+ (inc k) j)] 0.0)))
+                                                 v))
+                              factor (/ (* 2.0 dot-Qv) v-norm-sq)]
+                          (reduce
+                            (fn [Q-inner j]
+                              (let [col (+ (inc k) j)]
+                                (update-in Q-inner [i col]
+                                  #(- % (* factor (nth v j))))))
+                            Q-cur
+                            (range m-size))))
+                      Q
+                      (range n))]
+                (recur (inc k) H-after-right Q-new)))))))))
 
+(defn- schur-converged?
+  "Checks if Schur decomposition has converged.
+  Converged when all subdiagonal elements are negligible except possibly
+  within 2x2 blocks for complex eigenvalues."
+  [T tolerance]
+  (let [n (mx/rows T)]
+    (if (< n 2)
+      true
+      (loop [i 0]
+        (if (>= i (dec n))
+          true
+          (let [sub-diag (m/abs (get-in T [(inc i) i] 0.0))
+                diag-sum (+ (m/abs (get-in T [i i] 0.0))
+                           (m/abs (get-in T [(inc i) (inc i)] 0.0)))]
+            (if (< sub-diag (* tolerance (max diag-sum 1.0)))
+              ;; Element is negligible, check next
+              (recur (inc i))
+              ;; Check if this is a 2x2 block with complex eigenvalues
+              (let [a (get-in T [i i] 0.0)
+                    b (get-in T [i (inc i)] 0.0)
+                    c (get-in T [(inc i) i] 0.0)
+                    d (get-in T [(inc i) (inc i)] 0.0)
+                    ;; Discriminant of 2x2 block eigenvalue equation
+                    trace (+ a d)
+                    det (- (* a d) (* b c))
+                    discriminant (- (m/sq trace) (* 4.0 det))]
+                (if (neg? discriminant)
+                  ;; Complex eigenvalues - this is a valid 2x2 block, skip it
+                  (if (< (+ i 2) n)
+                    ;; Check element below the 2x2 block
+                    (let [below-block (m/abs (get-in T [(+ i 2) (inc i)] 0.0))]
+                      (if (< below-block (* tolerance (max diag-sum 1.0)))
+                        (recur (+ i 2))
+                        false))
+                    true)                                   ;; 2x2 block at bottom, converged
+                  ;; Real eigenvalues but non-zero subdiagonal - not converged
+                  false)))))))))
+
+(defn- schur-qr-step
+  "Performs one QR iteration step with Francis double shift on Hessenberg matrix.
+  Uses implicit QR for efficiency. Returns [T-new Q-step]."
+  [T]
+  (let [n (mx/rows T)]
+    (if (< n 2)
+      [T (mx/identity-matrix n)]
+      (let [;; Wilkinson shift from bottom 2x2 corner
+            a (get-in T [(- n 2) (- n 2)] 0.0)
+            b (get-in T [(- n 2) (- n 1)] 0.0)
+            c (get-in T [(- n 1) (- n 2)] 0.0)
+            d (get-in T [(- n 1) (- n 1)] 0.0)
+            ;; Use the eigenvalue of the 2x2 block closest to d
+            delta (/ (- a d) 2.0)
+            sign (if (>= delta 0.0) 1.0 -1.0)
+            denom (+ (m/abs delta) (m/sqrt (+ (m/sq delta) (* b c))))
+            shift (if (m/roughly? denom 0.0 m/dbl-close)
+                    d
+                    (- d (/ (* sign b c) denom)))
+            ;; Apply shift
+            T-shifted (mx/compute-matrix n n
+                        (fn [i j]
+                          (if (= i j)
+                            (- (get-in T [i j] 0.0) shift)
+                            (get-in T [i j] 0.0))))
+            ;; QR decomposition
+            {::keys [Q R]} (qr-decomposition T-shifted)
+            ;; Compute R*Q and add shift back
+            RQ (mx/mx* R Q)
+            T-new (mx/compute-matrix n n
+                    (fn [i j]
+                      (if (= i j)
+                        (+ (get-in RQ [i j] 0.0) shift)
+                        (get-in RQ [i j] 0.0))))]
+        [T-new Q]))))
+
+(defn schur-decomposition
+  "Computes the real Schur decomposition of a square matrix.
+
+  Decomposes A = Q * T * Q^T where:
+  - Q is orthogonal (Q^T * Q = I)
+  - T is quasi-upper-triangular (upper triangular with possible 2x2 blocks
+    on the diagonal for complex conjugate eigenvalue pairs)
+
+  Uses Hessenberg reduction followed by QR iteration with Wilkinson shifts.
+
+  Complexity: O(n^3) with iterative refinement
+
+  Options:
+  - :max-iterations - Maximum QR iterations (default 100)
+  - :tolerance - Convergence tolerance (default 1e-12)
+
+  Returns a map with ::schur-Q and ::schur-T, or nil for invalid input.
+
+  Examples:
+    (schur-decomposition [[4 1] [2 3]])
+    ;=> {::schur-Q [[...] [...]] ::schur-T [[...] [...]]}
+
+    ;; Verify: A = Q * T * Q^T
+    (let [{::keys [schur-Q schur-T]} (schur-decomposition m)]
+      (mx/mx* schur-Q (mx/mx* schur-T (mx/transpose schur-Q))))
+
+  Notes:
+  - Real eigenvalues appear on the diagonal of T
+  - Complex conjugate eigenvalue pairs appear as 2x2 blocks on the diagonal
+  - More numerically stable than eigendecomposition for non-symmetric matrices
+
+  See also: eigen-decomposition, qr-decomposition"
+  ([square-m] (schur-decomposition square-m {}))
+  ([square-m {:keys [max-iterations tolerance]
+              :or   {max-iterations 100
+                     tolerance      1e-12}}]
+   (when (and (mx/square-matrix? square-m)
+           (not (mx/empty-matrix? square-m))
+           (mx/matrix-finite? square-m))
+     (let [n (mx/rows square-m)]
+       (if (= n 1)
+         ;; 1x1 case: already in Schur form
+         {::schur-Q [[1.0]]
+          ::schur-T (mapv #(mapv double %) square-m)}
+         ;; General case: Hessenberg reduction + QR iteration
+         (let [[H Q-hess] (hessenberg-reduction square-m)
+               [final-T final-Q converged?]
+               (loop [T H
+                      Q Q-hess
+                      iter 0]
+                 (if (>= iter max-iterations)
+                   [T Q false]
+                   (if (schur-converged? T tolerance)
+                     [T Q true]
+                     (let [[T-new Q-step] (schur-qr-step T)
+                           Q-new (mx/mx* Q Q-step)]
+                       (recur T-new Q-new (inc iter))))))]
+           (when converged?
+             {::schur-Q final-Q
+              ::schur-T final-T})))))))
+
+(s/fdef schur-decomposition
+  :args (s/cat :square-m ::mx/square-matrix
+          :opts (s/? (s/keys :opt-un [::max-iterations ::tolerance])))
+  :ret (s/nilable (s/keys :req [::schur-Q ::schur-T])))
+
+;;;EIGENDECOMPOSITION
 (defn- find-unreduced-block
   "Finds the largest unreduced block in a tridiagonal/symmetric matrix.
   Returns [start end] indices of the block that still needs iteration.
@@ -1222,21 +1441,21 @@
       ;; Find the last non-negligible subdiagonal from bottom
       (loop [end (dec n)]
         (if (< end 1)
-          nil  ; All converged
+          nil                                               ; All converged
           (let [sub-diag (m/abs (get-in A [(dec end) end] 0.0))
                 diag-sum (+ (m/abs (get-in A [(dec end) (dec end)] 0.0))
                            (m/abs (get-in A [end end] 0.0)))]
             (if (< sub-diag (* tolerance (max diag-sum 1.0)))
-              (recur (dec end))  ; This one converged, check earlier
+              (recur (dec end))                             ; This one converged, check earlier
               ;; Found non-converged element, now find start
               (loop [start (dec end)]
                 (if (< start 1)
-                  [0 end]  ; Block starts at 0
+                  [0 end]                                   ; Block starts at 0
                   (let [sub-diag (m/abs (get-in A [(dec start) start] 0.0))
                         diag-sum (+ (m/abs (get-in A [(dec start) (dec start)] 0.0))
                                    (m/abs (get-in A [start start] 0.0)))]
                     (if (< sub-diag (* tolerance (max diag-sum 1.0)))
-                      [start end]  ; Block starts here
+                      [start end]                           ; Block starts here
                       (recur (dec start)))))))))))))
 
 (defn- qr-iteration-step-block
@@ -1269,35 +1488,6 @@
         A-new (mx/compute-matrix n n
                 (fn [i j]
                   (if (and (= i j) (<= block-start i block-end))
-                    (+ (get-in RQ [i j] 0.0) shift)
-                    (get-in RQ [i j] 0.0))))]
-    [A-new Q]))
-
-(defn- qr-iteration-step
-  "Performs one step of QR iteration with Wilkinson shift for symmetric matrices."
-  [A]
-  (let [n (mx/rows A)
-        shift (if (< n 2)
-                0.0
-                (let [a (get-in A [(- n 2) (- n 2)] 0.0)
-                      b (get-in A [(- n 2) (- n 1)] 0.0)
-                      c (get-in A [(- n 1) (- n 1)] 0.0)
-                      delta (/ (- a c) 2.0)
-                      sign (if (>= delta 0.0) 1.0 -1.0)
-                      mu (- c (/ (* sign b b)
-                               (+ (m/abs delta)
-                                 (m/sqrt (+ (m/sq delta) (m/sq b))))))]
-                  mu))
-        A-shifted (mx/compute-matrix n n
-                    (fn [i j]
-                      (if (= i j)
-                        (- (get-in A [i j] 0.0) shift)
-                        (get-in A [i j] 0.0))))
-        {::keys [Q R]} (qr-decomposition A-shifted)
-        RQ (mx/mx* R Q)
-        A-new (mx/compute-matrix n n
-                (fn [i j]
-                  (if (= i j)
                     (+ (get-in RQ [i j] 0.0) shift)
                     (get-in RQ [i j] 0.0))))]
     [A-new Q]))
@@ -1353,8 +1543,7 @@
                indexed (map-indexed vector eigenvalues)
                sorted-indices (map first (sort-by #(- (m/abs (second %))) indexed))
                sorted-eigenvalues (mapv #(get eigenvalues %) sorted-indices)
-               sorted-V (mx/transpose
-                          (mapv #(mx/get-column final-V %) sorted-indices))]
+               sorted-V (mx/transpose (mapv #(mx/get-column final-V %) sorted-indices))]
            {::eigenvalues        sorted-eigenvalues
             ::eigenvalues-matrix (mx/diagonal-matrix sorted-eigenvalues)
             ::eigenvectors       sorted-V
@@ -1453,8 +1642,7 @@
 (defn condition-number-from-svd
   "Extracts the condition number from an existing SVD result.
 
-  This avoids redundant computation when you need both the SVD
-  and the condition number.
+  This avoids redundant computation when you need both the SVD and the condition number.
 
   Takes the map returned by `sv-decomposition` which includes ::condition-number.
 
@@ -1559,8 +1747,7 @@
 (defn norm-spectral-from-svd
   "Extracts the spectral norm from an existing SVD result.
 
-  This avoids redundant computation when you need both the SVD
-  and the spectral norm.
+  This avoids redundant computation when you need both the SVD and the spectral norm.
 
   Takes the map returned by `sv-decomposition` which includes ::norm-spectral.
 
@@ -1598,23 +1785,10 @@
   :ret ::m/number)
 
 ;;;PSEUDOINVERSE
-(s/def ::svd-result
-  (s/with-gen
-    (s/keys :req [::svd-left ::singular-values ::svd-right])
-    #(gen/fmap (fn [m]
-                 (if-let [svd (sv-decomposition m {:rank-tolerance 0.0})]
-                   (select-keys svd [::svd-left ::singular-values ::svd-right])
-                   ;; Fallback for matrices where SVD fails
-                   {::svd-left         [[1.0]]
-                    ::singular-values  [1.0]
-                    ::svd-right        [[1.0]]}))
-       (s/gen ::mx/matrix-finite))))
-
 (defn pseudoinverse-from-svd
   "Computes the Moore-Penrose pseudoinverse from an existing SVD result.
 
-  This avoids redundant computation when you need both the SVD
-  and the pseudoinverse.
+  This avoids redundant computation when you need both the SVD and the pseudoinverse.
 
   For A = U * Σ * V^T, the pseudoinverse is A+ = V * Σ+ * U^T.
 
@@ -1750,7 +1924,7 @@
         factorial (fn [x] (reduce * 1N (range 1 (inc x))))
         pade-coef (fn [k p]
                     (/ (* (factorial (- (* 2 p) k)) (factorial p))
-                       (* (factorial (* 2 p)) (factorial k) (factorial (- p k)))))
+                      (* (factorial (* 2 p)) (factorial k) (factorial (- p k)))))
         ;; Compute powers of M
         powers (loop [k 1
                       current m

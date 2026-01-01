@@ -32,18 +32,18 @@
          upper-is-keyword? (keyword? upper)
          lower-spec (if lower-is-keyword? lower `number?)
          upper-spec (if upper-is-keyword? upper `number?)
-         lower-gen (if lower-is-keyword? 
-                     `(s/gen ~lower) 
+         lower-gen (if lower-is-keyword?
+                     `(s/gen ~lower)
                      `(gen/return ~lower))
-         upper-gen (if upper-is-keyword? 
-                     `(s/gen ~upper) 
+         upper-gen (if upper-is-keyword?
+                     `(s/gen ~upper)
                      `(gen/return ~upper))]
      `(s/with-gen
         (s/and (s/tuple ~lower-spec ~upper-spec)
           (fn [[~'x1 ~'x2]] (or (~compare-op ~'x2 ~'x1)
                               (and (m/nan? ~'x1) (m/nan? ~'x2)))))
-        #(gen/fmap (comp vec sort) 
-                   (gen/tuple ~lower-gen ~upper-gen))))))
+        #(gen/fmap (comp vec sort)
+           (gen/tuple ~lower-gen ~upper-gen))))))
 
 (defmacro strict-interval-spec
   ([spec] `(strict-interval-spec ~spec ~spec))
@@ -51,31 +51,18 @@
    `(interval-spec ~lower ~upper :compare-op > ~@opts)))
 
 (s/def ::strict-interval (strict-interval-spec ::m/number))
-
 (s/def ::interval (interval-spec ::m/number))
-
 (s/def ::num-interval (interval-spec ::m/num))
-
 (s/def ::pos-interval (interval-spec ::m/pos))
-
 (s/def ::finite-interval (interval-spec ::m/finite))
-
 (s/def ::finite+-interval (interval-spec ::m/finite+))
-
 (s/def ::prob-interval (interval-spec ::m/prob))
-
 (s/def ::open-prob-interval (interval-spec ::m/open-prob))
-
 (s/def ::finite-non--interval (interval-spec ::m/finite-non-))
-
 (s/def ::int-interval (interval-spec ::m/int))
-
 (s/def ::int+-interval (interval-spec ::m/int+))
-
 (s/def ::int-non--interval (interval-spec ::m/int-non-))
-
 (s/def ::long-interval (interval-spec ::m/long))
-
 (s/def ::long+-interval (interval-spec ::m/long+))
 
 (defn long-interval-gen
@@ -132,6 +119,8 @@
     #(gen/vector (s/gen ::bounds) 0 mdl)))
 
 (s/def ::by-upper? boolean?)
+(s/def ::bound-entry (s/tuple ::m/number boolean?))
+(s/def ::bound-coll (s/coll-of ::bound-entry :kind sequential?))
 
 ;;INTERVALS
 (defn in-interval?
@@ -511,12 +500,6 @@
   :ret ::interval)
 
 ;;;BOUNDS MANIPULATION
-(s/def ::bound-entry
-  (s/tuple ::m/number boolean?))
-
-(s/def ::bound-coll
-  (s/coll-of ::bound-entry :kind sequential?))
-
 (defn min-bound
   "Finds the minimum bound value from a collection of [value open?] pairs.
 
@@ -599,11 +582,9 @@
     (intersection [(bounds 0 5) (bounds 10 15)])
     ;=> nil (no overlap)"
   [vector-bounds]
-  (let [[lower open-lower?] (max-bound (map
-                                         #(vector (::lower %) (::open-lower? %))
+  (let [[lower open-lower?] (max-bound (map #(vector (::lower %) (::open-lower? %))
                                          vector-bounds))
-        [upper open-upper?] (min-bound (map
-                                         #(vector (::upper %) (::open-upper? %))
+        [upper open-upper?] (min-bound (map #(vector (::upper %) (::open-upper? %))
                                          vector-bounds))]
     (when (or (< lower upper)
             (and (== upper lower)
@@ -630,13 +611,11 @@
   [vector-bounds]
   (let [[lower open-lower?] (min-bound
                               (map (fn [bounds]
-                                     (vector (::lower bounds)
-                                       (::open-lower? bounds)))
+                                     (vector (::lower bounds) (::open-lower? bounds)))
                                 vector-bounds))
         [upper open-upper?] (max-bound
                               (map (fn [bounds]
-                                     (vector (::upper bounds)
-                                       (::open-upper? bounds)))
+                                     (vector (::upper bounds) (::open-upper? bounds)))
                                 vector-bounds))]
     (bounds lower upper open-lower? open-upper?)))
 

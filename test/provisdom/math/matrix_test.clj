@@ -7,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anom]))
 
-;;64 seconds
+;;41 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -705,7 +705,7 @@
 
 (t/deftest ereduce-kv-test
   (t/with-instrument `mx/ereduce-kv
-    (t/is-spec-check mx/ereduce-kv))
+    (t/is-spec-check mx/ereduce-kv {:num-tests 250}))
   (t/with-instrument :all
     (t/is= 29.9
       (mx/ereduce-kv (fn [tot r c n1 n2 n3]
@@ -1016,7 +1016,7 @@
 
 (t/deftest kronecker-product-test
   (t/with-instrument `mx/kronecker-product
-    (t/is-spec-check mx/kronecker-product))
+    (t/is-spec-check mx/kronecker-product {:num-tests 300}))
   (t/with-instrument :all
     (t/is= [[]] (mx/kronecker-product))
     (t/is= [[]] (mx/kronecker-product [[]]))

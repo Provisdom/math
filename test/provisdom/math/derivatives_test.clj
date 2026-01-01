@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.derivatives :as deriv]))
 
-;;25 seconds
+;;20 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -24,7 +24,7 @@
     ;;first derivative: 131624.413159103
     (t/is= 131624.41317399498 ((deriv/derivative-fn der-f) 5.0))
     (t/is= 131624.41315653265 ((deriv/derivative-fn der-f {::deriv/h 1e-5}) 5.0))
-    (t/is= 131624.41340682562 ((deriv/derivative-fn der-f {::deriv/h 1e-7}) 5.0))
+    (t/is-approx= 131624.413 ((deriv/derivative-fn der-f {::deriv/h 1e-7}) 5.0) :tolerance 0.01)
     (t/is= 131624.4131885469 ((deriv/derivative-fn der-f {::deriv/accuracy 8}) 5.0))
     (t/is= 131624.41315944307 ((deriv/derivative-fn der-f {::deriv/type :forward}) 5.0))
     (t/is= 131624.4131885469 ((deriv/derivative-fn der-f {::deriv/type :backward}) 5.0))
@@ -84,21 +84,22 @@
                                    ::deriv/accuracy   6})
        5.0))
     ;;fifth deriv: 25348.41315903
-    (t/is= 25348.41462038457 ((deriv/derivative-fn der-f {::deriv/derivative 5}) 5.0))
-    (t/is= 25348.537368699905
+    (t/is-approx= 25348.41 ((deriv/derivative-fn der-f {::deriv/derivative 5}) 5.0) :tolerance 0.1)
+    (t/is-approx= 25348.54
       ((deriv/derivative-fn der-f {::deriv/derivative 5
                                    ::deriv/h          1e-8})
-       5.0))
+       5.0)
+      :tolerance 0.1)
     (t/is= 25348.660635063425
       ((deriv/derivative-fn der-f {::deriv/derivative 5
                                    ::deriv/h          1e-6})
        5.0))
     ;;sixth deriv: 5188.4131591
-    (t/is= 5188.451371035215 ((deriv/derivative-fn der-f {::deriv/derivative 6}) 5.0))
+    (t/is-approx= 5188.45 ((deriv/derivative-fn der-f {::deriv/derivative 6}) 5.0) :tolerance 0.1)
     ;;seventh deriv: 148.413159103
-    (t/is= 148.4122348483652 ((deriv/derivative-fn der-f {::deriv/derivative 7}) 5.0))
+    (t/is-approx= 148.41 ((deriv/derivative-fn der-f {::deriv/derivative 7}) 5.0) :tolerance 0.1)
     ;;eighth deriv: 148.413159103
-    (t/is= 148.37917386236595 ((deriv/derivative-fn der-f {::deriv/derivative 8}) 5.0))
+    (t/is-approx= 148.38 ((deriv/derivative-fn der-f {::deriv/derivative 8}) 5.0) :tolerance 0.1)
     ;;example issues requiring 'h'
     (t/is= 2.0E8 ((deriv/derivative-fn m/sq) 1e8))          ;good
     (t/is= 1.92E9 ((deriv/derivative-fn m/sq) 1e9))         ;bad

@@ -30,6 +30,8 @@
     [java.util.random RandomGenerator$SplittableGenerator RandomGeneratorFactory]
     [java.security SecureRandom]))
 
+(declare ensure-rng-gen!)
+
 (def mdl 6)
 
 ;;;PROTOCOL AND IMPLEMENTATIONS
@@ -135,9 +137,8 @@
                   (str algorithm))]
        (Java17SplittableRandom. algo seed)))))
 
-(def next-rng
-  "Returns a random-number generator. Successive calls should return
-  independent results."
+(def next-rng$
+  "Returns a random-number generator. Successive calls should return independent results."
   (let [a (atom (make-rng (System/currentTimeMillis)))
         thread-local
         (proxy [ThreadLocal] []
@@ -155,9 +156,9 @@
 (s/def ::rng
   (s/with-gen
     (partial satisfies? IRandom)
-    #(gen/return (next-rng))))
+    #(gen/return (next-rng$))))
 
-(s/fdef next-rng
+(s/fdef next-rng$
   :args (s/cat)
   :ret ::rng)
 
@@ -402,18 +403,6 @@
   :ret (s/every ::m/long))
 
 ;;;BOUND RNG
-(defn rng!
-  "Retrieves the current bound RNG from the dynamic context.
-  
-  Returns the RNG instance bound to *rng-gen*.
-  Must be called within a bind-seed context or after set-seed!."
-  []
-  (*rng-gen*))
-
-(s/fdef rng!
-  :args (s/cat)
-  :ret ::rng)
-
 (defn rng-gen
   "Creates a stateful RNG generator function from an initial RNG.
 
@@ -435,11 +424,35 @@
   :args (s/cat :rng ::rng)
   :ret fn?)
 
+(defn- ensure-rng-gen!
+  "Lazily initializes *rng-gen* on first use if nil.
+  Uses system time for non-reproducible default behavior."
+  []
+  (when (nil? *rng-gen*)
+    (alter-var-root (var *rng-gen*)
+      (fn [current]
+        (if (nil? current)
+          (rng-gen (rng (System/currentTimeMillis)))
+          current)))))
+
+(defn rng!
+  "Retrieves the current bound RNG from the dynamic context.
+
+  Returns the RNG instance bound to *rng-gen*.
+  Lazily initializes with system time if not already set."
+  []
+  (ensure-rng-gen!)
+  (*rng-gen*))
+
+(s/fdef rng!
+  :args (s/cat)
+  :ret ::rng)
+
 (defn set-seed!
   "Sets the global RNG generator to use the specified seed.
 
-  This mutates the global *rng-gen* var, affecting all subsequent
-  calls to bound RNG functions (rnd!, rnd-long!, etc.).
+  This mutates the global *rng-gen* var, affecting all subsequent calls to bound RNG
+  functions (rnd!, rnd-long!, etc.).
 
   Parameters:
     seed - Long value to seed the generator
@@ -474,7 +487,7 @@
     interval - Optional [lower upper] bounds (default: all possible longs)
   
   Returns a uniformly distributed long within the interval.
-  Requires bound RNG context (bind-seed or set-seed!)."
+  Requires the bound RNG context (bind-seed or set-seed!)."
   ([] (rnd-long (rng!)))
   ([[lower upper]] (rnd-long (rng!) [lower upper])))
 
@@ -563,7 +576,7 @@
   
   Returns a new RNG instance."
   []
-  (next-rng))
+  (next-rng$))
 
 (s/fdef rng$
   :args (s/cat)
@@ -596,12 +609,6 @@
 (s/fdef set-seed!$
   :args (s/cat)
   :ret fn?)
-
-;; TODO: Is there a better way to set the default value for *rng-gen*?
-;; This is needed due to a circular dependency on functions when initially
-;; compiled. You will get an "Attempting to call unbound fn" error if you try to
-;; directly set *rng-gen* to `(rng-gen)`.
-(set-seed!$)
 
 ;;;MACROS
 (defmacro bind-seed

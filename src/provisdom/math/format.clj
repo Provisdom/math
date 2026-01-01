@@ -24,7 +24,6 @@
     #(gen/large-integer* {:min 1 :max 35})))
 
 (s/def ::max-digits ::digits)
-
 (s/def ::max-length ::m/int+)
 
 (s/def ::decimal-places
@@ -37,8 +36,7 @@
 (s/def ::thousands-sep? boolean?)
 (s/def ::engineering? boolean?)
 
-(s/def ::rounding-mode
-  #{:ceiling :floor :half-down :half-even :half-up})
+(s/def ::rounding-mode #{:ceiling :floor :half-down :half-even :half-up})
 
 (s/def ::decimal-symbol char?)
 (s/def ::grouping-symbol char?)
@@ -256,8 +254,8 @@
 (defn format-number
   "Formats a number intelligently within length constraints.
 
-  Automatically chooses between fixed-point and scientific notation to
-  produce the most readable result within `max-length` characters.
+  Automatically chooses between fixed-point and scientific notation to produce the most readable
+  result within `max-length` characters.
   Handles special values (NaN, Infinity) appropriately.
 
   Options:
@@ -411,10 +409,10 @@
 (defn unparse-shorthand
   "Converts numbers to shorthand notation with K, M, B, T suffixes.
 
-  Formats large numbers using shorthand suffixes (K=thousands, M=millions,
-  B=billions, T=trillions) within the specified `max-length` character limit.
-  Automatically falls back to standard formatting for very large numbers or
-  when shorthand doesn't provide space savings.
+  Formats large numbers using shorthand suffixes (K=thousands, M=millions, B=billions, T=trillions)
+  within the specified `max-length` character limit.
+  Automatically falls back to standard formatting for very large numbers or when shorthand doesn't
+  provide space savings.
 
   Parameters:
     max-length - Maximum number of characters in the output string

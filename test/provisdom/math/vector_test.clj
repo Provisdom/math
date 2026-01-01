@@ -5,7 +5,7 @@
     [provisdom.math.vector :as vector]
     [provisdom.test.core :as t]))
 
-;;16 SECONDS
+;;13 SECONDS
 
 (set! *warn-on-reflection* true)
 

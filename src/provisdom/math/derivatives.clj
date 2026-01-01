@@ -105,8 +105,7 @@
                    (list + - (fn [x y] (+ x (* 2 y))))))))
 
 (s/def ::h
-  (s/with-gen
-    ::m/finite+
+  (s/with-gen ::m/finite+
     #(gen/double* {:infinite? false
                    :NaN?      false
                    :min       m/tiny-dbl
@@ -116,10 +115,7 @@
 (s/def ::multiplier ::h)
 (s/def ::type #{:central :forward :backward})
 (s/def ::accuracy (s/and (s/int-in 1 9) (partial not= 7)))
-
-(s/def ::coefficients
-  (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
-
+(s/def ::coefficients (s/coll-of ::vector/vector-2D :kind clojure.core/vector? :into []))
 (s/def ::derivative (s/int-in 0 9))
 
 ;;; New specs for improved derivatives
@@ -128,13 +124,11 @@
 (s/def ::abs-tol ::m/finite+)
 (s/def ::max-iterations (s/int-in 1 21))
 (s/def ::direction ::vector/vector)
-(s/def ::derivative-orders
-  (s/coll-of ::m/int-non- :kind vector? :min-count 1))
+(s/def ::derivative-orders (s/coll-of ::m/int-non- :kind vector? :min-count 1))
 (s/def ::value ::m/number)
 (s/def ::error-bound ::m/finite-non-)
 (s/def ::derivative-result (s/keys :req [::value ::error-bound]))
-(s/def ::sparsity-pattern
-  (s/coll-of (s/tuple ::m/int-non- ::m/int-non-) :kind set?))
+(s/def ::sparsity-pattern (s/coll-of (s/tuple ::m/int-non- ::m/int-non-) :kind set?))
 
 (comment "The zero coefficient is left out below, but can be found because 
     the sum of coefficients equals zero")
@@ -167,8 +161,7 @@
    [[3 -1] [2 4] [1 -5]]
    [[4 (/ 11 12)] [3 (/ -14 3)] [2 (/ 19 2)] [1 (/ -26 3)]]
    [[5 (/ -5 6)] [4 (/ 61 12)] [3 -13] [2 (/ 107 6)] [1 (/ -77 6)]]
-   [[6 (/ 137 180)] [5 (/ -27 5)] [4 (/ 33 2)] [3 (/ -254 9)] [2 (/ 117 4)]
-    [1 (/ -87 5)]]
+   [[6 (/ 137 180)] [5 (/ -27 5)] [4 (/ 33 2)] [3 (/ -254 9)] [2 (/ 117 4)] [1 (/ -87 5)]]
    [[7 (/ -7 10)] [6 (/ 1019 180)] [5 (/ -201 10)] [4 41] [3 (/ -949 18)]
     [2 (/ 879 20)] [1 (/ -223 10)]]])
 
@@ -186,8 +179,7 @@
   [[[4 1] [3 -4] [2 6] [1 -4]]
    [[5 -2] [4 11] [3 -24] [2 26] [1 -14]]
    [[6 (/ 17 6)] [5 -19] [4 (/ 107 2)] [3 (/ -242 3)] [2 (/ 137 2)] [1 -31]]
-   [[7 (/ -7 2)] [6 (/ 82 3)] [5 (/ -185 2)] [4 176] [3 (/ -1219 6)] [2 142]
-    [1 (/ -111 2)]]
+   [[7 (/ -7 2)] [6 (/ 82 3)] [5 (/ -185 2)] [4 176] [3 (/ -1219 6)] [2 142] [1 (/ -111 2)]]
    [[8 (/ 967 240)] [7 (/ -536 15)] [6 (/ 2803 20)] [5 (/ -4772 15)]
     [4 (/ 10993 24)] [3 (/ -2144 5)] [2 (/ 15289 60)] [1 (/ -1316 15)]]])
 
@@ -285,42 +277,42 @@
          h (when h (double h))]
      (cond (zero? derivative) number->number
 
-           (> derivative 4)
-           (let [exc (- derivative 4)
-                 x (if h
-                     (/ h (/ m/sgl-close 10))
-                     1.0)]
-             (derivative-fn
-               (derivative-fn
-                 number->number
-                 {::derivative exc
-                  ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
-                  ::type       type})
-               {::derivative 4
-                ::h          (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
-                ::type       type}))
+       (> derivative 4)
+       (let [exc (- derivative 4)
+             x (if h
+                 (/ h (/ m/sgl-close 10))
+                 1.0)]
+         (derivative-fn
+           (derivative-fn
+             number->number
+             {::derivative exc
+              ::h          (* x (m/pow 10 (/ (+ 3 exc) -2)))
+              ::type       type})
+           {::derivative 4
+            ::h          (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
+            ::type       type}))
 
-           :else
-           (let [h (cond h h
-                         (m/one? derivative) m/sgl-close
-                         :else (/ m/sgl-close 10))
-                 accuracy (cond accuracy accuracy
-                                (<= derivative 2) 2
-                                (and (== derivative 4) (not= type :central)) 5
-                                :else 6)
-                 coefficient-fn (case type
-                                  :central get-central-coefficients
-                                  :forward get-forward-coefficients
-                                  :backward get-backward-coefficients)
-                 multiplier (/ h)
-                 dx (m/pow h (/ derivative))
-                 coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
-                               (coefficient-fn derivative accuracy))]
-             (fn [v]
-               (* multiplier
-                 (apply + (map #(let [[e1 e2] %]
-                                  (* (number->number (+ v e1)) e2))
-                            coefficient)))))))))
+       :else
+       (let [h (cond h h
+                 (m/one? derivative) m/sgl-close
+                 :else (/ m/sgl-close 10))
+             accuracy (cond accuracy accuracy
+                        (<= derivative 2) 2
+                        (and (== derivative 4) (not= type :central)) 5
+                        :else 6)
+             coefficient-fn (case type
+                              :central get-central-coefficients
+                              :forward get-forward-coefficients
+                              :backward get-backward-coefficients)
+             multiplier (/ h)
+             dx (m/pow h (/ derivative))
+             coefficient (map #(let [[e1 e2] %] [(* dx e1) e2])
+                           (coefficient-fn derivative accuracy))]
+         (fn [v]
+           (* multiplier
+             (apply + (map #(let [[e1 e2] %]
+                              (* (number->number (+ v e1)) e2))
+                        coefficient)))))))))
 
 (s/fdef derivative-fn
   :args (s/cat :number->number ::number->number
@@ -331,8 +323,8 @@
                                t (get v ::type :central)
                                a (get v ::accuracy
                                    (cond (<= d 2) 2
-                                         (and (== d 4) (not= t :central)) 5
-                                         :else 6))]
+                                     (and (== d 4) (not= t :central)) 5
+                                     :else 6))]
                            (if (= t :central)
                              (and (even? a)
                                (or (and (<= d 2) (<= a 8)) (<= a 6)))
@@ -530,11 +522,10 @@
                      (== row column)
                      (* multiplier
                        (apply +
-                         (map
-                           (fn [coeff]
-                             (let [[e1 e2] coeff]
-                               (* (v->number (assoc v row (+ (get v row) e1)))
-                                 e2)))
+                         (map (fn [coeff]
+                                (let [[e1 e2] coeff]
+                                  (* (v->number (assoc v row (+ (get v row) e1)))
+                                    e2)))
                            coefficient)))
 
                      :else
@@ -548,8 +539,8 @@
                        (fn [v] (let [t (get v ::type :joint-central)
                                      a (get v ::accuracy 2)]
                                  (cond (= t :joint-central) (== a 2)
-                                       (= t :central) (and (even? a) (<= a 8))
-                                       :else (<= a 6)))))))
+                                   (= t :central) (and (even? a) (<= a 8))
+                                   :else (<= a 6)))))))
   :ret ::v->symmetric-m)
 
 (defn partial-derivative-x-of-fxy
@@ -725,9 +716,9 @@
                             ::accuracy   accuracy})
                          x)]
            (if (and prev-estimate
-                    (or (>= iter max-iterations)
-                        (<= (m/abs (- estimate prev-estimate))
-                            (+ abs-tol (* rel-tol (m/abs estimate))))))
+                 (or (>= iter max-iterations)
+                   (<= (m/abs (- estimate prev-estimate))
+                     (+ abs-tol (* rel-tol (m/abs estimate))))))
              estimate
              (recur (/ h-cur 2.0) estimate (inc iter)))))))))
 
@@ -941,7 +932,6 @@
          :ret ::vector/vector))
 
 ;;;HIGHER-ORDER MIXED PARTIALS
-
 (defn mixed-partial-fn
   "Creates function computing arbitrary mixed partial derivatives.
 
@@ -997,7 +987,6 @@
   :ret ::v->number)
 
 ;;;SPARSE JACOBIANS AND HESSIANS
-
 (defn sparse-jacobian-fn
   "Creates Jacobian function that only computes specified entries.
 

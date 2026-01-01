@@ -1,8 +1,9 @@
 (ns provisdom.math.combinatorics-test
-            [provisdom.math.combinatorics :as combo]
-            [provisdom.test.core :as t]))
+  (:require
+    [provisdom.math.combinatorics :as combo]
+    [provisdom.test.core :as t]))
 
-;;6 seconds
+;;5 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -21,7 +22,7 @@
     (t/is= 5.109094217170945E19 (combo/factorial 21))
     (t/is= 1.1240007277776072E21 (combo/factorial 22))
     (t/is= 2.585201673888498E22 (combo/factorial 23))
-    (t/is= 4.714723635992578E284 (combo/factorial 160)))) ;;Math 4.7147236359920616E284
+    (t/is= 4.714723635992578E284 (combo/factorial 160))))   ;;Math 4.7147236359920616E284
 
 (t/deftest factorial'-test
   (t/with-instrument `combo/factorial'
@@ -321,10 +322,10 @@
   (t/with-instrument :all
     (t/is= 1.0 (combo/rising-factorial 5 0))
     (t/is= 5.0 (combo/rising-factorial 5 1))
-    (t/is= 30.0 (combo/rising-factorial 5 2))     ;; 5 × 6
-    (t/is= 360.0 (combo/rising-factorial 3 4))    ;; 3 × 4 × 5 × 6
-    (t/is= 120.0 (combo/rising-factorial 1 5))    ;; same as 5!
-    (t/is= 1.875 (combo/rising-factorial 0.5 3)))) ;; 0.5 × 1.5 × 2.5
+    (t/is= 30.0 (combo/rising-factorial 5 2))               ;; 5 × 6
+    (t/is= 360.0 (combo/rising-factorial 3 4))              ;; 3 × 4 × 5 × 6
+    (t/is= 120.0 (combo/rising-factorial 1 5))              ;; same as 5!
+    (t/is= 1.875 (combo/rising-factorial 0.5 3))))          ;; 0.5 × 1.5 × 2.5
 
 (t/deftest falling-factorial-test
   (t/with-instrument `combo/falling-factorial
@@ -332,10 +333,10 @@
   (t/with-instrument :all
     (t/is= 1.0 (combo/falling-factorial 5 0))
     (t/is= 5.0 (combo/falling-factorial 5 1))
-    (t/is= 20.0 (combo/falling-factorial 5 2))    ;; 5 × 4
-    (t/is= 60.0 (combo/falling-factorial 5 3))    ;; 5 × 4 × 3
-    (t/is= 120.0 (combo/falling-factorial 5 5))   ;; same as 5!
-    (t/is= 8.75 (combo/falling-factorial 3.5 2)))) ;; 3.5 × 2.5
+    (t/is= 20.0 (combo/falling-factorial 5 2))              ;; 5 × 4
+    (t/is= 60.0 (combo/falling-factorial 5 3))              ;; 5 × 4 × 3
+    (t/is= 120.0 (combo/falling-factorial 5 5))             ;; same as 5!
+    (t/is= 8.75 (combo/falling-factorial 3.5 2))))          ;; 3.5 × 2.5
 
 ;;;MULTINOMIAL COEFFICIENTS
 (t/deftest multinomial-coefficient-test
@@ -343,9 +344,9 @@
     (t/is-spec-check combo/multinomial-coefficient))
   (t/with-instrument :all
     (t/is= 1.0 (combo/multinomial-coefficient [3]))
-    (t/is= 6.0 (combo/multinomial-coefficient [2 2]))     ;; same as C(4,2)
-    (t/is= 60.0 (combo/multinomial-coefficient [2 3 1]))  ;; 6!/(2!3!1!)
-    (t/is= 6.0 (combo/multinomial-coefficient [1 1 1])))) ;; 3!
+    (t/is= 6.0 (combo/multinomial-coefficient [2 2]))       ;; same as C(4,2)
+    (t/is= 60.0 (combo/multinomial-coefficient [2 3 1]))    ;; 6!/(2!3!1!)
+    (t/is= 6.0 (combo/multinomial-coefficient [1 1 1]))))   ;; 3!
 
 (t/deftest log-multinomial-coefficient-test
   (t/with-instrument `combo/log-multinomial-coefficient
@@ -371,7 +372,7 @@
     (t/is= 1.0 (combo/stirling-number-of-the-first-kind 0 0))
     (t/is= 0.0 (combo/stirling-number-of-the-first-kind 0 3))
     (t/is= 1.0 (combo/stirling-number-of-the-first-kind 4 4))
-    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 1 4))    ;; (4-1)! = 6
+    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 1 4)) ;; (4-1)! = 6
     (t/is= 11.0 (combo/stirling-number-of-the-first-kind 2 4))
     (t/is= 6.0 (combo/stirling-number-of-the-first-kind 3 4))))
 
@@ -416,8 +417,8 @@
     (t/is-spec-check combo/count-permutations))
   (t/with-instrument :all
     (t/is= 120.0 (combo/count-permutations 5))
-    (t/is= 20.0 (combo/count-permutations 2 5))    ;; P(5,2) = 5 × 4
-    (t/is= 120.0 (combo/count-permutations 5 5)))) ;; P(5,5) = 5!
+    (t/is= 20.0 (combo/count-permutations 2 5))             ;; P(5,2) = 5 × 4
+    (t/is= 120.0 (combo/count-permutations 5 5))))          ;; P(5,5) = 5!
 
 ;;;INTEGER PARTITIONS
 (t/deftest integer-partitions-test

@@ -104,6 +104,7 @@ Matrix decompositions and linear system solving:
 Comprehensive matrix operations:
 - Matrix creation (identity, diagonal, Toeplitz, random)
 - Specialized types (symmetric, triangular, sparse, positive-definite)
+  - Note: Sparse matrix support is limited to conversion utilities (`sparse->matrix`, `matrix->sparse`). Full sparse algebra is not implemented; convert to dense for operations.
 - Matrix multiplication, transpose, Kronecker product
 - Slicing, filtering, and partitioning
 - Row/column manipulation (insert, remove, update)
@@ -211,6 +212,6 @@ Specialized 1D tensor operations:
 
 ## License
 
-Copyright 2018 Provisdom
+Copyright © 2018-2026 Provisdom Corp.
 
 Distributed under the GNU Lesser General Public License version 3.0.

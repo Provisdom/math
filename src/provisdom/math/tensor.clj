@@ -16,7 +16,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]))
 
-(declare transpose rank tensor?)
+(declare rank tensor? transpose)
 
 (def mdl
   "Maximum dimension length used in generators for spec testing."
@@ -113,6 +113,12 @@
       :t5+ ::tensor5D+)
     #(gen/one-of (map s/gen [::tensor1D ::tensor2D ::tensor3D]))))
 
+(s/def ::axes
+  (s/with-gen
+    (s/coll-of ::index :kind vector?)
+    #(gen/bind (gen/large-integer* {:min 0 :max 4})
+       (fn [n] (gen/fmap vec (gen/shuffle (range n)))))))
+
 ;;;TENSOR TYPES
 (defn tensor?
   "Returns true if `x` is a valid tensor.
@@ -194,9 +200,8 @@
 (defn compute-tensor
   "Creates a tensor by computing each element using function `indices->number`.
   
-  The function receives a vector of indices (coordinates) and should return
-  the value for that position. Indices are 0-based. The tensor will have
-  dimensions specified by `shape`.
+  The function receives a vector of indices (coordinates) and should return the value for that
+  position. Indices are 0-based. The tensor will have dimensions specified by `shape`.
   
   Examples:
     (compute-tensor [2 3] #(apply + %)) ;=> [[0 1 2] [1 2 3]]
@@ -304,8 +309,7 @@
 (defn ecount
   "Returns the total number of elements in `tensor`.
 
-  For scalars, returns 1. For multi-dimensional tensors, returns the product
-  of all dimension sizes.
+  For scalars, returns 1. For multidimensional tensors, returns the product of all dimension sizes.
 
   Examples:
     (ecount 5) ;=> 1
@@ -396,9 +400,8 @@
 (defn filter-kv
   "Filters the top-level elements of a tensor based on a predicate.
   
-  The predicate receives (index element) where index is the position
-  of the element in the top-level sequence. Returns nil for scalars
-  that don't match.
+  The predicate receives (index element) where index is the position of the element in the top-level
+  sequence. Returns nil for scalars that don't match.
   
   Examples:
     (filter-kv (fn [i x] (even? i)) [10 20 30 40]) ;=> [10 30]
@@ -423,8 +426,8 @@
 (defn flatten-tensor
   "Flattens a tensor to a 1D vector of numbers in row-major order.
 
-  Recursively traverses the tensor structure, collecting all numeric
-  elements into a single vector. More efficient than Clojure's flatten.
+  Recursively traverses the tensor structure, collecting all numeric elements into a single vector.
+  More efficient than Clojure's flatten.
 
   Examples:
     (flatten-tensor 5) ;=> [5]
@@ -446,8 +449,7 @@
 (defn sum
   "Returns the sum of all elements in `tensor`.
 
-  For scalars, returns the scalar itself. Uses double arithmetic
-  for consistent precision.
+  For scalars, returns the scalar itself. Uses double arithmetic for consistent precision.
 
   Examples:
     (sum 5) ;=> 5.0
@@ -505,8 +507,8 @@
 (defn transpose
   "Transposes a tensor by permuting its axes.
 
-  With one argument (tensor only), reverses all axes - equivalent to
-  swapping rows and columns for 2D matrices.
+  With one argument (tensor only), reverses all axes - equivalent to swapping rows and columns for
+  2D matrices.
 
   With two arguments, permutes axes according to the given permutation vector.
   The permutation specifies where each axis of the input goes in the output.
@@ -535,18 +537,13 @@
        (< r 2) tensor
        (not= (count axes) r) nil
        (not= (set axes) (set (range r))) nil
-       :else (let [new-shape (mapv #(get sh %) axes)]
+       :else (let [new-shape (mapv #(get sh %) axes)
+                   axis->new-index (zipmap axes-vec (range))]
                (compute-tensor new-shape
                  (fn [new-indices]
                    (let [old-indices (vec (for [old-axis (range r)]
-                                            (get new-indices (.indexOf axes-vec old-axis))))]
+                                            (get new-indices (axis->new-index old-axis))))]
                      (get-in tensor old-indices)))))))))
-
-(s/def ::axes
-  (s/with-gen
-    (s/coll-of ::index :kind vector?)
-    #(gen/bind (gen/large-integer* {:min 0 :max 4})
-       (fn [n] (gen/fmap vec (gen/shuffle (range n)))))))
 
 (s/fdef transpose
   :args (s/or :one (s/cat :tensor ::tensor)
@@ -756,7 +753,7 @@
     (=== [[1 ##NaN]] [[1 ##NaN]]) ;=> true
     (=== [1 2] [1 2]) ;=> true
     (=== [1 2] [1 3]) ;=> false"
-  ([tensor] true)
+  ([_tensor] true)
   ([tensor1 tensor2]
    (let [eq (emap m/=== tensor1 tensor2)]
      (if eq (all-true? eq) false)))

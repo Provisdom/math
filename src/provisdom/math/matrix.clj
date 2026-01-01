@@ -26,16 +26,14 @@
     [provisdom.utility-belt.extensions :as extensions]))
 
 ;;;DECLARATIONS
-(declare column-matrix transpose diagonal deserialize-symmetric-matrix
-  deserialize-upper-triangular-matrix deserialize-lower-triangular-matrix
-  get-slices-as-matrix some-kv matrix? row-matrix? column-matrix?
-  square-matrix? symmetric-matrix? diagonal-matrix? diagonal-matrix
-  row-matrix rows columns size-of-symmetric-or-triangular-matrix
-  size-of-symmetric-or-triangular-matrix-without-diag to-matrix
-  symmetric-matrix-by-averaging constant-matrix mx* assoc-diagonal
-  ecount-of-symmetric-or-triangular-matrix
-  ecount-of-symmetric-or-triangular-matrix-without-diag
-  lower-triangular-matrix? upper-triangular-matrix?)
+(declare assoc-diagonal column-matrix column-matrix? columns constant-matrix
+  deserialize-lower-triangular-matrix deserialize-symmetric-matrix
+  deserialize-upper-triangular-matrix diagonal diagonal-matrix diagonal-matrix?
+  ecount-of-symmetric-or-triangular-matrix ecount-of-symmetric-or-triangular-matrix-without-diag
+  get-slices-as-matrix lower-triangular-matrix? matrix-finite-non-? matrix-finite? matrix-prob?
+  matrix? mx* row-matrix row-matrix? rows size-of-symmetric-or-triangular-matrix
+  size-of-symmetric-or-triangular-matrix-without-diag some-kv square-matrix?
+  symmetric-matrix-by-averaging symmetric-matrix? to-matrix transpose upper-triangular-matrix?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -108,6 +106,128 @@
   (s/fspec :args (s/cat :number ::m/number)
     :ret boolean?))
 
+(s/def ::matrix
+  (s/with-gen
+    #(matrix? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/number) i)
+           1
+           mdl)))))
+
+(s/def ::matrix-finite
+  (s/with-gen
+    #(matrix-finite? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/finite) i)
+           1
+           mdl)))))
+
+(s/def ::matrix-finite-non-
+  (s/with-gen
+    #(matrix-finite-non-? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/finite-non-) i)
+           1
+           mdl)))))
+
+(s/def ::matrix-prob
+  (s/with-gen
+    #(matrix-prob? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/prob) i)
+           1
+           mdl)))))
+
+(s/def ::empty-matrix #(= [[]] %))
+
+(s/def ::row-matrix
+  (s/with-gen
+    #(row-matrix? %)
+    #(gen/fmap row-matrix (s/gen ::vector/vector))))
+
+(s/def ::column-matrix
+  (s/with-gen
+    #(column-matrix? %)
+    #(gen/fmap column-matrix (s/gen ::vector/vector))))
+
+(s/def ::zero-matrix
+  (s/with-gen
+    (s/coll-of (s/coll-of zero? :kind vector? :into [])
+      :kind vector?
+      :into [])
+    #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 1 mdl)))
+
+(s/def ::square-matrix
+  (s/with-gen
+    #(square-matrix? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/number) i)
+           (max 1 i))))))
+
+(s/def ::square-matrix-finite
+  (s/with-gen
+    (s/and (s/coll-of
+             (s/coll-of ::m/finite :kind vector? :into [])
+             :min-count 1
+             :kind vector?
+             :into [])
+      (fn [m] (= (rows m) (columns m))))
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/finite) i)
+           (max 1 i))))))
+
+(s/def ::diagonal-matrix
+  (s/with-gen
+    #(diagonal-matrix? %)
+    #(gen/fmap diagonal-matrix (s/gen ::vector/vector))))
+
+(s/def ::upper-triangular-matrix
+  (s/with-gen
+    #(upper-triangular-matrix? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/fmap deserialize-upper-triangular-matrix
+           (gen/vector
+             (s/gen ::m/number)
+             (ecount-of-symmetric-or-triangular-matrix i)))))))
+
+(s/def ::lower-triangular-matrix
+  (s/with-gen
+    #(lower-triangular-matrix? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/fmap deserialize-lower-triangular-matrix
+           (gen/vector
+             (s/gen ::m/number)
+             (ecount-of-symmetric-or-triangular-matrix i)))))))
+
+(s/def ::symmetric-matrix
+  (s/with-gen
+    #(symmetric-matrix? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/fmap deserialize-symmetric-matrix
+           (gen/vector
+             (s/gen ::m/number)
+             (ecount-of-symmetric-or-triangular-matrix i)))))))
+
+(s/def ::top-left ::matrix)
+(s/def ::bottom-left ::matrix)
+(s/def ::top-right ::matrix)
+(s/def ::bottom-right ::matrix)
+
 ;;;MATRIX TYPES
 (defn matrix?
   "Returns true if x is a valid matrix.
@@ -134,16 +254,6 @@
 (s/fdef matrix?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::matrix
-  (s/with-gen
-    matrix?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/number) i)
-           1
-           mdl)))))
 
 (defn matrix-num?
   "Returns true if x is a valid matrix containing only non-NaN numbers.
@@ -198,16 +308,6 @@
 (s/fdef matrix-finite?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::matrix-finite
-  (s/with-gen
-    matrix-finite?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/finite) i)
-           1
-           mdl)))))
 
 (defn all-matrix-values?
   "Returns true if all matrix elements are within the specified bounds.
@@ -306,16 +406,6 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::matrix-finite-non-
-  (s/with-gen
-    matrix-finite-non-?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/finite-non-) i)
-           1
-           mdl)))))
-
 (defn matrix-prob?
   "Returns true if x is a valid matrix of probability values.
   
@@ -338,16 +428,6 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::matrix-prob
-  (s/with-gen
-    matrix-prob?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/prob) i)
-           1
-           mdl)))))
-
 (defn empty-matrix?
   "Returns true if x is an empty matrix.
   
@@ -364,13 +444,10 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::empty-matrix #(= [[]] %))
-
 (defn row-matrix?
   "Returns true if x is a single-row matrix.
 
-  A row matrix has exactly one row containing only numbers,
-  or is an empty matrix.
+  A row matrix has exactly one row containing only numbers, or is an empty matrix.
 
   Examples:
     (row-matrix? [[1 2 3]]) ;=> true
@@ -387,16 +464,10 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::row-matrix
-  (s/with-gen
-    row-matrix?
-    #(gen/fmap row-matrix (s/gen ::vector/vector))))
-
 (defn column-matrix?
   "Returns true if x is a single-column matrix.
   
-  A column matrix has exactly one column (all rows have length 1),
-  or is an empty matrix.
+  A column matrix has exactly one column (all rows have length 1), or is an empty matrix.
   
   Examples:
     (column-matrix? [[1] [2] [3]]) ;=> true
@@ -414,11 +485,6 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::column-matrix
-  (s/with-gen
-    column-matrix?
-    #(gen/fmap column-matrix (s/gen ::vector/vector))))
-
 (defn zero-matrix?
   "Returns true if x is a valid matrix with all elements equal to zero.
   
@@ -432,13 +498,6 @@
 (s/fdef zero-matrix?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::zero-matrix
-  (s/with-gen
-    (s/coll-of (s/coll-of zero? :kind vector? :into [])
-      :kind vector?
-      :into [])
-    #(gen/vector (gen/vector (s/gen zero?) 0 mdl) 1 mdl)))
 
 (defn square-matrix?
   "Returns true if x is a square matrix.
@@ -456,29 +515,6 @@
 (s/fdef square-matrix?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::square-matrix
-  (s/with-gen
-    square-matrix?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/number) i)
-           (max 1 i))))))
-
-(s/def ::square-matrix-finite
-  (s/with-gen
-    (s/and (s/coll-of
-             (s/coll-of ::m/finite :kind vector? :into [])
-             :min-count 1
-             :kind vector?
-             :into [])
-      (fn [m] (= (rows m) (columns m))))
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/finite) i)
-           (max 1 i))))))
 
 (defn diagonal-matrix?
   "Returns true if x is a diagonal matrix.
@@ -500,11 +536,6 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::diagonal-matrix
-  (s/with-gen
-    diagonal-matrix?
-    #(gen/fmap diagonal-matrix (s/gen ::vector/vector))))
-
 (defn upper-triangular-matrix?
   "Returns true if x is an upper triangular matrix.
   
@@ -524,16 +555,6 @@
 (s/fdef upper-triangular-matrix?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::upper-triangular-matrix
-  (s/with-gen
-    upper-triangular-matrix?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/fmap deserialize-upper-triangular-matrix
-           (gen/vector
-             (s/gen ::m/number)
-             (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 (defn lower-triangular-matrix?
   "Returns true if x is a lower triangular matrix.
@@ -555,21 +576,11 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::lower-triangular-matrix
-  (s/with-gen
-    lower-triangular-matrix?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/fmap deserialize-lower-triangular-matrix
-           (gen/vector
-             (s/gen ::m/number)
-             (ecount-of-symmetric-or-triangular-matrix i)))))))
-
 (defn symmetric-matrix?
   "Returns true if x is a symmetric matrix.
   
-  A symmetric matrix is square and equal to its transpose. Element at [i,j]
-  equals element at [j,i] for all positions.
+  A symmetric matrix is square and equal to its transpose. Element at [i,j] equals element at [j,i]
+  for all positions.
   
   Examples:
     (symmetric-matrix? [[1 2] [2 3]]) ;=> true
@@ -581,16 +592,6 @@
 (s/fdef symmetric-matrix?
   :args (s/cat :x any?)
   :ret boolean?)
-
-(s/def ::symmetric-matrix
-  (s/with-gen
-    symmetric-matrix?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/fmap deserialize-symmetric-matrix
-           (gen/vector
-             (s/gen ::m/number)
-             (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 ;;;MATRIX CONSTRUCTORS
 (defn to-matrix
@@ -915,9 +916,8 @@
 (defn toeplitz-matrix
   "Creates a Toeplitz (diagonal-constant) matrix.
   
-  A Toeplitz matrix has constant values along each diagonal. The first row
-  and first column define all matrix elements. The first elements of both
-  vectors must be equal.
+  A Toeplitz matrix has constant values along each diagonal. The first row and first column define
+  all matrix elements. The first elements of both vectors must be equal.
   
   Examples:
     (toeplitz-matrix [1 2 3] [1 4 5]) ;=> [[1 2 3] [4 1 2] [5 4 1]]"
@@ -971,8 +971,7 @@
 (defn rnd-matrix!
   "Creates a matrix with random elements between 0 and 1.
   
-  Uses the current random number generator state. Elements are uniformly
-  distributed doubles.
+  Uses the current random number generator state. Elements are uniformly distributed doubles.
   
   Examples:
     (rnd-matrix! 2 2) ;=> [[0.123 0.456] [0.789 0.012]] (example values)"
@@ -1188,7 +1187,7 @@
 (defn serialize-symmetric-or-triangular-matrix
   "Flattens the upper or lower triangle of a matrix into a vector.
   
-  By default extracts the upper triangle (including diagonal) in row-major order.
+  By default, extracts the upper triangle (including diagonal) in row-major order.
   The matrix doesn't need to be symmetric.
   
   Options:
@@ -1271,8 +1270,8 @@
 (defn ecount-of-symmetric-or-triangular-matrix-without-diag
   "Calculates the number of off-diagonal elements in a triangular matrix.
   
-  For a square matrix of given size, returns the count of elements
-  above (or below) the diagonal: size*(size-1)/2.
+  For a square matrix of given size, returns the count of elements above (or below) the diagonal:
+  size*(size-1)/2.
   
   Examples:
     (ecount-of-symmetric-or-triangular-matrix-without-diag 2) ;=> 1
@@ -1434,8 +1433,8 @@
 (defn filter-symmetric-matrix
   "Filters a symmetric matrix by keeping rows/columns that satisfy a predicate.
   
-  The predicate receives each row vector. Keeps both row and corresponding
-  column if the predicate returns true, maintaining symmetry.
+  The predicate receives each row vector. Keeps both row and corresponding column if the predicate
+  returns true, maintaining symmetry.
   
   Examples:
     (filter-symmetric-matrix #(> (first %) 2) [[1 2] [2 3]]) ;=> [[3]]"
@@ -1454,11 +1453,6 @@
                           :ret boolean?)
           :symmetric-m ::symmetric-matrix)
   :ret ::symmetric-matrix)
-
-(s/def ::top-left ::matrix)
-(s/def ::bottom-left ::matrix)
-(s/def ::top-right ::matrix)
-(s/def ::bottom-right ::matrix)
 
 (defn matrix-partition
   "Splits a matrix into four quadrants.
@@ -1494,9 +1488,8 @@
 (defn some-kv
   "Finds the first matrix element satisfying a predicate.
 
-  The predicate function receives (row column element) and should return
-  a truthy value. Returns the first element for which the predicate is truthy,
-  or nil if none found.
+  The predicate function receives (row column element) and should return a truthy value. Returns the
+  first element for which the predicate is truthy, or nil if none found.
 
   Options:
   - ::by-row? (default true) - traverse by rows first, then columns
@@ -1629,8 +1622,8 @@
 (defn matrix->sparse
   "Converts a matrix to sparse representation.
   
-  Returns a vector of [row col value] triples for elements that satisfy
-  the predicate function. By default includes all non-zero elements.
+  Returns a vector of [row col value] triples for elements that satisfy the predicate function.
+  By default includes all non-zero elements.
   
   Examples:
     (matrix->sparse [[1 0] [0 2]]) ;=> [[0 0 1] [1 1 2]]
@@ -1677,8 +1670,8 @@
 (defn transpose
   "Transposes a matrix by swapping rows and columns.
   
-  Converts an m×n matrix to an n×m matrix where element at [i,j] becomes
-  element at [j,i] in the result.
+  Converts an m×n matrix to an n×m matrix where element at [i,j] becomes element at [j,i] in the
+  result.
   
   Examples:
     (transpose [[1 2 3] [4 5 6]]) ;=> [[1 4] [2 5] [3 6]]
@@ -1695,8 +1688,8 @@
 (defn assoc-row
   "Replaces a row in the matrix with new values.
 
-  Returns anomaly if the new row length doesn't match existing columns or if
-  row index is out of bounds.
+  Returns anomaly if the new row length doesn't match existing columns or if row index is out of
+  bounds.
 
   Examples:
     (assoc-row [[1 2] [3 4]] 0 [5 6]) ;=> [[5 6] [3 4]]
@@ -1723,8 +1716,8 @@
 (defn assoc-column
   "Replaces a column in the matrix with new values.
 
-  Returns anomaly if the new column length doesn't match existing rows or if
-  column index is out of bounds.
+  Returns anomaly if the new column length doesn't match existing rows or if column index is out of
+  bounds.
 
   Examples:
     (assoc-column [[1 2] [3 4]] 0 [5 6]) ;=> [[5 2] [6 4]]
@@ -1780,8 +1773,8 @@
 (defn insert-row
   "Inserts a new row at the specified position.
 
-  Returns anomaly if the new row length doesn't match existing columns or if
-  row index is out of bounds.
+  Returns anomaly if the new row length doesn't match existing columns or if row index is out of
+  bounds.
 
   Examples:
     (insert-row [[1 2] [3 4]] 1 [5 6]) ;=> [[1 2] [5 6] [3 4]]
@@ -1808,8 +1801,8 @@
 (defn insert-column
   "Inserts a new column at the specified position.
 
-  Returns anomaly if the new column length doesn't match existing rows or if
-  column index is out of bounds.
+  Returns anomaly if the new column length doesn't match existing rows or if column index is out of
+  bounds.
 
   Examples:
     (insert-column [[1 2] [3 4]] 1 [5 6]) ;=> [[1 5 2] [3 6 4]]
@@ -2017,8 +2010,8 @@
 (defn replace-submatrix
   "Replaces a rectangular region of a matrix with a submatrix.
   
-  Places the submatrix at the specified top-left position. Negative positions
-  are allowed and will expand the result matrix. Unfilled positions default to 0.0.
+  Places the submatrix at the specified top-left position. Negative positions are allowed and will
+  expand the result matrix. Unfilled positions default to 0.0.
   
   Examples:
     (replace-submatrix [[1 2] [3 4]] [[9]] 0 0) ;=> [[9 2] [3 4]]
@@ -2058,9 +2051,9 @@
 (defn symmetric-matrix-by-averaging
   "Creates a symmetric matrix by averaging corresponding off-diagonal elements.
   
-  For each pair of elements at positions [i,j] and [j,i], replaces both with
-  their average. Diagonal elements remain unchanged. Useful for correcting
-  matrices that should be symmetric but have small numerical errors.
+  For each pair of elements at positions [i,j] and [j,i], replaces both with their average. Diagonal
+  elements remain unchanged. Useful for correcting matrices that should be symmetric but have small
+  numerical errors.
   
   Examples:
     (symmetric-matrix-by-averaging [[1 2] [3 4]]) ;=> [[1.0 2.5] [2.5 4.0]]"
@@ -2081,9 +2074,9 @@
 (defn mx*
   "Performs matrix multiplication on one or more matrices.
   
-  For two matrices A and B, computes the dot product where A has dimensions
-  m×n and B has dimensions n×p, resulting in an m×p matrix. The number of
-  columns in the first matrix must equal the number of rows in the second.
+  For two matrices A and B, computes the dot product where A has dimensions m×n and B has dimensions
+  n×p, resulting in an m×p matrix. The number of columns in the first matrix must equal the number
+  of rows in the second.
   
   Returns nil if dimensions are incompatible.
   

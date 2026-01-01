@@ -5,7 +5,7 @@
     [provisdom.test.core :as t])
   (:import (java.util UUID)))
 
-;;40 seconds
+;;19 seconds
 
 (set! *warn-on-reflection* true)
 

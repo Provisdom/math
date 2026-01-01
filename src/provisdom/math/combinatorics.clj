@@ -40,20 +40,21 @@
     ::m/int-non-
     #(gen/large-integer* {:min 0 :max mdl})))
 
+(defn- n-no-less-than-k?
+  [{:keys [k n]}]
+  (>= n k))
 
 ;;;CONSTANTS
 (def ^:private ^:const subfactorials
   "also called 'recontres numbers' or 'derangements'"
-  [1, 0, 1, 2, 9, 44, 265, 1854, 14833, 133496, 1334961, 14684570, 176214841,
-   2290792932, 32071101049, 481066515734, 7697064251745, 130850092279664,
-   2355301661033953, 44750731559645106, 895014631192902121,
-   18795307255050944540])
+  [1, 0, 1, 2, 9, 44, 265, 1854, 14833, 133496, 1334961, 14684570, 176214841, 2290792932,
+   32071101049, 481066515734, 7697064251745, 130850092279664, 2355301661033953, 44750731559645106,
+   895014631192902121, 18795307255050944540])
 
 (def ^:private ^:const bell-numbers
-  [1, 1, 2, 5, 15, 52, 203, 877, 4140, 21147, 115975, 678570, 4213597,
-   27644437, 190899322, 1382958545, 10480142147, 82864869804, 682076806159,
-   5832742205057, 51724158235372, 474869816156751, 4506715738447323,
-   44152005855084346, 445958869294805289, 4638590332229999353,
+  [1, 1, 2, 5, 15, 52, 203, 877, 4140, 21147, 115975, 678570, 4213597, 27644437, 190899322,
+   1382958545, 10480142147, 82864869804, 682076806159, 5832742205057, 51724158235372,
+   474869816156751, 4506715738447323, 44152005855084346, 445958869294805289, 4638590332229999353,
    49631246523618756274])
 
 ;;;FACTORIALS
@@ -237,24 +238,19 @@
   [k n]
   (let [diff (- n k)]
     (cond (or (zero? diff) (zero? k)) 1.0
-          (or (m/one? k) (m/one? diff)) (double n)
-          (> k (/ n 2)) (choose-k-from-n diff n)
-          :else (reduce (fn [acc i]
-                          (let [acc (* acc (/ (+ diff i) i))]
-                            (if (m/inf+? acc)
-                              (reduced acc)
-                              acc)))
-                  1.0
-                  (range 1 (inc k))))))
-
-(defn n-no-less-than-k?
-  [{:keys [k n]}]
-  (>= n k))
+      (or (m/one? k) (m/one? diff)) (double n)
+      (> k (/ n 2)) (choose-k-from-n diff n)
+      :else (reduce (fn [acc i]
+                      (let [acc (* acc (/ (+ diff i) i))]
+                        (if (m/inf+? acc)
+                          (reduced acc)
+                          acc)))
+              1.0
+              (range 1 (inc k))))))
 
 (s/fdef choose-k-from-n
   :args (s/with-gen
-          (s/and (s/cat :k ::m/int-non-
-                   :n ::m/int-non-)
+          (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
             n-no-less-than-k?)
           #(gen/bind
              (s/gen ::m/int-non-)
@@ -272,10 +268,8 @@
   (m/maybe-long-able (choose-k-from-n k n)))
 
 (s/fdef choose-k-from-n'
-  :args (s/and (s/cat :k ::m/int-non-
-                 :n ::m/int-non-)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+  :args (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
+          n-no-less-than-k?)
   :ret ::m/num)
 
 (defn log-choose-k-from-n
@@ -299,10 +293,8 @@
         (log-factorial (- n k))))))
 
 (s/fdef log-choose-k-from-n
-  :args (s/and (s/cat :k ::m/non-
-                 :n ::m/non-)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+  :args (s/and (s/cat :k ::m/non- :n ::m/non-)
+          n-no-less-than-k?)
   :ret ::m/num)
 
 (defn multinomial-coefficient
@@ -321,8 +313,7 @@
     (multinomial-coefficient [1 1 1])  ;=> 6.0 (3! permutations)"
   [ks]
   (let [n (reduce + 0 ks)]
-    (/ (factorial n)
-       (reduce * 1.0 (map factorial ks)))))
+    (/ (factorial n) (reduce * 1.0 (map factorial ks)))))
 
 (s/fdef multinomial-coefficient
   :args (s/cat :ks (s/coll-of ::m/int-non-))
@@ -337,9 +328,8 @@
     (log-multinomial-coefficient [2 3 1])  ;=> 4.0943... (ln(60))
     (log-multinomial-coefficient [50 50])  ;=> 66.7838... (ln(C(100,50)))"
   [ks]
-  (let [n (reduce + 0 ks)]
-    (- (log-factorial n)
-       (reduce + 0.0 (map log-factorial ks)))))
+  (let [n (reduce + 0.0 ks)]
+    (- (log-factorial n) (reduce + 0.0 (map log-factorial ks)))))
 
 (s/fdef log-multinomial-coefficient
   :args (s/cat :ks (s/coll-of ::m/non-))
@@ -353,17 +343,14 @@
     (* (/ (factorial k))
       (ccr/fold
         + (fn [tot e]
-            (+ tot
-              (* (m/pow (- 1) e)
-                (choose-k-from-n e k)
-                (m/pow (- k e) n))))
+            (+ tot (* (m/pow (- 1) e)
+                     (choose-k-from-n e k)
+                     (m/pow (- k e) n))))
         (range (inc k))))))
 
 (s/fdef stirling-number-of-the-second-kind
-  :args (s/and (s/cat :k ::m/long-non-
-                 :n ::m/long)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+  :args (s/and (s/cat :k ::m/long-non- :n ::m/long)
+          n-no-less-than-k?)
   :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind'
@@ -374,8 +361,7 @@
 
 (s/fdef stirling-number-of-the-second-kind'
   :args (s/and (s/cat :k ::m/long-non- :n ::m/long)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+          n-no-less-than-k?)
   :ret ::m/number)
 
 (defn log-stirling-number-of-the-second-kind
@@ -409,8 +395,7 @@
 
 (s/fdef log-stirling-number-of-the-second-kind
   :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
-          (fn [{:keys [k n]}]
-            (>= n k)))
+          n-no-less-than-k?)
   :ret ::m/num)
 
 (defn stirling-number-of-the-first-kind
@@ -440,7 +425,7 @@
                       (fn [row curr-k]
                         (assoc row curr-k
                           (+ (* (dec curr-n) (get prev-row curr-k 0.0))
-                             (get prev-row (dec curr-k) 0.0))))
+                            (get prev-row (dec curr-k) 0.0))))
                       {}
                       (range 1 (inc (min curr-n k)))))
                   {0 1.0}
@@ -450,8 +435,7 @@
 (s/fdef stirling-number-of-the-first-kind
   :args (s/with-gen
           (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
-            (fn [{:keys [k n]}]
-              (>= n k)))
+            n-no-less-than-k?)
           #(gen/bind
              (gen/large-integer* {:min 0 :max 15})
              (fn [k]
@@ -467,8 +451,7 @@
 (s/fdef stirling-number-of-the-first-kind'
   :args (s/with-gen
           (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
-            (fn [{:keys [k n]}]
-              (>= n k)))
+            n-no-less-than-k?)
           #(gen/bind
              (gen/large-integer* {:min 0 :max 15})
              (fn [k]
@@ -480,10 +463,10 @@
   "Returns the number of partitions of a set of size `n`."
   [n]
   (cond (> n 170) m/nan
-        (and (m/non-? n) (< n 27)) (bell-numbers (long n))
-        :else (ccr/fold + (fn [tot e]
-                            (+ tot (stirling-number-of-the-second-kind e n)))
-                (range (inc n)))))
+    (and (m/non-? n) (< n 27)) (bell-numbers (long n))
+    :else (ccr/fold + (fn [tot e]
+                        (+ tot (stirling-number-of-the-second-kind e n)))
+            (range (inc n)))))
 
 (s/fdef bell-number
   :args (s/cat :n ::m/long)
@@ -754,9 +737,9 @@
        (list ())
        (let [cnt (count items)]
          (cond (> n cnt) nil
-               (= n cnt) (list (seq items))
-               :else (map #(map v-items %)
-                       (index-combinations n cnt))))))))
+           (= n cnt) (list (seq items))
+           :else (map #(map v-items %)
+                   (index-combinations n cnt))))))))
 
 (s/fdef combinations
   :args (s/cat :items ::items
@@ -815,8 +798,7 @@
     (distinct (combinations (apply interleave (repeat n items))))))
 
 (s/fdef distinct-combinations-with-replacement
-  :args (s/cat :items ::items
-          :n ::replacement-count)
+  :args (s/cat :items ::items :n ::replacement-count)
   :ret ::groups-of-items)
 
 ;;;ORDERED COMBINATIONS
@@ -911,8 +893,7 @@
     (take n (repeat items))))
 
 (s/fdef selections
-  :args (s/cat :items ::items
-          :n ::replacement-count)
+  :args (s/cat :items ::items :n ::replacement-count)
   :ret ::groups-of-items)
 
 ;;;DIRECT ACCESS

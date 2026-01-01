@@ -1,9 +1,9 @@
 (ns provisdom.math.series
   "Infinite series summation with convergence testing and acceleration.
 
-  Provides robust algorithms for summing infinite series with adaptive
-  convergence detection. Supports multiple summation strategies and
-  series acceleration methods for improved numerical stability.
+  Provides robust algorithms for summing infinite series with adaptive convergence detection.
+  Supports multiple summation strategies and series acceleration methods for improved numerical
+  stability.
 
   Key features:
   - Adaptive convergence testing with customizable criteria
@@ -18,6 +18,7 @@
     [clojure.spec.alpha :as s]
     [provisdom.math.core :as m]
     [provisdom.utility-belt.anomalies :as anomalies]))
+
 
 ;;;DECLARATIONS
 (s/def ::term-series (s/every ::m/number))
@@ -248,9 +249,8 @@
 (defn aitken-accelerate
   "Applies Aitken's delta-squared process to accelerate convergence.
 
-  Given a sequence of partial sums `partial-sums`, returns a new sequence
-  with faster convergence. Particularly effective for linearly convergent
-  sequences.
+  Given a sequence of partial sums `partial-sums`, returns a new sequence with faster convergence.
+  Particularly effective for linearly convergent sequences.
 
   The formula is: s'ₙ = sₙ - (sₙ₊₁ - sₙ)² / (sₙ₊₂ - 2sₙ₊₁ + sₙ)
 
@@ -335,9 +335,8 @@
   Transforms an alternating series into one with better convergence.
   Input is the original series `terms` (not partial sums).
 
-  For alternating series Σ(-1)ⁿaₙ, this computes the Euler transform
-  which can dramatically improve convergence for slowly converging
-  alternating series.
+  For alternating series Σ(-1)ⁿaₙ, this computes the Euler transform which can dramatically improve
+  convergence for slowly converging alternating series.
 
   Returns a lazy sequence of transformed terms that can be summed.
 
@@ -371,12 +370,11 @@
 (defn richardson-extrapolate
   "Applies Richardson extrapolation to improve convergence.
 
-  Given a sequence of approximations `approxs` computed at different
-  step sizes (assumed to be halved each time), extrapolates to the
-  limit value.
+  Given a sequence of approximations `approxs` computed at different step sizes (assumed to be
+  halved each time), extrapolates to the limit value.
 
-  The `order` parameter specifies the order of the error term being
-  eliminated (default 2, suitable for trapezoidal rule errors).
+  The `order` parameter specifies the order of the error term being eliminated (default 2, suitable
+  for trapezoidal rule errors).
 
   Returns a sequence of progressively refined estimates.
 
@@ -443,11 +441,10 @@
 (defn power-series-compose
   "Computes the composition of two power series.
 
-  Given `outer-coeffs` for f(x) and `inner-coeffs` for g(x),
-  returns coefficients for f(g(x)).
+  Given `outer-coeffs` for f(x) and `inner-coeffs` for g(x), returns coefficients for f(g(x)).
 
-  IMPORTANT: g(0) must be 0 (i.e., first coefficient of inner must be 0)
-  for the composition to be well-defined as a power series.
+  IMPORTANT: g(0) must be 0 (i.e., first coefficient of inner must be 0) for the composition to be
+  well-defined as a power series.
 
   Options:
     ::max-iter - Maximum number of output terms (default 20)
@@ -468,9 +465,10 @@
                 g-power (vec (concat [1.0] (repeat (dec max-iter) 0.0)))
                 result (vec (repeat max-iter 0.0))]
            (if (>= k n)
-             (vec (take-while #(or (not (zero? %))
-                                 (< (.indexOf ^clojure.lang.PersistentVector result %) n))
-                    result))
+             (->> result
+               (map-indexed vector)
+               (take-while (fn [[i v]] (or (< i n) (not (zero? v)))))
+               (mapv second))
              (let [ak (double (nth outer k 0))
                    new-result (mapv (fn [i]
                                       (+ (nth result i) (* ak (nth g-power i 0.0))))
@@ -489,8 +487,8 @@
 (defn power-series-inverse
   "Computes coefficients for the compositional inverse of a power series.
 
-  Given `coeffs` for f(x) where f(0) = 0 and f'(0) ≠ 0, returns
-  coefficients for g(x) such that f(g(x)) = x.
+  Given `coeffs` for f(x) where f(0) = 0 and f'(0) ≠ 0, returns coefficients for g(x) such that
+  f(g(x)) = x.
 
   Requires: first coefficient is 0, second coefficient is non-zero.
 
@@ -599,16 +597,15 @@
 (defn pade-approximant
   "Computes a Padé approximant [L/M] from power series coefficients.
 
-  Given `coeffs` [c₀ c₁ c₂ ...] representing f(x) = Σcₙxⁿ, computes
-  the [L/M] Padé approximant P(x)/Q(x) where P has degree L and Q
-  has degree M.
+  Given `coeffs` [c₀ c₁ c₂ ...] representing f(x) = Σcₙxⁿ, computes the [L/M] Padé approximant
+  P(x)/Q(x) where P has degree L and Q has degree M.
 
   Returns a map with:
     ::numerator - Coefficients of P(x)
     ::denominator - Coefficients of Q(x) (normalized so Q(0) = 1)
 
-  The Padé approximant often converges where Taylor series diverge
-  and can provide better rational approximations.
+  The Padé approximant often converges where Taylor series diverge and can provide better rational
+  approximations.
 
   Example:
     ;; [1/1] Padé for e^x = 1 + x + x²/2 + ...
@@ -804,10 +801,10 @@
     ; => converging infinite product"
   ([term-series] (multiplicative-sum-convergent-series term-series {}))
   ([term-series {::keys [converged-pred error-pred]
-                 :or    {converged-pred (fn [sum i val]
+                 :or    {converged-pred (fn [_sum i val]
                                           (and (not (zero? i))
                                             (m/roughly? val 1.0 1e-14)))
-                         error-pred     (fn [sum i val]
+                         error-pred     (fn [sum i _val]
                                           (or (> i 100000)
                                             (not (m/finite? sum))))}}]
    (loop [i 0
@@ -925,8 +922,7 @@
    (loop [i 0
           [val & t] term-series
           sum 0.0
-          carry 0.0
-          prev-sum 0.0]
+          carry 0.0]
      (cond
        ;; End of sequence
        (nil? val)
@@ -961,16 +957,16 @@
            ;; Neumaier summation
            (let [temp (+ sum val)]
              (if (>= (m/abs sum) (m/abs val))
-               (recur (inc i) t temp (+ carry (- sum temp) val) sum)
-               (recur (inc i) t temp (+ carry (- val temp) sum) sum)))
+               (recur (inc i) t temp (+ carry (- sum temp) val))
+               (recur (inc i) t temp (+ carry (- val temp) sum))))
            (if kahan?
              ;; Kahan summation
              (let [y (- val carry)
                    new-sum (+ y sum)
                    new-carry (- new-sum sum y)]
-               (recur (inc i) t new-sum new-carry sum))
+               (recur (inc i) t new-sum new-carry))
              ;; Naive summation
-             (recur (inc i) t (+ sum val) 0.0 sum))))))))
+             (recur (inc i) t (+ sum val) 0.0))))))))
 
 (s/fdef sum-with-diagnostics
   :args (s/cat :term-series ::term-series

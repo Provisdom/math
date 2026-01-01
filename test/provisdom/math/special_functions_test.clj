@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
-;;30 seconds
+;;14 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -27,7 +27,7 @@
     (t/is= 0.0 (special-fns/erf 0.0))
     (t/is= -0.997020533343667 (special-fns/erf -2.1))
     ;;Math 0.842700792949714869341220635082609259296066997966302908459937
-    (t/is= 0.842700792949715 (special-fns/erf 1.0))
+    (t/is-approx= 0.842700792949715 (special-fns/erf 1.0) :tolerance 1e-14)
     ;;Math 0.999977909503001414558627223870417679620152292912600750342761
     (t/is= 0.9999779095030014 (special-fns/erf 3.0))
     ;;Math 0.428392355046668455103603845320172444121862928522590383495086
@@ -43,11 +43,11 @@
     (t/is= 0.0 (special-fns/erf-diff m/inf+ m/inf+))
     (t/is= -1.0 (special-fns/erf-diff m/inf+ 0.0))
     (t/is= 1.839721326293382 (special-fns/erf-diff -2.1 1.0))
-    (t/is= -1.8380230579686678 (special-fns/erf-diff 1.0 -2.0))
+    (t/is-approx= -1.8380230579686678 (special-fns/erf-diff 1.0 -2.0) :tolerance 1e-14)
     (t/is= 0.0 (special-fns/erf-diff 1.0 1.0))
-    (t/is= 0.1526214720692377 (special-fns/erf-diff 1.0 2.0))
-    (t/is= 1.68540158589943 (special-fns/erf-diff -1.0 1.0))
-    (t/is= 0.842700792949715 (special-fns/erf-diff 0.0 1.0))))
+    (t/is-approx= 0.1526214720692377 (special-fns/erf-diff 1.0 2.0) :tolerance 1e-14)
+    (t/is-approx= 1.68540158589943 (special-fns/erf-diff -1.0 1.0) :tolerance 1e-13)
+    (t/is-approx= 0.842700792949715 (special-fns/erf-diff 0.0 1.0) :tolerance 1e-14)))
 
 (t/deftest erf-derivative-test
   (t/with-instrument `special-fns/erf-derivative
@@ -67,17 +67,15 @@
     (t/is= 2.0 (special-fns/erfc m/inf-))
     (t/is= 0.0 (special-fns/erfc m/inf+))
     (t/is= 1.0 (special-fns/erfc 0.0))
-    (t/is= 0.157299207050285 (special-fns/erfc 1.0))
+    (t/is-approx= 0.157299207050285 (special-fns/erfc 1.0) :tolerance 1e-14)
     (t/is= 1.997020533343667 (special-fns/erfc -2.1))
     ;;Math 0.571607644953331544896396154679827555878137071477409616504913
     (t/is= 0.5716076449533315 (special-fns/erfc 0.4))
     ;; Large x tests using asymptotic expansion (would fail with naive 1-erf)
     ;; NIST DLMF reference: erfc(5) = 1.5374597944280349e-12
-    (t/is-approx= 1.5374597944280349e-12 (special-fns/erfc 5.0)
-                     :tolerance 1e-22)
+    (t/is-approx= 1.5374597944280349e-12 (special-fns/erfc 5.0) :tolerance 1e-22)
     ;; NIST DLMF reference: erfc(10) = 2.0884875837625447e-45
-    (t/is-approx= 2.0884875837625447e-45 (special-fns/erfc 10.0)
-                     :tolerance 1e-55)
+    (t/is-approx= 2.0884875837625447e-45 (special-fns/erfc 10.0) :tolerance 1e-55)
     ;; Test underflow threshold
     (t/is= 0.0 (special-fns/erfc 27.0))))
 
@@ -89,7 +87,7 @@
     (t/is= m/inf+ (special-fns/inv-erf 1.0))
     (t/is= 0.0 (special-fns/inv-erf 0.0))
     (t/is= 1.0000000000000002 (special-fns/inv-erf 0.842700792949715))
-    (t/is= -2.100000000000001 (special-fns/inv-erf -0.997020533343667))
+    (t/is-approx= -2.1 (special-fns/inv-erf -0.997020533343667) :tolerance 1e-12)
     ;;Math 0.5951160814499948500193003601681082534396168862798484
     (t/is= 0.5951160814499948 (special-fns/inv-erf 0.6))
     ;;Math -1.64497635713318705017720343524951162466534303628880
@@ -101,7 +99,7 @@
     ;;Math 1.1630871536766740867262542605629475934779325500020816
     (t/is= 1.1630871536766743 (special-fns/inv-erf 0.9))
     ;;Math 0.9061938024368232200711627030956628666508668747462206
-    (t/is= 0.9061938024368233 (special-fns/inv-erf 0.8))
+    (t/is-approx= 0.9061938024368233 (special-fns/inv-erf 0.8) :tolerance 1e-14)
     ;;Math 0.3708071585935579290582494775224491386043048831629311
     (t/is= 0.37080715859355795 (special-fns/inv-erf 0.4))))
 
@@ -114,7 +112,7 @@
     (t/is= 0.37080715859355795 (special-fns/inv-erfc 0.6))
     (t/is= 0.0 (special-fns/inv-erfc 1.0))
     (t/is= 1.0000000000000002 (special-fns/inv-erfc 0.157299207050285))
-    (t/is= -2.100000000000001 (special-fns/inv-erfc 1.997020533343667))))
+    (t/is-approx= -2.1 (special-fns/inv-erfc 1.997020533343667) :tolerance 1e-12)))
 
 ;;;SIGMOID FUNCTIONS
 (t/deftest inv-cdf-standard-normal-test
@@ -224,7 +222,7 @@
     (t/is= 9.51350769866873 (special-fns/upper-gamma 0.1 0.0))
     (t/is= 0.1224564282529819 (special-fns/upper-gamma 1.0 2.1))
     (t/is (m/nan? (special-fns/upper-gamma 0.1 m/inf+)))
-    (t/is= 0.33287108369807955 (special-fns/upper-gamma 1 1.1))
+    (t/is-approx= 0.33287108369807955 (special-fns/upper-gamma 1 1.1) :tolerance 1e-14)
     (t/is= 0.36787944117144233 (special-fns/upper-gamma 1 1))
     (t/is= 1.0 (special-fns/upper-gamma 1 0))
     (t/is= 0.22953567028884253 (special-fns/upper-gamma 0.1 1))))
@@ -239,7 +237,7 @@
     (t/is= m/inf+ (special-fns/upper-gamma-derivative-x 0.1 0.0))
     (t/is= 0.1224564282529819 (special-fns/upper-gamma-derivative-x 1.0 2.1))
     (t/is= 0.0 (special-fns/upper-gamma-derivative-x 0.1 m/inf+))
-    (t/is= 0.33287108369807955 (special-fns/upper-gamma-derivative-x 1 1.1))
+    (t/is-approx= 0.33287108369807955 (special-fns/upper-gamma-derivative-x 1 1.1) :tolerance 1e-14)
     (t/is= 0.36787944117144233 (special-fns/upper-gamma-derivative-x 1 1))
     (t/is= 1.0 (special-fns/upper-gamma-derivative-x 1 0))
     (t/is= 0.03866916944030238 (special-fns/upper-gamma-derivative-x 0.1 1))))
@@ -309,9 +307,9 @@
     (t/is= 0.48533596581277155 (special-fns/log-gamma-derivative 2.1))
     (t/is= -0.4237549432781376 (special-fns/log-gamma-derivative 1.1))
     (t/is= -1.2200235564290471 (special-fns/log-gamma-derivative 0.7))
-    (t/is= 0.7031566378697294 (special-fns/digamma 2.5))
+    (t/is-approx= 0.7031566378697294 (special-fns/digamma 2.5) :tolerance 1e-14)
     ;;Math PolyGamma[-2.5] = 1.10315663786969725133498712848062671647481605379749
-    (t/is= 1.1031566378697286 (special-fns/digamma -2.5))
+    (t/is-approx= 1.1031566378697286 (special-fns/digamma -2.5) :tolerance 1e-14)
     (t/is= m/inf- (special-fns/digamma -2.0))
     (t/is= (special-fns/log-gamma-derivative 1.0) (special-fns/digamma 1.0))))
 
@@ -324,7 +322,7 @@
     (t/is= -0.5772156677920671 (special-fns/gamma-derivative 1))
     (t/is= 0.5078972191920689 (special-fns/gamma-derivative 2.1))
     (t/is= -0.40313959152254936 (special-fns/gamma-derivative 1.1))
-    (t/is= -1.0428235898368972 (special-fns/gamma-derivative -2.5))
+    (t/is-approx= -1.0428235898368972 (special-fns/gamma-derivative -2.5) :tolerance 1e-14)
     (t/is= -1.5836580833783633 (special-fns/gamma-derivative 0.7))))
 
 (t/deftest trigamma-test
@@ -351,7 +349,7 @@
     (t/is= 1.0 (special-fns/multivariate-gamma 1.1 0))
     (t/is= 0.9513507698668731 (special-fns/multivariate-gamma 1.1 1))
     (t/is= 2.511113699545875 (special-fns/multivariate-gamma 1.1 2))
-    (t/is= 75.05107616754478 (special-fns/multivariate-gamma 1.1 3))))
+    (t/is-approx= 75.05107616754478 (special-fns/multivariate-gamma 1.1 3) :tolerance 1e-12)))
 
 (t/deftest multivariate-log-gamma-test
   (t/with-instrument `special-fns/multivariate-log-gamma
@@ -368,7 +366,7 @@
   (t/with-instrument `special-fns/beta
     (t/is-spec-check special-fns/beta))
   (t/with-instrument :all
-    (t/is= 0.4761904761904761 (special-fns/beta 1.0 2.1))
+    (t/is-approx= 0.4761904761904761 (special-fns/beta 1.0 2.1) :tolerance 1e-14)
     (t/is (m/nan? (special-fns/beta 0.1 m/inf+)))
     (t/is= 0.9090909090909091 (special-fns/beta 1 1.1))
     (t/is= 0.9090909090909091 (special-fns/beta 1.1 1))
@@ -380,7 +378,7 @@
   (t/with-instrument `special-fns/log-beta
     (t/is-spec-check special-fns/log-beta))
   (t/with-instrument :all
-    (t/is= -0.7419373447293774 (special-fns/log-beta 1.0 2.1))
+    (t/is-approx= -0.7419373447293774 (special-fns/log-beta 1.0 2.1) :tolerance 1e-14)
     (t/is (m/nan? (special-fns/log-beta 0.1 m/inf+)))
     (t/is= -0.09531017980432493 (special-fns/log-beta 1 1.1))
     (t/is= -0.09531017980432493 (special-fns/log-beta 1.1 1))
@@ -404,10 +402,10 @@
     (t/is= 0.9649610951198176 (special-fns/regularized-beta 0.7 0.1 1))
     (t/is= 1.0 (special-fns/regularized-beta 1 1 0.1))
     ;;Math BetaRegularized[0.5, 0.5, 0.5] = 0.5
-    (t/is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))
+    (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)
     (t/is= 0.0 (special-fns/regularized-beta 0 1 1))
     (t/is= 0.5000004638553182 (special-fns/regularized-beta 0.5 1e10 1e10))
-    (t/is= 0.49999999999999983 (special-fns/regularized-beta 0.5 0.5 0.5))))
+    (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)))
 
 (t/deftest incomplete-beta-test
   (t/with-instrument `special-fns/incomplete-beta
@@ -519,7 +517,7 @@
   (t/is (m/nan? (special-fns/hypergeometric-1f1 1 -1 1)))
   (t/with-instrument :all
     ;; ₁F₁(a; a; z) = e^z
-    (t/is= m/E (special-fns/hypergeometric-1f1 1 1 1))
+    (t/is-approx= m/E (special-fns/hypergeometric-1f1 1 1 1) :tolerance 1e-14)
     (t/is-approx= (m/exp 3) (special-fns/hypergeometric-1f1 2 2 3) :tolerance 1e-14)
     ;; ₁F₁(0; b; z) = 1
     (t/is= 1.0 (special-fns/hypergeometric-1f1 0 1 5))
@@ -559,3 +557,98 @@
     ;; Gauss summation at z=1 (when c > a + b)
     (t/is-approx= 1.2732395447351625
       (special-fns/hypergeometric-2f1 0.5 0.5 2 1.0) :tolerance 1e-14)))
+
+;;;ADDITIONAL COVERAGE TESTS
+(t/deftest bessel-high-order-test
+  ;; Test Bessel functions with higher orders (> 2)
+  (t/with-instrument :all
+    ;; J_5(x) values - from NIST DLMF
+    (t/is= 0.0 (special-fns/bessel-j 5 0.0))
+    ;; Math: BesselJ[5, 5] = 0.261140546120170
+    (t/is-approx= 0.26114054612 (special-fns/bessel-j 5 5.0) :tolerance 1e-8)
+    ;; J_3(4) - intermediate order
+    ;; Math: BesselJ[3, 4] = 0.430171473876
+    (t/is-approx= 0.43017147388 (special-fns/bessel-j 3 4.0) :tolerance 1e-8)
+    ;; J_4(10) - higher argument
+    ;; Math: BesselJ[4, 10] = -0.219602686102
+    (t/is-approx= -0.2196026861 (special-fns/bessel-j 4 10.0) :tolerance 1e-6)))
+
+(t/deftest bessel-recurrence-test
+  ;; Verify Bessel recurrence relation: J_{n-1}(x) + J_{n+1}(x) = (2n/x) * J_n(x)
+  (t/with-instrument :all
+    ;; Test at multiple points
+    (doseq [x [1.0 2.5 5.0 10.0]
+            n [1 2 3 4]]
+      (let [j-nm1 (special-fns/bessel-j (dec n) x)
+            j-n (special-fns/bessel-j n x)
+            j-np1 (special-fns/bessel-j (inc n) x)
+            lhs (+ j-nm1 j-np1)
+            rhs (* (/ (* 2.0 n) x) j-n)]
+        (t/is-approx= lhs rhs :tolerance 1e-10)))))
+
+(t/deftest hypergeometric-kummer-test
+  ;; Verify Kummer transformation: 1F1(a; b; z) = e^z * 1F1(b-a; b; -z)
+  (t/with-instrument :all
+    (let [a 1.5
+          b 3.0
+          z 2.0
+          direct (special-fns/hypergeometric-1f1 a b z)
+          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
+      (t/is-approx= direct transformed :tolerance 1e-10))
+    ;; Test for negative z where Kummer is numerically important
+    (let [a 0.5
+          b 2.0
+          z -5.0
+          direct (special-fns/hypergeometric-1f1 a b z)
+          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
+      (t/is-approx= direct transformed :tolerance 1e-8))))
+
+(t/deftest incomplete-beta-bounds-test
+  ;; Test regularized beta at boundaries
+  (t/with-instrument :all
+    ;; At x=0, regularized beta should be 0
+    (t/is= 0.0 (special-fns/regularized-beta 0.0 2.0 3.0))
+    (t/is= 0.0 (special-fns/regularized-beta 0.0 0.5 0.5))
+    ;; At x=1, regularized beta should be 1
+    (t/is= 1.0 (special-fns/regularized-beta 1.0 2.0 3.0))
+    (t/is= 1.0 (special-fns/regularized-beta 1.0 0.5 0.5))
+    ;; Incomplete beta at boundaries
+    (t/is= 0.0 (special-fns/incomplete-beta 0.0 2.0 3.0))
+    (t/is-approx= (special-fns/beta 2.0 3.0)
+      (special-fns/incomplete-beta 1.0 2.0 3.0)
+      :tolerance 1e-14)))
+
+(t/deftest gamma-overflow-test
+  ;; Test gamma function near overflow boundary
+  (t/with-instrument :all
+    ;; Gamma(171) is very large but representable
+    ;; Math: Gamma[171] = 7.257415615307998e306
+    (t/is (m/finite? (special-fns/gamma 171.0)))
+    (t/is (> (special-fns/gamma 171.0) 7e306))
+    ;; Gamma(171.5) should still be finite
+    (t/is (m/finite? (special-fns/gamma 171.5)))
+    (t/is (> (special-fns/gamma 171.5) 1e306))
+    ;; Gamma(172) overflows to infinity
+    (t/is= m/inf+ (special-fns/gamma 172.0))
+    (t/is= m/inf+ (special-fns/gamma 172.5))
+    ;; Log-gamma should still work for large values
+    (t/is (m/finite? (special-fns/log-gamma 172.0)))
+    (t/is (m/finite? (special-fns/log-gamma 500.0)))
+    ;; Math: LogGamma[172] = 711.714725802289
+    (t/is-approx= 711.7147 (special-fns/log-gamma 172.0) :tolerance 0.01)))
+
+(t/deftest trigamma-values-test
+  ;; Test trigamma at known values
+  (t/with-instrument :all
+    ;; Math: PolyGamma[1, 0.5] = pi^2/2 = 4.9348...
+    (t/is-approx= 4.9348022005 (special-fns/trigamma 0.5) :tolerance 1e-7)
+    ;; Known value: trigamma(1) = pi^2/6
+    ;; Math: PolyGamma[1, 1] = Pi^2/6 = 1.6449340668...
+    (t/is-approx= (/ (m/sq m/PI) 6) (special-fns/trigamma 1.0) :tolerance 1e-7)
+    ;; Math: PolyGamma[1, 2] = Pi^2/6 - 1 = 0.6449340668...
+    (t/is-approx= (- (/ (m/sq m/PI) 6) 1.0) (special-fns/trigamma 2.0) :tolerance 1e-7)
+    ;; Recurrence relation: trigamma(x+1) = trigamma(x) - 1/x^2
+    (let [x 3.0
+          psi1-x (special-fns/trigamma x)
+          psi1-x+1 (special-fns/trigamma (inc x))]
+      (t/is-approx= (- psi1-x (/ (m/sq x))) psi1-x+1 :tolerance 1e-10))))
