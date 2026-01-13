@@ -420,9 +420,15 @@
         (swap! gens rest)
         rng))))
 
+;; Use fn? instead of fspec - Orchestra would call the function to validate,
+;; which consumes state from the lazy RNG sequence
+(s/def ::rng-gen-fn
+  (s/with-gen fn?
+    #(gen/return (fn [] (rng 42)))))
+
 (s/fdef rng-gen
   :args (s/cat :rng ::rng)
-  :ret fn?)
+  :ret ::rng-gen-fn)
 
 (defn- ensure-rng-gen!
   "Lazily initializes *rng-gen* on first use if nil.
@@ -463,7 +469,7 @@
 
 (s/fdef set-seed!
   :args (s/cat :seed ::seed)
-  :ret fn?)
+  :ret ::rng-gen-fn)
 
 (defn rnd!
   "Generates a random double using the bound RNG.
@@ -608,7 +614,7 @@
 
 (s/fdef set-seed!$
   :args (s/cat)
-  :ret fn?)
+  :ret ::rng-gen-fn)
 
 ;;;MACROS
 (defmacro bind-seed
@@ -995,8 +1001,12 @@
   (let [rngs (split-n rng n)]
     (into [] (pmap sample-fn rngs))))
 
+(s/def ::sample-fn
+  (s/with-gen fn?
+    #(gen/return (fn [rng] (rnd rng)))))
+
 (s/fdef parallel-sample
-  :args (s/cat :rng ::rng :sample-fn fn? :n ::n)
+  :args (s/cat :rng ::rng :sample-fn ::sample-fn :n ::n)
   :ret vector?)
 
 (defn parallel-fold
@@ -1015,10 +1025,20 @@
         samples (pmap sample-fn rngs)]
     (reduce reduce-fn (combine-fn) samples)))
 
+;; Generic HOF function specs - use fn? because these accept ANY function
+;; Generators provide sample functions for spec-checking
+(s/def ::combine-fn
+  (s/with-gen fn?
+    #(gen/return (fn [] []))))
+
+(s/def ::reduce-fn
+  (s/with-gen fn?
+    #(gen/return (fn [acc sample] (conj (if (vector? acc) acc []) sample)))))
+
 (s/fdef parallel-fold
   :args (s/cat :rng ::rng
           :n ::n
-          :combine-fn fn?
-          :reduce-fn fn?
-          :sample-fn fn?)
+          :combine-fn ::combine-fn
+          :reduce-fn ::reduce-fn
+          :sample-fn ::sample-fn)
   :ret any?)

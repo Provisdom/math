@@ -5,7 +5,7 @@
     [provisdom.test.core :as t])
   (:import (java.util UUID)))
 
-;;19 seconds
+;;21 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -338,15 +338,17 @@
 
 ;;;PARALLEL UTILITIES
 (t/deftest parallel-sample-test
-  ;; spec-check skipped: fn? has no generator
   (t/with-instrument `random/parallel-sample
+    (t/is-spec-check random/parallel-sample))
+  (t/with-instrument :all
     (let [samples (random/parallel-sample (random/rng 3) #(random/rnd-int % 100) 5)]
       (t/is= 5 (count samples))
       (t/is (every? #(and (int? %) (<= 0 % 99)) samples)))))
 
 (t/deftest parallel-fold-test
-  ;; spec-check skipped: fn? has no generator
   (t/with-instrument `random/parallel-fold
+    (t/is-spec-check random/parallel-fold))
+  (t/with-instrument :all
     (let [result (random/parallel-fold (random/rng 3) 100 (constantly 0) + #(random/rnd-int % 100))]
       (t/is (int? result))
       (t/is (pos? result)))))

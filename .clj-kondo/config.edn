@@ -1,2 +1,2 @@
 {:config-paths ["imports/provisdom/test"]
- :linters {:unresolved-var {:exclude [provisdom.test.core/deftest]}}}
+ :linters      {:non-arg-vec-return-type-hint {:level :off} :unresolved-var {:exclude [provisdom.test.core/deftest]}}}
