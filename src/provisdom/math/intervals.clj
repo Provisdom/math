@@ -51,6 +51,7 @@
    `(interval-spec ~lower ~upper :compare-op > ~@opts)))
 
 (s/def ::strict-interval (strict-interval-spec ::m/number))
+(s/def ::strict-finite-interval (strict-interval-spec ::m/finite))
 (s/def ::interval (interval-spec ::m/number))
 (s/def ::num-interval (interval-spec ::m/num))
 (s/def ::pos-interval (interval-spec ::m/pos))
