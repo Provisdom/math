@@ -192,7 +192,7 @@
   :ret string?)
 
 (defn format-as-float
-  "Formats `finite` into float form with a number of decimal places."
+  "Formats `finite` into fixed-point notation with the specified number of `decimal-places`."
   [finite decimal-places]
   (format (str "%." decimal-places "f") (double finite)))
 
@@ -202,7 +202,10 @@
   :ret string?)
 
 (defn format-as-exponential
-  "Formats `finite` into exponential form with a number of digits."
+  "Formats `finite` into scientific notation (exponential form).
+
+  Options:
+    `::digits` - Number of significant digits. If not specified, trims trailing zeros."
   ([finite] (format-as-exponential finite {}))
   ([finite {::keys [digits]}]
    (if digits
@@ -223,15 +226,15 @@
 (defn format-as-engineering
   "Formats `finite` into engineering notation (exponent divisible by 3).
 
-  Engineering notation uses exponents that are multiples of 3, making it
-  easier to read with SI prefixes (kilo, mega, giga, etc.).
+  Engineering notation uses exponents that are multiples of 3, making it easier to read with SI
+  prefixes (kilo, mega, giga, etc.).
 
   Options:
-    ::digits - Number of significant digits (default 3)
+    `::digits` - Number of significant digits (default `3`)
 
   Examples:
-    (format-as-engineering 12345)              ;=> \"12.345E+3\"
-    (format-as-engineering 0.00123)            ;=> \"1.23E-3\"
+    (format-as-engineering 12345)                ;=> \"12.345E+3\"
+    (format-as-engineering 0.00123)              ;=> \"1.23E-3\"
     (format-as-engineering 1234567 {::digits 4}) ;=> \"1.235E+6\""
   ([finite] (format-as-engineering finite {}))
   ([finite {::keys [digits] :or {digits 3}}]
@@ -255,18 +258,17 @@
   "Formats a number intelligently within length constraints.
 
   Automatically chooses between fixed-point and scientific notation to produce the most readable
-  result within `max-length` characters.
-  Handles special values (NaN, Infinity) appropriately.
+  result within `max-length` characters. Handles special values (`##NaN`, `##Inf`) appropriately.
 
   Options:
-    ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits in scientific notation
+    `::max-decimal-places` - Limit decimal precision
+    `::max-digits` - Limit significant digits in scientific notation
 
   Examples:
-    (format-number 1234.5678 8)           ;=> \"1234.568\"
-    (format-number 0.000123 8)           ;=> \"1.23E-4\"
-    (format-number 1234567890 8)         ;=> \"1.235E+9\"
-    (format-number ##NaN 5)              ;=> \"NaN\""
+    (format-number 1234.5678 8)   ;=> \"1234.568\"
+    (format-number 0.000123 8)    ;=> \"1.23E-4\"
+    (format-number 1234567890 8)  ;=> \"1.235E+9\"
+    (format-number ##NaN 5)       ;=> \"NaN\""
   ([number max-length] (format-number number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits]}]
    (let [number (double number)]
@@ -310,17 +312,17 @@
 (defn format-number-extended
   "Extended number formatting with additional options.
 
-  Builds on [[format-number]] with support for thousand separators,
-  engineering notation, rounding mode control, and localization.
+  Builds on [[format-number]] with support for thousand separators, engineering notation, rounding
+  mode control, and localization.
 
   Options:
-    ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits in scientific notation
-    ::engineering? - Use engineering notation (exponents divisible by 3)
-    ::thousands-sep? - Add thousand separators (commas)
-    ::rounding-mode - One of :ceiling, :floor, :half-down, :half-even, :half-up
-    ::decimal-symbol - Custom decimal separator character
-    ::grouping-symbol - Custom grouping separator character
+    `::max-decimal-places` - Limit decimal precision
+    `::max-digits` - Limit significant digits in scientific notation
+    `::engineering?` - Use engineering notation (exponents divisible by 3)
+    `::thousands-sep?` - Add thousand separators (commas)
+    `::rounding-mode` - One of `:ceiling`, `:floor`, `:half-down`, `:half-even`, `:half-up`
+    `::decimal-symbol` - Custom decimal separator character
+    `::grouping-symbol` - Custom grouping separator character
 
   Examples:
     (format-number-extended 1234567 10 {::thousands-sep? true})
@@ -385,13 +387,13 @@
   "Converts decimal to percentage string.
 
   Options:
-    ::precision - Decimal places (default 0)
+    `::precision` - Decimal places (default `0`)
 
   Examples:
-    (format-percent 0.15)                    ;=> \"15%\"
-    (format-percent 0.156 {::precision 1})   ;=> \"15.6%\"
-    (format-percent 1.5)                     ;=> \"150%\"
-    (format-percent ##NaN)                   ;=> \"NaN\""
+    (format-percent 0.15)                   ;=> \"15%\"
+    (format-percent 0.156 {::precision 1})  ;=> \"15.6%\"
+    (format-percent 1.5)                    ;=> \"150%\"
+    (format-percent ##NaN)                  ;=> \"NaN\""
   ([decimal] (format-percent decimal {}))
   ([decimal {::keys [precision] :or {precision 0}}]
    (cond
@@ -410,17 +412,13 @@
   "Converts numbers to shorthand notation with K, M, B, T suffixes.
 
   Formats large numbers using shorthand suffixes (K=thousands, M=millions, B=billions, T=trillions)
-  within the specified `max-length` character limit.
-  Automatically falls back to standard formatting for very large numbers or when shorthand doesn't
-  provide space savings.
-
-  Parameters:
-    max-length - Maximum number of characters in the output string
+  within the specified `max-length` character limit. Automatically falls back to standard formatting
+  for very large numbers or when shorthand doesn't provide space savings.
 
   Options:
-    ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits in scientific notation
-    ::money? - Add $ prefix for currency formatting
+    `::max-decimal-places` - Limit decimal precision
+    `::max-digits` - Limit significant digits in scientific notation
+    `::money?` - Add `$` prefix for currency formatting
 
   Examples:
     (unparse-shorthand 1500 5)                    ;=> \"1.5K\"
@@ -483,9 +481,9 @@
 (defn parse-shorthand
   "Parses shorthand number strings back to numeric values.
 
-  Converts formatted strings with suffixes (K, M, B, T) and money symbols ($)
-  back to their numeric equivalents. Also handles scientific notation (e.g., '1.23E+4').
-  Returns an anomaly if parsing fails.
+  Converts formatted strings with suffixes (K, M, B, T) and money symbols (`$`) back to their
+  numeric equivalents. Also handles scientific notation (e.g., `\"1.23E+4\"`). Returns an anomaly if
+  parsing fails.
 
   Handles special values and all formats produced by [[unparse-shorthand]].
 
@@ -496,7 +494,7 @@
     (parse-shorthand \"1.23E+4\") ;=> 12300.0
     (parse-shorthand \"NaN\")     ;=> ##NaN
     (parse-shorthand \"42\")      ;=> 42
-    (parse-shorthand \"invalid\") ;=> {::anomalies/category ::anomalies/incorrect ...}"
+    (parse-shorthand \"invalid\") ;=> `{::anomalies/category ::anomalies/incorrect ...}`"
   [s]
   (if (str/blank? s)
     {::anomalies/category ::anomalies/incorrect

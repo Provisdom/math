@@ -215,10 +215,10 @@
   A vector is a Clojure vector containing only numbers.
   
   Examples:
-    (vector? [1 2 3]) ;=> true
-    (vector? []) ;=> true
-    (vector? [1 \"a\"]) ;=> false
-    (vector? '(1 2 3)) ;=> false (list, not vector)"
+    (vector? [1 2 3]) => true
+    (vector? []) => true
+    (vector? [1 \"a\"]) => false
+    (vector? '(1 2 3)) => false (list, not vector)"
   [x]
   (and (m/numbers? x) (clojure.core/vector? x)))
 
@@ -232,9 +232,9 @@
   All elements must be numbers in the range [0, 1].
   
   Examples:
-    (vector-prob? [0.3 0.7]) ;=> true
-    (vector-prob? [0.0 1.0 0.5]) ;=> true
-    (vector-prob? [0.3 1.2]) ;=> false (1.2 > 1)"
+    (vector-prob? [0.3 0.7]) => true
+    (vector-prob? [0.0 1.0 0.5]) => true
+    (vector-prob? [0.3 1.2]) => false (1.2 > 1)"
   [x]
   (and (vector? x)
        (every? m/prob? x)))
@@ -249,9 +249,9 @@
   All elements must be numbers in the range (0, 1), excluding 0 and 1.
   
   Examples:
-    (vector-open-prob? [0.3 0.7]) ;=> true
-    (vector-open-prob? [0.0 0.5]) ;=> false (contains 0)
-    (vector-open-prob? [0.3 1.0]) ;=> false (contains 1)"
+    (vector-open-prob? [0.3 0.7]) => true
+    (vector-open-prob? [0.0 0.5]) => false (contains 0)
+    (vector-open-prob? [0.3 1.0]) => false (contains 1)"
   [x]
   (and (vector? x)
        (every? m/open-prob? x)))
@@ -267,8 +267,8 @@
   specified accuracy tolerance `accu` of the range [0, 1].
   
   Examples:
-    (vector-roughly-prob? [0.3 1.01] 0.02) ;=> true (1.01 is close to 1)
-    (vector-roughly-prob? [0.3 1.1] 0.02) ;=> false (1.1 too far from 1)"
+    (vector-roughly-prob? [0.3 1.01] 0.02) => true (1.01 is close to 1)
+    (vector-roughly-prob? [0.3 1.1] 0.02) => false (1.1 too far from 1)"
   [x accu]
   (and (vector? x)
        (every? (fn [number]
@@ -287,9 +287,9 @@
   specified tolerance `sum-accu`.
   
   Examples:
-    (probs? [0.3 0.7] 1e-8) ;=> true
-    (probs? [0.5 0.5] 1e-8) ;=> true
-    (probs? [0.3 0.6] 1e-8) ;=> false (sums to 0.9)"
+    (probs? [0.3 0.7] 1e-8) => true
+    (probs? [0.5 0.5] 1e-8) => true
+    (probs? [0.3 0.6] 1e-8) => false (sums to 0.9)"
   [x sum-accu]
   (and (vector-prob? x)
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
@@ -306,8 +306,8 @@
   tolerance `sum-accu`.
   
   Examples:
-    (open-probs? [0.3 0.7] 1e-8) ;=> true
-    (open-probs? [0.0 1.0] 1e-8) ;=> false (contains boundary values)"
+    (open-probs? [0.3 0.7] 1e-8) => true
+    (open-probs? [0.0 1.0] 1e-8) => false (contains boundary values)"
   [x sum-accu]
   (and (vector-open-prob? x)
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
@@ -324,8 +324,8 @@
   and the sum must be approximately 1.0 within `sum-accu` tolerance.
   
   Examples:
-    (roughly-probs? [0.31 0.69] 0.01 1e-8) ;=> true
-    (roughly-probs? [-0.01 1.01] 0.02 1e-8) ;=> true (values close to [0,1])"
+    (roughly-probs? [0.31 0.69] 0.01 1e-8) => true
+    (roughly-probs? [-0.01 1.01] 0.02 1e-8) => true (values close to [0,1])"
   [x accu sum-accu]
   (and (vector-roughly-prob? x accu)
        (m/roughly? 1.0 (kahan-sum x) sum-accu)))
@@ -344,9 +344,9 @@
   Returns nil if any non-numeric values are encountered.
   
   Examples:
-    (to-vector [[1 2] [3 4]]) ;=> [1 2 3 4]
-    (to-vector 5) ;=> [5]
-    (to-vector [1 \"a\"]) ;=> nil (contains non-number)"
+    (to-vector [[1 2] [3 4]]) => [1 2 3 4]
+    (to-vector 5) => [5]
+    (to-vector [1 \"a\"]) => nil (contains non-number)"
   [x]
   (let [ret (cond (number? x) [x]
                   (sequential? x) (let [flat (flatten x)]
@@ -364,8 +364,8 @@
   The function receives the index (0-based) and should return the value for that position.
   
   Examples:
-    (compute-vector 3 identity) ;=> [0 1 2]
-    (compute-vector 4 #(* % %)) ;=> [0 1 4 9]"
+    (compute-vector 3 identity) => [0 1 2]
+    (compute-vector 4 #(* % %)) => [0 1 4 9]"
   [size index->number]
   (mapv index->number (range 0 size)))
 
@@ -380,8 +380,8 @@
   function.
   
   Examples:
-    (compute-coll 3 str) ;=> (\"0\" \"1\" \"2\")
-    (compute-coll 2 #(* % 10)) ;=> (0 10)"
+    (compute-coll 3 str) => (\"0\" \"1\" \"2\")
+    (compute-coll 2 #(* % 10)) => (0 10)"
   [size index->any]
   (map index->any (range 0 size)))
 
@@ -398,7 +398,7 @@
   0 and 1.
   
   Examples:
-    (rnd-vector! 3) ;=> [0.123 0.456 0.789] (example values)"
+    (rnd-vector! 3) => [0.123 0.456 0.789] (example values)"
   [size]
   (vec (take size (random/rnd-lazy!))))
 
@@ -413,8 +413,8 @@
   override earlier ones for the same index.
   
   Examples:
-    (sparse->vector [[0 5] [2 7]] [1 1 1]) ;=> [5 1 7]
-    (sparse->vector [[1 10]] [0 0 0]) ;=> [0 10 0]"
+    (sparse->vector [[0 5] [2 7]] [1 1 1]) => [5 1 7]
+    (sparse->vector [[1 10]] [0 0 0]) => [0 10 0]"
   [sparse v]
   (let [s (count v)]
     (vec (reduce (fn [new-v [i x]]
@@ -435,8 +435,8 @@
   Searches through the vector and returns all positions where the exact number is found.
   
   Examples:
-    (indexes-of 2 [1 2 3 2]) ;=> [1 3]
-    (indexes-of 5 [1 2 3]) ;=> []"
+    (indexes-of 2 [1 2 3 2]) => [1 3]
+    (indexes-of 5 [1 2 3]) => []"
   [number v]
   (vec (keep-indexed (fn [i n]
                        (when (= n number) i))
@@ -453,8 +453,8 @@
   result.
   
   Examples:
-    (filter-kv (fn [i v] (even? i)) [10 20 30 40]) ;=> [10 30]
-    (filter-kv (fn [i v] (> v i)) [0 0 3 1]) ;=> [3]"
+    (filter-kv (fn [i v] (even? i)) [10 20 30 40]) => [10 30]
+    (filter-kv (fn [i v] (> v i)) [0 0 3 1]) => [3]"
   [index+number->bool v]
   (persistent!
     (reduce-kv (fn [tot index number]
@@ -476,8 +476,8 @@
   first value for which the predicate is truthy, or nil if none found.
   
   Examples:
-    (some-kv (fn [i v] (when (> v 5) v)) [1 3 7 2]) ;=> 7
-    (some-kv (fn [i v] (when (> v 10) v)) [1 3 7]) ;=> nil"
+    (some-kv (fn [i v] (when (> v 5) v)) [1 3 7 2]) => 7
+    (some-kv (fn [i v] (when (> v 10) v)) [1 3 7]) => nil"
   [index+number->bool v]
   (loop [i 0
          s v]
@@ -500,8 +500,8 @@
   All elements at and after the index are shifted right.
   
   Examples:
-    (insertv [1 2 3] 1 99) ;=> [1 99 2 3]
-    (insertv [1 2] 0 99) ;=> [99 1 2]"
+    (insertv [1 2 3] 1 99) => [1 99 2 3]
+    (insertv [1 2] 0 99) => [99 1 2]"
   [v index number]
   (when (<= index (count v))
     (let [f (subvec v 0 index)
@@ -521,8 +521,8 @@
   All elements after the index are shifted left.
   
   Examples:
-    (removev [1 2 3] 1) ;=> [1 3]
-    (removev [1 2 3] 0) ;=> [2 3]"
+    (removev [1 2 3] 1) => [1 3]
+    (removev [1 2 3] 0) => [2 3]"
   [v index]
   (if (<= (inc index) (count v))
     (let [f (subvec v 0 index)
@@ -541,8 +541,8 @@
   precedence over `coll1`. Gaps are filled with nil.
   
   Examples:
-    (concat-by-index [1 2 3] [8 9] 1) ;=> (1 8 9)
-    (concat-by-index [1 2] [8 9] 3) ;=> (1 2 nil 8 9)"
+    (concat-by-index [1 2 3] [8 9] 1) => (1 8 9)
+    (concat-by-index [1 2] [8 9] 3) => (1 2 nil 8 9)"
   [coll1 coll2 i]
   (lazy-seq
     (cond
@@ -572,8 +572,8 @@
   Preserves the original collection type.
   
   Examples:
-    (replace-nan 0 [1 ##NaN 3]) ;=> [1 0 3]
-    (replace-nan -1 [##NaN ##NaN]) ;=> [-1 -1]"
+    (replace-nan 0 [1 ##NaN 3]) => [1 0 3]
+    (replace-nan -1 [##NaN ##NaN]) => [-1 -1]"
   [replacement-number numbers]
   (if (vector? numbers)
     (reduce (fn [v i]
@@ -598,8 +598,8 @@
   accuracy tolerance.
   
   Examples:
-    (round-roughly-vector-prob [1.01 -0.01 0.5] 0.02) ;=> [1.0 0.0 0.5]
-    (round-roughly-vector-prob [0.99 0.01] 0.02) ;=> [0.99 0.01]"
+    (round-roughly-vector-prob [1.01 -0.01 0.5] 0.02) => [1.0 0.0 0.5]
+    (round-roughly-vector-prob [0.99 0.01] 0.02) => [0.99 0.01]"
   [v accu]
   (mapv (fn [p]
           (if (m/roughly-prob? p accu)
@@ -620,7 +620,7 @@
   Uses the Fisher-Yates shuffle algorithm for uniform random permutation.
   
   Examples:
-    (rnd-shuffle-vector! [1 2 3 4]) ;=> [3 1 4 2] (example result)"
+    (rnd-shuffle-vector! [1 2 3 4]) => [3 1 4 2] (example result)"
   [v]
   (loop [v' (transient v)
          n (count v')]
@@ -647,8 +647,8 @@
   providing better precision than regular addition for large sequences.
   
   Examples:
-    (kahan-sum [0.1 0.1 0.1]) ;=> 0.30000000000000004 (more accurate than +)
-    (kahan-sum [1e16 1 -1e16]) ;=> 1.0 (preserves small values)"
+    (kahan-sum [0.1 0.1 0.1]) => 0.30000000000000004 (more accurate than +)
+    (kahan-sum [1e16 1 -1e16]) => 1.0 (preserves small values)"
   [numbers]
   (loop [[h & t] numbers
          sum 0.0
@@ -668,14 +668,14 @@
 (defn softmax
   "Computes the softmax function for a vector of numbers.
 
-   softmax(x)_i = exp(x_i) / ∑_j exp(x_j)
+   softmax(x)_i = exp(x_i) / sum_j(exp(x_j))
 
    Uses the max-subtraction trick for numerical stability to avoid overflow.
    Returns a vector of probabilities that sum to 1.
 
    Examples:
-     (softmax [1.0 2.0 3.0]) ;=> [0.09003... 0.24472... 0.66524...]
-     (softmax [0.0 0.0]) ;=> [0.5 0.5]"
+     (softmax [1.0 2.0 3.0]) => [0.09003... 0.24472... 0.66524...]
+     (softmax [0.0 0.0]) => [0.5 0.5]"
   [numbers]
   (let [max-val (double (apply max numbers))
         exp-vals (mapv #(m/exp (- (double %) max-val)) numbers)
@@ -689,17 +689,17 @@
 (defn dot-product
   "Computes the dot product (inner product) of vectors `v1` and `v2`.
   
-  Calculates ∑(`v1`[i] * `v2`[i]). Geometrically, this equals |`v1`| |`v2`| cos(θ)
-  where θ is the angle between the vectors.
+  Calculates sum(`v1`[i] * `v2`[i]). Geometrically, this equals |`v1`| |`v2`| cos(theta) where theta
+  is the angle between the vectors.
   
   Properties:
-  - Commutative: v1 · v2 = v2 · v1
+  - Commutative: v1 . v2 = v2 . v1
   - Zero when vectors are orthogonal
-  - Positive when angle < 90°, negative when angle > 90°
+  - Positive when angle < 90 degrees, negative when angle > 90 degrees
   
   Examples:
-    (dot-product [1 2 3] [4 5 6]) ;=> 32 (1*4 + 2*5 + 3*6)
-    (dot-product [1 0] [0 1]) ;=> 0 (orthogonal vectors)"
+    (dot-product [1 2 3] [4 5 6]) => 32 (1*4 + 2*5 + 3*6)
+    (dot-product [1 0] [0 1]) => 0 (orthogonal vectors)"
   [v1 v2]
   (apply + (map (fn [a b]
                   (* (double a) b))
@@ -716,15 +716,15 @@
 (defn cross-product
   "Computes the cross product of vectors `v1` and `v2`.
   
-  For 3D vectors: returns a vector perpendicular to both inputs with
-  magnitude |`v1`| |`v2`| sin(θ). Direction follows right-hand rule.
+  For 3D vectors: returns a vector perpendicular to both inputs with magnitude |`v1`| |`v2`|
+  sin(theta). Direction follows right-hand rule.
   
   For 2D vectors: returns the z-component of the 3D cross product,
   which is the signed area of the parallelogram formed by the vectors.
   
   Examples:
-    (cross-product [1 0 0] [0 1 0]) ;=> [0 0 1] (right-hand rule)
-    (cross-product [3 4] [1 2]) ;=> 2 (3*2 - 4*1)"
+    (cross-product [1 0 0] [0 1 0]) => [0 0 1] (right-hand rule)
+    (cross-product [3 4] [1 2]) => 2 (3*2 - 4*1)"
   [v1 v2]
   (let [v10 (double (get v1 0))
         v20 (double (get v2 0))
@@ -756,13 +756,13 @@
   "Computes the vector projection of `v1` onto `v2`.
   
   Returns the component of `v1` that lies in the direction of `v2`.
-  The result is parallel to `v2` with length |`v1`| cos(θ).
+  The result is parallel to `v2` with length |`v1`| cos(theta).
   
   Formula: proj_`v2`(`v1`) = ((`v1` · `v2`) / |`v2`|²) * `v2`
   
   Examples:
-    (projection [3 4] [1 0]) ;=> [3.0 0.0] (projection onto x-axis)
-    (projection [1 1] [2 0]) ;=> [1.0 0.0] (projection onto direction [2 0])"
+    (projection [3 4] [1 0]) => [3.0 0.0] (projection onto x-axis)
+    (projection [1 1] [2 0]) => [1.0 0.0] (projection onto direction [2 0])"
   [v1 v2]
   (let [s (m/div (dot-product v1 v2) (apply + (map m/sq v2)))]
     (mapv #(* s %) v2)))
@@ -780,9 +780,9 @@
   Uses the specified accuracy tolerance for floating-point comparison.
 
   Examples:
-    (orthogonal? [1 0] [0 1] 1e-8) ;=> true
-    (orthogonal? [1 1] [1 -1] 1e-8) ;=> true
-    (orthogonal? [1 0] [1 1] 1e-8) ;=> false"
+    (orthogonal? [1 0] [0 1] 1e-8) => true
+    (orthogonal? [1 1] [1 -1] 1e-8) => true
+    (orthogonal? [1 0] [1 1] 1e-8) => false"
   [v1 v2 accu]
   (m/roughly? 0.0 (dot-product v1 v2) accu))
 
@@ -796,14 +796,14 @@
   "Returns the angle in radians between vectors `v1` and `v2`.
 
   Computes the angle using the dot product formula:
-  θ = acos((v1 · v2) / (|v1| |v2|))
+  theta = acos((v1 . v2) / (|v1| |v2|))
 
-  The result is always in the range [0, π].
+  The result is always in the range [0, pi].
 
   Examples:
-    (angle-between [1 0] [0 1]) ;=> 1.5707963267948966 (π/2)
-    (angle-between [1 0] [1 0]) ;=> 0.0
-    (angle-between [1 0] [-1 0]) ;=> 3.141592653589793 (π)"
+    (angle-between [1 0] [0 1]) => 1.5707963267948966 (pi/2)
+    (angle-between [1 0] [1 0]) => 0.0
+    (angle-between [1 0] [-1 0]) => 3.141592653589793 (pi)"
   [v1 v2]
   (let [dot (dot-product v1 v2)
         n1 (tensor/norm v1)
@@ -824,9 +824,9 @@
   Treats vectors as points in n-dimensional space.
 
   Examples:
-    (distance [0 0] [3 4]) ;=> 5.0
-    (distance [1 2 3] [1 2 3]) ;=> 0.0
-    (distance [0 0] [1 1]) ;=> 1.4142135623730951"
+    (distance [0 0] [3 4]) => 5.0
+    (distance [1 2 3] [1 2 3]) => 0.0
+    (distance [0 0] [1 1]) => 1.4142135623730951"
   [v1 v2]
   (tensor/norm (tensor/subtract v1 v2)))
 

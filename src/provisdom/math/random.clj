@@ -390,10 +390,10 @@
 
 (defn rnd-long-lazy
   "Creates a lazy sequence of random longs from independent RNGs.
-  
+
   Parameters:
-    rng - Initial random number generator
-  
+    `rng` - initial random number generator
+
   Returns a lazy sequence of random longs."
   [rng]
   (map rand-long (rng-lazy rng)))
@@ -406,11 +406,11 @@
 (defn rng-gen
   "Creates a stateful RNG generator function from an initial RNG.
 
-  The returned function maintains an internal sequence of split RNGs
-  to ensure each call produces an independent generator.
+  The returned function maintains an internal sequence of split RNGs to ensure each call produces
+  an independent generator.
 
   Parameters:
-    rng - Initial random number generator
+    `rng` - initial random number generator
 
   Returns a function that produces fresh RNG instances on each call."
   [rng]
@@ -457,13 +457,13 @@
 (defn set-seed!
   "Sets the global RNG generator to use the specified seed.
 
-  This mutates the global *rng-gen* var, affecting all subsequent calls to bound RNG
-  functions (rnd!, rnd-long!, etc.).
+  This mutates the global `*rng-gen*` var, affecting all subsequent calls to bound RNG functions
+  ([[rnd!]], [[rnd-long!]], etc.).
 
   Parameters:
-    seed - Long value to seed the generator
+    `seed` - long value to seed the generator
 
-  Side effects: Modifies global *rng-gen* state."
+  Side effects: Modifies global `*rng-gen*` state."
   [seed]
   (alter-var-root (var *rng-gen*) (constantly (rng-gen (rng seed)))))
 
@@ -473,12 +473,12 @@
 
 (defn rnd!
   "Generates a random double using the bound RNG.
-  
+
   Parameters:
-    interval - Optional [lower upper] bounds (default: [0, 1])
-  
-  Returns a uniformly distributed double within the interval.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+    `interval` - optional `[lower upper]` bounds (default: `[0, 1]`)
+
+  Returns a uniformly distributed double within the interval. Requires the bound RNG context
+  ([[bind-seed]] or [[set-seed!]])."
   ([] (rnd (rng!)))
   ([[lower upper]] (rnd (rng!) [lower upper])))
 
@@ -488,12 +488,12 @@
 
 (defn rnd-long!
   "Generates a random long using the bound RNG.
-  
+
   Parameters:
-    interval - Optional [lower upper] bounds (default: all possible longs)
-  
-  Returns a uniformly distributed long within the interval.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+    `interval` - optional `[lower upper]` bounds (default: all possible longs)
+
+  Returns a uniformly distributed long within the interval. Requires the bound RNG context
+  ([[bind-seed]] or [[set-seed!]])."
   ([] (rnd-long (rng!)))
   ([[lower upper]] (rnd-long (rng!) [lower upper])))
 
@@ -503,9 +503,9 @@
 
 (defn rnd-bool!
   "Generates a random boolean using the bound RNG.
-  
-  Returns true or false with equal probability.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+
+  Returns `true` or `false` with equal probability. Requires the bound RNG context ([[bind-seed]]
+  or [[set-seed!]])."
   []
   (rnd-bool (rng!)))
 
@@ -515,9 +515,9 @@
 
 (defn rnd-normal!
   "Generates a normally distributed value using the bound RNG.
-  
-  Returns a value from standard normal distribution (mean=0, std=1).
-  Requires the bound RNG context (bind-seed or set-seed!)."
+
+  Returns a value from standard normal distribution (`mean=0`, `std=1`). Requires the bound RNG
+  context ([[bind-seed]] or [[set-seed!]])."
   []
   (rnd-normal (rng!)))
 
@@ -528,8 +528,8 @@
 (defn rnd-uuid!
   "Generates a random UUID (version 4) using the bound RNG.
 
-  Returns a random java.util.UUID.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+  Returns a random `java.util.UUID`. Requires the bound RNG context ([[bind-seed]] or
+  [[set-seed!]])."
   []
   (rnd-uuid (rng!)))
 
@@ -540,8 +540,8 @@
 (defn rng-lazy!
   "Creates a lazy sequence of independent RNGs using the bound RNG.
 
-  Returns a lazy sequence of RNG instances, each split from the previous.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+  Returns a lazy sequence of RNG instances, each split from the previous. Requires the bound RNG
+  context ([[bind-seed]] or [[set-seed!]])."
   []
   (rng-lazy (rng!)))
 
@@ -551,9 +551,9 @@
 
 (defn rnd-lazy!
   "Creates a lazy sequence of random doubles using the bound RNG.
-  
-  Returns a lazy sequence of doubles in [0, 1).
-  Requires the bound RNG context (bind-seed or set-seed!)."
+
+  Returns a lazy sequence of doubles in `[0, 1)`. Requires the bound RNG context ([[bind-seed]] or
+  [[set-seed!]])."
   []
   (rnd-lazy (rng!)))
 
@@ -563,9 +563,9 @@
 
 (defn rnd-long-lazy!
   "Creates a lazy sequence of random longs using the bound RNG.
-  
-  Returns a lazy sequence of random longs.
-  Requires the bound RNG context (bind-seed or set-seed!)."
+
+  Returns a lazy sequence of random longs. Requires the bound RNG context ([[bind-seed]] or
+  [[set-seed!]])."
   []
   (rnd-long-lazy (rng!)))
 
@@ -576,10 +576,10 @@
 ;;;USE CLOCK
 (defn rng$
   "Creates a new RNG seeded from the current system time.
-  
-  Uses the current clock time to generate a unique RNG instance.
-  Useful for non-reproducible random generation.
-  
+
+  Uses the current clock time to generate a unique RNG instance. Useful for non-reproducible
+  random generation.
+
   Returns a new RNG instance."
   []
   (next-rng$))
@@ -590,10 +590,9 @@
 
 (defn seed$
   "Generates a random seed from the current system time.
-  
-  Creates a time-based RNG and extracts a random long value
-  suitable for seeding other generators.
-  
+
+  Creates a time-based RNG and extracts a random long value suitable for seeding other generators.
+
   Returns a random long seed value."
   []
   (rnd-long (rng$)))
@@ -605,10 +604,10 @@
 (defn set-seed!$
   "Sets the global RNG generator using the current system time.
 
-  Equivalent to calling set-seed! with a time-based seed.
-  Provides non-reproducible random behavior.
+  Equivalent to calling [[set-seed!]] with a time-based seed. Provides non-reproducible random
+  behavior.
 
-  Side effects: Modifies global *rng-gen* state."
+  Side effects: Modifies global `*rng-gen*` state."
   []
   (set-seed! (System/currentTimeMillis)))
 
@@ -618,9 +617,9 @@
 
 ;;;MACROS
 (defmacro bind-seed
-  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a
-  lazy sequence, ensure the seq is realized within the scope of the binding
-  otherwise you will get inconsistent results."
+  "Sets the seed for the RNGs to `seed` for the code in `body`. If used with a lazy sequence,
+  ensure the seq is realized within the scope of the binding otherwise you will get inconsistent
+  results."
   [seed & body]
   `(binding [*rng-gen* (rng-gen (rng ~seed))]
      ~@body))
@@ -639,7 +638,7 @@
   Parameters:
     `rng` - Random number generator
 
-  Returns the algorithm string (e.g., \"L64X128MixRandom\") or :secure for SecureRandom."
+  Returns the algorithm string (e.g., `\"L64X128MixRandom\"`) or `:secure` for `SecureRandom`."
   [rng]
   (cond
     (instance? Java17SplittableRandom rng) (.-algorithm ^Java17SplittableRandom rng)
@@ -656,7 +655,7 @@
   Parameters:
     `rng` - Random number generator
 
-  Returns the seed (long) or nil for SecureRandom (which has no seed)."
+  Returns the seed (long) or `nil` for `SecureRandom` (which has no seed)."
   [rng]
   (cond
     (instance? Java17SplittableRandom rng) (.-seed ^Java17SplittableRandom rng)
@@ -675,7 +674,7 @@
     `rng` - Random number generator
     `n` - Number of doubles to generate
 
-  Returns a vector of doubles in [0, 1)."
+  Returns a vector of doubles in `[0, 1)`."
   [rng n]
   (mapv rand-double (take n (rng-lazy rng))))
 
@@ -687,9 +686,9 @@
   "Generates a vector of `n` random doubles using the bound RNG.
 
   Parameters:
-    `n` - Number of doubles to generate
+    `n` - number of doubles to generate
 
-  Returns a vector of doubles in [0, 1)."
+  Returns a vector of doubles in `[0, 1)`."
   [n]
   (rnd-doubles (rng!) n))
 
@@ -701,8 +700,8 @@
   "Generates a vector of `n` random longs from `rng`.
 
   Parameters:
-    `rng` - Random number generator
-    `n` - Number of longs to generate
+    `rng` - random number generator
+    `n` - number of longs to generate
 
   Returns a vector of random longs."
   [rng n]
@@ -716,7 +715,7 @@
   "Generates a vector of `n` random longs using the bound RNG.
 
   Parameters:
-    `n` - Number of longs to generate
+    `n` - number of longs to generate
 
   Returns a vector of random longs."
   [n]
@@ -730,10 +729,10 @@
   "Generates a vector of `n` standard normal values from `rng`.
 
   Parameters:
-    `rng` - Random number generator
-    `n` - Number of normal values to generate
+    `rng` - random number generator
+    `n` - number of normal values to generate
 
-  Returns a vector of standard normal values (mean=0, std=1)."
+  Returns a vector of standard normal values (`mean=0`, `std=1`)."
   [rng n]
   (mapv (comp random-normal rand-double) (take n (rng-lazy rng))))
 
@@ -745,9 +744,9 @@
   "Generates a vector of `n` standard normal values using the bound RNG.
 
   Parameters:
-    `n` - Number of normal values to generate
+    `n` - number of normal values to generate
 
-  Returns a vector of standard normal values (mean=0, std=1)."
+  Returns a vector of standard normal values (`mean=0`, `std=1`)."
   [n]
   (rnd-normals (rng!) n))
 
@@ -757,13 +756,13 @@
 
 ;;;CONVENIENCE FUNCTIONS
 (defn rnd-int
-  "Generates a random integer from `rng` in [0, upper).
+  "Generates a random integer from `rng` in `[0, upper)`.
 
   Parameters:
-    `rng` - Random number generator
-    `upper` - Exclusive upper bound (positive integer)
+    `rng` - random number generator
+    `upper` - exclusive upper bound (positive integer)
 
-  Returns a random integer in [0, upper)."
+  Returns a random integer in `[0, upper)`."
   [rng upper]
   (int (m/floor (* upper (rand-double rng)))))
 
@@ -772,12 +771,12 @@
   :ret ::m/int-non-)
 
 (defn rnd-int!
-  "Generates a random integer using the bound RNG in [0, upper).
+  "Generates a random integer using the bound RNG in `[0, upper)`.
 
   Parameters:
-    `upper` - Exclusive upper bound (positive integer)
+    `upper` - exclusive upper bound (positive integer)
 
-  Returns a random integer in [0, upper)."
+  Returns a random integer in `[0, upper)`."
   [upper]
   (rnd-int (rng!) upper))
 
@@ -789,11 +788,11 @@
   "Generates a Gaussian (normal) distributed value from `rng`.
 
   Parameters:
-    `rng` - Random number generator
-    `mean` - Mean of the distribution
-    `std` - Standard deviation of the distribution
+    `rng` - random number generator
+    `mean` - mean of the distribution
+    `std` - standard deviation of the distribution
 
-  Returns a normally distributed value with given mean and std."
+  Returns a normally distributed value with given `mean` and `std`."
   [rng mean std]
   (+ mean (* std (rnd-normal rng))))
 
@@ -805,10 +804,10 @@
   "Generates a Gaussian (normal) distributed value using the bound RNG.
 
   Parameters:
-    `mean` - Mean of the distribution
-    `std` - Standard deviation of the distribution
+    `mean` - mean of the distribution
+    `std` - standard deviation of the distribution
 
-  Returns a normally distributed value with given mean and std."
+  Returns a normally distributed value with given `mean` and `std`."
   [mean std]
   (rnd-gaussian (rng!) mean std))
 
@@ -821,8 +820,8 @@
   "Picks a random element from `coll` using `rng`.
 
   Parameters:
-    `rng` - Random number generator
-    `coll` - Collection to pick from (must be non-empty)
+    `rng` - random number generator
+    `coll` - collection to pick from (must be non-empty)
 
   Returns a random element from the collection."
   [rng coll]
@@ -839,7 +838,7 @@
   "Picks a random element from `coll` using the bound RNG.
 
   Parameters:
-    `coll` - Collection to pick from (must be non-empty)
+    `coll` - collection to pick from (must be non-empty)
 
   Returns a random element from the collection."
   [coll]
@@ -853,8 +852,8 @@
   "Returns a randomly shuffled vector of `coll` using Fisher-Yates algorithm.
 
   Parameters:
-    `rng` - Random number generator
-    `coll` - Collection to shuffle
+    `rng` - random number generator
+    `coll` - collection to shuffle
 
   Returns a new vector with elements in random order."
   [rng coll]
@@ -880,7 +879,7 @@
   "Returns a randomly shuffled vector of `coll` using the bound RNG.
 
   Parameters:
-    `coll` - Collection to shuffle
+    `coll` - collection to shuffle
 
   Returns a new vector with elements in random order."
   [coll]
@@ -894,11 +893,11 @@
   "Samples `n` elements from `coll` without replacement using `rng`.
 
   Parameters:
-    `rng` - Random number generator
-    `n` - Number of elements to sample
-    `coll` - Collection to sample from
+    `rng` - random number generator
+    `n` - number of elements to sample
+    `coll` - collection to sample from
 
-  Returns a vector of `n` randomly selected elements (or fewer if coll is smaller)."
+  Returns a vector of `n` randomly selected elements (or fewer if `coll` is smaller)."
   [rng n coll]
   (let [v (vec coll)
         k (min n (count v))]
@@ -912,10 +911,10 @@
   "Samples `n` elements from `coll` without replacement using the bound RNG.
 
   Parameters:
-    `n` - Number of elements to sample
-    `coll` - Collection to sample from
+    `n` - number of elements to sample
+    `coll` - collection to sample from
 
-  Returns a vector of `n` randomly selected elements (or fewer if coll is smaller)."
+  Returns a vector of `n` randomly selected elements (or fewer if `coll` is smaller)."
   [n coll]
   (rnd-sample (rng!) n coll))
 
@@ -927,9 +926,9 @@
   "Picks a random element from `coll` with probability proportional to `weights`.
 
   Parameters:
-    `rng` - Random number generator
-    `weights` - Sequence of non-negative weights (same length as coll)
-    `coll` - Collection to pick from
+    `rng` - random number generator
+    `weights` - sequence of non-negative weights (same length as `coll`)
+    `coll` - collection to pick from
 
   Returns a randomly selected element, with selection probability proportional to weight."
   [rng weights coll]
@@ -966,8 +965,8 @@
   "Picks a random element from `coll` with probability proportional to `weights`.
 
   Parameters:
-    `weights` - Sequence of non-negative weights (same length as coll)
-    `coll` - Collection to pick from
+    `weights` - sequence of non-negative weights (same length as `coll`)
+    `coll` - collection to pick from
 
   Returns a randomly selected element, with selection probability proportional to weight."
   [weights coll]
@@ -992,9 +991,9 @@
   "Samples `n` values in parallel using split RNGs.
 
   Parameters:
-    `rng` - Random number generator
-    `sample-fn` - Function that takes an RNG and returns a sample
-    `n` - Number of samples to generate
+    `rng` - random number generator
+    `sample-fn` - function that takes an RNG and returns a sample
+    `n` - number of samples to generate
 
   Returns a vector of `n` samples generated using independent RNGs."
   [rng sample-fn n]
@@ -1013,11 +1012,11 @@
   "Parallel fold over `n` random samples using split RNGs.
 
   Parameters:
-    `rng` - Random number generator
-    `n` - Number of samples
-    `combine-fn` - Associative combining function (called with 0 args for identity)
-    `reduce-fn` - Reducing function (acc, sample) -> acc
-    `sample-fn` - Function that takes an RNG and returns a sample
+    `rng` - random number generator
+    `n` - number of samples
+    `combine-fn` - associative combining function (called with 0 args for identity)
+    `reduce-fn` - reducing function `(acc, sample) -> acc`
+    `sample-fn` - function that takes an RNG and returns a sample
 
   Returns the folded result."
   [rng n combine-fn reduce-fn sample-fn]

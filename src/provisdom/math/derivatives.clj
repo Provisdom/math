@@ -249,23 +249,23 @@
 
 (defn derivative-fn
   "Creates a numerical derivative function using finite differences.
-  
-  Takes a function `number->number` and returns its derivative function.
-  Uses finite difference methods with pre-computed coefficients for high accuracy.
-  
+
+  Takes a function `number->number` and returns its derivative function. Uses finite difference
+  methods with pre-computed coefficients for high accuracy.
+
   Options:
-    ::derivative - Order (0-8, default 1). Order 0 returns original function.
-    ::h - Step size (default m/sgl-close for 1st deriv, smaller for higher orders).
-           Smaller isn't always better due to floating-point precision limits.
-    ::type - Difference scheme: :central (default), :forward, or :backward
-    ::accuracy - Points used: 2,4,6,8 for central; 1-6 for forward/backward
-  
+    `::derivative` - Order (0-8, default `1`). Order 0 returns original function.
+    `::h` - Step size (default `m/sgl-close` for 1st deriv, smaller for higher orders). Smaller
+            isn't always better due to floating-point precision limits.
+    `::type` - Difference scheme: `:central` (default), `:forward`, or `:backward`
+    `::accuracy` - Points used: 2, 4, 6, 8 for central; 1-6 for forward/backward
+
   Returns function that computes nth derivative at given point.
-  
+
   Examples:
-    (def f (derivative-fn #(* % % %)))  ; derivative of x³  
-    (f 2.0)  ;=> ~12.0 (3x² at x=2)
-    
+    (def f (derivative-fn #(* % % %)))  ; derivative of x^3
+    (f 2.0)  ;=> ~12.0 (3x^2 at x=2)
+
     (def f'' (derivative-fn sin {::derivative 2}))  ; second derivative of sin
     (f'' 0.0)  ;=> ~0.0 (-sin(0))"
   ([number->number] (derivative-fn number->number {}))
@@ -334,22 +334,22 @@
 
 (defn gradient-fn
   "Creates a numerical gradient function for multivariable functions.
-  
-  Takes a function `v->number` (vector → scalar) and returns its gradient function
-  (vector → vector). The gradient points in the direction of steepest ascent.
-  
+
+  Takes a function `v->number` (vector -> scalar) and returns its gradient function (vector ->
+  vector). The gradient points in the direction of steepest ascent.
+
   Options:
-    ::h - Step size (default: m/sgl-close). Balance between accuracy and numerical stability.
-    ::type - Difference scheme: :central (default), :forward, or :backward  
-    ::accuracy - Number of points: 2 (default), 4, 6, 8 for central; 1-6 for others
-  
-  Returns a function that computes ∇f at any point.
-  
+    `::h` - Step size (default `m/sgl-close`). Balance between accuracy and numerical stability.
+    `::type` - Difference scheme: `:central` (default), `:forward`, or `:backward`
+    `::accuracy` - Number of points: `2` (default), 4, 6, 8 for central; 1-6 for others
+
+  Returns a function that computes the gradient at any point.
+
   Examples:
     (def grad-f (gradient-fn (fn [[x y]] (+ (* x x) (* y y)))))
-    (grad-f [2.0 3.0])  ;=> [4.0 6.0] (gradient of x²+y² at (2,3))
-    
-    (def grad-g (gradient-fn (fn [[x y]] (* x y))))  
+    (grad-f [2.0 3.0])  ;=> [4.0 6.0] (gradient of x^2+y^2 at (2,3))
+
+    (def grad-g (gradient-fn (fn [[x y]] (* x y))))
     (grad-g [1.0 2.0])  ;=> [2.0 1.0] (gradient of xy at (1,2))"
   ([v->number] (gradient-fn v->number {}))
   ([v->number {::keys [h type accuracy]
@@ -388,22 +388,22 @@
 
 (defn jacobian-fn
   "Creates a numerical Jacobian function for vector-valued functions.
-  
-  Takes a function `v->v` (vector → vector) and returns its Jacobian function
-  (vector → matrix). The Jacobian matrix contains all first-order partial derivatives.
-  
-  For function f: ℝⁿ → ℝᵐ, the Jacobian J is an m×n matrix where J[i,j] = ∂fᵢ/∂xⱼ.
-  Each row represents the gradient of one output component.
-  
+
+  Takes a function `v->v` (vector -> vector) and returns its Jacobian function (vector -> matrix).
+  The Jacobian matrix contains all first-order partial derivatives.
+
+  For function f: R^n -> R^m, the Jacobian J is an m x n matrix where J[i,j] = df_i/dx_j. Each row
+  represents the gradient of one output component.
+
   Options:
-    ::h - Step size (default: m/sgl-close)
-    ::type - Difference scheme: :central (default), :forward, or :backward
-    ::accuracy - Number of points: 2 (default), 4, 6, 8 for central; 1-6 for others
-  
+    `::h` - Step size (default `m/sgl-close`)
+    `::type` - Difference scheme: `:central` (default), `:forward`, or `:backward`
+    `::accuracy` - Number of points: `2` (default), 4, 6, 8 for central; 1-6 for others
+
   Examples:
     (def jac-f (jacobian-fn (fn [[x y]] [(* x y) (+ x y)])))
-    (jac-f [2.0 3.0])  ;=> [[3.0 2.0]    ; ∂(xy)/∂x, ∂(xy)/∂y
-                       ;     [1.0 1.0]]   ; ∂(x+y)/∂x, ∂(x+y)/∂y"
+    (jac-f [2.0 3.0])  ;=> [[3.0 2.0]    ; d(xy)/dx, d(xy)/dy
+                       ;    [1.0 1.0]]    ; d(x+y)/dx, d(x+y)/dy"
   ([v->v] (jacobian-fn v->v {}))
   ([v->v {::keys [h type accuracy]
           :or    {h        m/sgl-close
@@ -473,22 +473,23 @@
 
 (defn hessian-fn
   "Creates a numerical Hessian function for scalar multivariable functions.
-  
-  Takes a function `v->number` (vector → scalar) and returns its Hessian function
-  (vector → symmetric matrix). The Hessian contains all second-order partial derivatives.
-  
-  For function f: ℝⁿ → ℝ, the Hessian H is an n×n matrix where H[i,j] = ∂²f/(∂xᵢ∂xⱼ).
-  Used for optimization, analyzing critical points, and Newton's method.
-  
+
+  Takes a function `v->number` (vector -> scalar) and returns its Hessian function (vector ->
+  symmetric matrix). The Hessian contains all second-order partial derivatives.
+
+  For function f: R^n -> R, the Hessian H is an n x n matrix where H[i,j] = d^2f/(dx_i dx_j). Used
+  for optimization, analyzing critical points, and Newton's method.
+
   Options:
-    ::h - Step size (default: m/sgl-close * 0.1, since this involves second derivatives)
-    ::type - Method: :joint-central (default, most accurate), :central, :forward, :backward
-    ::accuracy - 2 (default, only option for :joint-central); 2,4,6,8 for central; 1-6 for others
-  
+    `::h` - Step size (default `m/sgl-close * 0.1`, since this involves second derivatives)
+    `::type` - Method: `:joint-central` (default, most accurate), `:central`, `:forward`, `:backward`
+    `::accuracy` - `2` (default, only option for `:joint-central`); 2, 4, 6, 8 for central; 1-6 for
+                   others
+
   Examples:
-    (def hess-f (hessian-fn (fn [[x y]] (+ (* x x y) (* y y y)))))  ; f(x,y) = x²y + y³
-    (hess-f [1.0 2.0])  ;=> [[4.0 2.0]    ; ∂²f/∂x², ∂²f/∂x∂y
-                        ;     [2.0 12.0]]  ; ∂²f/∂y∂x, ∂²f/∂y²"
+    (def hess-f (hessian-fn (fn [[x y]] (+ (* x x y) (* y y y)))))  ; f(x,y) = x^2*y + y^3
+    (hess-f [1.0 2.0])  ;=> [[4.0 2.0]    ; d^2f/dx^2, d^2f/dxdy
+                        ;    [2.0 12.0]]   ; d^2f/dydx, d^2f/dy^2"
   ([v->number] (hessian-fn v->number {}))
   ([v->number {::keys [h type accuracy]
                :or    {h        (* m/sgl-close 0.1)
@@ -544,6 +545,13 @@
   :ret ::v->symmetric-m)
 
 (defn partial-derivative-x-of-fxy
+  "Creates function computing the partial derivative with respect to `x` of a bivariate function.
+
+  Takes a function `fxy` of two arguments `(x, y)` and returns a function that computes df/dx at any
+  point. Uses [[derivative-fn]] internally.
+
+  Options:
+    `::h` - Step size (default `m/sgl-close`)"
   ([fxy] (partial-derivative-x-of-fxy fxy {}))
   ([fxy {::keys [h] :or {h m/sgl-close}}]
    (fn [x y]
@@ -559,6 +567,13 @@
   :ret ::fxy)
 
 (defn partial-derivative-y-of-fxy
+  "Creates function computing the partial derivative with respect to `y` of a bivariate function.
+
+  Takes a function `fxy` of two arguments `(x, y)` and returns a function that computes df/dy at any
+  point. Uses [[derivative-fn]] internally.
+
+  Options:
+    `::h` - Step size (default `m/sgl-close`)"
   ([fxy] (partial-derivative-y-of-fxy fxy {}))
   ([fxy {::keys [h] :or {h m/sgl-close}}]
    (fn [x y]
@@ -574,6 +589,13 @@
   :ret ::fxy)
 
 (defn second-partial-derivative-xx-of-fxy
+  "Creates function computing d^2f/dx^2 for a bivariate function.
+
+  Takes a function `fxy` of two arguments `(x, y)` and returns a function that computes the second
+  partial derivative with respect to `x` at any point.
+
+  Options:
+    `::h` - Step size (default `m/sgl-close * 0.1`)"
   ([fxy] (second-partial-derivative-xx-of-fxy fxy {}))
   ([fxy {::keys [h] :or {h (* m/sgl-close 0.1)}}]
    (fn [x y]
@@ -589,6 +611,13 @@
   :ret ::fxy)
 
 (defn second-partial-derivative-yy-of-fxy
+  "Creates function computing d^2f/dy^2 for a bivariate function.
+
+  Takes a function `fxy` of two arguments `(x, y)` and returns a function that computes the second
+  partial derivative with respect to `y` at any point.
+
+  Options:
+    `::h` - Step size (default `m/sgl-close * 0.1`)"
   ([fxy] (second-partial-derivative-yy-of-fxy fxy {}))
   ([fxy {::keys [h] :or {h (* m/sgl-close 0.1)}}]
    (fn [x y]
@@ -604,6 +633,13 @@
   :ret ::fxy)
 
 (defn second-partial-derivative-xy-of-fxy
+  "Creates function computing the mixed partial derivative d^2f/dxdy for a bivariate function.
+
+  Takes a function `fxy` of two arguments `(x, y)` and returns a function that computes the mixed
+  second partial derivative at any point. Uses joint central differences for accuracy.
+
+  Options:
+    `::h` - Step size (default `m/sgl-close * 0.1`)"
   ([fxy] (second-partial-derivative-xy-of-fxy fxy {}))
   ([fxy {::keys [h] :or {h (* m/sgl-close 0.1)}}]
    (fn [x y]

@@ -59,12 +59,12 @@
 
 (defn power-series-fn
   "Returns a function that evaluates a power series at a given point.
-  
-  Takes a sequence of coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function that
-  computes the power series Σ(aₙ × xⁿ) for a given x.
-  
+
+  Takes a sequence of coefficients `term-series` `[a0 a1 a2 ...]` and returns a function that
+  computes the power series `sum(an * x^n)` for a given `x`.
+
   Example:
-    ((power-series-fn [1 2 3]) 2) ; => [1.0 4.0 12.0] (coeffs: 1×2⁰, 2×2¹, 3×2²)"
+    `((power-series-fn [1 2 3]) 2)` => `[1.0 4.0 12.0]` (coeffs: `1*2^0`, `2*2^1`, `3*2^2`)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (m/pow x n)))
@@ -76,12 +76,12 @@
 
 (defn power-series-derivative-fn
   "Returns a function that evaluates the derivative of a power series.
-  
-  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
-  derivative: Σ(n × aₙ × xⁿ⁻¹).
-  
+
+  Takes coefficients `term-series` `[a0 a1 a2 ...]` and returns a function computing the
+  derivative: `sum(n * an * x^(n-1))`.
+
   Example:
-    ((power-series-derivative-fn [1 2 3]) 2) ; => [0.0 4.0 24.0] (derivatives)"
+    `((power-series-derivative-fn [1 2 3]) 2)` => `[0.0 4.0 24.0]` (derivatives)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an (double n) (m/pow x (dec n))))
@@ -93,12 +93,12 @@
 
 (defn power-series-integral-fn
   "Returns a function that evaluates the indefinite integral of a power series.
-  
-  Takes coefficients `term-series` [a₀ a₁ a₂ ...] and returns a function computing the
-  integral: Σ(aₙ × xⁿ⁺¹ / (n+1)).
-  
+
+  Takes coefficients `term-series` `[a0 a1 a2 ...]` and returns a function computing the
+  integral: `sum(an * x^(n+1) / (n+1))`.
+
   Example:
-    ((power-series-integral-fn [1 2 3]) 2) ; => [2.0 4.0 8.0] (integrals)"
+    `((power-series-integral-fn [1 2 3]) 2)` => `[2.0 4.0 8.0]` (integrals)"
   [term-series]
   (fn [x] (map-indexed (fn [n an]
                          (* an
@@ -112,14 +112,14 @@
 
 (defn continued-fraction
   "Converts sequence `term-series` to its continued fraction representation.
-  
-  Given coefficients [a₀ a₁ a₂ ...], computes the continued fraction:
-  a₀ + 1/(a₁ + 1/(a₂ + 1/(a₃ + ...)))
-  
+
+  Given coefficients `[a0 a1 a2 ...]`, computes the continued fraction:
+  `a0 + 1/(a1 + 1/(a2 + 1/(a3 + ...)))`
+
   Returns a lazy sequence of partial convergents.
-  
+
   Example:
-    (continued-fraction [1.0 3.0 6.0 8.0]) ; => [1.0 -0.25 0.01 ...]"
+    `(continued-fraction [1.0 3.0 6.0 8.0])` => `[1.0 -0.25 0.01 ...]`"
   [term-series]
   (if (empty? term-series)
     '()
@@ -139,14 +139,14 @@
 
 (defn generalized-continued-fraction
   "Computes a generalized continued fraction from two coefficient sequences.
-  
-  Given sequences `a-term-series` [a₀ a₁ a₂ ...] and `b-term-series` [b₀ b₁ b₂ ...], computes:
-  a₀ + b₀/(a₁ + b₁/(a₂ + b₂/(a₃ + ...)))
-  
+
+  Given sequences `a-term-series` `[a0 a1 a2 ...]` and `b-term-series` `[b0 b1 b2 ...]`, computes:
+  `a0 + b0/(a1 + b1/(a2 + b2/(a3 + ...)))`
+
   Returns a lazy sequence of partial convergents.
-  
+
   Example:
-    (generalized-continued-fraction [1 3 6 8] [2 3 2 6]) ; => convergent series"
+    `(generalized-continued-fraction [1 3 6 8] [2 3 2 6])` => convergent series"
   [a-term-series b-term-series]
   (if (empty? a-term-series)
     '()
@@ -169,15 +169,15 @@
 
 (defn multiplicative-continued-fraction
   "Computes continued fraction for `term-series` using multiplicative convergence algorithm.
-  
-  More numerically stable than the standard algorithm in some cases.
-  Uses the relative accuracy threshold to avoid division by zero.
-  
+
+  More numerically stable than the standard algorithm in some cases. Uses the relative accuracy
+  threshold to avoid division by zero.
+
   Options:
-    ::rel-accu - Relative accuracy threshold (default 1e-50)
-  
+    `::rel-accu` - relative accuracy threshold (default `1e-50`)
+
   Example:
-    (multiplicative-continued-fraction [1.0 3.0 6.0 8.0]) ; => stable convergents"
+    `(multiplicative-continued-fraction [1.0 3.0 6.0 8.0])` => stable convergents"
   ([term-series] (multiplicative-continued-fraction term-series {}))
   ([term-series {::keys [rel-accu] :or {rel-accu 1e-50}}]
    (if (empty? term-series)
@@ -206,16 +206,16 @@
 (defn multiplicative-generalized-continued-fraction
   "Computes generalized continued fraction for `a-term-series` and `b-term-series` using
   multiplicative algorithm.
-  
-  More numerically stable than standard algorithm, especially useful for
-  special functions. Based on Didonato and Morris (1992) Algorithm 708.
-  
+
+  More numerically stable than standard algorithm, especially useful for special functions. Based
+  on Didonato and Morris (1992) Algorithm 708.
+
   Options:
-    ::rel-accu - Relative accuracy threshold (default 1e-50)
-  
+    `::rel-accu` - relative accuracy threshold (default `1e-50`)
+
   Example:
-    (multiplicative-generalized-continued-fraction [1 3 6 8] [2 3 2 6])
-    ; => numerically stable convergents"
+    `(multiplicative-generalized-continued-fraction [1 3 6 8] [2 3 2 6])`
+    => numerically stable convergents"
   ([a-term-series b-term-series]
    (multiplicative-generalized-continued-fraction
      a-term-series b-term-series {}))
@@ -249,16 +249,15 @@
 (defn aitken-accelerate
   "Applies Aitken's delta-squared process to accelerate convergence.
 
-  Given a sequence of partial sums `partial-sums`, returns a new sequence with faster convergence.
-  Particularly effective for linearly convergent sequences.
+  Given a sequence of `partial-sums`, returns a new sequence with faster convergence. Particularly
+  effective for linearly convergent sequences.
 
-  The formula is: s'ₙ = sₙ - (sₙ₊₁ - sₙ)² / (sₙ₊₂ - 2sₙ₊₁ + sₙ)
+  The formula is: `s'n = sn - (s(n+1) - sn)^2 / (s(n+2) - 2*s(n+1) + sn)`
 
   Returns a lazy sequence of accelerated values (2 fewer than input).
 
   Example:
-    (aitken-accelerate [1.0 0.5 0.75 0.625 0.6875])
-    ; => faster convergence to ln(2)"
+    `(aitken-accelerate [1.0 0.5 0.75 0.625 0.6875])` => faster convergence to `ln(2)`"
   [partial-sums]
   (letfn [(f [[s0 s1 s2 & rest]]
             (when s2
@@ -279,19 +278,19 @@
 (defn wynn-epsilon
   "Applies Wynn's epsilon algorithm for series acceleration.
 
-  One of the most powerful general-purpose acceleration methods.
-  Transforms a sequence of partial sums into a faster-converging sequence.
-  Particularly effective for many types of slowly converging series.
+  One of the most powerful general-purpose acceleration methods. Transforms a sequence of partial
+  sums into a faster-converging sequence. Particularly effective for many types of slowly
+  converging series.
 
-  Takes `partial-sums` and returns a lazy sequence of accelerated values.
-  Each output value uses progressively more input terms.
+  Takes `partial-sums` and returns a lazy sequence of accelerated values. Each output value uses
+  progressively more input terms.
 
   Options:
-    ::max-iter - Maximum iterations (default 50)
+    `::max-iter` - maximum iterations (default `50`)
 
   Example:
-    (wynn-epsilon (reductions + (map #(/ (m/pow -1 %) (inc %)) (range))))
-    ; => rapidly converging sequence approaching ln(2)"
+    `(wynn-epsilon (reductions + (map #(/ (m/pow -1 %) (inc %)) (range))))`
+    => rapidly converging sequence approaching `ln(2)`"
   ([partial-sums] (wynn-epsilon partial-sums {}))
   ([partial-sums {::keys [max-iter] :or {max-iter 50}}]
    (letfn [(epsilon-step [eps-table sn n]
@@ -332,17 +331,17 @@
 (defn euler-transform
   "Applies Euler transformation to accelerate alternating series.
 
-  Transforms an alternating series into one with better convergence.
-  Input is the original series `terms` (not partial sums).
+  Transforms an alternating series into one with better convergence. Input is the original series
+  `terms` (not partial sums).
 
-  For alternating series Σ(-1)ⁿaₙ, this computes the Euler transform which can dramatically improve
-  convergence for slowly converging alternating series.
+  For alternating series `sum((-1)^n * an)`, this computes the Euler transform which can
+  dramatically improve convergence for slowly converging alternating series.
 
   Returns a lazy sequence of transformed terms that can be summed.
 
   Example:
-    (reduce + (take 20 (euler-transform (map #(/ 1.0 (inc %)) (range)))))
-    ; => approximates ln(2) faster than naive summation"
+    `(reduce + (take 20 (euler-transform (map #(/ 1.0 (inc %)) (range)))))`
+    => approximates `ln(2)` faster than naive summation"
   [terms]
   (letfn [(binomial-row [row]
             (vec (concat [1] (map + row (rest row)) [1])))
@@ -373,15 +372,14 @@
   Given a sequence of approximations `approxs` computed at different step sizes (assumed to be
   halved each time), extrapolates to the limit value.
 
-  The `order` parameter specifies the order of the error term being eliminated (default 2, suitable
-  for trapezoidal rule errors).
+  The `::order` option specifies the order of the error term being eliminated (default `2`,
+  suitable for trapezoidal rule errors).
 
   Returns a sequence of progressively refined estimates.
 
   Example:
-    ;; For trapezoidal rule approximations with halving step sizes
-    (richardson-extrapolate [2.0 1.5 1.25 1.125] {::order 2})
-    ; => refined estimates approaching the true integral"
+    `(richardson-extrapolate [2.0 1.5 1.25 1.125] {::order 2})`
+    => refined estimates approaching the true integral"
   ([approxs] (richardson-extrapolate approxs {}))
   ([approxs {::keys [order] :or {order 2}}]
    (letfn [(extrapolate [[a0 a1 & rest] p]
@@ -405,18 +403,17 @@
 (defn cauchy-product
   "Computes the Cauchy product (convolution) of two power series.
 
-  Given coefficients `a-coeffs` [a₀ a₁ a₂ ...] and `b-coeffs` [b₀ b₁ b₂ ...],
-  returns coefficients [c₀ c₁ c₂ ...] where cₙ = Σᵢ₌₀ⁿ aᵢbₙ₋ᵢ.
+  Given coefficients `a-coeffs` `[a0 a1 a2 ...]` and `b-coeffs` `[b0 b1 b2 ...]`, returns
+  coefficients `[c0 c1 c2 ...]` where `cn = sum(i=0 to n, ai * b(n-i))`.
 
-  This corresponds to multiplication of the power series:
-  (Σ aₙxⁿ)(Σ bₙxⁿ) = Σ cₙxⁿ
+  This corresponds to multiplication of the power series: `(sum an*x^n)(sum bn*x^n) = sum cn*x^n`
 
   Options:
-    ::max-iter - Maximum number of output terms (default 100)
+    `::max-iter` - maximum number of output terms (default `100`)
 
   Example:
-    (cauchy-product [1 1 1] [1 1])  ; (1+x+x²)(1+x) = 1+2x+2x²+x³
-    ; => [1 2 2 1]"
+    `(cauchy-product [1 1 1] [1 1])` ; `(1+x+x^2)(1+x) = 1+2x+2x^2+x^3`
+    => `[1 2 2 1]`"
   ([a-coeffs b-coeffs] (cauchy-product a-coeffs b-coeffs {}))
   ([a-coeffs b-coeffs {::keys [max-iter] :or {max-iter 100}}]
    (let [a (vec (take max-iter a-coeffs))
@@ -441,18 +438,18 @@
 (defn power-series-compose
   "Computes the composition of two power series.
 
-  Given `outer-coeffs` for f(x) and `inner-coeffs` for g(x), returns coefficients for f(g(x)).
+  Given `outer-coeffs` for `f(x)` and `inner-coeffs` for `g(x)`, returns coefficients for
+  `f(g(x))`.
 
-  IMPORTANT: g(0) must be 0 (i.e., first coefficient of inner must be 0) for the composition to be
-  well-defined as a power series.
+  IMPORTANT: `g(0)` must be `0` (i.e., first coefficient of inner must be `0`) for the composition
+  to be well-defined as a power series.
 
   Options:
-    ::max-iter - Maximum number of output terms (default 20)
+    `::max-iter` - maximum number of output terms (default `20`)
 
   Example:
-    ;; f(x) = 1 + x + x², g(x) = 2x
-    (power-series-compose [1 1 1] [0 2])  ; f(2x) = 1 + 2x + 4x²
-    ; => [1.0 2.0 4.0]"
+    `(power-series-compose [1 1 1] [0 2])` ; `f(x) = 1 + x + x^2`, `g(x) = 2x`, `f(2x) = 1 + 2x + 4x^2`
+    => `[1.0 2.0 4.0]`"
   ([outer-coeffs inner-coeffs]
    (power-series-compose outer-coeffs inner-coeffs {}))
   ([outer-coeffs inner-coeffs {::keys [max-iter] :or {max-iter 20}}]
@@ -487,18 +484,17 @@
 (defn power-series-inverse
   "Computes coefficients for the compositional inverse of a power series.
 
-  Given `coeffs` for f(x) where f(0) = 0 and f'(0) ≠ 0, returns coefficients for g(x) such that
-  f(g(x)) = x.
+  Given `coeffs` for `f(x)` where `f(0) = 0` and `f'(0) != 0`, returns coefficients for `g(x)` such
+  that `f(g(x)) = x`.
 
-  Requires: first coefficient is 0, second coefficient is non-zero.
+  Requires: first coefficient is `0`, second coefficient is non-zero.
 
   Options:
-    ::max-iter - Maximum number of output terms (default 20)
+    `::max-iter` - maximum number of output terms (default `20`)
 
   Example:
-    ;; f(x) = x + x², find g such that f(g(x)) = x
-    (power-series-inverse [0 1 1])
-    ; => [0.0 1.0 -1.0 2.0 -5.0 ...] (Catalan numbers with signs)"
+    `(power-series-inverse [0 1 1])` ; `f(x) = x + x^2`, find `g` such that `f(g(x)) = x`
+    => `[0.0 1.0 -1.0 2.0 -5.0 ...]` (Catalan numbers with signs)"
   ([coeffs] (power-series-inverse coeffs {}))
   ([coeffs {::keys [max-iter] :or {max-iter 20}}]
    (let [cs (vec (take max-iter coeffs))
@@ -537,21 +533,20 @@
 (defn radius-of-convergence
   "Estimates the radius of convergence of a power series.
 
-  Uses the ratio test (lim |aₙ₊₁/aₙ|) and root test (lim |aₙ|^(1/n))
-  on the given `coeffs` to estimate the radius of convergence.
+  Uses the ratio test `(lim |a(n+1)/an|)` and root test `(lim |an|^(1/n))` on the given `coeffs`
+  to estimate the radius of convergence.
 
   Returns a map with:
-    ::ratio-estimate - Estimate from ratio test
-    ::root-estimate - Estimate from root test
-    ::combined-estimate - Best estimate (minimum of finite estimates)
+    `::ratio-estimate` - estimate from ratio test
+    `::root-estimate` - estimate from root test
+    `::combined-estimate` - best estimate (minimum of finite estimates)
 
   Options:
-    ::num-terms - Number of terms to use for estimation (default 20)
+    `::num-terms` - number of terms to use for estimation (default `20`)
 
   Example:
-    ;; Geometric series has radius 1
-    (radius-of-convergence [1 1 1 1 1 1 1 1 1 1])
-    ; => {::ratio-estimate 1.0 ::root-estimate 1.0 ::combined-estimate 1.0}"
+    `(radius-of-convergence [1 1 1 1 1 1 1 1 1 1])` ; geometric series has radius `1`
+    => `{::ratio-estimate 1.0 ::root-estimate 1.0 ::combined-estimate 1.0}`"
   ([coeffs] (radius-of-convergence coeffs {}))
   ([coeffs {::keys [num-terms] :or {num-terms 20}}]
    (let [cs (vec (take num-terms coeffs))
@@ -593,24 +588,23 @@
           :opts (s/? (s/keys :opt [::num-terms])))
   :ret (s/keys :req [::ratio-estimate ::root-estimate ::combined-estimate]))
 
-;;;PADÉ APPROXIMANTS
+;;;PADE APPROXIMANTS
 (defn pade-approximant
-  "Computes a Padé approximant [L/M] from power series coefficients.
+  "Computes a Pade approximant [`L`/`M`] from power series coefficients.
 
-  Given `coeffs` [c₀ c₁ c₂ ...] representing f(x) = Σcₙxⁿ, computes the [L/M] Padé approximant
-  P(x)/Q(x) where P has degree L and Q has degree M.
+  Given `coeffs` `[c0 c1 c2 ...]` representing `f(x) = sum(cn*x^n)`, computes the [`L`/`M`] Pade
+  approximant `P(x)/Q(x)` where `P` has degree `L` and `Q` has degree `M`.
 
   Returns a map with:
-    ::numerator - Coefficients of P(x)
-    ::denominator - Coefficients of Q(x) (normalized so Q(0) = 1)
+    `::numerator` - coefficients of `P(x)`
+    `::denominator` - coefficients of `Q(x)` (normalized so `Q(0) = 1`)
 
-  The Padé approximant often converges where Taylor series diverge and can provide better rational
+  The Pade approximant often converges where Taylor series diverge and can provide better rational
   approximations.
 
   Example:
-    ;; [1/1] Padé for e^x = 1 + x + x²/2 + ...
-    (pade-approximant [1 1 0.5 0.167] 1 1)
-    ; => {::numerator [1.0 0.5] ::denominator [1.0 -0.5]}"
+    `(pade-approximant [1 1 0.5 0.167] 1 1)` ; `[1/1]` Pade for `e^x = 1 + x + x^2/2 + ...`
+    => `{::numerator [1.0 0.5] ::denominator [1.0 -0.5]}`"
   [coeffs L M]
   (let [cs (vec (concat (take (+ L M 1) coeffs)
                   (repeat (max 0 (- (+ L M 1) (count (take (+ L M 1) coeffs)))) 0.0)))
@@ -692,14 +686,13 @@
   :ret (s/keys :req [::numerator ::denominator]))
 
 (defn evaluate-pade
-  "Evaluates a Padé approximant at a given point.
+  "Evaluates a Pade approximant at a given point.
 
-  Takes the result of `pade-approximant` and evaluates P(x)/Q(x).
+  Takes the result of [[pade-approximant]] and evaluates `P(x)/Q(x)`.
 
   Example:
-    (let [pade (pade-approximant [1 1 0.5 0.167] 2 2)]
-      (evaluate-pade pade 0.5))
-    ; => approximation of e^0.5"
+    `(let [pade (pade-approximant [1 1 0.5 0.167] 2 2)] (evaluate-pade pade 0.5))`
+    => approximation of `e^0.5`"
   [{::keys [numerator denominator]} x]
   (let [eval-poly (fn [coeffs x]
                     (reduce (fn [acc [i c]]
@@ -718,25 +711,24 @@
 ;;;SUMMATION
 (defn sum-convergent-series
   "Sums infinite series `term-series` with adaptive convergence detection.
-  
-  Iteratively sums terms until convergence criteria are met or an error
-  condition is detected. Supports Kahan summation for improved numerical accuracy.
-  
+
+  Iteratively sums terms until convergence criteria are met or an error condition is detected.
+  Supports Kahan summation for improved numerical accuracy.
+
   Parameters:
-    `term-series` - Lazy sequence of series terms
-  
+    `term-series` - lazy sequence of series terms
+
   Options:
-    ::kahan? - Use Kahan summation for reduced floating-point error (default true)
-    ::converged-pred - Function (sum index term) -> boolean indicating convergence
-                      (default: after 5 terms, |term| ≤ quad-close or |term/sum| ≤ quad-close)
-    ::error-pred - Function (sum index term) -> boolean indicating error condition
-                  (default: index > 10000 or sum not finite)
-  
+    `::kahan?` - use Kahan summation for reduced floating-point error (default `true`)
+    `::converged-pred` - function `(sum index term) -> boolean` indicating convergence (default:
+                         after 5 terms, `|term| <= quad-close` or `|term/sum| <= quad-close`)
+    `::error-pred` - function `(sum index term) -> boolean` indicating error condition (default:
+                     `index > 10000` or sum not finite)
+
   Returns the series sum or an anomaly map if convergence fails.
-  
+
   Example:
-    (sum-convergent-series (map #(/ (m/pow -1 %) (inc %)) (range)))
-    ; => ln(2) ≈ 0.693..."
+    `(sum-convergent-series (map #(/ (m/pow -1 %) (inc %)) (range)))` => `ln(2)` ~ `0.693...`"
   ([term-series] (sum-convergent-series term-series {}))
   ([term-series {::keys [kahan? converged-pred error-pred]
                  :or    {kahan?         true
@@ -780,25 +772,24 @@
 
 (defn multiplicative-sum-convergent-series
   "Computes the product of infinite series `term-series` with convergence detection.
-  
-  Multiplies terms until convergence criteria are met. Useful for series
-  where terms approach 1.0 rather than 0.0.
-  
+
+  Multiplies terms until convergence criteria are met. Useful for series where terms approach `1.0`
+  rather than `0.0`.
+
   Parameters:
-    `term-series` - Lazy sequence of series terms
-  
+    `term-series` - lazy sequence of series terms
+
   Options:
-    ::converged-pred - Function (product index term) -> boolean indicating convergence
-                      (default: term within 1e-14 of 1.0)
-    ::error-pred - Function (product index term) -> boolean indicating error
-                  (default: index ≥ 100000 or product not finite)
-  
+    `::converged-pred` - function `(product index term) -> boolean` indicating convergence
+                         (default: term within `1e-14` of `1.0`)
+    `::error-pred` - function `(product index term) -> boolean` indicating error (default:
+                     `index >= 100000` or product not finite)
+
   Returns the series product or an anomaly map if convergence fails.
-  
+
   Example:
-    (multiplicative-sum-convergent-series
-      (map #(+ 1.0 (/ (m/pow -1 %) %)) (range 1 1000)))
-    ; => converging infinite product"
+    `(multiplicative-sum-convergent-series (map #(+ 1.0 (/ (m/pow -1 %) %)) (range 1 1000)))`
+    => converging infinite product"
   ([term-series] (multiplicative-sum-convergent-series term-series {}))
   ([term-series {::keys [converged-pred error-pred]
                  :or    {converged-pred (fn [_sum i val]
@@ -833,14 +824,12 @@
 (defn neumaier-sum
   "Sums a sequence using Neumaier's improved Kahan summation algorithm.
 
-  An improvement over Kahan summation that handles the case where the
-  next term to be added is larger in magnitude than the running sum.
-  This provides better numerical accuracy for sequences where term
-  magnitudes vary widely.
+  An improvement over Kahan summation that handles the case where the next term to be added is
+  larger in magnitude than the running sum. This provides better numerical accuracy for sequences
+  where term magnitudes vary widely.
 
   Example:
-    (neumaier-sum [1.0 1e100 1.0 -1e100])
-    ; => 2.0 (exactly, despite intermediate large values)"
+    `(neumaier-sum [1.0 1e100 1.0 -1e100])` => `2.0` (exactly, despite intermediate large values)"
   [terms]
   (loop [[val & t] terms
          sum 0.0
@@ -862,17 +851,15 @@
 (defn pairwise-sum
   "Sums a sequence using pairwise summation algorithm.
 
-  Recursively divides the sequence in half and sums each half,
-  then adds the results. This achieves O(log n) error growth
-  compared to O(n) for naive summation, while being more
+  Recursively divides the sequence in half and sums each half, then adds the results. This achieves
+  `O(log n)` error growth compared to `O(n)` for naive summation, while being more
   parallelization-friendly than Kahan summation.
 
   Options:
-    ::threshold - Below this size, use direct summation (default 16)
+    `::threshold` - below this size, use direct summation (default `16`)
 
   Example:
-    (pairwise-sum (range 1 1001))
-    ; => 500500.0"
+    `(pairwise-sum (range 1 1001))` => `500500.0`"
   ([terms] (pairwise-sum terms {}))
   ([terms {::keys [threshold] :or {threshold 16}}]
    (let [v (vec terms)
@@ -891,28 +878,28 @@
 (defn sum-with-diagnostics
   "Sums infinite series with detailed convergence diagnostics.
 
-  Like `sum-convergent-series` but returns a map with convergence
-  information instead of just the sum.
+  Like [[sum-convergent-series]] but returns a map with convergence information instead of just the
+  sum.
 
   Parameters:
-    `term-series` - Lazy sequence of series terms
+    `term-series` - lazy sequence of series terms
 
   Options:
-    ::kahan? - Use Kahan summation (default true)
-    ::neumaier? - Use Neumaier summation instead of Kahan (default false)
-    ::rel-accu - Relative accuracy target (default quad-close)
-    ::max-iter - Maximum iterations (default 10000)
+    `::kahan?` - use Kahan summation (default `true`)
+    `::neumaier?` - use Neumaier summation instead of Kahan (default `false`)
+    `::rel-accu` - relative accuracy target (default `quad-close`)
+    `::max-iter` - maximum iterations (default `10000`)
 
   Returns a map with:
-    ::sum - The computed sum
-    ::iterations - Number of terms summed
-    ::final-term - The last term added
-    ::estimated-error - Estimated remaining error (|final-term|)
-    ::converged? - Whether convergence was achieved
+    `::sum` - the computed sum
+    `::iterations` - number of terms summed
+    `::final-term` - the last term added
+    `::estimated-error` - estimated remaining error (`|final-term|`)
+    `::converged?` - whether convergence was achieved
 
   Example:
-    (sum-with-diagnostics (map #(/ (m/pow -1 %) (inc %)) (range)))
-    ; => {::sum 0.693... ::iterations 42 ::converged? true ...}"
+    `(sum-with-diagnostics (map #(/ (m/pow -1 %) (inc %)) (range)))`
+    => `{::sum 0.693... ::iterations 42 ::converged? true ...}`"
   ([term-series] (sum-with-diagnostics term-series {}))
   ([term-series {::keys [kahan? neumaier? rel-accu max-iter]
                  :or    {kahan?    true

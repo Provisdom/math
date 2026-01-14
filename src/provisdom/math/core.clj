@@ -4,40 +4,40 @@
   This namespace provides the foundation for all provisdom.math libraries:
 
   ## Constants
-  Mathematical constants with full double precision: PI, E, sqrt-two, sqrt-pi,
-  log-two, log-pi, inv-sqrt-two-pi, and many derived values. Also includes
-  system limits: max-dbl, min-dbl, max-long, tiny-dbl, etc.
+  Mathematical constants with full double precision: `PI`, `E`, `sqrt-two`, `sqrt-pi`, `log-two`,
+  `log-pi`, `inv-sqrt-two-pi`, and many derived values. Also includes system limits: `max-dbl`,
+  `min-dbl`, `max-long`, `tiny-dbl`, etc.
 
   ## Type Predicates
   IEEE 754-aware predicates that correctly handle NaN and infinity:
-  - Sign: pos?, neg?, non-?, non+?
-  - Finiteness: finite?, finite+?, finite-?, inf?, inf+?, inf-?, nan?
-  - Ranges: prob? (0-1), open-prob?, corr? (-1 to 1), open-corr?
-  - Integer types: long?, int?, long-able?, roughly-round?
+  - Sign: [[pos?]], [[neg?]], [[non-?]], [[non+?]]
+  - Finiteness: [[finite?]], [[finite+?]], [[finite-?]], [[inf?]], [[inf+?]], [[inf-?]], [[nan?]]
+  - Ranges: [[prob?]] (0-1), [[open-prob?]], [[corr?]] (-1 to 1), [[open-corr?]]
+  - Integer types: [[long?]], [[int?]], [[long-able?]], [[roughly-round?]]
 
   ## Arithmetic
   Safe operations that handle edge cases gracefully:
-  - div: division with proper 0/0 → NaN, n/0 → ±Inf handling
-  - sq, cube, sqrt, cbrt, pow, exp, log, log2, log10, logn
-  - sgn: sign function returning -1, 0, 1, or NaN
+  - [[div]]: division with proper 0/0 -> NaN, n/0 -> +/-Inf handling
+  - [[sq]], [[cube]], [[sqrt]], [[cbrt]], [[pow]], [[exp]], [[log]], [[log2]], [[log10]], [[logn]]
+  - [[sgn]]: sign function returning -1, 0, 1, or NaN
 
   ## Rounding & Comparison
-  - floor, ceil, round with configurable rounding modes
-  - roughly?: approximate equality within tolerance
-  - roughly-floor, roughly-ceil: tolerance-aware rounding
-  - round-significant: round to N significant digits
+  - [[floor]], [[ceil]], [[round]] with configurable rounding modes
+  - [[roughly?]]: approximate equality within tolerance
+  - [[roughly-floor]], [[roughly-ceil]]: tolerance-aware rounding
+  - [[round-significant]]: round to N significant digits
 
   ## Trigonometry
-  Standard and hyperbolic: sin, cos, tan, asin, acos, atan, atan2,
-  sinh, cosh, tanh, asinh, acosh, atanh, hypot
+  Standard and hyperbolic: [[sin]], [[cos]], [[tan]], [[asin]], [[acos]], [[atan]], [[atan2]],
+  [[sinh]], [[cosh]], [[tanh]], [[asinh]], [[acosh]], [[atanh]], [[hypot]]
 
   ## Angle Conversion
-  radians->angle', angle->radians', reduce-angle', reduce-radians'
+  [[radians->angle']], [[angle->radians']], [[reduce-angle']], [[reduce-radians']]
 
   ## Apostrophe Convention
-  Functions marked with ' (e.g., floor', mod', sq') return longs when the
-  result fits in long range, otherwise doubles. Unmarked functions always
-  return doubles for consistency and to avoid overflow surprises."
+  Functions marked with `'` (e.g., [[floor']], [[mod']], [[sq']]) return longs when the result fits
+  in long range, otherwise doubles. Unmarked functions always return doubles for consistency and to
+  avoid overflow surprises."
   (:refer-clojure :exclude [abs int? neg? pos?])
   (:require
     [clojure.spec.alpha :as s]
@@ -118,12 +118,12 @@
 
 (defn numbers?
   "Tests if a collection contains only numbers.
-  
-  Returns true if `x` is sequential and every element is a number.
-  
+
+  Returns `true` if `x` is sequential and every element is a number.
+
   Examples:
     (numbers? [1 2 3])        ;=> true
-    (numbers? [1 :a 3])       ;=> false  
+    (numbers? [1 :a 3])       ;=> false
     (numbers? #{1 2 3})       ;=> false (not sequential)"
   [x]
   (and (sequential? x) (every? number? x)))
@@ -146,13 +146,13 @@
 
 (defn num?
   "Tests if a value is a valid (non-NaN) number.
-  
-  Returns true if `x` is a number and not NaN. Uses the property that 
-  NaN is not equal to itself (NaN != NaN).
-  
+
+  Returns `true` if `x` is a number and not NaN. Uses the property that NaN is not equal to itself
+  (NaN != NaN).
+
   Examples:
     (num? 42)        ;=> true
-    (num? 3.14)      ;=> true  
+    (num? 3.14)      ;=> true
     (num? ##NaN)     ;=> false
     (num? \"foo\")    ;=> false"
   [x]
@@ -164,10 +164,10 @@
 
 (defn nan?
   "Tests if a value is NaN (Not a Number).
-  
-  Returns true if `x` is NaN. Uses the IEEE 754 property that NaN != NaN.
-  Only returns true for actual NaN values, not other non-numeric types.
-  
+
+  Returns `true` if `x` is NaN. Uses the IEEE 754 property that NaN != NaN. Only returns `true` for
+  actual NaN values, not other non-numeric types.
+
   Examples:
     (nan? ##NaN)           ;=> true
     (nan? (/ 0.0 0.0))     ;=> true
@@ -180,10 +180,10 @@
 
 (defn pos?
   "Tests if a number is positive (> 0).
-  
-  Returns true if `x` is a number and positive. Unlike clojure.core/pos?,
-  this function ensures the input is actually a number first.
-  
+
+  Returns `true` if `x` is a number and positive. Unlike `clojure.core/pos?`, this function ensures
+  the input is actually a number first.
+
   Examples:
     (pos? 5)     ;=> true
     (pos? 0)     ;=> false
@@ -206,10 +206,10 @@
 
 (defn neg?
   "Tests if a number is negative (< 0).
-  
-  Returns true if `x` is a number and negative. Unlike clojure.core/neg?,
-  this function ensures the input is actually a number first.
-  
+
+  Returns `true` if `x` is a number and negative. Unlike `clojure.core/neg?`, this function ensures
+  the input is actually a number first.
+
   Examples:
     (neg? -5)    ;=> true
     (neg? 0)     ;=> false
@@ -232,9 +232,9 @@
 
 (defn non-?
   "Tests if a number is non-negative (>= 0).
-  
-  Returns true if `x` is a number and greater than or equal to zero.
-  
+
+  Returns `true` if `x` is a number and greater than or equal to zero.
+
   Examples:
     (non-? 5)     ;=> true
     (non-? 0)     ;=> true
@@ -257,9 +257,9 @@
 
 (defn non+?
   "Tests if a number is non-positive (<= 0).
-  
-  Returns true if `x` is a number and less than or equal to zero.
-  
+
+  Returns `true` if `x` is a number and less than or equal to zero.
+
   Examples:
     (non+? -5)    ;=> true
     (non+? 0)     ;=> true
@@ -282,9 +282,9 @@
 
 (defn finite?
   "Tests if a number is finite (not infinite or NaN).
-  
-  Returns true if `x` is a valid number that is neither infinite nor NaN.
-  
+
+  Returns `true` if `x` is a valid number that is neither infinite nor NaN.
+
   Examples:
     (finite? 42)      ;=> true
     (finite? -3.14)   ;=> true
@@ -321,7 +321,7 @@
                    (gen/large-integer)])))
 
 (defn finite+?
-  "Returns true if `x` is a positive finite number."
+  "Returns `true` if `x` is a positive finite number."
   [x]
   (and (pos? x) (not (infinite? x))))
 
@@ -348,7 +348,7 @@
                    (gen/large-integer* {:min 1})])))
 
 (defn finite-?
-  "Returns true if `x` is a negative finite number."
+  "Returns `true` if `x` is a negative finite number."
   [x]
   (and (neg? x) (not (infinite? x))))
 
@@ -368,7 +368,7 @@
                    (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
-  "Returns true if `x` is a non-negative finite number."
+  "Returns `true` if `x` is a non-negative finite number."
   [x]
   (and (non-? x) (not (infinite? x))))
 
@@ -394,7 +394,7 @@
                              (gen/large-integer* {:min 0})])))
 
 (defn finite-non+?
-  "Returns true if `x` is a non-positive finite number."
+  "Returns `true` if `x` is a non-positive finite number."
   [x]
   (and (non+? x) (not (infinite? x))))
 
@@ -414,7 +414,7 @@
   (s/spec double? :gen #(gen/double)))
 
 (defn double-finite?
-  "Returns true if `x` is a double and finite."
+  "Returns `true` if `x` is a double and finite."
   [x]
   (and (double? x) (== x x) (not (infinite? x))))
 
@@ -422,7 +422,7 @@
   (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
 
 (defn double-finite+?
-  "Returns true if `x` is a double and finite+."
+  "Returns `true` if `x` is a double and positive finite."
   [x]
   (and (finite+? x) (double? x)))
 
@@ -433,7 +433,7 @@
                               :NaN?      false})))
 
 (defn single?
-  "Returns true if `x` is a single."
+  "Returns `true` if `x` is a single-precision float (or fits in single range)."
   [x]
   (and (double? x)
        (or (sgl-range? x)
@@ -444,7 +444,7 @@
   (s/spec single? :gen #(gen/double)))
 
 (defn single-finite?
-  "Returns true if `x` is a single and finite."
+  "Returns `true` if `x` is a single-precision float and finite."
   [x]
   (and (double? x) (sgl-range? x)))
 
@@ -456,7 +456,7 @@
                               :max       max-sgl})))
 
 (defn long?
-  "Returns true if `x` is a long."
+  "Returns `true` if `x` is a long."
   [x]
   (and (number? x) (or (clojure.core/int? x) (instance? Long x))))
 
@@ -476,7 +476,7 @@
                    :max (min max-long (ceil' ~m2))})))
 
 (defn long+?
-  "Returns true if `x` is a long and is positive."
+  "Returns `true` if `x` is a long and is positive."
   [x]
   (and (pos? x) (long? x)))
 
@@ -490,7 +490,7 @@
                   {:min 1 :max (min max-long (ceil' ~m2))})))
 
 (defn long-?
-  "Returns true if `x` is a long and is negative."
+  "Returns `true` if `x` is a long and is negative."
   [x]
   (and (neg? x) (long? x)))
 
@@ -498,7 +498,7 @@
   (s/spec long-? :gen #(s/gen (s/int-in min-long 0))))
 
 (defn long-non-?
-  "Returns true if `x` is a long and is non-negative."
+  "Returns `true` if `x` is a long and is non-negative."
   [x]
   (and (non-? x) (long? x)))
 
@@ -512,7 +512,7 @@
                   {:min 0 :max (min max-long (ceil' ~m2))})))
 
 (defn long-non+?
-  "Returns true if `x` is a long and is non-positive."
+  "Returns `true` if `x` is a long and is non-positive."
   [x]
   (and (non+? x) (long? x)))
 
@@ -520,7 +520,7 @@
   (s/spec long-non+? :gen #(s/gen (s/int-in min-long 1))))
 
 (defn int?
-  "Returns true if `x` is an integer that is within the int range."
+  "Returns `true` if `x` is an integer that is within the int range."
   [x]
   (and (integer? x) (int-range? x)))
 
@@ -540,7 +540,7 @@
                    :max (min max-int (ceil' ~m2))})))
 
 (defn int+?
-  "Returns true if `x` is an int and is positive."
+  "Returns `true` if `x` is an int and is positive."
   [x]
   (and (int? x) (pos? x)))
 
@@ -554,7 +554,7 @@
                   {:min 1 :max (min max-int (ceil' ~m2))})))
 
 (defn int-?
-  "Returns true if `x` is an int and is negative."
+  "Returns `true` if `x` is an int and is negative."
   [x]
   (and (int? x) (neg? x)))
 
@@ -562,7 +562,7 @@
   (s/spec int-? :gen #(s/gen (s/int-in min-int 0))))
 
 (defn int-non-?
-  "Returns true if `x` is an int and is non-negative."
+  "Returns `true` if `x` is an int and is non-negative."
   [x]
   (and (int? x) (non-? x)))
 
@@ -576,7 +576,7 @@
                   {:min 0 :max (min max-int (ceil' ~m2))})))
 
 (defn int-non+?
-  "Returns true if `x` is an int and is non-positive."
+  "Returns `true` if `x` is an int and is non-positive."
   [x]
   (and (int? x) (non+? x)))
 
@@ -584,33 +584,29 @@
   (s/spec int-non+? :gen #(s/gen (s/int-in min-int 1))))
 
 (defn long-able?
-  "Returns true if `x` is a number that can be converted to a long."
+  "Returns `true` if `x` is a number that can be converted to a long."
   [x]
   (and (number? x)
        (roughly-round? x 0.0)
        (long-range? x)))
 
 (defn long-able+?
-  "Returns true if `x` is a number that can be converted to a long, and is
-  positive."
+  "Returns `true` if `x` is a number that can be converted to a long, and is positive."
   [x]
   (and (long-able? x) (pos? x)))
 
 (defn long-able-?
-  "Returns true if `x` is a number that can be converted to a long, and is
-  negative."
+  "Returns `true` if `x` is a number that can be converted to a long, and is negative."
   [x]
   (and (long-able? x) (neg? x)))
 
 (defn long-able-non+?
-  "Returns true if `x` is a number that can be converted to a long, and is
-  non+."
+  "Returns `true` if `x` is a number that can be converted to a long, and is non-positive."
   [x]
   (and (long-able? x) (non+? x)))
 
 (defn long-able-non-?
-  "Returns true if `x` is a number that can be converted to a long, and is
-  non-."
+  "Returns `true` if `x` is a number that can be converted to a long, and is non-negative."
   [x]
   (and (long-able? x) (non-? x)))
 
@@ -623,7 +619,7 @@
           :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf+?
-  "Returns true if `x` is Inf+."
+  "Returns `true` if `x` is positive infinity."
   [x]
   (and (number? x)
        (infinite? x)
@@ -638,7 +634,7 @@
           :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf-?
-  "Returns true if `x` is Inf-."
+  "Returns `true` if `x` is negative infinity."
   [x]
   (and (number? x) (infinite? (double x)) (neg? x)))
 
@@ -651,7 +647,7 @@
           :gen #(s/gen (s/double-in :NaN? true))))
 
 (defn inf?
-  "Returns true if `x` is Inf+ or Inf-."
+  "Returns `true` if `x` is positive or negative infinity."
   [x]
   (and (number? x) (infinite? (double x))))
 
@@ -662,7 +658,7 @@
                    (gen/return inf+)])))
 
 (defn one?
-  "Returns true if `x` if equal to one."
+  "Returns `true` if `x` is equal to one."
   [x]
   (and (number? x) (== 1 x)))
 
@@ -670,7 +666,7 @@
   (s/spec one? :gen #(gen/return 1.0)))
 
 (defn prob?
-  "Returns true if `x` is between 0 and 1, inclusive."
+  "Returns `true` if `x` is between 0 and 1, inclusive."
   [x]
   (and (non-? x) (<= x 1)))
 
@@ -682,7 +678,7 @@
           :gen #(s/gen (s/double-in :min 0.0 :max 1.0))))
 
 (defn open-prob?
-  "Returns true if `x` is between 0 and 1, exclusive."
+  "Returns `true` if `x` is between 0 and 1, exclusive."
   [x]
   (and (pos? x) (< x 1)))
 
@@ -697,7 +693,7 @@
           :gen #(s/gen (s/double-in :min tiny-dbl :max (next-down 1.0)))))
 
 (defn corr?
-  "Returns true if `x` is between -1 and 1, inclusive."
+  "Returns `true` if `x` is between -1 and 1, inclusive."
   [x]
   (and (number? x)
        (<= x 1)
@@ -711,7 +707,7 @@
           :gen #(s/gen (s/double-in :min -1.0 :max 1.0))))
 
 (defn open-corr?
-  "Returns true if `x` is between -1 and 1, exclusive."
+  "Returns `true` if `x` is between -1 and 1, exclusive."
   [x]
   (and (number? x)
        (< x 1)
@@ -728,9 +724,9 @@
           :gen #(s/gen (s/double-in :min (next-up -1.0) :max (next-down 1.0)))))
 
 (defn maybe-long-able
-  "Coerces x to long if it's an integer value within long range, otherwise
-  returns x unchanged. Unlike maybe-long-range (private), this checks that x
-  is actually an integer (via roughly-round?) before converting."
+  "Coerces `x` to long if it's an integer value within long range, otherwise returns `x` unchanged.
+  Unlike `maybe-long-range` (private), this checks that `x` is actually an integer (via
+  [[roughly-round?]]) before converting."
   [x]
   (if (long-able? x)
     (long x)
@@ -756,10 +752,10 @@
 
 (defn next-up
   "Returns the next representable floating-point value greater than `number`.
-  
-  Uses IEEE 754 nextAfter operation to find the smallest possible increment.
-  Useful for creating strict upper bounds or testing floating-point precision.
-  
+
+  Uses IEEE 754 nextAfter operation to find the smallest possible increment. Useful for creating
+  strict upper bounds or testing floating-point precision.
+
   Examples:
     (next-up 1.0)  ;=> 1.0000000000000002
     (next-up 0.0)  ;=> 4.9E-324 (smallest positive double)"
@@ -772,10 +768,10 @@
 
 (defn next-down
   "Returns the next representable floating-point value less than `number`.
-  
-  Uses IEEE 754 nextAfter operation to find the smallest possible decrement.
-  Useful for creating strict lower bounds or testing floating-point precision.
-  
+
+  Uses IEEE 754 nextAfter operation to find the smallest possible decrement. Useful for creating
+  strict lower bounds or testing floating-point precision.
+
   Examples:
     (next-down 1.0)  ;=> 0.9999999999999998
     (next-down 0.0)  ;=> -4.9E-324 (smallest negative double)"
@@ -788,14 +784,14 @@
 
 (defn div
   "Divides numbers with proper handling of division by zero.
-  
-  Returns `number1` divided by `number2`, or (1 / `number2`) if only one argument.
-  Handles edge cases:
-  - Positive / 0 → +Infinity  
-  - Negative / 0 → -Infinity
-  - 0 / 0 → NaN (or custom value via `zero-div-by-zero`)
-  - NaN / 0 → NaN
-  
+
+  Returns `number1` divided by `number2`, or (1 / `number2`) if only one argument. Handles edge
+  cases:
+  - Positive / 0 -> +Infinity
+  - Negative / 0 -> -Infinity
+  - 0 / 0 -> NaN (or custom value via `zero-div-by-zero`)
+  - NaN / 0 -> NaN
+
   Examples:
     (div 6 2)     ;=> 3.0
     (div 1 0)     ;=> ##Inf
@@ -820,10 +816,10 @@
 
 (defn one-
   "Computes 1 minus the sum of arguments.
-  
-  Returns (1 - `number`) for single argument, or (1 - sum) for multiple arguments.
-  Always returns a double when multiple arguments are provided.
-  
+
+  Returns (1 - `number`) for single argument, or (1 - sum) for multiple arguments. Always returns a
+  double when multiple arguments are provided.
+
   Examples:
     (one- 0.3)      ;=> 0.7
     (one- 0.2 0.3)  ;=> 0.5 (1 - 0.2 - 0.3)
@@ -837,9 +833,9 @@
 
 (defn sq
   "Computes the square of a number.
-  
-  Returns `number` × `number`. Always returns a double.
-  
+
+  Returns `number` * `number`. Always returns a double.
+
   Examples:
     (sq 5)     ;=> 25.0
     (sq -3)    ;=> 9.0
@@ -853,13 +849,13 @@
 
 (defn sq'
   "Computes the square of a number, returning a long when possible.
-  
-  Returns `number` × `number` as a long if the result fits in long range,
-  otherwise returns a double.
-  
+
+  Returns `number` * `number` as a long if the result fits in long range, otherwise returns a
+  double.
+
   Examples:
     (sq' 5)       ;=> 25 (long)
-    (sq' 1.5)     ;=> 2.25 (double, non-integer result)"
+    (sq' 1.5)     ;=> 2.25 (double, noninteger result)"
   [number]
   (maybe-long-able
     (* (double number) number)))
@@ -889,13 +885,13 @@
 
 (defn sgn
   "Returns the sign of a number.
-  
+
   Returns:
-  - 1 if `number` is positive
-  - 0 if `number` is zero  
-  - -1 if `number` is negative
-  - NaN if `number` is NaN
-  
+  - `1` if `number` is positive
+  - `0` if `number` is zero
+  - `-1` if `number` is negative
+  - `NaN` if `number` is NaN
+
   Examples:
     (sgn 5)     ;=> 1
     (sgn 0)     ;=> 0
@@ -922,7 +918,7 @@
   :ret ::nan-or-non-)
 
 (defn dec-exp
-  "Returns e^`number` minus one. Useful for positive numbers less than 1e-15."
+  "Returns e^`number` minus one. Useful for positive numbers less than `1e-15`."
   [number]
   (Math/expm1 (double number)))
 
@@ -940,8 +936,7 @@
   :ret ::number)
 
 (defn log-inc
-  "Returns log of one plus `number`. Useful for positive numbers less than
-  1e-15."
+  "Returns log of one plus `number`. Useful for positive numbers less than `1e-15`."
   [number]
   (Math/log1p (double number)))
 
@@ -987,9 +982,8 @@
   :ret ::number)
 
 (defn abs
-  "Computes the absolute value of a number.
-  
-  Returns |`number`|, always non-negative. Always returns a double."
+  "Computes the absolute value of a number. Returns |`number`|, always non-negative. Always returns
+  a double."
   [number]
   (Math/abs (double number)))
 
@@ -1008,10 +1002,8 @@
   :ret ::nan-or-non-)
 
 (defn sqrt
-  "Computes the square root of a number.
-  
-  Returns √`number`. For negative numbers, returns NaN.
-  
+  "Computes the square root of a number. Returns sqrt(`number`). For negative numbers, returns NaN.
+
   Examples:
     (sqrt 9)     ;=> 3.0
     (sqrt 2)     ;=> 1.4142135623730951
@@ -1098,9 +1090,8 @@
   :ret ::number)
 
 (defn acosh
-  "Returns inverse hyperbolic cosine of `number`.
-
-  Uses asymptotic formula log(2x) for large x to avoid precision loss."
+  "Returns inverse hyperbolic cosine of `number`. Uses asymptotic formula `log(2x)` for large `x` to
+  avoid precision loss."
   [number]
   (cond (not (>= number 1)) nan
         ;; For large x, use log(2x) = log(2) + log(x) to avoid overflow in x^2
@@ -1150,9 +1141,8 @@
 (defn atanh
   "Returns inverse hyperbolic tangent of `number`.
 
-  Computes atanh(x) = 0.5 × ln((1+x)/(1-x)).
-  Domain: (-1, 1), returns NaN outside this range.
-  atanh(±1) = ±∞"
+  Computes `atanh(x) = 0.5 * ln((1+x)/(1-x))`. Domain: (-1, 1), returns NaN outside this range.
+  `atanh(+/-1) = +/-Inf`."
   [number]
   (cond (not (corr? number)) nan
         (one? number) inf+
@@ -1181,14 +1171,15 @@
 (s/def ::round-type #{:up :down :away-from-zero :toward-zero :toward-even})
 
 (defn round'
-  "Rounds to nearest integer, with tie-breaking rule specified by `round-type`.
-  Returns a long if possible. Otherwise, returns `number`.
-    `round-type` (all round to nearest, differs only at halfway points):
-      `:up` - ties go toward +∞ (0.5 → 1, -0.5 → 0)
-      `:down` - ties go toward -∞ (0.5 → 0, -0.5 → -1)
-      `:away-from-zero` - ties go away from zero (0.5 → 1, -0.5 → -1)
-      `:toward-zero` - ties go toward zero (0.5 → 0, -0.5 → 0)
-      `:toward-even` - ties go to nearest even (0.5 → 0, 1.5 → 2, 2.5 → 2)"
+  "Rounds to nearest integer, with tie-breaking rule specified by `round-type`. Returns a long if
+  possible. Otherwise, returns `number`.
+
+  `round-type` options (all round to nearest, differs only at halfway points):
+    `:up` - ties go toward +Inf (0.5 -> 1, -0.5 -> 0)
+    `:down` - ties go toward -Inf (0.5 -> 0, -0.5 -> -1)
+    `:away-from-zero` - ties go away from zero (0.5 -> 1, -0.5 -> -1)
+    `:toward-zero` - ties go toward zero (0.5 -> 0, -0.5 -> 0)
+    `:toward-even` - ties go to nearest even (0.5 -> 0, 1.5 -> 2, 2.5 -> 2)"
   [number round-type]
   (if-not (long-range? number)
     number
@@ -1213,13 +1204,13 @@
   :ret ::number)
 
 (def round
-  "Alias for round'. See round' for documentation."
+  "Alias for [[round']]. See [[round']] for documentation."
   round')
 
 (defn round-significant
-  "Round a number to the specified number of significant digits. This function
-  can be used in conjunction with functions like floor, roughly-floor, etc. to
-  get 'floor-significant', etc."
+  "Round a number to the specified number of significant digits. This function can be used in
+  conjunction with functions like [[floor]], [[roughly-floor]], etc. to get 'floor-significant',
+  etc."
   [number significant-digits round-type]
   (if (or (nan? number) (zero? number) (inf? number))
     number
@@ -1240,9 +1231,8 @@
   :ret ::number)
 
 (defn floor
-  "Rounds a number down to the nearest integer.
-  
-  Returns the largest integer ≤ `number`. Always returns a double."
+  "Rounds a number down to the nearest integer. Returns the largest integer <= `number`. Always
+  returns a double."
   [number]
   (Math/floor number))
 
@@ -1251,10 +1241,8 @@
   :ret ::number)
 
 (defn floor'
-  "Rounds a number down, returning a long when possible.
-  
-  Returns the largest integer ≤ `number` as a long if it fits in long range,
-  otherwise returns a double."
+  "Rounds a number down, returning a long when possible. Returns the largest integer <= `number` as
+  a long if it fits in long range, otherwise returns a double."
   [number]
   (maybe-long-range (floor number)))
 
@@ -1263,9 +1251,8 @@
   :ret ::number)
 
 (defn ceil
-  "Rounds a number up to the nearest integer.
-  
-  Returns the smallest integer ≥ `number`. Always returns a double."
+  "Rounds a number up to the nearest integer. Returns the smallest integer >= `number`. Always
+  returns a double."
   [number]
   (Math/ceil number))
 
@@ -1284,7 +1271,7 @@
   :ret ::number)
 
 (defn roughly-floor
-  "Rounds down unless within `accu`, then rounds up. Returns a double."
+  "Rounds down unless within `accu` of an integer, then rounds up. Returns a double."
   [number accu]
   (floor (+ number (double accu))))
 
@@ -1293,7 +1280,7 @@
   :ret ::number)
 
 (defn roughly-floor'
-  "Rounds down unless within `accu`, then rounds up. Returns a long if possible,
+  "Rounds down unless within `accu` of an integer, then rounds up. Returns a long if possible,
   otherwise a double."
   [number accu]
   (floor' (+ number (double accu))))
@@ -1303,7 +1290,7 @@
   :ret ::number)
 
 (defn roughly-ceil
-  "Rounds up unless within `accu`, then rounds down. Returns a double."
+  "Rounds up unless within `accu` of an integer, then rounds down. Returns a double."
   [number accu]
   (ceil (- number (double accu))))
 
@@ -1312,7 +1299,7 @@
   :ret ::number)
 
 (defn roughly-ceil'
-  "Rounds up unless within `accu`, then rounds down. Returns a long if possible,
+  "Rounds up unless within `accu` of an integer, then rounds down. Returns a long if possible,
   otherwise a double."
   [number accu]
   (ceil' (- number (double accu))))
@@ -1323,19 +1310,17 @@
 
 (defn roughly?
   "Tests if two numbers are approximately equal within a tolerance.
-  
-  Returns true if `number1` and `number2` are within `accu` of each other.
-  Handles special cases:
-  - NaN arguments → false
-  - Infinite tolerance → true  
-  - Infinite arguments → false (unless both same infinity)
-  
-  Useful for floating-point comparisons where exact equality fails due to
-  rounding errors.
-  
+
+  Returns `true` if `number1` and `number2` are within `accu` of each other. Handles special cases:
+  - NaN arguments -> `false`
+  - Infinite tolerance -> `true`
+  - Infinite arguments -> `false` (unless both same infinity)
+
+  Useful for floating-point comparisons where exact equality fails due to rounding errors.
+
   Examples:
     (roughly? 1.0 1.0000001 1e-6)  ;=> true
-    (roughly? 1.0 1.1 0.05)        ;=> false  
+    (roughly? 1.0 1.1 0.05)        ;=> false
     (roughly? ##NaN 1.0 0.1)       ;=> false"
   [number1 number2 accu]
   (cond (or (nan? number1) (nan? number2)) false
@@ -1350,8 +1335,7 @@
   :ret boolean?)
 
 (defn roughly-round?
-  "Returns true if `number` is equal to a whole number or within `accu` of a
-  whole number, or within double accuracy."
+  "Returns `true` if `number` is equal to a whole number or within `accu` of a whole number."
   [number accu]
   (cond (nan? number) false
         (inf+? accu) true
@@ -1363,8 +1347,7 @@
   :ret boolean?)
 
 (defn roughly-round-non-?
-  "Returns true if `number` is non- and roughly a whole number, or within
-  double accuracy."
+  "Returns `true` if `number` is non-negative and roughly a whole number (within `accu`)."
   [number accu]
   (and (non-? number) (roughly-round? number accu)))
 
@@ -1373,8 +1356,7 @@
   :ret boolean?)
 
 (defn roughly-round-non+?
-  "Returns true if `number` is non+ and roughly a whole number, or within
-  double accuracy."
+  "Returns `true` if `number` is non-positive and roughly a whole number (within `accu`)."
   [number accu]
   (and (non+? number) (roughly-round? number accu)))
 
@@ -1383,8 +1365,7 @@
   :ret boolean?)
 
 (defn roughly-round+?
-  "Returns true if `number` is positive and roughly a whole number, or within
-  double accuracy."
+  "Returns `true` if `number` is positive and roughly a whole number (within `accu`)."
   [number accu]
   (and (pos? number) (roughly-round? number accu)))
 
@@ -1393,8 +1374,7 @@
   :ret boolean?)
 
 (defn roughly-round-?
-  "Returns true if `number` is negative and roughly a whole number, or within
-  double accuracy."
+  "Returns `true` if `number` is negative and roughly a whole number (within `accu`)."
   [number accu]
   (and (neg? number) (roughly-round? number accu)))
 
@@ -1403,7 +1383,7 @@
   :ret boolean?)
 
 (defn roughly-non-?
-  "Returns true if `number` is positive or within `accu` to zero."
+  "Returns `true` if `number` is non-negative or within `accu` of zero."
   [number accu]
   (>= number (- accu)))
 
@@ -1412,7 +1392,7 @@
   :ret boolean?)
 
 (defn roughly-non+?
-  "Returns true if `number` is negative or within `accu` to zero."
+  "Returns `true` if `number` is non-positive or within `accu` of zero."
   [number accu]
   (<= number accu))
 
@@ -1421,7 +1401,7 @@
   :ret boolean?)
 
 (defn roughly-prob?
-  "Returns true if `number` is a prob or within `accu` of a prob."
+  "Returns `true` if `number` is a probability (0-1) or within `accu` of that range."
   [number accu]
   (and (>= number (- accu)) (<= number (inc (double accu)))))
 
@@ -1430,7 +1410,7 @@
   :ret boolean?)
 
 (defn roughly-corr?
-  "Returns true if `number` is a corr or within `accu` of a corr."
+  "Returns `true` if `number` is a correlation (-1 to 1) or within `accu` of that range."
   [number accu]
   (and (>= number (dec (- (double accu))))
        (<= number (inc (double accu)))))
@@ -1450,7 +1430,7 @@
       (zero? divisor)))
 
 (defn quot'
-  "Quotient of dividing `numerator` by `divisor`. Returns a long if possible."
+  "Returns the quotient of dividing `numerator` by `divisor`. Returns a long if possible."
   [numerator divisor]
   (if (quotient-invalid? numerator divisor)
     nan
@@ -1465,9 +1445,9 @@
   :ret ::number)
 
 (defn mod'
-  "Modulus of `numerator` and `divisor`. Truncates toward negative infinity. Has
-  sign of `divisor` unless numerical rounding error with [[quot']]. Will stay
-  consistent with [[quot']]. Returns a long if possible."
+  "Returns the modulus of `numerator` and `divisor`. Truncates toward negative infinity. Has sign of
+  `divisor` unless numerical rounding error with [[quot']]. Will stay consistent with [[quot']].
+  Returns a long if possible."
   [numerator divisor]
   (if (quotient-invalid? numerator divisor)
     nan
@@ -1482,9 +1462,9 @@
   :ret ::number)
 
 (defn rem'
-  "Remainder of dividing `numerator` by `divisor`. Has sign of `numerator`
-  unless numerical rounding error with [[quot']]. Will stay consistent with
-  [[quot']]. Returns a long if possible."
+  "Returns the remainder of dividing `numerator` by `divisor`. Has sign of `numerator` unless
+  numerical rounding error with [[quot']]. Will stay consistent with [[quot']]. Returns a long if
+  possible."
   [numerator divisor]
   (if (quotient-invalid? numerator divisor)
     nan
@@ -1498,10 +1478,8 @@
   :ret ::number)
 
 (defn quot-and-rem'
-  "Returns a tuple of longs if possible. Quotient of dividing `numerator` by
-  `divisor`. Remainder of dividing `numerator` by `divisor`. Has sign of
-  `numerator` unless numerical rounding error with [[quot']]. Will stay
-  consistent with [[quot']]."
+  "Returns a tuple of `[quotient remainder]` (longs if possible). Remainder has sign of `numerator`
+  unless numerical rounding error with [[quot']]. Will stay consistent with [[quot']]."
   [numerator divisor]
   [(quot' numerator divisor) (rem' numerator divisor)])
 
@@ -1510,10 +1488,9 @@
   :ret (s/tuple ::number ::number))
 
 (defn quot-and-mod'
-  "Returns a tuple of longs if possible. Quotient of dividing `numerator` by
-  `divisor`. Modulus of `numerator` and `divisor`. Truncates toward negative
-  infinity. Has sign of `divisor` unless numerical rounding error with
-  [[quot']]. Will stay consistent with [[quot']]."
+  "Returns a tuple of `[quotient modulus]` (longs if possible). Modulus truncates toward negative
+  infinity and has sign of `divisor` unless numerical rounding error with [[quot']]. Will stay
+  consistent with [[quot']]."
   [numerator divisor]
   (let [q (quot' numerator divisor)
         m (mod' numerator divisor)
@@ -1527,10 +1504,8 @@
   :ret (s/tuple ::number ::number))
 
 (defn gcd
-  "Returns the Greatest Common Divisor (Denominator) of two longs.
-
-  Handles negative numbers by taking absolute values. Returns a non-negative
-  result. gcd(0, 0) returns 0."
+  "Returns the Greatest Common Divisor (Denominator) of two longs. Handles negative numbers by
+  taking absolute values. Returns a non-negative result. `gcd(0, 0)` returns `0`."
   [long1 long2]
   (let [a (abs' long1)
         b (abs' long2)]
@@ -1543,11 +1518,9 @@
   :ret ::long-non-)
 
 (defn lcm'
-  "Returns the Least Common Multiple of two longs. Returns a long if possible.
-
-  Handles negative numbers by taking absolute values. Returns a non-negative
-  result. lcm(0, n) = lcm(n, 0) = 0. Returns a double if the result overflows
-  long range."
+  "Returns the Least Common Multiple of two longs. Handles negative numbers by taking absolute
+  values. Returns a non-negative result. `lcm(0, n) = lcm(n, 0) = 0`. Returns a double if the
+  result overflows long range, otherwise a long."
   [long1 long2]
   (let [a (abs' long1)
         b (abs' long2)]
@@ -1561,7 +1534,7 @@
 
 ;;;ANGLES
 (defn reduce-angle'
-  "Returns an `angle` between 0 and 360. Returns a long if possible."
+  "Returns `angle` reduced to the range [0, 360). Returns a long if possible."
   [angle]
   (let [m (mod' angle 360)]
     (if (or (nan? m)
@@ -1583,7 +1556,7 @@
              :inf ::inf))
 
 (defn reduce-radians'
-  "Returns `radians` between 0 and 2 × PI. Returns a long if possible."
+  "Returns `radians` reduced to the range [0, 2*PI). Returns a long if possible."
   [radians]
   (let [m (mod' radians two-pi)]
     (if (or (nan? m)
@@ -1605,8 +1578,8 @@
              :inf ::inf))
 
 (defn radians->angle'
-  "Returns the reduced angle from `radians`, where
-  angles = 180 × `radians` / PI. Returns a long if possible."
+  "Converts `radians` to degrees and reduces to [0, 360). Computes `180 * radians / PI`. Returns a
+  long if possible."
   [radians]
   (if (inf? radians)
     radians
@@ -1620,8 +1593,8 @@
              :inf ::inf))
 
 (defn angle->radians'
-  "Returns the reduced radians from the `angle`, where
-  radians = `angle` × PI / 180. Returns a long if possible."
+  "Converts `angle` (degrees) to radians and reduces to [0, 2*PI). Computes `angle * PI / 180`.
+  Returns a long if possible."
   [angle]
   (if (inf? angle)
     angle

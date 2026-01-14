@@ -9,8 +9,8 @@
   - Sigmoid functions (logistic, logit, probit, with derivatives)
   - Standard normal CDF and inverse CDF
   - Log-sum-exp for numerical stability
-  - Bessel functions (J_ν, Y_ν, I_ν, K_ν for real orders)
-  - Hypergeometric functions (confluent ₁F₁, Gaussian ₂F₁)
+  - Bessel functions (J_v, Y_v, I_v, K_v for real orders)
+  - Hypergeometric functions (confluent 1F1, Gaussian 2F1)
 
   Uses high-precision algorithms with series expansions, continued fractions,
   and asymptotic expansions as appropriate for different parameter ranges."
@@ -113,14 +113,14 @@
 
 ;;;LOG-SUM-EXP
 (defn log-sum-exp
-  "Computes log(∑e^xi) for sequence `numbers` in a numerically stable way.
-  
+  "Computes log(sum(e^xi)) for sequence `numbers` in a numerically stable way.
+
   Avoids overflow/underflow when computing the log of sums of exponentials for very large or very
   small numbers. Uses the log-sum-exp trick.
-  
+
   Examples:
-    (log-sum-exp [1200 1210]) ;=> 1210.0000453988991
-    (log-sum-exp [-1200 -1210]) ;=> -1199.9999546011009"
+    (log-sum-exp [1200 1210]) => 1210.0000453988991
+    (log-sum-exp [-1200 -1210]) => -1199.9999546011009"
   [numbers]
   (if (empty? numbers)
     0.0
@@ -149,19 +149,19 @@
 ;;;ERROR FUNCTIONS
 (defn erf
   "Computes the error function erf(`x`).
-  
-  Defined as (2/√π) ∫₀ˣ e^(-t²) dt. Represents the probability that a random
-  variable from a standard normal distribution falls within [-`x`√2, `x`√2].
-  
+
+  Defined as (2/sqrt(pi)) * integral(0 to x, e^(-t^2) dt). Represents the probability that a random
+  variable from a standard normal distribution falls within [-`x`*sqrt(2), `x`*sqrt(2)].
+
   Properties:
   - erf(0) = 0
-  - erf(∞) = 1
+  - erf(inf) = 1
   - erf(-x) = -erf(x) (odd function)
-  
+
   Examples:
-    (erf 0.0) ;=> 0.0
-    (erf 1.0) ;=> 0.842700792949715
-    (erf -1.0) ;=> -0.842700792949715"
+    (erf 0.0) => 0.0
+    (erf 1.0) => 0.842700792949715
+    (erf -1.0) => -0.842700792949715"
   [x]
   (cond (zero? x) 0.0
     (> x 6.0) 1.0
@@ -175,13 +175,13 @@
 
 (defn erf-diff
   "Computes erf(`x2`) - erf(`x1`) with improved numerical stability.
-  
+
   Uses optimized algorithms to avoid loss of precision when computing the difference of two error
   function values.
-  
+
   Examples:
-    (erf-diff -1.0 1.0) ;=> 1.68540158589943
-    (erf-diff 1.0 2.0) ;=> 0.1526214720692377"
+    (erf-diff -1.0 1.0) => 1.68540158589943
+    (erf-diff 1.0 2.0) => 0.1526214720692377"
   [x1 x2]
   (if (> x1 x2)
     (- (erf-diff x2 x1))
@@ -199,13 +199,13 @@
 
 (defn erf-derivative
   "Computes the derivative of the error function: d/d`x` erf(`x`).
-  
-  The derivative is (2/√π) e^(-x²), which is the standard normal probability density function scaled
-  by √(2π).
-  
+
+  The derivative is (2/sqrt(pi)) * e^(-x^2), which is the standard normal probability density
+  function scaled by sqrt(2*pi).
+
   Examples:
-    (erf-derivative 0.0) ;=> 1.1283791670955126 (2/√π)
-    (erf-derivative 1.0) ;=> 0.41510749742502713"
+    (erf-derivative 0.0) => 1.1283791670955126 (2/sqrt(pi))
+    (erf-derivative 1.0) => 0.41510749742502713"
   [x]
   (* 2.0 m/inv-sqrt-pi (m/exp (- (m/sq x)))))
 
@@ -215,7 +215,7 @@
 
 (defn- erfc-asymptotic
   "Computes erfc(x) using asymptotic expansion for large x > 4.
-  erfc(x) ~ exp(-x²)/(x√π) * [1 - 1/(2x²) + 1·3/(2x²)² - 1·3·5/(2x²)³ + ...]"
+  erfc(x) ~ exp(-x^2)/(x*sqrt(pi)) * [1 - 1/(2x^2) + 1*3/(2x^2)^2 - 1*3*5/(2x^2)^3 + ...]"
   [x]
   (let [x2 (m/sq x)
         inv-2x2 (/ (* 2.0 x2))
@@ -241,10 +241,10 @@
   - Symmetry relation for negative x
 
   Examples:
-    (erfc 0.0) ;=> 1.0
-    (erfc 3.0) ;=> 2.2090496998585441e-5
-    (erfc 5.0) ;=> 1.5374597944280349e-12
-    (erfc 10.0) ;=> 2.0884875837625447e-45"
+    (erfc 0.0) => 1.0
+    (erfc 3.0) => 2.2090496998585441e-5
+    (erfc 5.0) => 1.5374597944280349e-12
+    (erfc 10.0) => 2.0884875837625447e-45"
   [x]
   (cond
     (zero? x) 1.0
@@ -267,17 +267,17 @@
     (rest coeffs)))
 
 (defn inv-erf
-  "Computes the inverse error function erf⁻¹(`x`).
-  
+  "Computes the inverse error function erf^(-1)(`x`).
+
   Finds y such that erf(y) = `x`. Uses rational approximations with different coefficient sets for
   different ranges.
-  
+
   Domain: [-1, 1]
-  Range: (-∞, ∞)
-  
+  Range: (-inf, inf)
+
   Examples:
-    (inv-erf 0.0) ;=> 0.0
-    (inv-erf 0.8427) ;=> ~1.0 (approximately)"
+    (inv-erf 0.0) => 0.0
+    (inv-erf 0.8427) => ~1.0 (approximately)"
   [x]
   (cond (m/roughly? 1.0 x m/dbl-close) m/inf+
     (m/roughly? -1.0 x m/dbl-close) m/inf-
@@ -308,17 +308,17 @@
   :ret ::m/num)
 
 (defn inv-erfc
-  "Computes the inverse complementary error function erfc⁻¹(`x`).
-  
-  Finds y such that erfc(y) = `x`. Equivalent to inv-erf(1-`x`).
-  
+  "Computes the inverse complementary error function erfc^(-1)(`x`).
+
+  Finds y such that erfc(y) = `x`. Equivalent to [[inv-erf]](1-`x`).
+
   Domain: [0, 2]
-  Range: (-∞, ∞)
-  
+  Range: (-inf, inf)
+
   Examples:
-    (inv-erfc 1.0) ;=> 0.0
-    (inv-erfc 0.0) ;=> ∞
-    (inv-erfc 2.0) ;=> -∞"
+    (inv-erfc 1.0) => 0.0
+    (inv-erfc 0.0) => inf
+    (inv-erfc 2.0) => -inf"
   [x]
   (cond (m/roughly? x 0.0 m/dbl-close) m/inf+
     (m/roughly? x 2.0 m/dbl-close) m/inf-
@@ -332,13 +332,13 @@
 ;;;SIGMOID FUNCTIONS
 (defn inv-cdf-standard-normal
   "Computes the inverse cumulative distribution function of the standard normal.
-  
-  Finds the value x such that Φ(x) = `cumulative-prob`, where Φ is the standard normal CDF.
+
+  Finds the value x such that Phi(x) = `cumulative-prob`, where Phi is the standard normal CDF.
   Also known as the probit function or normal quantile function.
-  
+
   Examples:
-    (inv-cdf-standard-normal 0.5) ;=> 0.0 (median)
-    (inv-cdf-standard-normal 0.975) ;=> ~1.96 (97.5th percentile)"
+    (inv-cdf-standard-normal 0.5) => 0.0 (median)
+    (inv-cdf-standard-normal 0.975) => ~1.96 (97.5th percentile)"
   [cumulative-prob]
   (cond (zero? cumulative-prob) m/inf-
     (m/one? cumulative-prob) m/inf+
@@ -351,14 +351,14 @@
 
 (defn cdf-standard-normal
   "Computes the cumulative distribution function of the standard normal.
-  
-  Calculates Φ(`x`) = P(Z ≤ `x`) where Z ~ N(0,1). Related to the error
-  function by Φ(`x`) = (1 + erf(`x`/√2))/2.
-  
+
+  Calculates Phi(`x`) = P(Z <= `x`) where Z ~ N(0,1). Related to the error function by
+  Phi(`x`) = (1 + erf(`x`/sqrt(2)))/2.
+
   Examples:
-    (cdf-standard-normal 0.0) ;=> 0.5
-    (cdf-standard-normal 1.96) ;=> ~0.975
-    (cdf-standard-normal -1.96) ;=> ~0.025"
+    (cdf-standard-normal 0.0) => 0.5
+    (cdf-standard-normal 1.96) => ~0.975
+    (cdf-standard-normal -1.96) => ~0.025"
   [x]
   (cond (m/inf+? x) 1.0
     (m/inf-? x) 0.0
@@ -375,19 +375,19 @@
 
 (defn logistic
   "Computes the logistic (sigmoid) function: 1/(1 + e^(-`x`)).
-  
+
   Maps real numbers to (0,1). Often used as an activation function in neural networks and in
   logistic regression.
-  
+
   Properties:
   - logistic(0) = 0.5
   - logistic(-x) = 1 - logistic(x)
   - Derivative is logistic(x) * (1 - logistic(x))
-  
+
   Examples:
-    (logistic 0.0) ;=> 0.5
-    (logistic 2.0) ;=> 0.8807970779778823
-    (logistic -2.0) ;=> 0.11920292202211755"
+    (logistic 0.0) => 0.5
+    (logistic 2.0) => 0.8807970779778823
+    (logistic -2.0) => 0.11920292202211755"
   [x]
   (+ 0.5 (* 0.5 (m/tanh (* 0.5 x)))))
 
@@ -397,13 +397,13 @@
 
 (defn logistic-derivative
   "Computes the derivative of the logistic function at `x`.
-  
+
   The derivative is logistic(`x`) * (1 - logistic(`x`)), which has its maximum of 0.25 at `x` = 0.
-  This is efficiently computed as 0.25 * (1 - tanh²(`x`/2)).
-  
+  This is efficiently computed as 0.25 * (1 - tanh(`x`/2)^2).
+
   Examples:
-    (logistic-derivative 0.0) ;=> 0.25
-    (logistic-derivative 2.0) ;=> 0.10499358540350662"
+    (logistic-derivative 0.0) => 0.25
+    (logistic-derivative 2.0) => 0.10499358540350662"
   [x]
   (* 0.25 (m/one- (m/sq (m/tanh (* 0.5 x))))))
 
@@ -413,14 +413,14 @@
 
 (defn logit
   "Computes the logit function: ln(`p`/(1-`p`)).
-  
-  The inverse of the logistic function. Maps probabilities in (0,1) to real numbers. Used in
+
+  The inverse of the [[logistic]] function. Maps probabilities in (0,1) to real numbers. Used in
   logistic regression and odds ratios.
-  
+
   Examples:
-    (logit 0.5) ;=> 0.0
-    (logit 0.75) ;=> 1.0986122886681098 (ln(3))
-    (logit 0.25) ;=> -1.0986122886681098"
+    (logit 0.5) => 0.0
+    (logit 0.75) => 1.0986122886681098 (ln(3))
+    (logit 0.25) => -1.0986122886681098"
   [p]
   (cond (zero? p) m/inf-
     (m/one? p) m/inf+
@@ -432,12 +432,12 @@
 
 (defn logit-derivative
   "Computes the derivative of the logit function: d/d`p` logit(`p`).
-  
+
   The derivative is 1/(`p`(1-`p`)), which approaches infinity as `p` approaches 0 or 1.
-  
+
   Examples:
-    (logit-derivative 0.5) ;=> 4.0
-    (logit-derivative 0.25) ;=> 5.333333333333333"
+    (logit-derivative 0.5) => 4.0
+    (logit-derivative 0.25) => 5.333333333333333"
   [p]
   (if (or (zero? p) (m/one? p))
     m/inf+
@@ -478,21 +478,21 @@
             (* x f)))))))
 
 (defn gamma
-  "Computes the gamma function Γ(`a`).
-  
-  Defined as Γ(`a`) = ∫₀^∞ t^(`a`-1) e^(-t) dt for `a` > 0.
+  "Computes the gamma function Gamma(`a`).
+
+  Defined as Gamma(`a`) = integral(0 to inf, t^(`a`-1) * e^(-t) dt) for `a` > 0.
   Extended to negative nonintegers using the reflection formula.
-  
+
   Properties:
-  - Γ(n) = (n-1)! for positive integers n
-  - Γ(1/2) = √π
-  - Γ(a+1) = a Γ(a) (recurrence relation)
-  
+  - Gamma(n) = (n-1)! for positive integers n
+  - Gamma(1/2) = sqrt(pi)
+  - Gamma(a+1) = a * Gamma(a) (recurrence relation)
+
   Examples:
-    (gamma 1.0) ;=> 1.0 (0!)
-    (gamma 2.0) ;=> 1.0 (1!)
-    (gamma 3.0) ;=> 2.0 (2!)
-    (gamma 0.5) ;=> 1.7724538509055159 (√π)"
+    (gamma 1.0) => 1.0 (0!)
+    (gamma 2.0) => 1.0 (1!)
+    (gamma 3.0) => 2.0 (2!)
+    (gamma 0.5) => 1.7724538509055159 (sqrt(pi))"
   [a]
   (cond (>= a 141.8) (m/exp (log-gamma a))
     (<= a -141.8) 0.0
@@ -530,16 +530,16 @@
   :ret ::m/non-inf-)
 
 (defn lower-gamma
-  "Computes the lower incomplete gamma function γ(`a`,`x`).
-  
-  Defined as γ(`a`,`x`) = ∫₀^`x` t^(`a`-1) e^(-t) dt.
+  "Computes the lower incomplete gamma function gamma(`a`,`x`).
+
+  Defined as gamma(`a`,`x`) = integral(0 to `x`, t^(`a`-1) * e^(-t) dt).
   Represents the \"tail\" of the gamma function from 0 to `x`.
-  
-  Related to the regularized gamma P function by γ(`a`,`x`) = Γ(`a`) P(`a`,`x`).
-  
+
+  Related to the regularized gamma P function by gamma(`a`,`x`) = Gamma(`a`) * P(`a`,`x`).
+
   Examples:
-    (lower-gamma 2.0 1.0) ;=> 0.6321205588285577
-    (lower-gamma 1.0 2.0) ;=> 0.8646647167633873"
+    (lower-gamma 2.0 1.0) => 0.6321205588285577
+    (lower-gamma 1.0 2.0) => 0.8646647167633873"
   [a x]
   (cond (zero? x) 0.0
     (m/one? a) (- (m/dec-exp (- x)))
@@ -551,17 +551,17 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma
-  "Computes the upper incomplete gamma function Γ(`a`,`x`).
-  
-  Defined as Γ(`a`,`x`) = ∫_`x`^∞ t^(`a`-1) e^(-t) dt.
+  "Computes the upper incomplete gamma function Gamma(`a`,`x`).
+
+  Defined as Gamma(`a`,`x`) = integral(`x` to inf, t^(`a`-1) * e^(-t) dt).
   Represents the \"tail\" of the gamma function from `x` to infinity.
-  
-  Related to the regularized gamma Q function by Γ(`a`,`x`) = Γ(`a`) Q(`a`,`x`).
-  Satisfies γ(`a`,`x`) + Γ(`a`,`x`) = Γ(`a`).
-  
+
+  Related to the regularized gamma Q function by Gamma(`a`,`x`) = Gamma(`a`) * Q(`a`,`x`).
+  Satisfies gamma(`a`,`x`) + Gamma(`a`,`x`) = Gamma(`a`).
+
   Examples:
-    (upper-gamma 2.0 1.0) ;=> 0.36787944117144233
-    (upper-gamma 1.0 2.0) ;=> 0.1353352832366127"
+    (upper-gamma 2.0 1.0) => 0.36787944117144233
+    (upper-gamma 1.0 2.0) => 0.1353352832366127"
   [a x]
   (cond (zero? x) (gamma a)
     (m/one? a) (m/exp (- x))
@@ -572,15 +572,15 @@
   :ret ::m/nan-or-non-)
 
 (defn upper-gamma-derivative-x
-  "Computes `x`^(`a`-1) e^(-`x`) / Γ(`a`).
+  "Computes `x`^(`a`-1) * e^(-`x`) / Gamma(`a`).
 
-  This equals the gamma distribution PDF with shape `a` and rate 1.
-  Also equals d/d`x` P(`a`,`x`) = -d/d`x` Q(`a`,`x`), where P and Q are the
-  regularized lower and upper incomplete gamma functions.
+  This equals the gamma distribution PDF with shape `a` and rate 1. Also equals d/d`x` P(`a`,`x`)
+  = -d/d`x` Q(`a`,`x`), where P and Q are the regularized lower and upper incomplete gamma
+  functions.
 
   Examples:
-    (upper-gamma-derivative-x 2.0 1.0) ;=> 0.36787944117144233
-    (upper-gamma-derivative-x 1.0 0.0) ;=> 1.0"
+    (upper-gamma-derivative-x 2.0 1.0) => 0.36787944117144233
+    (upper-gamma-derivative-x 1.0 0.0) => 1.0"
   [a x]
   (let [v (* (m/exp (- x))
             (m/pow x (dec a))
@@ -593,17 +593,17 @@
 
 (defn regularized-gamma-p
   "Computes the regularized lower incomplete gamma function P(`a`,`x`).
-  
-  Defined as P(`a`,`x`) = γ(`a`,`x`) / Γ(`a`), where γ is the lower incomplete gamma.
+
+  Defined as P(`a`,`x`) = gamma(`a`,`x`) / Gamma(`a`), where gamma is the lower incomplete gamma.
   Represents the cumulative distribution function of the gamma distribution.
-  
+
   Properties:
   - P(a,0) = 0
-  - P(a,∞) = 1
+  - P(a,inf) = 1
   - P(a,x) + Q(a,x) = 1
-  
+
   Examples:
-    (regularized-gamma-p 2.0 1.0) ;=> 0.6321205588285577"
+    (regularized-gamma-p 2.0 1.0) => 0.6321205588285577"
   [a x]
   (cond (zero? x) 0.0
     (>= x (inc a)) (m/one- (regularized-gamma-q a x))
@@ -631,17 +631,17 @@
 
 (defn regularized-gamma-q
   "Computes the regularized upper incomplete gamma function Q(`a`,`x`).
-  
-  Defined as Q(`a`,`x`) = Γ(`a`,`x`) / Γ(`a`), where Γ is the upper incomplete gamma.
+
+  Defined as Q(`a`,`x`) = Gamma(`a`,`x`) / Gamma(`a`), where Gamma is the upper incomplete gamma.
   Represents the survival function (1 - CDF) of the gamma distribution.
-  
+
   Properties:
   - Q(a,0) = 1
-  - Q(a,∞) = 0
+  - Q(a,inf) = 0
   - P(a,x) + Q(a,x) = 1
-  
+
   Examples:
-    (regularized-gamma-q 2.0 1.0) ;=> 0.36787944117144233"
+    (regularized-gamma-q 2.0 1.0) => 0.36787944117144233"
   [a x]
   (cond (zero? x) 1.0
     (< x (inc (double a))) (m/one- (regularized-gamma-p a x))
@@ -669,15 +669,15 @@
   :ret ::m/nan-or-prob)
 
 (defn log-gamma
-  "Computes the natural logarithm of the gamma function ln(Γ(`a`)).
-  
-  More numerically stable than computing log(gamma(`a`)) directly,
-  especially for large values of `a` where gamma(`a`) would overflow.
-  
+  "Computes the natural logarithm of the gamma function ln(Gamma(`a`)).
+
+  More numerically stable than computing log([[gamma]](`a`)) directly, especially for large values
+  of `a` where [[gamma]](`a`) would overflow.
+
   Examples:
-    (log-gamma 1.0) ;=> 0.0 (ln(1))
-    (log-gamma 2.0) ;=> 0.0 (ln(1))
-    (log-gamma 10.0) ;=> 12.801827480081469 (ln(9!))"
+    (log-gamma 1.0) => 0.0 (ln(1))
+    (log-gamma 2.0) => 0.0 (ln(1))
+    (log-gamma 10.0) => 12.801827480081469 (ln(9!))"
   [a]
   (cond (m/inf+? a) m/inf+
     (< a 0.5) (- (log-gamma-inc a) (m/log a))
@@ -700,14 +700,14 @@
   :ret ::m/non-inf-)
 
 (defn log-gamma-inc
-  "Computes ln(Γ(1+a)) with improved accuracy for small a.
-  
-  More numerically stable than computing log-gamma(1+a) directly
-  when a is close to zero, avoiding cancellation errors.
-  
+  "Computes ln(Gamma(1+`a`)) with improved accuracy for small `a`.
+
+  More numerically stable than computing [[log-gamma]](1+`a`) directly when `a` is close to zero,
+  avoiding cancellation errors.
+
   Examples:
-    (log-gamma-inc 0.0) ;=> 0.0 (ln(Γ(1)))
-    (log-gamma-inc 0.1) ;=> -0.04987244125983972"
+    (log-gamma-inc 0.0) => 0.0 (ln(Gamma(1)))
+    (log-gamma-inc 0.1) => -0.04987244125983972"
   [a]
   (if (or (< a -0.5) (> a 1.5))
     (log-gamma (inc a))
@@ -719,17 +719,17 @@
   :ret ::m/non-inf-)
 
 (defn log-gamma-derivative
-  "Computes the derivative of ln(Γ(a)), also known as the digamma function ψ(a).
-  
-  The digamma function is d/da ln(Γ(a)) = Γ'(a)/Γ(a).
-  
+  "Computes the derivative of ln(Gamma(`a`)), also known as the digamma function psi(`a`).
+
+  The digamma function is d/d`a` ln(Gamma(`a`)) = Gamma'(`a`)/Gamma(`a`).
+
   Properties:
-  - ψ(1) = -γ (negative Euler-Mascheroni constant)
-  - ψ(n) = -γ + ∑(1/k) for k=1 to n-1 (positive integers)
-  
+  - psi(1) = -gamma (negative Euler-Mascheroni constant)
+  - psi(n) = -gamma + sum(1/k) for k=1 to n-1 (positive integers)
+
   Examples:
-    (log-gamma-derivative 1.0) ;=> -0.5772156649015329 (-γ)
-    (log-gamma-derivative 2.0) ;=> 0.42278433509846713"
+    (log-gamma-derivative 1.0) => -0.5772156649015329 (-gamma)
+    (log-gamma-derivative 2.0) => 0.42278433509846713"
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -757,13 +757,13 @@
 (def digamma log-gamma-derivative)
 
 (defn gamma-derivative
-  "Computes the derivative of the gamma function Γ'(a).
-  
-  The derivative is Γ'(a) = Γ(a) ψ(a), where ψ is the digamma function.
-  
+  "Computes the derivative of the gamma function Gamma'(`a`).
+
+  The derivative is Gamma'(`a`) = Gamma(`a`) * psi(`a`), where psi is the digamma function.
+
   Examples:
-    (gamma-derivative 1.0) ;=> -0.5772156649015329
-    (gamma-derivative 2.0) ;=> 0.42278433509846713"
+    (gamma-derivative 1.0) => -0.5772156649015329
+    (gamma-derivative 2.0) => 0.42278433509846713"
   [a]
   (* (gamma a) (log-gamma-derivative a)))
 
@@ -774,17 +774,17 @@
   :ret ::m/number)
 
 (defn trigamma
-  "Computes the trigamma function ψ'(a), the second derivative of ln(Γ(a)).
-  
-  The trigamma function is d²/da² ln(Γ(a)) = d/da ψ(a).
+  "Computes the trigamma function psi'(`a`), the second derivative of ln(Gamma(`a`)).
+
+  The trigamma function is d^2/d`a`^2 ln(Gamma(`a`)) = d/d`a` psi(`a`).
   Related to the variance of certain probability distributions.
-  
+
   Properties:
-  - ψ'(1) = π²/6 (Apéry's constant)
-  - ψ'(n) = π²/6 - ∑(1/k²) for k=1 to n-1
-  
+  - psi'(1) = pi^2/6 (related to Apery's constant)
+  - psi'(n) = pi^2/6 - sum(1/k^2) for k=1 to n-1
+
   Examples:
-    (trigamma 1.0) ;=> 1.6449340668482264 (π²/6)"
+    (trigamma 1.0) => 1.6449340668482264 (pi^2/6)"
   [a]
   (let [a (double a)]
     (if (m/roughly-round-non+? a m/sgl-close)
@@ -813,14 +813,14 @@
   :ret ::m/num)
 
 (defn multivariate-gamma
-  "Computes the multivariate gamma function Γ_p(a).
-  
-  Defined as Γ_p(a) = π^(p(p-1)/4) ∏_{j=1}^p Γ(a + (1-j)/2).
+  "Computes the multivariate gamma function Gamma_`p`(`a`).
+
+  Defined as Gamma_p(a) = pi^(p(p-1)/4) * product(j=1 to p, Gamma(a + (1-j)/2)).
   Used in multivariate statistics, particularly with Wishart distributions.
-  
+
   Examples:
-    (multivariate-gamma 2.0 1) ;=> 1.0 (same as univariate gamma)
-    (multivariate-gamma 2.0 2) ;=> 0.8862269254527579"
+    (multivariate-gamma 2.0 1) => 1.0 (same as univariate gamma)
+    (multivariate-gamma 2.0 2) => 0.8862269254527579"
   [a p]
   (let [p (if (= p m/max-long)
             (double p)
@@ -850,13 +850,13 @@
 
 (defn multivariate-log-gamma
   "Computes the natural logarithm of the multivariate gamma function.
-  
-  More numerically stable than computing log(multivariate-gamma(a, p)) directly, especially for
-  large values.
-  
+
+  More numerically stable than computing log([[multivariate-gamma]](`a`, `p`)) directly, especially
+  for large values.
+
   Examples:
-    (multivariate-log-gamma 2.0 1) ;=> 0.0
-    (multivariate-log-gamma 2.0 2) ;=> -0.12078223763524518"
+    (multivariate-log-gamma 2.0 1) => 0.0
+    (multivariate-log-gamma 2.0 2) => -0.12078223763524518"
   [a p]
   (+ (* m/log-pi 0.25 p (dec p))
     (apply + (map (fn [i]
@@ -874,19 +874,19 @@
 
 ;;;BETA FUNCTIONS
 (defn beta
-  "Computes the beta function B(x,y).
-  
-  Defined as B(x,y) = ∫₀¹ t^(x-1) (1-t)^(y-1) dt.
-  Related to the gamma function by B(x,y) = Γ(x)Γ(y)/Γ(x+y).
-  
+  "Computes the beta function B(`x`,`y`).
+
+  Defined as B(x,y) = integral(0 to 1, t^(x-1) * (1-t)^(y-1) dt).
+  Related to the gamma function by B(x,y) = Gamma(x)*Gamma(y)/Gamma(x+y).
+
   Properties:
   - B(x,y) = B(y,x) (symmetric)
   - B(1,1) = 1
   - B(m,n) = (m-1)!(n-1)!/(m+n-1)! for positive integers
-  
+
   Examples:
-    (beta 1.0 1.0) ;=> 1.0
-    (beta 2.0 3.0) ;=> 0.08333333333333333 (1/12)"
+    (beta 1.0 1.0) => 1.0
+    (beta 2.0 3.0) => 0.08333333333333333 (1/12)"
   [x y]
   (m/exp (log-beta x y)))
 
@@ -944,14 +944,14 @@
       :else (+ (log-gamma-inc (dec x)) (m/log (* x (inc x)))))))
 
 (defn log-beta
-  "Computes the natural logarithm of the beta function ln(B(x,y)).
-  
-  More numerically stable than computing log(beta(x, y)) directly.
-  Uses the relation ln(B(x,y)) = ln(Γ(x)) + ln(Γ(y)) - ln(Γ(x+y)).
-  
+  "Computes the natural logarithm of the beta function ln(B(`x`,`y`)).
+
+  More numerically stable than computing log([[beta]](`x`, `y`)) directly.
+  Uses the relation ln(B(x,y)) = ln(Gamma(x)) + ln(Gamma(y)) - ln(Gamma(x+y)).
+
   Examples:
-    (log-beta 1.0 1.0) ;=> 0.0
-    (log-beta 2.0 3.0) ;=> -2.4849066497880004"
+    (log-beta 1.0 1.0) => 0.0
+    (log-beta 2.0 3.0) => -2.4849066497880004"
   [x y]
   (let [a (min x y)
         b (max x y)]
@@ -1041,20 +1041,20 @@
   :ret ::m/nan-or-non-inf-)
 
 (defn regularized-beta
-  "Computes the regularized incomplete beta function I_c(x,y).
-  
+  "Computes the regularized incomplete beta function I_`c`(`x`,`y`).
+
   Defined as I_c(x,y) = B_c(x,y) / B(x,y), where B_c is the incomplete beta.
   Represents the cumulative distribution function of the beta distribution.
-  
+
   Properties:
   - I_0(x,y) = 0
   - I_1(x,y) = 1
   - I_c(x,y) = 1 - I_{1-c}(y,x)
-  
+
   Examples:
-    (regularized-beta 0.5 2.0 3.0) ;=> 0.875
-    (regularized-beta 0.0 2.0 3.0) ;=> 0.0
-    (regularized-beta 1.0 2.0 3.0) ;=> 1.0"
+    (regularized-beta 0.5 2.0 3.0) => 0.875
+    (regularized-beta 0.0 2.0 3.0) => 0.0
+    (regularized-beta 1.0 2.0 3.0) => 1.0"
   [c x y]
   (let [x (double x)
         y (double y)
@@ -1107,14 +1107,14 @@
 (def regularized-incomplete-beta regularized-beta)
 
 (defn incomplete-beta
-  "Computes the incomplete beta function B_c(x,y).
-  
-  Defined as B_c(x,y) = ∫₀^c t^(x-1) (1-t)^(y-1) dt.
-  Related to the regularized incomplete beta by B_c(x,y) = B(x,y) I_c(x,y).
-  
+  "Computes the incomplete beta function B_`c`(`x`,`y`).
+
+  Defined as B_c(x,y) = integral(0 to c, t^(x-1) * (1-t)^(y-1) dt).
+  Related to the regularized incomplete beta by B_c(x,y) = B(x,y) * I_c(x,y).
+
   Examples:
-    (incomplete-beta 0.5 2.0 3.0) ;=> 0.072916666666666663
-    (incomplete-beta 0.0 2.0 3.0) ;=> 0.0"
+    (incomplete-beta 0.5 2.0 3.0) => 0.072916666666666663
+    (incomplete-beta 0.0 2.0 3.0) => 0.0"
   [c x y]
   (if (zero? c)
     0.0
@@ -1190,17 +1190,17 @@
 (defn bessel-j
   "Computes the Bessel function of the first kind J_`order`(`x`).
 
-  J_ν(x) is the solution to Bessel's equation that is finite at x=0.
+  J_v(x) is the solution to Bessel's equation that is finite at x=0.
   For integer orders n, J_n(x) = (-1)^n * J_{-n}(x).
 
   Parameters:
-    `order` - the order ν (any real number)
+    `order` - the order v (any real number)
     `x` - the argument (x >= 0)
 
   Examples:
-    (bessel-j 0 0.0) ;=> 1.0
-    (bessel-j 0 1.0) ;=> 0.7651976865579666
-    (bessel-j 1 1.0) ;=> 0.4400505857449335"
+    (bessel-j 0 0.0) => 1.0
+    (bessel-j 0 1.0) => 0.7651976865579666
+    (bessel-j 1 1.0) => 0.4400505857449335"
   [order x]
   (cond
     (m/inf? x) 0.0                                          ;; J_ν(∞) = 0 (oscillates to 0)
@@ -1298,16 +1298,16 @@
 (defn bessel-y
   "Computes the Bessel function of the second kind Y_`order`(`x`).
 
-  Also called Neumann function N_ν(x). Y_ν(x) is the second linearly independent solution to
+  Also called Neumann function N_v(x). Y_v(x) is the second linearly independent solution to
   Bessel's equation. Has a logarithmic singularity at x=0.
 
   Parameters:
-    `order` - the order ν (any real number)
+    `order` - the order v (any real number)
     `x` - the argument (x > 0)
 
   Examples:
-    (bessel-y 0 1.0) ;=> 0.08825696421567691
-    (bessel-y 1 1.0) ;=> -0.7812128213002887"
+    (bessel-y 0 1.0) => 0.08825696421567691
+    (bessel-y 1 1.0) => -0.7812128213002887"
   [order x]
   (cond
     (<= x 0.0) m/inf-
@@ -1322,8 +1322,8 @@
   :ret ::m/num)
 
 (defn- bessel-i-series
-  "Power series for I_ν(x) for small to moderate x.
-  I_ν(x) = (x/2)^ν * Σ_{k=0}^∞ (x/2)^(2k) / (k! * Γ(ν+k+1))"
+  "Power series for I_v(x) for small to moderate x.
+  I_v(x) = (x/2)^v * sum(k=0 to inf, (x/2)^(2k) / (k! * Gamma(v+k+1)))"
   [order x max-terms]
   (let [x-half (* 0.5 x)
         x2 (m/sq x-half)
@@ -1340,9 +1340,9 @@
           (recur (inc k) next-term (+ sum next-term)))))))
 
 (defn- bessel-i-asymptotic
-  "Asymptotic expansion for I_ν(x) for large x.
-  I_ν(x) ~ exp(x)/√(2πx) * [1 - (μ-1)/(8x) + ...]
-  where μ = 4ν²"
+  "Asymptotic expansion for I_v(x) for large x.
+  I_v(x) ~ exp(x)/sqrt(2*pi*x) * [1 - (mu-1)/(8x) + ...]
+  where mu = 4*v^2"
   [order x]
   (let [prefactor (/ (m/exp x) (m/sqrt (* 2.0 m/PI x)))
         mu (* 4.0 (m/sq order))
@@ -1363,17 +1363,17 @@
 (defn bessel-i
   "Computes the modified Bessel function of the first kind I_`order`(`x`).
 
-  I_ν(x) is the solution to the modified Bessel equation that is finite at x=0. Related to J_ν
-  by I_ν(x) = i^(-ν) * J_ν(ix).
+  I_v(x) is the solution to the modified Bessel equation that is finite at x=0. Related to J_v
+  by I_v(x) = i^(-v) * J_v(ix).
 
   Parameters:
-    `order` - the order ν (any real number)
+    `order` - the order v (any real number)
     `x` - the argument (x >= 0)
 
   Examples:
-    (bessel-i 0 0.0) ;=> 1.0
-    (bessel-i 0 1.0) ;=> 1.2660658777520082
-    (bessel-i 1 1.0) ;=> 0.5651591039924851"
+    (bessel-i 0 0.0) => 1.0
+    (bessel-i 0 1.0) => 1.2660658777520082
+    (bessel-i 1 1.0) => 0.5651591039924851"
   [order x]
   (cond
     (zero? x) (if (zero? order) 1.0 0.0)
@@ -1397,9 +1397,9 @@
   :ret ::m/nan-or-non-)
 
 (defn- bessel-k-asymptotic
-  "Asymptotic expansion for K_ν(x) for large x.
-  K_ν(x) ~ √(π/(2x)) * e^(-x) * [1 + (μ-1)/(8x) + ...]
-  where μ = 4ν²"
+  "Asymptotic expansion for K_v(x) for large x.
+  K_v(x) ~ sqrt(pi/(2x)) * e^(-x) * [1 + (mu-1)/(8x) + ...]
+  where mu = 4*v^2"
   [order x]
   (let [prefactor (* (m/sqrt (/ m/PI (* 2.0 x))) (m/exp (- x)))
         mu (* 4.0 (m/sq order))
@@ -1418,8 +1418,8 @@
               (recur (inc k) next-term (+ sum next-term)))))))))
 
 (defn- bessel-k-series
-  "Computes K_ν(x) for non-integer order using the relation:
-  K_ν(x) = (π/2) * (I_{-ν}(x) - I_ν(x)) / sin(νπ)"
+  "Computes K_v(x) for non-integer order using the relation:
+  K_v(x) = (pi/2) * (I_{-v}(x) - I_v(x)) / sin(v*pi)"
   [order x]
   (let [i-nu (bessel-i order x)
         i-neg-nu (bessel-i (- order) x)
@@ -1447,8 +1447,8 @@
                 (recur (inc k) k-curr k-next))))))
 
       (zero? n)
-      ;; K_0(x) = -[γ + ln(x/2)]I_0(x) + Σ_{k=1}^∞ (x/2)^{2k} ψ(k) / (k!)²
-      ;; where ψ(k) = H_k = 1 + 1/2 + ... + 1/k
+      ;; K_0(x) = -[gamma + ln(x/2)]I_0(x) + sum(k=1 to inf, (x/2)^{2k} * psi(k) / (k!)^2)
+      ;; where psi(k) = H_k = 1 + 1/2 + ... + 1/k
       (let [ln-x2 (m/log (* 0.5 x))
             x-half (* 0.5 x)
             x2 (m/sq x-half)
@@ -1492,16 +1492,16 @@
 (defn bessel-k
   "Computes the modified Bessel function of the second kind K_`order`(`x`).
 
-  K_ν(x) is the second linearly independent solution to the modified Bessel equation. Decays
+  K_v(x) is the second linearly independent solution to the modified Bessel equation. Decays
   exponentially for large x. Has a singularity at x=0.
 
   Parameters:
-    `order` - the order ν (any real number)
+    `order` - the order v (any real number)
     `x` - the argument (x > 0)
 
   Examples:
-    (bessel-k 0 1.0) ;=> 0.42102443824070834
-    (bessel-k 1 1.0) ;=> 0.6019072301972346"
+    (bessel-k 0 1.0) => 0.42102443824070834
+    (bessel-k 1 1.0) => 0.6019072301972346"
   [order x]
   (let [abs-order (m/abs order)]                            ;; K_ν(x) = K_{-ν}(x), so use |ν|
     (cond
@@ -1527,7 +1527,7 @@
 
 ;;;HYPERGEOMETRIC FUNCTIONS
 (defn- hypergeometric-1f1-series
-  "Direct series for ₁F₁(a; b; z) = Σ_{n=0}^∞ (a)_n z^n / ((b)_n n!)
+  "Direct series for 1F1(a; b; z) = sum(n=0 to inf, (a)_n z^n / ((b)_n n!))
   where (a)_n is the Pochhammer symbol (rising factorial)."
   [a b z max-terms]
   (loop [n 0
@@ -1543,10 +1543,10 @@
         (recur (inc n) next-term (+ sum next-term))))))
 
 (defn hypergeometric-1f1
-  "Computes the confluent hypergeometric function ₁F₁(`a`; `b`; `z`).
+  "Computes the confluent hypergeometric function 1F1(`a`; `b`; `z`).
 
   Also known as Kummer's function M(a,b,z). Defined by:
-  ₁F₁(a; b; z) = Σ_{n=0}^∞ (a)_n z^n / ((b)_n n!)
+  1F1(a; b; z) = sum(n=0 to inf, (a)_n z^n / ((b)_n n!))
 
   Parameters:
     `a` - first parameter (any real number)
@@ -1554,13 +1554,13 @@
     `z` - the argument (any real number)
 
   Special cases:
-    ₁F₁(a; a; z) = e^z
-    ₁F₁(0; b; z) = 1
-    ₁F₁(1; 2; 2z) = (e^z - 1)/z * sinh(z)/z for small z
+    1F1(a; a; z) = e^z
+    1F1(0; b; z) = 1
+    1F1(1; 2; 2z) = (e^z - 1)/z * sinh(z)/z for small z
 
   Examples:
-    (hypergeometric-1f1 1 1 1) ;=> e ≈ 2.718281828
-    (hypergeometric-1f1 0.5 1.5 -1) ;=> 0.7468241328"
+    (hypergeometric-1f1 1 1 1) => e (approx 2.718281828)
+    (hypergeometric-1f1 0.5 1.5 -1) => 0.7468241328"
   [a b z]
   (cond
     ;; b is non-positive integer: undefined (pole)
@@ -1601,7 +1601,7 @@
   :ret ::m/num)
 
 (defn- hypergeometric-2f1-series
-  "Direct series for ₂F₁(a, b; c; z) = Σ_{n=0}^∞ (a)_n (b)_n z^n / ((c)_n n!)
+  "Direct series for 2F1(a, b; c; z) = sum(n=0 to inf, (a)_n (b)_n z^n / ((c)_n n!))
   Converges for |z| < 1."
   [a b c z max-terms]
   (loop [n 0
@@ -1620,13 +1620,13 @@
         (recur (inc n) next-term (+ sum next-term))))))
 
 (defn hypergeometric-2f1
-  "Computes the Gaussian hypergeometric function ₂F₁(`a`, `b`; `c`; `z`).
+  "Computes the Gaussian hypergeometric function 2F1(`a`, `b`; `c`; `z`).
 
   Defined by:
-  ₂F₁(a, b; c; z) = Σ_{n=0}^∞ (a)_n (b)_n z^n / ((c)_n n!)
+  2F1(a, b; c; z) = sum(n=0 to inf, (a)_n (b)_n z^n / ((c)_n n!))
 
-  The series converges for |z| < 1. For |z| ≥ 1, various transformations
-  are used (Euler, Pfaff, etc.).
+  The series converges for |z| < 1. For |z| >= 1, various transformations are used (Euler, Pfaff,
+  etc.).
 
   Parameters:
     `a`, `b` - numerator parameters (any real numbers)
@@ -1634,13 +1634,13 @@
     `z` - the argument (real number, |z| < 1 for convergence)
 
   Special cases:
-    ₂F₁(a, b; c; 0) = 1
-    ₂F₁(1, 1; 2; z) = -ln(1-z)/z
-    ₂F₁(1, b; b; z) = 1/(1-z)
+    2F1(a, b; c; 0) = 1
+    2F1(1, 1; 2; z) = -ln(1-z)/z
+    2F1(1, b; b; z) = 1/(1-z)
 
   Examples:
-    (hypergeometric-2f1 1 1 2 0.5) ;=> 2*ln(2) ≈ 1.386294
-    (hypergeometric-2f1 0.5 0.5 1.5 0.5) ;=> (2/√π)*arcsin(√0.5)"
+    (hypergeometric-2f1 1 1 2 0.5) => 2*ln(2) (approx 1.386294)
+    (hypergeometric-2f1 0.5 0.5 1.5 0.5) => (2/sqrt(pi))*arcsin(sqrt(0.5))"
   [a b c z]
   (cond
     ;; c is non-positive integer: undefined (pole)
@@ -1659,7 +1659,7 @@
       (m/roughly? b 0.0 m/sgl-close))
     1.0
 
-    ;; a = c or b = c: reduces to ₁F₀ = (1-z)^(-b) or (1-z)^(-a)
+    ;; a = c or b = c: reduces to 1F0 = (1-z)^(-b) or (1-z)^(-a)
     (m/roughly? a c m/sgl-close)
     (m/pow (- 1.0 z) (- b))
 
@@ -1677,13 +1677,13 @@
       (* (gamma (- c a)) (gamma (- c b))))
 
     ;; z > 1 or z < 0: use linear transformation
-    ;; ₂F₁(a,b;c;z) = (1-z)^(-a) * ₂F₁(a, c-b; c; z/(z-1))  [Pfaff transformation]
+    ;; 2F1(a,b;c;z) = (1-z)^(-a) * 2F1(a, c-b; c; z/(z-1))  [Pfaff transformation]
     (or (> z 1.0) (< z 0.0))
     (let [z-transformed (/ z (- z 1.0))]
       (if (< (m/abs z-transformed) 1.0)
         (* (m/pow (- 1.0 z) (- a))
           (hypergeometric-2f1 a (- c b) c z-transformed))
-        ;; Try alternative: (1-z)^(-b) * ₂F₁(c-a, b; c; z/(z-1))
+        ;; Try alternative: (1-z)^(-b) * 2F1(c-a, b; c; z/(z-1))
         (* (m/pow (- 1.0 z) (- b))
           (hypergeometric-2f1 (- c a) b c z-transformed))))
 

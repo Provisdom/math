@@ -230,14 +230,14 @@
 
 ;;;MATRIX TYPES
 (defn matrix?
-  "Returns true if x is a valid matrix.
-  
+  "Returns `true` if `x` is a valid matrix.
+
   A valid matrix is a vector of vectors where:
   - All rows have equal length (including zero-length rows)
   - All elements are numbers
-  - Empty matrix [[]] is valid
-  - Single empty row with multiple rows [[] []] is invalid
-  
+  - Empty matrix `[[]]` is valid
+  - Single empty row with multiple rows `[[] []]` is invalid
+
   Examples:
     (matrix? [[1 2] [3 4]]) ;=> true
     (matrix? [[]]) ;=> true
@@ -256,10 +256,10 @@
   :ret boolean?)
 
 (defn matrix-num?
-  "Returns true if x is a valid matrix containing only non-NaN numbers.
-  
-  Similar to matrix? but excludes NaN values. Accepts infinite values.
-  
+  "Returns `true` if `x` is a valid matrix containing only non-NaN numbers.
+
+  Similar to [[matrix?]] but excludes NaN values. Accepts infinite values.
+
   Examples:
     (matrix-num? [[1 2] [3 4]]) ;=> true
     (matrix-num? [[1 ##NaN]]) ;=> false
@@ -288,10 +288,10 @@
            mdl)))))
 
 (defn matrix-finite?
-  "Returns true if x is a valid matrix containing only finite numbers.
-  
+  "Returns `true` if `x` is a valid matrix containing only finite numbers.
+
   Excludes both NaN and infinite values.
-  
+
   Examples:
     (matrix-finite? [[1 2] [3 4]]) ;=> true
     (matrix-finite? [[1 ##Inf]]) ;=> false
@@ -310,9 +310,9 @@
   :ret boolean?)
 
 (defn all-matrix-values?
-  "Returns true if all matrix elements are within the specified bounds.
+  "Returns `true` if all matrix elements are within the specified bounds.
 
-  Checks that every element e satisfies m1 <= e <= m2.
+  Checks that every element e satisfies `m1` <= e <= `m2`.
 
   Examples:
     (all-matrix-values? [[1 2] [3 4]] 0 5) ;=> true
@@ -323,7 +323,7 @@
     x))
 
 (defn matrix-size?
-  "Returns true if the matrix has exactly the specified dimensions.
+  "Returns `true` if the matrix has exactly the specified dimensions.
 
   Examples:
     (matrix-size? [[1 2] [3 4]] 2 2) ;=> true
@@ -334,7 +334,7 @@
     (= (columns x) column-count)))
 
 (defn matrix-min-size?
-  "Returns true if the matrix has at least the specified dimensions.
+  "Returns `true` if the matrix has at least the specified dimensions.
 
   Examples:
     (matrix-min-size? [[1 2] [3 4]] 2 2) ;=> true
@@ -385,10 +385,10 @@
         ~row-count)))
 
 (defn matrix-finite-non-?
-  "Returns true if x is a valid matrix of finite non-negative numbers.
-  
+  "Returns `true` if `x` is a valid matrix of finite non-negative numbers.
+
   All elements must be finite and >= 0.
-  
+
   Examples:
     (matrix-finite-non-? [[0 1] [2 3]]) ;=> true
     (matrix-finite-non-? [[1 -1]]) ;=> false
@@ -407,10 +407,10 @@
   :ret boolean?)
 
 (defn matrix-prob?
-  "Returns true if x is a valid matrix of probability values.
-  
+  "Returns `true` if `x` is a valid matrix of probability values.
+
   All elements must be finite numbers between 0 and 1 inclusive.
-  
+
   Examples:
     (matrix-prob? [[0 0.5] [0.8 1]]) ;=> true
     (matrix-prob? [[0.5 1.2]]) ;=> false
@@ -429,10 +429,10 @@
   :ret boolean?)
 
 (defn empty-matrix?
-  "Returns true if x is an empty matrix.
-  
-  An empty matrix is represented as [[]] - a vector containing one empty vector.
-  
+  "Returns `true` if `x` is an empty matrix.
+
+  An empty matrix is represented as `[[]]` - a vector containing one empty vector.
+
   Examples:
     (empty-matrix? [[]]) ;=> true
     (empty-matrix? []) ;=> false
@@ -445,7 +445,7 @@
   :ret boolean?)
 
 (defn row-matrix?
-  "Returns true if x is a single-row matrix.
+  "Returns `true` if `x` is a single-row matrix.
 
   A row matrix has exactly one row containing only numbers, or is an empty matrix.
 
@@ -465,10 +465,10 @@
   :ret boolean?)
 
 (defn column-matrix?
-  "Returns true if x is a single-column matrix.
-  
+  "Returns `true` if `x` is a single-column matrix.
+
   A column matrix has exactly one column (all rows have length 1), or is an empty matrix.
-  
+
   Examples:
     (column-matrix? [[1] [2] [3]]) ;=> true
     (column-matrix? [[1 2]]) ;=> false
@@ -486,8 +486,8 @@
   :ret boolean?)
 
 (defn zero-matrix?
-  "Returns true if x is a valid matrix with all elements equal to zero.
-  
+  "Returns `true` if `x` is a valid matrix with all elements equal to zero.
+
   Examples:
     (zero-matrix? [[0 0] [0 0]]) ;=> true
     (zero-matrix? [[0.0 0] [0 0.0]]) ;=> true
@@ -500,10 +500,10 @@
   :ret boolean?)
 
 (defn square-matrix?
-  "Returns true if x is a square matrix.
-  
+  "Returns `true` if `x` is a square matrix.
+
   A square matrix has the same number of rows and columns.
-  
+
   Examples:
     (square-matrix? [[1 2] [3 4]]) ;=> true
     (square-matrix? [[1]]) ;=> true
@@ -517,11 +517,11 @@
   :ret boolean?)
 
 (defn diagonal-matrix?
-  "Returns true if x is a diagonal matrix.
-  
-  A diagonal matrix has zeros for all off-diagonal elements.
-  Elements on the main diagonal can be any value.
-  
+  "Returns `true` if `x` is a diagonal matrix.
+
+  A diagonal matrix has zeros for all off-diagonal elements. Elements on the main diagonal can be
+  any value.
+
   Examples:
     (diagonal-matrix? [[1 0] [0 2]]) ;=> true
     (diagonal-matrix? [[1 0] [0 0]]) ;=> true
@@ -537,11 +537,11 @@
   :ret boolean?)
 
 (defn upper-triangular-matrix?
-  "Returns true if x is an upper triangular matrix.
-  
-  An upper triangular matrix is square with all entries below the main
-  diagonal equal to zero. Elements on or above the diagonal can be any value.
-  
+  "Returns `true` if `x` is an upper triangular matrix.
+
+  An upper triangular matrix is square with all entries below the main diagonal equal to zero.
+  Elements on or above the diagonal can be any value.
+
   Examples:
     (upper-triangular-matrix? [[1 2] [0 3]]) ;=> true
     (upper-triangular-matrix? [[1 0] [0 2]]) ;=> true
@@ -557,11 +557,11 @@
   :ret boolean?)
 
 (defn lower-triangular-matrix?
-  "Returns true if x is a lower triangular matrix.
-  
-  A lower triangular matrix is square with all entries above the main
-  diagonal equal to zero. Elements on or below the diagonal can be any value.
-  
+  "Returns `true` if `x` is a lower triangular matrix.
+
+  A lower triangular matrix is square with all entries above the main diagonal equal to zero.
+  Elements on or below the diagonal can be any value.
+
   Examples:
     (lower-triangular-matrix? [[1 0] [2 3]]) ;=> true
     (lower-triangular-matrix? [[1 0] [0 2]]) ;=> true
@@ -577,11 +577,11 @@
   :ret boolean?)
 
 (defn symmetric-matrix?
-  "Returns true if x is a symmetric matrix.
-  
-  A symmetric matrix is square and equal to its transpose. Element at [i,j] equals element at [j,i]
-  for all positions.
-  
+  "Returns `true` if `x` is a symmetric matrix.
+
+  A symmetric matrix is square and equal to its [[transpose]]. Element at `[i,j]` equals element
+  at `[j,i]` for all positions.
+
   Examples:
     (symmetric-matrix? [[1 2] [2 3]]) ;=> true
     (symmetric-matrix? [[1 2] [3 4]]) ;=> false
@@ -596,11 +596,10 @@
 ;;;MATRIX CONSTRUCTORS
 (defn to-matrix
   "Converts a tensor into a matrix with the specified number of rows.
-  
-  Flattens the tensor and reshapes it into a matrix. If tensor has fewer
-  elements than needed, pads with zeros. Elements are filled by row (default)
-  or by column based on by-row? option.
-  
+
+  Flattens the tensor and reshapes it into a matrix. If tensor has fewer elements than needed,
+  pads with zeros. Elements are filled by row (default) or by column based on `::by-row?` option.
+
   Examples:
     (to-matrix [1 2 3 4] 2) ;=> [[1 2] [3 4]]
     (to-matrix [1 2 3] 2) ;=> [[1 2] [3 0.0]]
@@ -632,9 +631,9 @@
 
 (defn constant-matrix
   "Creates a matrix filled with a constant value.
-  
-  All elements are set to the specified value (default 0.0).
-  
+
+  All elements are set to the specified value (default `0.0`).
+
   Examples:
     (constant-matrix 2 3) ;=> [[0.0 0.0 0.0] [0.0 0.0 0.0]]
     (constant-matrix 2 2 5) ;=> [[5 5] [5 5]]"
@@ -652,10 +651,10 @@
 
 (defn compute-matrix
   "Creates a matrix by computing each element using a function.
-  
-  The function row+column->number is called with row and column indices
-  (0-based) and should return the value for that position.
-  
+
+  The function `row+column->number` is called with row and column indices (0-based) and should
+  return the value for that position.
+
   Examples:
     (compute-matrix 2 3 +) ;=> [[0 1 2] [1 2 3]]
     (compute-matrix 3 3 #(if (= %1 %2) 1 0)) ;=> identity matrix"
@@ -678,9 +677,9 @@
 
 (defn identity-matrix
   "Creates an identity matrix of the specified size.
-  
-  An identity matrix has 1.0 on the main diagonal and 0.0 elsewhere.
-  
+
+  An identity matrix has `1.0` on the main diagonal and `0.0` elsewhere.
+
   Examples:
     (identity-matrix 2) ;=> [[1.0 0.0] [0.0 1.0]]
     (identity-matrix 0) ;=> [[]]"
@@ -693,11 +692,11 @@
 
 (defn row-matrix
   "Creates a single-row matrix from a sequence of numbers or a generator function.
-  
+
   Two arities:
-  - (row-matrix numbers) - converts sequence to single row
-  - (row-matrix size fn) - generates row using function of column index
-  
+  - `(row-matrix numbers)` - converts sequence to single row
+  - `(row-matrix size fn)` - generates row using function of column index
+
   Examples:
     (row-matrix [1 2 3]) ;=> [[1 2 3]]
     (row-matrix 3 #(* % %)) ;=> [[0 1 4]]"
@@ -711,11 +710,11 @@
 
 (defn column-matrix
   "Creates a single-column matrix from a sequence of numbers or a generator function.
-  
+
   Two arities:
-  - (column-matrix numbers) - converts sequence to single column
-  - (column-matrix size fn) - generates column using function of row index
-  
+  - `(column-matrix numbers)` - converts sequence to single column
+  - `(column-matrix size fn)` - generates column using function of row index
+
   Examples:
     (column-matrix [1 2 3]) ;=> [[1] [2] [3]]
     (column-matrix 3 #(* % %)) ;=> [[0] [1] [4]]"
@@ -735,14 +734,14 @@
 
 (defn diagonal-matrix
   "Creates a diagonal matrix with specified diagonal values.
-  
+
   Multiple arities:
-  - (diagonal-matrix values) - creates square matrix with given diagonal
-  - (diagonal-matrix size fn) - generates diagonal using function of index
-  - (diagonal-matrix rows cols fn) - creates rectangular diagonal matrix
-  
-  All off-diagonal elements are 0.0.
-  
+  - `(diagonal-matrix values)` - creates square matrix with given diagonal
+  - `(diagonal-matrix size fn)` - generates diagonal using function of index
+  - `(diagonal-matrix rows cols fn)` - creates rectangular diagonal matrix
+
+  All off-diagonal elements are `0.0`.
+
   Examples:
     (diagonal-matrix [1 2 3]) ;=> [[1.0 0.0 0.0] [0.0 2.0 0.0] [0.0 0.0 3.0]]
     (diagonal-matrix 3 inc) ;=> [[1.0 0.0 0.0] [0.0 2.0 0.0] [0.0 0.0 3.0]]"
@@ -803,15 +802,15 @@
 
 (defn deserialize-upper-triangular-matrix
   "Reconstructs an upper triangular matrix from a flattened representation.
-  
-  Takes a vector of numbers representing the upper triangle (including diagonal)
-  and reconstructs the full square matrix with zeros below the diagonal.
-  
+
+  Takes a vector of numbers representing the upper triangle (including diagonal) and reconstructs
+  the full square matrix with zeros below the diagonal.
+
   Options:
-  - ::by-row? (default true) - whether numbers are ordered by row or column
-  
+  - `::by-row?` (default `true`) - whether numbers are ordered by row or column
+
   Can also take separate diagonal and off-diagonal vectors.
-  
+
   Examples:
     (deserialize-upper-triangular-matrix [1 2 3]) ;=> [[1.0 2.0] [0.0 3.0]]"
   ([numbers] (deserialize-upper-triangular-matrix numbers {::by-row? true}))
@@ -849,15 +848,15 @@
 
 (defn deserialize-lower-triangular-matrix
   "Reconstructs a lower triangular matrix from a flattened representation.
-  
-  Takes a vector of numbers representing the lower triangle (including diagonal)
-  and reconstructs the full square matrix with zeros above the diagonal.
-  
+
+  Takes a vector of numbers representing the lower triangle (including diagonal) and reconstructs
+  the full square matrix with zeros above the diagonal.
+
   Options:
-  - ::by-row? (default true) - whether numbers are ordered by row or column
-  
+  - `::by-row?` (default `true`) - whether numbers are ordered by row or column
+
   Can also take separate diagonal and off-diagonal vectors.
-  
+
   Examples:
     (deserialize-lower-triangular-matrix [1 2 3]) ;=> [[1.0 0.0] [2.0 3.0]]"
   ([numbers] (deserialize-lower-triangular-matrix numbers {::by-row? true}))
@@ -895,10 +894,10 @@
 
 (defn deserialize-symmetric-matrix
   "Reconstructs a symmetric matrix from its upper triangle representation.
-  
-  Takes a vector of numbers representing the upper triangle (including diagonal)
-  and creates a full symmetric matrix by mirroring across the diagonal.
-  
+
+  Takes a vector of numbers representing the upper triangle (including diagonal) and creates a full
+  symmetric matrix by mirroring across the diagonal.
+
   Examples:
     (deserialize-symmetric-matrix [1 2 3]) ;=> [[1.0 2.0] [2.0 3.0]]"
   [numbers]
@@ -915,10 +914,10 @@
 
 (defn toeplitz-matrix
   "Creates a Toeplitz (diagonal-constant) matrix.
-  
-  A Toeplitz matrix has constant values along each diagonal. The first row and first column define
-  all matrix elements. The first elements of both vectors must be equal.
-  
+
+  A Toeplitz matrix has constant values along each diagonal. The `first-row` and `first-column`
+  define all matrix elements. The first elements of both vectors must be equal.
+
   Examples:
     (toeplitz-matrix [1 2 3] [1 4 5]) ;=> [[1 2 3] [4 1 2] [5 4 1]]"
   [first-row first-column]
@@ -949,10 +948,10 @@
 
 (defn outer-product
   "Computes the outer product of a vector with itself.
-  
-  Creates a square matrix where element [i,j] equals v[i] * v[j].
-  This is the tensor product of the vector with itself.
-  
+
+  Creates a square matrix where element `[i,j]` equals `v[i] * v[j]`. This is the tensor product
+  of the vector with itself.
+
   Examples:
     (outer-product [1 2]) ;=> [[1.0 2.0] [2.0 4.0]]
     (outer-product [2 3]) ;=> [[4.0 6.0] [6.0 9.0]]"
@@ -970,9 +969,9 @@
 
 (defn rnd-matrix!
   "Creates a matrix with random elements between 0 and 1.
-  
+
   Uses the current random number generator state. Elements are uniformly distributed doubles.
-  
+
   Examples:
     (rnd-matrix! 2 2) ;=> [[0.123 0.456] [0.789 0.012]] (example values)"
   [rows columns]
@@ -987,10 +986,10 @@
 
 (defn rnd-reflection-matrix!
   "Creates a random Householder reflection matrix.
-  
-  A Householder reflection matrix is symmetric and orthogonal, representing
-  a reflection through a hyperplane. Generated using a random unit vector.
-  
+
+  A Householder reflection matrix is symmetric and orthogonal, representing a reflection through a
+  hyperplane. Generated using a random unit vector.
+
   Examples:
     (rnd-reflection-matrix! 2) ;=> [[-0.6 0.8] [0.8 0.6]] (example values)"
   [size]
@@ -1006,11 +1005,10 @@
 
 (defn rnd-spectral-matrix!
   "Creates a random symmetric matrix with specified eigenvalues.
-  
-  Uses the given spectrum-vector as eigenvalues and generates random
-  eigenvectors through composed Householder reflections. The result is
-  symmetric with the exact specified eigenvalues.
-  
+
+  Uses the given `spectrum-vector` as eigenvalues and generates random eigenvectors through
+  composed Householder reflections. The result is symmetric with the exact specified eigenvalues.
+
   Examples:
     (rnd-spectral-matrix! [1 3]) ;=> [[2.1 -0.9] [-0.9 1.9]] (example values)"
   [spectrum-vector]
@@ -1028,13 +1026,13 @@
 
 (defn sparse->matrix
   "Constructs a matrix from sparse representation.
-  
-  Takes a sparse representation (vector of [row col value] triples) and an
-  existing matrix template. Sets specified positions to given values.
-  Later values override earlier ones for the same position.
-  
+
+  Takes a sparse representation (vector of `[row col value]` triples) and an existing matrix
+  template. Sets specified positions to given values. Later values override earlier ones for the
+  same position.
+
   Examples:
-    (sparse->matrix [[0 1 5] [1 0 3]] (constant-matrix 2 2 0))
+    (sparse->matrix [[0 1 5] [1 0 3]] ([[constant-matrix]] 2 2 0))
     ;=> [[0.0 5] [3 0.0]]"
   [sparse m]
   (let [[rows columns] [(rows m) (columns m)]]
@@ -1055,13 +1053,12 @@
 
 (defn sparse->symmetric-matrix
   "Constructs a symmetric matrix from sparse representation.
-  
-  Takes sparse representation and applies each [row col value] entry symmetrically.
-  Off-diagonal entries are mirrored (set at both [r,c] and [c,r]).
-  Later values override earlier ones.
-  
+
+  Takes sparse representation and applies each `[row col value]` entry symmetrically. Off-diagonal
+  entries are mirrored (set at both `[r,c]` and `[c,r]`). Later values override earlier ones.
+
   Examples:
-    (sparse->symmetric-matrix [[0 1 5]] (constant-matrix 2 2 0))
+    (sparse->symmetric-matrix [[0 1 5]] ([[constant-matrix]] 2 2 0))
     ;=> [[0.0 5] [5 0.0]]"
   [sparse symmetric-m]
   (let [rc (rows symmetric-m)]
@@ -1081,7 +1078,7 @@
 (defn rows
   "Returns the number of rows in the matrix.
 
-  For an empty matrix [[]], returns 0.
+  For an empty matrix `[[]]`, returns `0`.
 
   Examples:
     (rows [[1 2] [3 4]]) ;=> 2
@@ -1112,9 +1109,9 @@
 
 (defn get-row
   "Extracts the specified row from the matrix as a vector.
-  
+
   Row indices are 0-based.
-  
+
   Examples:
     (get-row [[1 2] [3 4]] 0) ;=> [1 2]
     (get-row [[1 2] [3 4]] 1) ;=> [3 4]"
@@ -1130,9 +1127,9 @@
 
 (defn get-column
   "Extracts the specified column from the matrix as a vector.
-  
+
   Column indices are 0-based. Returns empty vector if column is out of bounds.
-  
+
   Examples:
     (get-column [[1 2] [3 4]] 0) ;=> [1 3]
     (get-column [[1 2] [3 4]] 1) ;=> [2 4]"
@@ -1151,10 +1148,10 @@
 
 (defn diagonal
   "Extracts a diagonal from a matrix as a vector.
-  
-  With no offset (k), returns the main diagonal. Positive k returns diagonals
-  above the main diagonal, negative k returns diagonals below it.
-  
+
+  With no offset (`k`), returns the main diagonal. Positive `k` returns diagonals above the main
+  diagonal, negative `k` returns diagonals below it.
+
   Examples:
     (diagonal [[1 2 3] [4 5 6] [7 8 9]]) ;=> [1 5 9]
     (diagonal [[1 2 3] [4 5 6]] 1) ;=> [2 6]
@@ -1186,13 +1183,13 @@
 
 (defn serialize-symmetric-or-triangular-matrix
   "Flattens the upper or lower triangle of a matrix into a vector.
-  
-  By default, extracts the upper triangle (including diagonal) in row-major order.
-  The matrix doesn't need to be symmetric.
-  
+
+  By default, extracts the upper triangle (including diagonal) in row-major order. The matrix
+  doesn't need to be symmetric.
+
   Options:
-  - ::by-row? (default true) - extract upper triangle; false for lower triangle
-  
+  - `::by-row?` (default `true`) - extract upper triangle; `false` for lower triangle
+
   Examples:
     (serialize-symmetric-or-triangular-matrix [[1 2] [3 4]]) ;=> [1 2 4]"
   ([m] (serialize-symmetric-or-triangular-matrix m {::by-row? true}))
@@ -1215,10 +1212,10 @@
 
 (defn size-of-symmetric-or-triangular-matrix
   "Calculates the matrix size from the number of triangular elements.
-  
-  Given the count of elements in a triangular matrix (including diagonal),
-  determines the original square matrix size. Returns NaN if count is invalid.
-  
+
+  Given the count of elements in a triangular matrix (including diagonal), determines the original
+  square matrix size. Returns `NaN` if count is invalid.
+
   Examples:
     (size-of-symmetric-or-triangular-matrix 3) ;=> 2 (for 2x2 matrix)
     (size-of-symmetric-or-triangular-matrix 6) ;=> 3 (for 3x3 matrix)"
@@ -1234,10 +1231,10 @@
 
 (defn size-of-symmetric-or-triangular-matrix-without-diag
   "Calculates matrix size from off-diagonal element count.
-  
-  Given the count of elements above or below the diagonal (excluding diagonal),
-  determines the original square matrix size.
-  
+
+  Given the count of elements above or below the diagonal (excluding diagonal), determines the
+  original square matrix size.
+
   Examples:
     (size-of-symmetric-or-triangular-matrix-without-diag 1) ;=> 2
     (size-of-symmetric-or-triangular-matrix-without-diag 3) ;=> 3"
@@ -1253,10 +1250,10 @@
 
 (defn ecount-of-symmetric-or-triangular-matrix
   "Calculates the number of elements in a triangular matrix.
-  
-  For a square matrix of given size, returns the count of elements
-  on or above (or below) the diagonal: size*(size+1)/2.
-  
+
+  For a square matrix of given size, returns the count of elements on or above (or below) the
+  diagonal: `size*(size+1)/2`.
+
   Examples:
     (ecount-of-symmetric-or-triangular-matrix 2) ;=> 3
     (ecount-of-symmetric-or-triangular-matrix 3) ;=> 6"
@@ -1269,10 +1266,10 @@
 
 (defn ecount-of-symmetric-or-triangular-matrix-without-diag
   "Calculates the number of off-diagonal elements in a triangular matrix.
-  
+
   For a square matrix of given size, returns the count of elements above (or below) the diagonal:
-  size*(size-1)/2.
-  
+  `size*(size-1)/2`.
+
   Examples:
     (ecount-of-symmetric-or-triangular-matrix-without-diag 2) ;=> 1
     (ecount-of-symmetric-or-triangular-matrix-without-diag 3) ;=> 3"
@@ -1302,15 +1299,15 @@
 
 (defn get-slices-as-matrix
   "Extracts a submatrix by selecting specific rows and columns.
-  
+
   Options control which rows/columns to include or exclude:
-  - ::row-indices - specific rows to include (default: all)
-  - ::column-indices - specific columns to include (default: all) 
-  - ::exception-row-indices - rows to exclude
-  - ::exception-column-indices - columns to exclude
-  
+  - `::row-indices` - specific rows to include (default: all)
+  - `::column-indices` - specific columns to include (default: all)
+  - `::exception-row-indices` - rows to exclude
+  - `::exception-column-indices` - columns to exclude
+
   Exclusions take precedence over inclusions. Index sequences allow reordering.
-  
+
   Examples:
     (get-slices-as-matrix m {::row-indices [1 0]}) ; swaps first two rows
     (get-slices-as-matrix m {::exception-row-indices 0}) ; removes first row"
@@ -1391,10 +1388,10 @@
 
 (defn filter-by-row
   "Filters matrix rows based on a predicate function.
-  
-  The predicate receives each row vector and should return true to keep
-  the row. Returns empty matrix [[]] if no rows match.
-  
+
+  The predicate receives each row vector and should return `true` to keep the row. Returns empty
+  matrix `[[]]` if no rows match.
+
   Examples:
     (filter-by-row #(> (apply + %) 5) [[1 2] [3 4]]) ;=> [[3 4]]"
   [row-v->bool m]
@@ -1411,10 +1408,10 @@
 
 (defn filter-by-column
   "Filters matrix columns based on a predicate function.
-  
-  The predicate receives each column vector and should return true to keep
-  the column. Returns empty matrix [[]] if no columns match.
-  
+
+  The predicate receives each column vector and should return `true` to keep the column. Returns
+  empty matrix `[[]]` if no columns match.
+
   Examples:
     (filter-by-column #(> (apply + %) 3) [[1 2] [3 4]]) ;=> [[2] [4]]"
   [column-v->bool m]
@@ -1432,10 +1429,10 @@
 
 (defn filter-symmetric-matrix
   "Filters a symmetric matrix by keeping rows/columns that satisfy a predicate.
-  
+
   The predicate receives each row vector. Keeps both row and corresponding column if the predicate
-  returns true, maintaining symmetry.
-  
+  returns `true`, maintaining symmetry.
+
   Examples:
     (filter-symmetric-matrix #(> (first %) 2) [[1 2] [2 3]]) ;=> [[3]]"
   [v->bool symmetric-m]
@@ -1456,14 +1453,14 @@
 
 (defn matrix-partition
   "Splits a matrix into four quadrants.
-  
-  Returns a map with keys ::top-left, ::top-right, ::bottom-left, ::bottom-right.
-  The split occurs at the specified row and column boundaries.
-  
+
+  Returns a map with keys `::top-left`, `::top-right`, `::bottom-left`, `::bottom-right`. The split
+  occurs at the specified row and column boundaries.
+
   Parameters:
-  - first-bottom-row: row index where bottom partition starts
-  - first-right-column: column index where right partition starts
-  
+  - `first-bottom-row`: row index where bottom partition starts
+  - `first-right-column`: column index where right partition starts
+
   Examples:
     (matrix-partition [[1 2] [3 4]] 1 1)
     ;=> {::top-left [[1]], ::top-right [[2]], ::bottom-left [[3]], ::bottom-right [[4]]}"
@@ -1488,11 +1485,11 @@
 (defn some-kv
   "Finds the first matrix element satisfying a predicate.
 
-  The predicate function receives (row column element) and should return a truthy value. Returns the
-  first element for which the predicate is truthy, or nil if none found.
+  The predicate function receives `(row column element)` and should return a truthy value. Returns
+  the first element for which the predicate is truthy, or `nil` if none found.
 
   Options:
-  - ::by-row? (default true) - traverse by rows first, then columns
+  - `::by-row?` (default `true`) - traverse by rows first, then columns
 
   Examples:
     (some-kv #(> %3 5) [[1 2] [6 3]]) ;=> 6"
@@ -1520,14 +1517,14 @@
 
 (defn ereduce-kv
   "Reduces over matrix elements with row/column indices.
-  
-  The reduction function f receives:
-  - 1 matrix: (f result row col element)
-  - 2 matrices: (f result row col elem1 elem2)
-  - 3 matrices: (f result row col elem1 elem2 elem3)
-  
+
+  The reduction function `f` receives:
+  - 1 matrix: `(f result row col element)`
+  - 2 matrices: `(f result row col elem1 elem2)`
+  - 3 matrices: `(f result row col elem1 elem2 elem3)`
+
   For multiple matrices, the first matrix's column count must be smallest.
-  
+
   Examples:
     (ereduce-kv #(+ %1 %2 %3 %4) 0 [[1 2] [3 4]]) ;=> 10 (sum + indices)"
   ([f init m]
@@ -1621,10 +1618,10 @@
 
 (defn matrix->sparse
   "Converts a matrix to sparse representation.
-  
-  Returns a vector of [row col value] triples for elements that satisfy the predicate function.
+
+  Returns a vector of `[row col value]` triples for elements that satisfy the predicate function.
   By default includes all non-zero elements.
-  
+
   Examples:
     (matrix->sparse [[1 0] [0 2]]) ;=> [[0 0 1] [1 1 2]]
     (matrix->sparse [[1 2] [3 4]] #(> % 2)) ;=> [[1 0 3] [1 1 4]]"
@@ -1645,10 +1642,10 @@
 
 (defn symmetric-matrix->sparse
   "Converts a symmetric matrix to sparse representation of upper triangle.
-  
-  Only processes the upper triangle (including diagonal) to avoid duplication.
-  The predicate determines which elements to include in the sparse representation.
-  
+
+  Only processes the upper triangle (including diagonal) to avoid duplication. The predicate
+  determines which elements to include in the sparse representation.
+
   Examples:
     (symmetric-matrix->sparse [[1 0] [0 2]]) ;=> [[0 0 1] [1 1 2]]"
   ([symmetric-m] (symmetric-matrix->sparse symmetric-m (complement zero?)))
@@ -1669,10 +1666,10 @@
 ;;;MATRIX MANIPULATION
 (defn transpose
   "Transposes a matrix by swapping rows and columns.
-  
-  Converts an m×n matrix to an n×m matrix where element at [i,j] becomes element at [j,i] in the
-  result.
-  
+
+  Converts an m x n matrix to an n x m matrix where element at `[i,j]` becomes element at `[j,i]`
+  in the result.
+
   Examples:
     (transpose [[1 2 3] [4 5 6]]) ;=> [[1 4] [2 5] [3 6]]
     (transpose [[]]) ;=> [[]]"

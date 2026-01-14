@@ -123,23 +123,23 @@
 
 ;;;CHEBYSHEV POLYNOMIALS
 (defn chebyshev-polynomial-fn
-  "Creates a Chebyshev polynomial function of the specified degree.
-  
+  "Creates a Chebyshev polynomial function of the specified `degree`.
+
   Chebyshev polynomials are orthogonal polynomials useful for function approximation and numerical
   integration. First kind polynomials T_n(x) are bounded on [-1,1], while second kind polynomials
-  U_n(x) are their derivatives scaled by (1-x²).
-  
+  U_n(x) are their derivatives scaled by (1-x^2).
+
   Parameters:
-    degree - Non-negative integer degree of the polynomial
-  
+    `degree` - Non-negative integer degree of the polynomial
+
   Options:
-    ::second-kind? - If true, returns U_n(x) instead of T_n(x) (default false)
-  
+    `::second-kind?` - If `true`, returns U_n(x) instead of T_n(x) (default `false`)
+
   Returns a function that evaluates the Chebyshev polynomial at a given point.
-  
+
   Example:
-    ((chebyshev-polynomial-fn 2) 0.5) ; => T₂(0.5) = -0.5
-    ((chebyshev-polynomial-fn 2 {::second-kind? true}) 0.5) ; => U₂(0.5) = -1.0"
+    ((chebyshev-polynomial-fn 2) 0.5)                       ;=> T_2(0.5) = -0.5
+    ((chebyshev-polynomial-fn 2 {::second-kind? true}) 0.5) ;=> U_2(0.5) = -1.0"
   ([degree] (chebyshev-polynomial-fn degree {}))
   ([degree {::keys [second-kind?] :or {second-kind? false}}]
    (let [degree (long degree)
@@ -164,21 +164,21 @@
 ;;-- also solved for the derivative of second-kind at x = +-1
 (defn chebyshev-derivative-fn
   "Creates a function that computes derivatives of Chebyshev polynomials.
-  
-  Computes the nth derivative of Chebyshev polynomials using analytic
-  formulas when available, falling back to numerical differentiation.
-  
+
+  Computes the nth derivative of Chebyshev polynomials using analytic formulas when available,
+  falling back to numerical differentiation.
+
   Parameters:
-    degree - Degree of the base Chebyshev polynomial
-    derivative - Order of derivative (1 for first derivative, 2 for second, etc.)
-  
+    `degree` - Degree of the base Chebyshev polynomial
+    `derivative` - Order of derivative (1 for first derivative, 2 for second, etc.)
+
   Options:
-    ::second-kind? - If true, differentiates U_n(x) instead of T_n(x) (default false)
-  
+    `::second-kind?` - If `true`, differentiates U_n(x) instead of T_n(x) (default `false`)
+
   Returns a function that evaluates the derivative at a given point.
-  
+
   Example:
-    ((chebyshev-derivative-fn 3 1) 0.5) ; => T₃'(0.5)"
+    ((chebyshev-derivative-fn 3 1) 0.5) ;=> T_3'(0.5)"
   ([degree derivative] (chebyshev-derivative-fn degree derivative {}))
   ([degree derivative {::keys [second-kind?] :or {second-kind? false}}]
    (cond (zero? degree) (constantly 0.0)

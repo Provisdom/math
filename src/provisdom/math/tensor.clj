@@ -129,10 +129,10 @@
   - A nested vector structure where all dimensions have consistent lengths
   
   Examples:
-    (tensor? 5) ;=> true
-    (tensor? [1 2 3]) ;=> true
-    (tensor? [[1 2] [3 4]]) ;=> true
-    (tensor? [[1 2] [3]]) ;=> false (inconsistent row lengths)"
+    (tensor? 5) => true
+    (tensor? [1 2 3]) => true
+    (tensor? [[1 2] [3 4]]) => true
+    (tensor? [[1 2] [3]]) => false (inconsistent row lengths)"
   [x]
   (or (number? x)
     (and (vector? x) (every? #(number? %) x))
@@ -153,9 +153,9 @@
   Numbers are returned as-is. Non-sequential values return nil.
   
   Examples:
-    (to-tensor '((1 2) (3 4))) ;=> [[1 2] [3 4]]
-    (to-tensor [1 [2]]) ;=> nil (mixed structure)
-    (to-tensor \"hello\") ;=> nil"
+    (to-tensor '((1 2) (3 4))) => [[1 2] [3 4]]
+    (to-tensor [1 [2]]) => nil (mixed structure)
+    (to-tensor \"hello\") => nil"
   [x]
   (let [ret (cond (number? x) x
                   (sequential? x) (mapv to-tensor x)
@@ -204,9 +204,9 @@
   position. Indices are 0-based. The tensor will have dimensions specified by `shape`.
   
   Examples:
-    (compute-tensor [2 3] #(apply + %)) ;=> [[0 1 2] [1 2 3]]
+    (compute-tensor [2 3] #(apply + %)) => [[0 1 2] [1 2 3]]
     (compute-tensor [2 2] #(if (= (first %) (second %)) 1 0))
-    ;=> [[1 0] [0 1]] (identity matrix)"
+    => [[1 0] [0 1]] (identity matrix)"
   [shape indices->number]
   (recursive-compute-tensor shape indices->number []))
 
@@ -223,9 +223,9 @@
   With two arguments, tiles `seed-tensor` according to the `shape` dimensions.
   
   Examples:
-    (repeat-tensor [2 3]) ;=> [[0.0 0.0 0.0] [0.0 0.0 0.0]]
-    (repeat-tensor [2] 5) ;=> [5 5]
-    (repeat-tensor [2] [1 2]) ;=> [[1 2] [1 2]]"
+    (repeat-tensor [2 3]) => [[0.0 0.0 0.0] [0.0 0.0 0.0]]
+    (repeat-tensor [2] 5) => [5 5]
+    (repeat-tensor [2] [1 2]) => [[1 2] [1 2]]"
   ([shape] (repeat-tensor shape 0.0))
   ([shape seed-tensor]
    (if (zero? (count shape))
@@ -248,8 +248,8 @@
   elements are filled with 0.0. If too long, extra values are ignored.
   
   Examples:
-    (fill-tensor [2 2] [1 2 3 4]) ;=> [[1 2] [3 4]]
-    (fill-tensor [2 3] [1 2]) ;=> [[1 2 0.0] [0.0 0.0 0.0]]"
+    (fill-tensor [2 2] [1 2 3 4]) => [[1 2] [3 4]]
+    (fill-tensor [2 3] [1 2]) => [[1 2 0.0] [0.0 0.0 0.0]]"
   [shape numbers]
   (if (empty? shape)
     (or (first numbers) 0.0)
@@ -278,7 +278,7 @@
   Uses the current random number generator state.
   
   Examples:
-    (rnd-tensor! [2 2]) ;=> [[0.123 0.456] [0.789 0.012]] (example values)"
+    (rnd-tensor! [2 2]) => [[0.123 0.456] [0.789 0.012]] (example values)"
   [shape]
   (fill-tensor shape (take (reduce * shape) (random/rnd-lazy!))))
 
@@ -294,9 +294,9 @@
   Returns nil if `tensor` is nil.
   
   Examples:
-    (first-number [[1 2] [3 4]]) ;=> 1
-    (first-number 42) ;=> 42
-    (first-number nil) ;=> nil"
+    (first-number [[1 2] [3 4]]) => 1
+    (first-number 42) => 42
+    (first-number nil) => nil"
   [tensor]
   (cond (number? tensor) tensor
         (nil? tensor) tensor
@@ -312,9 +312,9 @@
   For scalars, returns 1. For multidimensional tensors, returns the product of all dimension sizes.
 
   Examples:
-    (ecount 5) ;=> 1
-    (ecount [1 2 3]) ;=> 3
-    (ecount [[1 2] [3 4]]) ;=> 4"
+    (ecount 5) => 1
+    (ecount [1 2 3]) => 3
+    (ecount [[1 2] [3 4]]) => 4"
   [tensor]
   (if (number? tensor)
     1
@@ -330,10 +330,10 @@
   Scalars have rank 0, vectors have rank 1, matrices have rank 2, etc.
   
   Examples:
-    (rank 5) ;=> 0
-    (rank [1 2 3]) ;=> 1
-    (rank [[1 2] [3 4]]) ;=> 2
-    (rank [[[1]]]) ;=> 3"
+    (rank 5) => 0
+    (rank [1 2 3]) => 1
+    (rank [[1 2] [3 4]]) => 2
+    (rank [[[1]]]) => 3"
   [tensor]
   (if (vector? tensor)
     (let [f (first tensor)]
@@ -352,10 +352,10 @@
   The shape describes the size of each dimension.
   
   Examples:
-    (shape 5) ;=> []
-    (shape [1 2 3]) ;=> [3]
-    (shape [[1 2] [3 4]]) ;=> [2 2]
-    (shape [[[1 2]]]) ;=> [1 1 2]"
+    (shape 5) => []
+    (shape [1 2 3]) => [3]
+    (shape [[1 2] [3 4]]) => [2 2]
+    (shape [[[1 2]]]) => [1 1 2]"
   [tensor]
   (loop [dim 0
          sh []
@@ -378,8 +378,8 @@
   coordinates for the element's position.
 
   Examples:
-    (every-kv? (fn [idx val] (pos? val)) [[1 2] [3 4]]) ;=> true
-    (every-kv? (fn [idx val] (even? val)) [1 2 3]) ;=> false"
+    (every-kv? (fn [idx val] (pos? val)) [[1 2] [3 4]]) => true
+    (every-kv? (fn [idx val] (even? val)) [1 2 3]) => false"
   [indices+number->bool tensor]
   (if (number? tensor)
     (indices+number->bool [] tensor)
@@ -404,8 +404,8 @@
   sequence. Returns nil for scalars that don't match.
   
   Examples:
-    (filter-kv (fn [i x] (even? i)) [10 20 30 40]) ;=> [10 30]
-    (filter-kv (fn [i x] (> x 2)) [1 2 3 4]) ;=> [3 4]"
+    (filter-kv (fn [i x] (even? i)) [10 20 30 40]) => [10 30]
+    (filter-kv (fn [i x] (> x 2)) [1 2 3 4]) => [3 4]"
   [index+tensor->bool tensor-v]
   (if (number? tensor-v)
     (when (index+tensor->bool 0 tensor-v) tensor-v)
@@ -430,10 +430,10 @@
   More efficient than Clojure's flatten.
 
   Examples:
-    (flatten-tensor 5) ;=> [5]
-    (flatten-tensor [1 2 3]) ;=> [1 2 3]
-    (flatten-tensor [[1 2] [3 4]]) ;=> [1 2 3 4]
-    (flatten-tensor [[[1 2] [3 4]] [[5 6] [7 8]]]) ;=> [1 2 3 4 5 6 7 8]"
+    (flatten-tensor 5) => [5]
+    (flatten-tensor [1 2 3]) => [1 2 3]
+    (flatten-tensor [[1 2] [3 4]]) => [1 2 3 4]
+    (flatten-tensor [[[1 2] [3 4]] [[5 6] [7 8]]]) => [1 2 3 4 5 6 7 8]"
   [tensor]
   (if (number? tensor)
     [tensor]
@@ -452,9 +452,9 @@
   For scalars, returns the scalar itself. Uses double arithmetic for consistent precision.
 
   Examples:
-    (sum 5) ;=> 5.0
-    (sum [1 2 3]) ;=> 6.0
-    (sum [[1 2] [3 4]]) ;=> 10.0"
+    (sum 5) => 5.0
+    (sum [1 2 3]) => 6.0
+    (sum [[1 2] [3 4]]) => 10.0"
   [tensor]
   (if (number? tensor)
     (double tensor)
@@ -470,9 +470,9 @@
   For scalars, returns the scalar itself. Uses double arithmetic.
 
   Examples:
-    (product 5) ;=> 5.0
-    (product [1 2 3]) ;=> 6.0
-    (product [[2 3] [4 5]]) ;=> 120.0"
+    (product 5) => 5.0
+    (product [1 2 3]) => 6.0
+    (product [[2 3] [4 5]]) => 120.0"
   [tensor]
   (if (number? tensor)
     (double tensor)
@@ -490,10 +490,10 @@
   Returns nil if the shapes are incompatible.
 
   Examples:
-    (reshape [1 2 3 4] [2 2]) ;=> [[1 2] [3 4]]
-    (reshape [[1 2] [3 4]] [4]) ;=> [1 2 3 4]
-    (reshape [[1 2 3] [4 5 6]] [3 2]) ;=> [[1 2] [3 4] [5 6]]
-    (reshape [1 2 3] [2 2]) ;=> nil (incompatible sizes)"
+    (reshape [1 2 3 4] [2 2]) => [[1 2] [3 4]]
+    (reshape [[1 2] [3 4]] [4]) => [1 2 3 4]
+    (reshape [[1 2 3] [4 5 6]] [3 2]) => [[1 2] [3 4] [5 6]]
+    (reshape [1 2 3] [2 2]) => nil (incompatible sizes)"
   [tensor new-shape]
   (let [old-count (ecount tensor)
         new-count (reduce * 1 new-shape)]
@@ -516,11 +516,11 @@
   For scalars and 1D tensors, returns the tensor unchanged.
 
   Examples:
-    (transpose [[1 2 3] [4 5 6]]) ;=> [[1 4] [2 5] [3 6]]
-    (transpose 5) ;=> 5
-    (transpose [1 2 3]) ;=> [1 2 3]
+    (transpose [[1 2 3] [4 5 6]]) => [[1 4] [2 5] [3 6]]
+    (transpose 5) => 5
+    (transpose [1 2 3]) => [1 2 3]
     (transpose [[[1 2] [3 4]] [[5 6] [7 8]]] [2 1 0])
-    ;=> [[[1 5] [3 7]] [[2 6] [4 8]]]"
+    => [[[1 5] [3 7]] [[2 6] [4 8]]]"
   ([tensor]
    (let [r (rank tensor)]
      (cond
@@ -602,9 +602,9 @@
   Broadcasting follows NumPy-like rules. Returns nil if shapes are incompatible.
   
   Examples:
-    (emap inc [1 2 3]) ;=> [2 3 4]
-    (emap + [[1 2]] [[10] [20]]) ;=> [[11 12] [21 22]] (broadcasting)
-    (emap * [1 2] 3) ;=> [3 6] (scalar broadcast)"
+    (emap inc [1 2 3]) => [2 3 4]
+    (emap + [[1 2]] [[10] [20]]) => [[11 12] [21 22]] (broadcasting)
+    (emap * [1 2] 3) => [3 6] (scalar broadcast)"
   ([f tensor] (recursive-emap (shape tensor) f [] [tensor]))
   ([f tensor1 tensor2] (emap-core f tensor1 tensor2))
   ([f tensor1 tensor2 tensor3] (emap-core f tensor1 tensor2 tensor3))
@@ -684,7 +684,7 @@
   
   Examples:
     (emap-kv (fn [idx val] (+ (apply + idx) val)) [[1 2] [3 4]])
-    ;=> [[1 3] [4 6]] (adds row+col indices to each value)"
+    => [[1 3] [4 6]] (adds row+col indices to each value)"
   ([f tensor] (recursive-emap-kv (shape tensor) f [] [tensor]))
   ([f tensor1 tensor2] (emap-kv-core f tensor1 tensor2))
   ([f tensor1 tensor2 tensor3] (emap-kv-core f tensor1 tensor2 tensor3))
@@ -729,8 +729,8 @@
   of n elements. May leave some elements unused if they don't fit evenly.
   
   Examples:
-    (partition-recursively 2 [1 2 3 4]) ;=> [[1 2] [3 4]]
-    (partition-recursively 3 (range 27)) ;=> 3x3x3 nested structure"
+    (partition-recursively 2 [1 2 3 4]) => [[1 2] [3 4]]
+    (partition-recursively 3 (range 27)) => 3x3x3 nested structure"
   [n tensor]
   (let [t (m/ceil' (m/div (m/log (count tensor)) (m/log n)))]
     (last (take t (iterate #(to-tensor (partition n %)) tensor)))))
@@ -750,9 +750,9 @@
   Tensors must have identical shapes and corresponding elements.
 
   Examples:
-    (=== [[1 ##NaN]] [[1 ##NaN]]) ;=> true
-    (=== [1 2] [1 2]) ;=> true
-    (=== [1 2] [1 3]) ;=> false"
+    (=== [[1 ##NaN]] [[1 ##NaN]]) => true
+    (=== [1 2] [1 2]) => true
+    (=== [1 2] [1 3]) => false"
   ([_tensor] true)
   ([tensor1 tensor2]
    (let [eq (emap m/=== tensor1 tensor2)]
@@ -774,9 +774,9 @@
   With no arguments, returns 0.0. With one argument, returns the tensor unchanged.
   
   Examples:
-    (add) ;=> 0.0
-    (add [1 2] [3 4]) ;=> [4 6]
-    (add [[1]] [[10] [20]]) ;=> [[11] [21]] (broadcasting)"
+    (add) => 0.0
+    (add [1 2] [3 4]) => [4 6]
+    (add [[1]] [[10] [20]]) => [[11] [21]] (broadcasting)"
   ([] 0.0)
   ([tensor] tensor)
   ([tensor1 tensor2]
@@ -803,9 +803,9 @@
   subtracts subsequent tensors from the first. Supports broadcasting.
 
   Examples:
-    (subtract [5 3]) ;=> [-5 -3]
-    (subtract [5 3] [1 2]) ;=> [4 1]
-    (subtract [[5]] [1 2]) ;=> [[4 3]] (broadcasting)"
+    (subtract [5 3]) => [-5 -3]
+    (subtract [5 3] [1 2]) => [4 1]
+    (subtract [[5]] [1 2]) => [[4 3]] (broadcasting)"
   ([tensor] (emap - tensor))
   ([tensor1 tensor2]
    (emap (fn [i j]
@@ -830,9 +830,9 @@
   With no arguments, returns 1.0. With one argument, returns the tensor unchanged.
   
   Examples:
-    (multiply) ;=> 1.0
-    (multiply [2 3] [4 5]) ;=> [8 15]
-    (multiply [[2]] [3 4]) ;=> [[6 8]] (broadcasting)"
+    (multiply) => 1.0
+    (multiply [2 3] [4 5]) => [8 15]
+    (multiply [[2]] [3 4]) => [[6 8]] (broadcasting)"
   ([] 1.0)
   ([tensor] tensor)
   ([tensor1 tensor2]
@@ -859,9 +859,9 @@
   divides the first tensor by subsequent tensors. Supports broadcasting.
 
   Examples:
-    (divide [8 6]) ;=> [0.125 0.167...] (reciprocals)
-    (divide [8 6] [2 3]) ;=> [4.0 2.0]
-    (divide [[12]] [3 4]) ;=> [[4.0 3.0]] (broadcasting)"
+    (divide [8 6]) => [0.125 0.167...] (reciprocals)
+    (divide [8 6] [2 3]) => [4.0 2.0]
+    (divide [[12]] [3 4]) => [[4.0 3.0]] (broadcasting)"
   ([tensor] (emap m/div tensor))
   ([tensor & more]
    (reduce (fn [tot e]
@@ -885,9 +885,9 @@
   of all elements divided by the total count.
 
   Examples:
-    (average 5) ;=> 5
-    (average [1 2 3]) ;=> 2.0
-    (average [[1 2] [3 4]]) ;=> 2.5"
+    (average 5) => 5
+    (average [1 2 3]) => 2.0
+    (average [[1 2] [3 4]]) => 2.5"
   [tensor]
   (if (number? tensor)
     tensor
@@ -903,8 +903,8 @@
   Returns the sum of absolute values of all elements.
 
   Examples:
-    (norm1 [-3 4]) ;=> 7.0
-    (norm1 [[-1 2] [3 -4]]) ;=> 10.0"
+    (norm1 [-3 4]) => 7.0
+    (norm1 [[-1 2] [3 -4]]) => 10.0"
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
@@ -921,8 +921,8 @@
   Also available as norm2.
 
   Examples:
-    (norm [3 4]) ;=> 5.0
-    (norm [[1 1] [1 1]]) ;=> 2.0"
+    (norm [3 4]) => 5.0
+    (norm [[1 1] [1 1]]) => 2.0"
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
@@ -941,9 +941,9 @@
   For `p` >= 1.0, this is a valid norm.
 
   Examples:
-    (norm-p [1 -1 1] 1) ;=> 3.0 (L1 norm)
-    (norm-p [3 4] 2) ;=> 5.0 (L2 norm)
-    (norm-p [2 2 2] 3) ;=> 2.884... (L3 norm)"
+    (norm-p [1 -1 1] 1) => 3.0 (L1 norm)
+    (norm-p [3 4] 2) => 5.0 (L2 norm)
+    (norm-p [2 2 2] 3) => 2.884... (L3 norm)"
   [tensor p]
   (if (number? tensor)
     (m/abs tensor)
@@ -961,8 +961,8 @@
   Returns the maximum absolute value among all elements.
 
   Examples:
-    (norm-inf [-3 4]) ;=> 4.0
-    (norm-inf [[-1 2] [3 -4]]) ;=> 4.0"
+    (norm-inf [-3 4]) => 4.0
+    (norm-inf [[-1 2] [3 -4]]) => 4.0"
   [tensor]
   (if (number? tensor)
     (m/abs tensor)
@@ -979,7 +979,7 @@
   a tensor where the sum of absolute values equals 1.
   
   Examples:
-    (normalize1 [3 6]) ;=> [0.333... 0.666...]"
+    (normalize1 [3 6]) => [0.333... 0.666...]"
   [tensor]
   (emap #(m/div % (norm1 tensor))
     tensor))
@@ -995,7 +995,7 @@
   a tensor with Euclidean length of 1. Also available as normalize2.
   
   Examples:
-    (normalize [3 4]) ;=> [0.6 0.8]"
+    (normalize [3 4]) => [0.6 0.8]"
   [tensor]
   (emap #(m/div % (norm tensor))
     tensor))
@@ -1013,7 +1013,7 @@
   a tensor with Lp norm equal to 1.
   
   Examples:
-    (normalize-p [2 4 6] 1) ;=> [0.167... 0.333... 0.5] (L1 normalized)"
+    (normalize-p [2 4 6] 1) => [0.167... 0.333... 0.5] (L1 normalized)"
   [tensor p]
   (emap #(m/div % (norm-p tensor p)) tensor))
 
@@ -1029,8 +1029,8 @@
   a tensor where the maximum absolute value equals 1.
 
   Examples:
-    (normalize-inf [3 -6]) ;=> [0.5 -1.0]
-    (normalize-inf [[2 -4] [1 3]]) ;=> [[0.5 -1.0] [0.25 0.75]]"
+    (normalize-inf [3 -6]) => [0.5 -1.0]
+    (normalize-inf [[2 -4] [1 3]]) => [[0.5 -1.0] [0.25 0.75]]"
   [tensor]
   (let [n (norm-inf tensor)]
     (if (zero? n)
@@ -1048,8 +1048,8 @@
   this is the standard dot product. Both tensors must have the same shape.
   
   Examples:
-    (inner-product [1 2 3] [4 5 6]) ;=> 32 (1*4 + 2*5 + 3*6)
-    (inner-product [[1 2]] [[3] [4]]) ;=> [[11]] (matrix-like operation)"
+    (inner-product [1 2 3] [4 5 6]) => 32 (1*4 + 2*5 + 3*6)
+    (inner-product [[1 2]] [[3] [4]]) => [[11]] (matrix-like operation)"
   [tensor1 tensor2]
   (if (number? tensor1)
     (* (double tensor1) tensor2)
@@ -1080,8 +1080,8 @@
   elements are within the specified accuracy of each other.
 
   Examples:
-    (roughly? [1.0 2.0] [1.001 1.999] 0.01) ;=> true
-    (roughly? [1.0] [1.1] 0.05) ;=> false"
+    (roughly? [1.0 2.0] [1.001 1.999] 0.01) => true
+    (roughly? [1.0] [1.1] 0.05) => false"
   [tensor1 tensor2 accu]
   (and (= (shape tensor1) (shape tensor2))
     (if (number? tensor1)
@@ -1104,8 +1104,8 @@
   (within the specified tolerance). Works on top-level elements.
   
   Examples:
-    (roughly-distinct [1.0 1.001 2.0 1.002] 0.01) ;=> [1.0 2.0]
-    (roughly-distinct [[1 2] [1.001 2.001] [3 4]] 0.01) ;=> [[1 2] [3 4]]"
+    (roughly-distinct [1.0 1.001 2.0 1.002] 0.01) => [1.0 2.0]
+    (roughly-distinct [[1 2] [1.001 2.001] [3 4]] 0.01) => [[1 2] [3 4]]"
   [tensor accu]
   (if (number? tensor)
     tensor

@@ -218,18 +218,18 @@
   - U is upper triangular
   - P is a permutation matrix
 
-  Complexity: O(n³) for n×n matrix
+  Complexity: O(n^3) for n x n matrix
 
   Returns a map with keys:
-  - ::L - lower triangular matrix
-  - ::U - upper triangular matrix
-  - ::LU-permutation - permutation matrix P
-  - ::singular? - true if matrix is singular (not invertible)
-  - ::determinant - the determinant of the matrix
-  - ::inverse - the inverse matrix (nil if singular)
+  - `::L` - lower triangular matrix
+  - `::U` - upper triangular matrix
+  - `::LU-permutation` - permutation matrix P
+  - `::singular?` - `true` if matrix is singular (not invertible)
+  - `::determinant` - the determinant of the matrix
+  - `::inverse` - the inverse matrix (`nil` if singular)
 
-  Returns nil for non-square, empty, non-finite, or numerically unstable matrices
-  (where the decomposition fails to produce valid triangular matrices).
+  Returns `nil` for non-square, empty, non-finite, or numerically unstable matrices (where the
+  decomposition fails to produce valid triangular matrices).
 
   Examples:
     (lu-decomposition [[4 3] [6 3]])
@@ -240,7 +240,7 @@
     ;    ::determinant -6.0
     ;    ::inverse [[-0.5 0.5] [1.0 -0.667]]}
 
-  See also: determinant, inverse, solve"
+  See also: [[determinant]], [[inverse]], [[solve]]"
   [square-m]
   (when (and (mx/square-matrix? square-m)
           (not (mx/empty-matrix? square-m))
@@ -267,13 +267,13 @@
 
   This avoids redundant computation when you need both the LU decomposition and the determinant.
 
-  Takes the map returned by `lu-decomposition` which includes ::determinant.
+  Takes the map returned by [[lu-decomposition]] which includes `::determinant`.
 
   Examples:
     (let [lu (lu-decomposition [[4 3] [6 3]])]
       (determinant-from-lu lu)) ;=> -6.0
 
-  See also: lu-decomposition, determinant"
+  See also: [[lu-decomposition]], [[determinant]]"
   [{::keys [determinant]}]
   determinant)
 
@@ -284,19 +284,19 @@
 (defn determinant
   "Computes the determinant of a square matrix.
 
-  Uses LU decomposition. The determinant equals the product of the diagonal
-  elements of U, with sign determined by the number of row swaps in P.
+  Uses LU decomposition. The determinant equals the product of the diagonal elements of U, with
+  sign determined by the number of row swaps in P.
 
-  Complexity: O(n³) for n×n matrix
+  Complexity: O(n^3) for n x n matrix
 
-  Returns NaN for empty matrices, nil for non-square matrices.
+  Returns `NaN` for empty matrices, `nil` for non-square matrices.
 
   Examples:
     (determinant [[1 2] [3 4]]) ;=> -2.0
     (determinant [[1 0] [0 1]]) ;=> 1.0
     (determinant [[1 2] [2 4]]) ;=> 0.0 (singular)
 
-  See also: inverse, lu-decomposition, determinant-from-lu"
+  See also: [[inverse]], [[lu-decomposition]], [[determinant-from-lu]]"
   [square-m]
   (cond
     (not (mx/square-matrix? square-m)) nil
@@ -309,20 +309,20 @@
 
 ;;;MINORS AND COFACTORS
 (defn minor
-  "Computes the (i,j) minor of a matrix.
+  "Computes the (`i`,`j`) minor of a matrix.
 
-  The minor M_ij is the determinant of the matrix with row i and column j removed.
-  Indices are 0-based.
+  The minor M_ij is the determinant of the matrix with row `i` and column `j` removed. Indices are
+  0-based.
 
-  Complexity: O(n³) for n×n matrix
+  Complexity: O(n^3) for n x n matrix
 
-  Returns nil for empty or 1×1 matrices, or if indices are out of bounds.
+  Returns `nil` for empty or 1x1 matrices, or if indices are out of bounds.
 
   Examples:
     (minor [[1 2 3] [4 5 6] [7 8 9]] 0 0) ;=> determinant of [[5 6] [8 9]] = -3.0
     (minor [[1 2] [3 4]] 0 0) ;=> 4.0
 
-  See also: cofactor, determinant"
+  See also: [[cofactor]], [[determinant]]"
   [square-m i j]
   (let [n (mx/rows square-m)]
     (when (and (> n 1)
@@ -343,18 +343,17 @@
   :ret (s/nilable ::determinant))
 
 (defn cofactor
-  "Computes the (i,j) cofactor of a matrix.
+  "Computes the (`i`,`j`) cofactor of a matrix.
 
-  The cofactor C_ij = (-1)^(i+j) * M_ij, where M_ij is the minor.
-  Indices are 0-based.
+  The cofactor C_ij = (-1)^(i+j) * M_ij, where M_ij is the [[minor]]. Indices are 0-based.
 
-  Complexity: O(n³) for n×n matrix
+  Complexity: O(n^3) for n x n matrix
 
   Examples:
     (cofactor [[1 2 3] [4 5 6] [7 8 9]] 0 0) ;=> -3.0
     (cofactor [[1 2 3] [4 5 6] [7 8 9]] 0 1) ;=> 6.0 (sign flip)
 
-  See also: minor, cofactor-matrix, adjugate"
+  See also: [[minor]], [[cofactor-matrix]], [[adjugate]]"
   [square-m i j]
   (when-let [m (minor square-m i j)]
     (let [sign (if (even? (+ i j)) 1.0 -1.0)]

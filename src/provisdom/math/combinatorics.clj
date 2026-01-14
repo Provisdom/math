@@ -261,9 +261,9 @@
   :ret ::m/num)
 
 (defn choose-k-from-n'
-  "Returns the number of ways to choose `k` items out of `n` items.
-  `n`! / (`k`! × (`n` - `k`)!). Returns a long if possible. `k` and `n` must be
-  int, otherwise use [[log-choose-k-from-n]]."
+  "Like [[choose-k-from-n]] but returns a long when possible. Returns the number of ways to choose
+  `k` items out of `n` items: `n`! / (`k`! * (`n` - `k`)!). For very large values, use
+  [[log-choose-k-from-n]] instead."
   [k n]
   (m/maybe-long-able (choose-k-from-n k n)))
 
@@ -336,7 +336,9 @@
   :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind
-  "Returns the number of ways to partition a set of `n` items into `k` subsets."
+  "Computes the Stirling number of the second kind S(`n`, `k`).
+
+  Returns the number of ways to partition a set of `n` items into exactly `k` non-empty subsets."
   [k n]
   (if (> k 170)
     m/nan
@@ -354,8 +356,7 @@
   :ret ::m/number)
 
 (defn stirling-number-of-the-second-kind'
-  "Returns the number of ways to partition a set of `n` items into `k` subsets.
-  Returns long if possible."
+  "Like [[stirling-number-of-the-second-kind]] but returns a long when possible."
   [k n]
   (m/maybe-long-able (stirling-number-of-the-second-kind k n)))
 
@@ -460,7 +461,10 @@
   :ret ::m/num)
 
 (defn bell-number
-  "Returns the number of partitions of a set of size `n`."
+  "Computes the `n`th Bell number.
+
+  Returns the total number of ways to partition a set of `n` items into non-empty subsets. This is
+  the sum of Stirling numbers of the second kind: B(`n`) = sum of S(`n`, `k`) for `k` from 0 to `n`."
   [n]
   (cond (> n 170) m/nan
     (and (m/non-? n) (< n 27)) (bell-numbers (long n))
@@ -538,7 +542,11 @@
   :ret ::m/number)
 
 (defn log-binomial-probability
-  "Log-Likelihood of seeing `successes` out of `trials` with `success-prob`."
+  "Computes the natural logarithm of the binomial probability.
+
+  Returns ln(P(X = `successes`)) for a binomial distribution with `trials` trials and probability
+  `success-prob`. More numerically stable than computing [[binomial-probability]] and taking the log
+  for large `trials`."
   [successes trials success-prob]
   (+ (log-choose-k-from-n successes trials)
     (* successes (m/log success-prob))
@@ -747,8 +755,10 @@
   :ret (s/nilable ::groups-of-items))
 
 (defn combinations-with-complements
-  "All combinations of size `n` with complements, or all combinations with
-  complements."
+  "Generates all combinations paired with their complements.
+
+  With one argument, returns all possible combinations paired with their complements. With two
+  arguments, returns all combinations of exactly `n` items paired with their complements."
   ([items]
    (let [s (combinations items)
          r (reverse s)]
@@ -766,9 +776,10 @@
   :ret (s/nilable ::groups-of-items))
 
 (defn combinations-using-all
-  "Combinations that use all the `items` by grouping into the `breakdown`
-   pattern, where `breakdown` is a collection of positive longs that sum to the
-   number of items."
+  "Generates all ways to partition `items` according to `breakdown`.
+
+  The `breakdown` is a collection of positive longs that sum to the number of items. Each element in
+  `breakdown` specifies the size of one group in the partition."
   [items breakdown]
   (if-not (next breakdown)
     (list (list items))
@@ -791,8 +802,7 @@
   :ret ::groups-of-items)
 
 (defn distinct-combinations-with-replacement
-  "All distinct combinations of the `items` with replacement of up to `n`
-  items."
+  "Generates all distinct combinations of `items` with replacement, up to `n` items total."
   [items n]
   (filter #(<= (count %) n)
     (distinct (combinations (apply interleave (repeat n items))))))
@@ -870,7 +880,9 @@
   :ret (s/nilable ::groups-of-items))
 
 (defn cartesian-product
-  "All the ways to take one item from each sequence in `sequences-of-items`."
+  "Generates the Cartesian product of multiple sequences.
+
+  Returns all possible tuples formed by taking one item from each sequence in `sequences-of-items`."
   [& sequences-of-items]
   (let [v (vec sequences-of-items)]
     (if (empty? v)
@@ -886,8 +898,10 @@
   :ret ::groups-of-items)
 
 (defn selections
-  "All the ways of taking `n` (possibly the same) elements from the sequence of
-  items."
+  "Generates all `n`-tuples from `items` with repetition allowed.
+
+  Returns all ways of selecting `n` elements from `items` where the same element can be chosen
+  multiple times."
   [items n]
   (apply cartesian-product
     (take n (repeat items))))

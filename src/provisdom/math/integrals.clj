@@ -819,26 +819,26 @@
 (defn integration
   "Integrates a function over an interval using adaptive Gauss-Kronrod quadrature.
 
-  Computes ∫[a,b] f(x) dx where f can return scalars, vectors, or tensors.
-  Automatically handles infinite intervals via change of variables.
-  Uses globally adaptive algorithm that subdivides where error is highest.
+  Computes ∫[a,b] f(x) dx where f can return scalars, vectors, or tensors. Automatically handles
+  infinite intervals via change of variables. Uses globally adaptive algorithm that subdivides where
+  error is highest.
 
   Options:
-    ::accu - Relative accuracy target (default: m/dbl-close)
-    ::iter-interval - [min-iter max-iter] bounds (default: [10 1000])
-    ::parallel? - Use parallel processing (default: false)
-    ::points - Quadrature points: 15,21,31,41,51,61 (auto-selected by default)
-    ::singularities - Known singularity/discontinuity locations to split at
+    `::accu` - Relative accuracy target (default `m/dbl-close`)
+    `::iter-interval` - [min-iter max-iter] bounds (default `[10 1000]`)
+    `::parallel?` - Use parallel processing (default `false`)
+    `::points` - Quadrature points: 15, 21, 31, 41, 51, 61 (auto-selected by default)
+    `::singularities` - Known singularity/discontinuity locations to split at
 
   Returns integral value or anomaly map if convergence fails.
 
   Examples:
-    (integration #(* % %) [0 1])           ;=> 0.33333... (∫x² from 0 to 1)
-    (integration #(m/exp (- (* % %))) [m/inf- m/inf+])  ;=> ~1.77245 (√π)
-    (integration f [-1 1] {::singularities [0]})  ;=> splits at discontinuity
+    (integration #(* % %) [0 1])                        ;=> 0.33333... (x^2)
+    (integration #(m/exp (- (* % %))) [m/inf- m/inf+])  ;=> ~1.77245 (sqrt(pi))
+    (integration f [-1 1] {::singularities [0]})        ;=> splits at discontinuity
 
-  Known limitations: Very large finite intervals may lose precision due to
-  floating-point limits. For such cases, increase ::points or ::iter-interval."
+  Known limitations: Very large finite intervals may lose precision due to floating-point limits.
+  For such cases, increase `::points` or `::iter-interval`."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
   ([number->tensor [a b] {::keys [accu iter-interval parallel? points singularities]
                           :or    {accu          m/dbl-close
@@ -880,22 +880,22 @@
          :tensor ::tensor/tensor))
 
 (defn rectangular-integration
-  "Returns the integral of a function `v->tensor` over the rectangular
-  `num-intervals` using global adaptive integration of the Gauss-Kronrod
-  Quadrature Formula. `v->tensor` takes a vector with one element for each
-  num-interval and returns a tensor.
+  "Integrates a function over a rectangular region in multiple dimensions.
+
+  Computes ∫...∫ f(x₁,...,xₙ) dx₁...dxₙ using global adaptive Gauss-Kronrod quadrature. The
+  function `v->tensor` takes a vector with one element for each interval and returns a tensor.
+
   Options:
-    `::accu` -- default is m/dbl-close (m/sgl-close for 4+ variables
-      or for 3+ variables if any num-interval is infinite); accuracy is also
-      adjusted for Gauss-Kronrod quadrature type
-    `::iter-interval` -- default is [10 1000]
-    `::parallel?` -- default is false
-    `::points` -- 15, 21, 31, 41, 51, 61; default is 15.
+    `::accu` - Accuracy target (default `m/dbl-close`, or `m/sgl-close` for 4+ dimensions or 3+
+               dimensions with infinite intervals)
+    `::iter-interval` - [min max] iterations (default `[10 1000]`)
+    `::parallel?` - Enable parallel processing (default `false`)
+    `::points` - Quadrature points: 15, 21, 31, 41, 51, 61 (default `15`)
+
+  For more than 4 dimensions, consider [[monte-carlo-integration]] for better performance.
 
   Known Limitations:
-    With more than 4 dimensions, use Monte Carlo simulation instead for speed.
-    Very large absolute ranges (not infinite) can cause approximation errors due
-      to limited rounded accuracy of the 'double' type."
+    Very large finite ranges can cause approximation errors due to limited double precision."
   ([v->tensor num-intervals]
    (rectangular-integration v->tensor num-intervals {}))
   ([v->tensor num-intervals {::keys [accu iter-interval parallel? points]
@@ -926,18 +926,19 @@
          :tensor ::tensor/tensor))
 
 (defn non-rectangular-2D-integration
-  "Returns the integral of a function `number2->tensor` over the outer and inner
-  intervals using global adaptive integration of the Gauss-Kronrod Quadrature
-  Formula. Use [[rectangular-integration]] for rectangular integration with
-  numbers because that function is faster. `number2->tensor` should be a
-  function of (outer, inner). `outer-interval` is [a b]. `outer->inner-interval`
-  takes the outer number and returns an interval [c d].
+  "Integrates a function over a non-rectangular 2D region with variable inner bounds.
+
+  Computes ∫ₐᵇ ∫_{c(x)}^{d(x)} f(x,y) dy dx where the inner bounds depend on the outer variable. For
+  rectangular regions, use [[rectangular-integration]] instead (faster).
+
+  The function `number2->tensor` takes `(outer, inner)` arguments. The function
+  `outer->inner-interval` takes the outer value and returns `[c d]` for the inner bounds.
+
   Options:
-    `::accu` -- default is m/*dbl-close* per dimension (accuracy is adjusted
-      for quadrature type)
-    `::iter-interval` -- default per dimension is [10 1000]
-    `::parallel?` -- default is false
-    `::points` -- 15, 21, 31, 41, 51, 61; default is 15."
+    `::accu` - Accuracy target per dimension (default `m/dbl-close`)
+    `::iter-interval` - [min max] iterations per dimension (default `[10 1000]`)
+    `::parallel?` - Enable parallel processing (default `false`)
+    `::points` - Quadrature points: 15, 21, 31, 41, 51, 61 (default `15`)"
   ([number2->tensor outer-interval outer->inner-interval]
    (non-rectangular-2D-integration
      number2->tensor outer-interval outer->inner-interval {}))
@@ -1032,15 +1033,14 @@
   "Like [[integration]] but returns a map with both value and error estimate.
 
   Returns:
-    {::value <integral-value>
-     ::error-estimate <estimated-absolute-error>}
+    `{::value <integral-value> ::error-estimate <estimated-absolute-error>}`
 
   Or an anomaly map if convergence fails.
 
-  The error estimate is the difference between the high and low precision
-  Gauss-Kronrod approximations, providing a reliable upper bound on error.
+  The error estimate is the difference between the high and low precision Gauss-Kronrod
+  approximations, providing a reliable upper bound on error.
 
-  Options: Same as [[integration]] (::accu, ::iter-interval, ::parallel?, ::points)
+  Options: Same as [[integration]] (`::accu`, `::iter-interval`, `::parallel?`, `::points`)
 
   Examples:
     (integration-with-error m/sq [0 1])
@@ -1114,28 +1114,28 @@
 (defn tanh-sinh-integration
   "Double-exponential (tanh-sinh) quadrature for integrals with endpoint singularities.
 
-  Uses transformation x = tanh(π/2 · sinh(t)) which clusters quadrature nodes
-  near the endpoints, providing excellent accuracy for integrands with algebraic
-  or logarithmic singularities at the boundaries.
+  Uses transformation x = tanh(pi/2 * sinh(t)) which clusters quadrature nodes near the endpoints,
+  providing excellent accuracy for integrands with algebraic or logarithmic singularities at the
+  boundaries.
 
   Best for:
-    - Integrands with x^α singularities at endpoints (e.g., 1/√x)
-    - Logarithmic singularities (e.g., x·log(x))
-    - Functions like 1/√(1-x²)
+    - Integrands with x^alpha singularities at endpoints (e.g., 1/sqrt(x))
+    - Logarithmic singularities (e.g., x*log(x))
+    - Functions like 1/sqrt(1-x^2)
     - Integrands that are smooth in the interior but singular at boundaries
 
   Options:
-    ::level - Refinement level 1-5 (default 3, gives 64 points)
-              Higher levels give more accuracy but cost more
-    ::accu - Target accuracy (default m/dbl-close) - used for adaptive refinement
+    `::level` - Refinement level 1-5 (default `3`, gives 64 points). Higher levels give more
+                accuracy but cost more.
+    `::accu` - Target accuracy (default `m/dbl-close`) - used for adaptive refinement
 
   Returns the integral value or anomaly if convergence fails.
 
   Examples:
-    ;; Integral with sqrt singularity at 0: ∫₀¹ 1/√x dx = 2
+    ;; Integral with sqrt singularity at 0: int_0^1 1/sqrt(x) dx = 2
     (tanh-sinh-integration #(/ (m/sqrt %)) [0.0 1.0])
 
-    ;; Integral with log singularity: ∫₀¹ x·log(x) dx = -1/4
+    ;; Integral with log singularity: int_0^1 x*log(x) dx = -1/4
     (tanh-sinh-integration #(* % (m/log %)) [0.0 1.0])
 
     ;; Elliptic-type integral
@@ -1216,9 +1216,8 @@
 (defn clenshaw-curtis-integration
   "Clenshaw-Curtis quadrature using Chebyshev nodes.
 
-  Uses Chebyshev extrema (including endpoints) as quadrature nodes. The method
-  is competitive with Gauss-Kronrod and has nested rules (n → 2n-1 points)
-  for efficient error estimation.
+  Uses Chebyshev extrema (including endpoints) as quadrature nodes. The method is competitive with
+  Gauss-Kronrod and has nested rules (n -> 2n-1 points) for efficient error estimation.
 
   Best for:
     - Smooth functions where you want endpoint values in the approximation
@@ -1232,13 +1231,13 @@
     - Slightly less efficient for very smooth analytic functions
 
   Options:
-    ::cc-points - Number of points: 3, 5, 9, 17, 33, 65 (default 17)
-    ::accu - Target accuracy (default m/dbl-close)
-    ::iter-interval - [min max] adaptive iterations (default [1 10])
+    `::cc-points` - Number of points: 3, 5, 9, 17, 33, 65 (default `17`)
+    `::accu` - Target accuracy (default `m/dbl-close`)
+    `::iter-interval` - [min max] adaptive iterations (default `[1 10]`)
 
   Examples:
-    (clenshaw-curtis-integration m/sq [0 1])  ;=> 0.333...
-    (clenshaw-curtis-integration m/cos [0 m/PI])  ;=> 0 (exact)"
+    (clenshaw-curtis-integration m/sq [0 1])       ;=> 0.333...
+    (clenshaw-curtis-integration m/cos [0 m/PI])   ;=> 0 (exact)"
   ([number->tensor [a b]] (clenshaw-curtis-integration number->tensor [a b] {}))
   ([number->tensor [a b] {::keys [cc-points accu iter-interval]
                           :or    {cc-points     17
@@ -1319,9 +1318,9 @@
 (defn monte-carlo-integration
   "Monte Carlo integration for high-dimensional integrals.
 
-  Estimates the integral by averaging function values at random points within
-  the integration region. The standard error decreases as 1/√n regardless of
-  dimension, making this method essential for high-dimensional problems.
+  Estimates the integral by averaging function values at random points within the integration
+  region. The standard error decreases as 1/sqrt(n) regardless of dimension, making this method
+  essential for high-dimensional problems.
 
   Best for:
     - Dimensions > 4 where adaptive quadrature becomes expensive
@@ -1330,18 +1329,16 @@
     - Integrands that are expensive to evaluate
 
   Options:
-    ::samples - Number of sample points (default 10000)
-    ::seed - Random seed for reproducibility (default: uses current RNG state)
+    `::samples` - Number of sample points (default `10000`)
+    `::seed` - Random seed for reproducibility (default: uses current RNG state)
 
   Returns:
-    {::value <estimated-integral>
-     ::standard-error <estimated-standard-error>
-     ::samples <number-of-samples-used>}
+    `{::value <estimated-integral> ::standard-error <error> ::samples <n>}`
 
   For dimensions > 4, Monte Carlo is typically faster than adaptive quadrature.
 
   Examples:
-    ;; 5D unit hypercube: ∫...∫ (x₁+...+x₅) dx₁...dx₅ = 2.5
+    ;; 5D unit hypercube: int...int (x1+...+x5) dx1...dx5 = 2.5
     (monte-carlo-integration
       (fn [v] (reduce + v))
       (repeat 5 [0.0 1.0])
@@ -1392,9 +1389,9 @@
 (defn quasi-monte-carlo-integration
   "Quasi-Monte Carlo integration using Halton low-discrepancy sequences.
 
-  Like [[monte-carlo-integration]] but uses deterministic Halton sequences
-  instead of pseudorandom numbers. Halton sequences provide better uniform
-  coverage, often achieving O(log(n)^d/n) convergence instead of O(1/√n).
+  Like [[monte-carlo-integration]] but uses deterministic Halton sequences instead of pseudorandom
+  numbers. Halton sequences provide better uniform coverage, often achieving O(log(n)^d/n)
+  convergence instead of O(1/sqrt(n)).
 
   Best for:
     - High-dimensional smooth functions
@@ -1406,9 +1403,9 @@
     - May miss features aligned with coordinate axes
 
   Options:
-    ::samples - Number of sample points (default 10000)
-    ::skip - Number of initial Halton points to skip (default 20, avoids
-             low-discrepancy issues at sequence start)
+    `::samples` - Number of sample points (default `10000`)
+    `::skip` - Number of initial Halton points to skip (default `20`, avoids low-discrepancy issues
+               at sequence start)
 
   Returns same format as [[monte-carlo-integration]]."
   ([v->tensor num-intervals]
@@ -1497,8 +1494,8 @@
 (defn sparse-grid-integration
   "Sparse grid (Smolyak) integration for moderate-dimensional problems.
 
-  Combines 1D quadrature rules using the Smolyak sparse grid construction,
-  achieving O(n · log(n)^(d-1)) points instead of O(n^d) for full tensor product.
+  Combines 1D quadrature rules using the Smolyak sparse grid construction, achieving
+  O(n * log(n)^(d-1)) points instead of O(n^d) for full tensor product.
 
   Best for:
     - Dimensions 5-15 with smooth integrands
@@ -1511,8 +1508,8 @@
     - Functions with isolated singularities
 
   Options:
-    ::sparse-grid-level - Smolyak level 1-7 (default 4)
-                          Level k gives accuracy O(n^(-k) · log(n)^(d-1))
+    `::sparse-grid-level` - Smolyak level 1-7 (default `4`). Level k gives accuracy
+                            O(n^(-k) * log(n)^(d-1))
 
   Examples:
     ;; 8D integral with ~2000 points instead of 10^8 for tensor product
@@ -1584,30 +1581,30 @@
        :gamma (/ (* 4.0 (- sin-t (* theta cos-t))) t3)})))
 
 (defn oscillatory-integration
-  "Integrates f(x)·sin(ωx) or f(x)·cos(ωx) for oscillatory integrands.
+  "Integrates f(x)*sin(omega*x) or f(x)*cos(omega*x) for oscillatory integrands.
 
-  Uses Filon-type quadrature which handles the oscillatory component analytically,
-  only needing to approximate the slowly-varying f(x). Standard quadrature
-  requires O(ω) points; Filon requires O(1) points for fixed accuracy as ω increases.
+  Uses Filon-type quadrature which handles the oscillatory component analytically, only needing to
+  approximate the slowly-varying f(x). Standard quadrature requires O(omega) points; Filon requires
+  O(1) points for fixed accuracy as omega increases.
 
   Best for:
-    - Integrals of the form ∫ f(x)·sin(ωx) dx with large ω
+    - Integrals of the form int f(x)*sin(omega*x) dx with large omega
     - Fourier-type integrals
     - When standard quadrature fails due to rapid oscillation
 
   Options:
-    ::omega - Oscillation frequency (REQUIRED)
-    ::oscillation-type - :sin (default) or :cos
-    ::points - Number of points (default 21, must be odd for Filon)
+    `::omega` - Oscillation frequency (REQUIRED)
+    `::oscillation-type` - `:sin` (default) or `:cos`
+    `::points` - Number of points (default `21`, must be odd for Filon)
 
-  Note: For very large ω (> 1000), consider specialized asymptotic methods.
+  Note: For very large omega (> 1000), consider specialized asymptotic methods.
 
   Examples:
-    ;; ∫₀^π x·sin(100x) dx
+    ;; int_0^pi x*sin(100x) dx
     (oscillatory-integration identity [0 m/PI]
       {::omega 100 ::oscillation-type :sin})
 
-    ;; ∫₀^1 exp(-x)·cos(50x) dx
+    ;; int_0^1 exp(-x)*cos(50x) dx
     (oscillatory-integration #(m/exp (- %)) [0 1]
       {::omega 50 ::oscillation-type :cos})"
   [number->tensor [a b] {::keys [omega oscillation-type points]
