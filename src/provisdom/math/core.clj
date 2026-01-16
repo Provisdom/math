@@ -1203,10 +1203,6 @@
   :args (s/cat :number ::number :round-type ::round-type)
   :ret ::number)
 
-(def round
-  "Alias for [[round']]. See [[round']] for documentation."
-  round')
-
 (defn round-significant
   "Round a number to the specified number of significant digits. This function can be used in
   conjunction with functions like [[floor]], [[roughly-floor]], etc. to get 'floor-significant',
