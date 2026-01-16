@@ -1620,7 +1620,7 @@
   "Converts a matrix to sparse representation.
 
   Returns a vector of `[row col value]` triples for elements that satisfy the predicate function.
-  By default includes all non-zero elements.
+  By default, includes all non-zero elements.
 
   Examples:
     (matrix->sparse [[1 0] [0 2]]) ;=> [[0 0 1] [1 1 2]]
@@ -1984,9 +1984,8 @@
 (defn merge-matrices
   "Combines four matrices into a single matrix.
   
-  Takes a map with keys ::top-left, ::top-right, ::bottom-left, ::bottom-right.
-  This is the inverse operation of matrix-partition. Returns nil if matrices
-  have incompatible dimensions.
+  Takes a map with keys ::top-left, ::top-right, ::bottom-left, ::bottom-right. This is the inverse
+  operation of matrix-partition. Returns nil if matrices have incompatible dimensions.
   
   Examples:
     (merge-matrices {::top-left [[1]] ::top-right [[2]] 
@@ -2107,8 +2106,8 @@
 (defn kronecker-product
   "Computes the Kronecker product of matrices.
   
-  For matrices A (m×n) and B (p×q), produces an (mp)×(nq) matrix where each
-  element A[i,j] is replaced by A[i,j] * B.
+  For matrices A (m×n) and B (p×q), produces a (mp)×(nq) matrix where each element A[i,j] is
+  replaced by A[i,j] * B.
   
   Examples:
     (kronecker-product [[1 2]] [[3 4]]) ;=> [[3 4 6 8]]
