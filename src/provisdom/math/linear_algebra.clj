@@ -1609,8 +1609,24 @@
                                                                 %)
                                                           (range nr))))
                                            extended-m (mx/transpose (vec (take nr extended)))
-                                           {::keys [Q]} (qr-decomposition extended-m)]
-                                       Q))]
+                                           {::keys [Q]} (qr-decomposition extended-m)
+                                           ;; Fix sign flips: QR can negate columns. Correct signs
+                                           ;; for the first (count valid-U-columns) columns of Q
+                                           ;; to match the original U-columns.
+                                           n-valid (count valid-U-columns)
+                                           Q-corrected
+                                           (mx/transpose
+                                             (mapv (fn [col-idx]
+                                                     (let [q-col (mx/get-column Q col-idx)]
+                                                       (if (< col-idx n-valid)
+                                                         (let [u-col (get valid-U-columns col-idx)
+                                                               dot (reduce + (map * q-col u-col))]
+                                                           (if (neg? dot)
+                                                             (mapv - q-col)
+                                                             q-col))
+                                                         q-col)))
+                                               (range nr)))]
+                                       Q-corrected))]
                      partial-U))
                sigma-matrix (mx/compute-matrix nr nc
                               (fn [i j]

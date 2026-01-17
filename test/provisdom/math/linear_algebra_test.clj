@@ -478,7 +478,17 @@
           S singular-values-matrix
           Vt svd-right
           reconstructed (mx/mx* U (mx/mx* S Vt))]
-      (t/is-data-approx= m reconstructed :tolerance 1e-10))))
+      (t/is-data-approx= m reconstructed :tolerance 1e-10))
+    ;; Tall matrix (rows > cols) - verify reconstruction
+    ;; This tests the QR sign correction in sv-decomposition
+    (let [m [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
+          result (la/sv-decomposition m {:rank-tolerance 0.0})
+          {::la/keys [svd-left singular-values-matrix svd-right]} result
+          U svd-left
+          S singular-values-matrix
+          Vt svd-right
+          reconstructed (mx/mx* U (mx/mx* S Vt))]
+      (t/is-data-approx= m reconstructed :tolerance 1e-9))))
 
 ;;;CONDITION NUMBER
 (t/deftest condition-number-from-svd-test
