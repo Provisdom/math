@@ -212,7 +212,7 @@
     (interval-midpoint [-5 5])   ;=> 0.0
     (interval-midpoint [2 8])    ;=> 5.0"
   [[lower upper]]
-  (/ (+ lower upper) 2.0))
+  (/ (+ (double lower) upper) 2.0))
 
 (s/fdef interval-midpoint
   :args (s/cat :interval ::interval)
@@ -268,10 +268,10 @@
     (bounds-width ([[bounds]] 0 10))   ;=> 10.0
     (bounds-width ([[bounds]] -5 5))   ;=> 10.0"
   [{::keys [lower upper]}]
-  (- upper lower))
+  (- upper (double lower)))
 
 (s/fdef bounds-width
-  :args (s/cat :bounds ::bounds)
+  :args (s/cat :bounds ::bounds-num)
   :ret ::m/non-)
 
 (defn bounds-midpoint

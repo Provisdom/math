@@ -111,36 +111,55 @@
    -0.04219773455554433 0.16653861138229148 -0.04200263503409524 -0.6558780715202539
    0.5772156649015329])
 
-;;;LOG-SUM-EXP
-(defn log-sum-exp
-  "Computes log(sum(e^xi)) for sequence `numbers` in a numerically stable way.
+;;;SAFE-EXP
+(defn safe-exp
+  "Computes `exp(x)` with protection against overflow/underflow.
 
-  Avoids overflow/underflow when computing the log of sums of exponentials for very large or very
-  small numbers. Uses the log-sum-exp trick.
+  Returns:
+    `0.0` when `x < -700` (underflow)
+    `inf+` when `x > 700` (overflow)
+    `exp(x)` otherwise
 
   Examples:
-    (log-sum-exp [1200 1210]) => 1210.0000453988991
-    (log-sum-exp [-1200 -1210]) => -1199.9999546011009"
+    (safe-exp -1000) ;=> 0.0
+    (safe-exp 1000)  ;=> ##Inf
+    (safe-exp 1.0)   ;=> 2.718..."
+  [x]
+  (cond
+    (< x -700.0) 0.0
+    (> x 700.0) m/inf+
+    :else (m/exp x)))
+
+(s/fdef safe-exp
+  :args (s/cat :x ::m/num)
+  :ret ::m/non-)
+
+;;;LOG-SUM-EXP
+(defn log-sum-exp
+  "Computes `log(sum(e^xi))` for sequence `numbers` in a numerically stable way.
+
+  Avoids overflow/underflow when computing the log of sums of exponentials for very large or very
+  small numbers. Uses the log-sum-exp trick:
+  `log(sum(exp(x_i))) = max(x) + log(sum(exp(x_i - max(x))))`
+
+  Returns `##-Inf` for empty input (since `log(0) = -inf`).
+
+  Examples:
+    (log-sum-exp [])           ;=> ##-Inf
+    (log-sum-exp [5.0])        ;=> 5.0
+    (log-sum-exp [1200 1210])  ;=> 1210.0000453988991
+    (log-sum-exp [-1200 -1210]) ;=> -1199.9999546011009"
   [numbers]
   (if (empty? numbers)
-    0.0
-    (let [b (double (apply max numbers))]
-      (if (> b 700.0)
-        (+ b
-          (m/log (reduce +
-                   (map
-                     (fn [val]
-                       (m/exp (- val b)))
-                     numbers))))
-        (let [a (double (apply min numbers))]
-          (if (< a -700.0)
-            (+ a
-              (m/log (reduce +
-                       (map
-                         (fn [val]
-                           (m/exp (- val a)))
-                         numbers))))
-            (m/log (reduce + (map m/exp numbers)))))))))
+    m/inf-
+    (let [max-x (double (apply max numbers))]
+      (cond
+        (m/inf-? max-x) m/inf-
+        (m/inf+? max-x) m/inf+
+        :else (+ max-x
+                (m/log (reduce +
+                         (map (fn [val] (m/exp (- val max-x)))
+                           numbers))))))))
 
 (s/fdef log-sum-exp
   :args (s/cat :v ::m/numbers)

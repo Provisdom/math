@@ -415,7 +415,7 @@
   Returns a function that produces fresh RNG instances on each call."
   [rng]
   (let [gens (atom (rng-lazy rng))]
-    (fn [] volatile!
+    (fn []
       (let [rng (first @gens)]
         (swap! gens rest)
         rng))))
@@ -797,7 +797,7 @@
   (+ mean (* std (rnd-normal rng))))
 
 (s/fdef rnd-gaussian
-  :args (s/cat :rng ::rng :mean ::m/num :std ::m/non-)
+  :args (s/cat :rng ::rng :mean ::m/finite :std ::m/finite-non-)
   :ret ::m/num)
 
 (defn rnd-gaussian!
@@ -812,7 +812,7 @@
   (rnd-gaussian (rng!) mean std))
 
 (s/fdef rnd-gaussian!
-  :args (s/cat :mean ::m/num :std ::m/non-)
+  :args (s/cat :mean ::m/finite :std ::m/finite-non-)
   :ret ::m/num)
 
 ;;;COLLECTION UTILITIES
@@ -865,9 +865,9 @@
       (if (pos? i)
         (let [j (rnd-int (first rngs) (inc i))
               vi (get v i)
-              vj (get v j)]
-          (assoc! v i vj)
-          (assoc! v j vi)
+              vj (get v j)
+              _ (assoc! v i vj)
+              _ (assoc! v j vi)]
           (recur (dec i) (rest rngs)))
         (persistent! v)))))
 
