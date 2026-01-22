@@ -1,17 +1,17 @@
 {:paths   ["src"]
  :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                   :git/sha "11c36ef106965acff9e69149bdbcd226ac5a4da9"}}
+                                   :git/sha "3a971f66eaa0943384ce3df1c73e1c0a0922baec"}}
  :aliases {:dev             {:extra-paths ["siderail"]}
            :local           {:override-deps {provisdom/test         {:local/root "../test"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test" "siderail"]
                              :extra-deps  {criterium/criterium    {:mvn/version "0.4.6"}
                                            orchestra/orchestra    {:mvn/version "2021.01.01-1"}
-                                           org.clojure/test.check {:mvn/version "1.1.2"}
+                                           org.clojure/test.check {:mvn/version "1.1.3"}
 
                                            provisdom/test
                                            {:git/url "https://github.com/Provisdom/test.git"
-                                            :git/sha "82a9039d2527a382139c8a06ca507af96c071785"}}}
+                                            :git/sha "c82c490a1f1d268b66f159f707a882de6ed50a7c"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
