@@ -8,48 +8,6 @@
 
 (set! *warn-on-reflection* true)
 
-;;;SAFE-EXP
-(t/deftest safe-exp-test
-  (t/with-instrument `special-fns/safe-exp
-    (t/is-spec-check special-fns/safe-exp))
-  (t/with-instrument :all
-    ;; Normal cases
-    (t/is= 1.0 (special-fns/safe-exp 0.0))
-    (t/is-approx= m/E (special-fns/safe-exp 1.0))
-    (t/is-approx= (/ m/E) (special-fns/safe-exp -1.0))
-    ;; Underflow protection
-    (t/is= 0.0 (special-fns/safe-exp -701.0))
-    (t/is= 0.0 (special-fns/safe-exp -1000.0))
-    ;; Overflow protection
-    (t/is= m/inf+ (special-fns/safe-exp 701.0))
-    (t/is= m/inf+ (special-fns/safe-exp 1000.0))
-    ;; Edge of threshold
-    (t/is (m/pos? (special-fns/safe-exp -699.0)))
-    (t/is (m/finite? (special-fns/safe-exp 699.0)))))
-
-;;;LOG-SUM-EXP
-(t/deftest log-sum-exp-test
-  (t/with-instrument `special-fns/log-sum-exp
-    (t/is-spec-check special-fns/log-sum-exp))
-  (t/with-instrument :all
-    ;; Empty vector returns -inf
-    (t/is= m/inf- (special-fns/log-sum-exp []))
-    ;; Single element
-    (t/is= 5.0 (special-fns/log-sum-exp [5.0]))
-    ;; Two equal elements: log(2*exp(x)) = x + log(2)
-    (t/is-approx= (+ 3.0 m/log-two) (special-fns/log-sum-exp [3.0 3.0]))
-    ;; General case: log(exp(1) + exp(2)) = 2 + log(1 + exp(-1))
-    (t/is-approx= (+ 2.0 (m/log (inc (m/exp -1.0)))) (special-fns/log-sum-exp [1.0 2.0]))
-    ;; Large values (should not overflow)
-    (t/is= -1199.9999546011009 (special-fns/log-sum-exp [-1200.0 -1210.0]))
-    (t/is= 1210.0000453988991 (special-fns/log-sum-exp [1200.0 1210.0]))
-    (t/is= 1210.0 (special-fns/log-sum-exp [-1200.0 1210.0]))
-    (t/is-approx= 1000.0 (special-fns/log-sum-exp [1000.0 900.0]) :tolerance 0.001)
-    ;; All -inf
-    (t/is= m/inf- (special-fns/log-sum-exp [m/inf- m/inf-]))
-    ;; Contains +inf
-    (t/is= m/inf+ (special-fns/log-sum-exp [1.0 2.0 m/inf+]))))
-
 ;;;ERROR FUNCTIONS
 (t/deftest erf-test
   (t/with-instrument `special-fns/erf

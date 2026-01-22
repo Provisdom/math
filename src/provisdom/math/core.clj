@@ -926,6 +926,28 @@
   :args (s/cat :number ::number)
   :ret ::number)
 
+(defn safe-exp
+  "Computes `exp(x)` with protection against overflow/underflow.
+
+  Returns:
+    `0.0` when `x < -700` (underflow)
+    `inf+` when `x > 700` (overflow)
+    `exp(x)` otherwise
+
+  Examples:
+    (safe-exp -1000) ;=> 0.0
+    (safe-exp 1000)  ;=> ##Inf
+    (safe-exp 1.0)   ;=> 2.718..."
+  [x]
+  (cond
+    (< x -700.0) 0.0
+    (> x 700.0) inf+
+    :else (exp x)))
+
+(s/fdef safe-exp
+  :args (s/cat :x ::num)
+  :ret ::non-)
+
 (defn log
   "Returns log `number`."
   [number]
@@ -942,6 +964,36 @@
 
 (s/fdef log-inc
   :args (s/cat :number ::number)
+  :ret ::number)
+
+(defn log-sum-exp
+  "Computes `log(sum(e^xi))` for sequence `numbers` in a numerically stable way.
+
+  Avoids overflow/underflow when computing the log of sums of exponentials for very large or very
+  small numbers. Uses the log-sum-exp trick:
+  `log(sum(exp(x_i))) = max(x) + log(sum(exp(x_i - max(x))))`
+
+  Returns `##-Inf` for empty input (since `log(0) = -inf`).
+
+  Examples:
+    (log-sum-exp [])           ;=> ##-Inf
+    (log-sum-exp [5.0])        ;=> 5.0
+    (log-sum-exp [1200 1210])  ;=> 1210.0000453988991
+    (log-sum-exp [-1200 -1210]) ;=> -1199.9999546011009"
+  [numbers]
+  (if (empty? numbers)
+    inf-
+    (let [max-x (double (apply max numbers))]
+      (cond
+        (inf-? max-x) inf-
+        (inf+? max-x) inf+
+        :else (+ max-x
+                (log (reduce +
+                       (map (fn [val] (exp (- val max-x)))
+                         numbers))))))))
+
+(s/fdef log-sum-exp
+  :args (s/cat :numbers ::numbers)
   :ret ::number)
 
 (defn log2
