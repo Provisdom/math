@@ -20,6 +20,16 @@
     (t/is (vector/vector? [2 3]))
     (t/is-not (vector/vector? [[2]]))))
 
+(t/deftest vector-finite?-test
+  (t/with-instrument `vector/vector-finite?
+    (t/is-spec-check vector/vector-finite?))
+  (t/with-instrument :all
+    (t/is-not (vector/vector-finite? 1))
+    (t/is (vector/vector-finite? []))
+    (t/is (vector/vector-finite? [1.0 2.0 3.0]))
+    (t/is-not (vector/vector-finite? [1.0 m/inf+]))
+    (t/is-not (vector/vector-finite? [1.0 m/nan]))))
+
 (t/deftest vector-prob?-test
   (t/with-instrument `vector/vector-prob?
     (t/is-spec-check vector/vector-prob?))
@@ -153,7 +163,7 @@
     (t/is= nil (vector/some-kv (fn [k v] (> v k)) []))
     (t/is= nil (vector/some-kv (fn [k v] (> v k)) [0]))
     (t/is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6]))
-    (t/is= 0 (vector/some-kv (fn [k v] (>= v 0)) [0 1 2]))))
+    (t/is= 0 (vector/some-kv (fn [_k v] (>= v 0)) [0 1 2]))))
 
 ;;;MANIPULATION
 (t/deftest insertv-test

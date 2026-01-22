@@ -226,6 +226,24 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
+(defn vector-finite?
+  "Returns true if `x` is a vector containing only finite numbers.
+
+  Excludes vectors containing NaN or infinite values.
+
+  Examples:
+    (vector-finite? [1.0 2.0 3.0]) => true
+    (vector-finite? []) => true
+    (vector-finite? [1.0 ##Inf]) => false
+    (vector-finite? [1.0 ##NaN]) => false"
+  [x]
+  (and (vector? x)
+       (every? m/finite? x)))
+
+(s/fdef vector-finite?
+  :args (s/cat :x any?)
+  :ret boolean?)
+
 (defn vector-prob?
   "Returns true if `x` is a vector containing only probability values.
   
@@ -338,21 +356,24 @@
 
 ;;;VECTOR CONSTRUCTORS
 (defn to-vector
-  "Converts nested structure `x` to a flat vector of numbers.
-  
-  Flattens any nested sequences and converts to a vector.
+  "Converts `x` to a flat vector of numbers.
+
+  Handles single numbers, flat vectors, and one level of nesting (e.g., matrices).
   Returns nil if any non-numeric values are encountered.
-  
+
   Examples:
     (to-vector [[1 2] [3 4]]) => [1 2 3 4]
+    (to-vector [1 2 3]) => [1 2 3]
     (to-vector 5) => [5]
     (to-vector [1 \"a\"]) => nil (contains non-number)"
   [x]
-  (let [ret (cond (number? x) [x]
-                  (sequential? x) (let [flat (flatten x)]
-                                    (when (every? number? flat) (vec flat)))
-                  :else nil)]
-    ret))
+  (cond
+    (number? x) [x]
+    (sequential? x) (let [flat (into []
+                                 (mapcat #(if (sequential? %) % [%]))
+                                 x)]
+                      (when (every? number? flat) flat))
+    :else nil))
 
 (s/fdef to-vector
   :args (s/cat :x any?)

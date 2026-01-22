@@ -7,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anom]))
 
-;;52 seconds
+;;38 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -37,7 +37,23 @@
           {::la/keys [L U LU-permutation singular?]} result
           reconstructed (mx/mx* LU-permutation (mx/mx* L U))]
       (t/is-not singular?)
-      (t/is-data-approx= m reconstructed :tolerance 1e-10))))
+      (t/is-data-approx= m reconstructed :tolerance 1e-10))
+    ;; Large matrix test (n > 8) to exercise lu-decomposition-impl-large code path
+    ;; Using a 10x10 matrix generated deterministically
+    (random/bind-seed 42
+      (let [n 10
+            m (la/rnd-pos-definite-matrix-finite! n)
+            result (la/lu-decomposition m)
+            {::la/keys [L U LU-permutation determinant inverse singular?]} result
+            reconstructed (mx/mx* LU-permutation (mx/mx* L U))]
+        (t/is-not singular?)
+        (t/is-data-approx= m reconstructed :tolerance 1e-10)
+        ;; Verify inverse: A * A^-1 = I
+        (let [product (mx/mx* m inverse)
+              identity-n (mx/identity-matrix n)]
+          (t/is-data-approx= identity-n product :tolerance 1e-8))
+        ;; Verify determinant is positive (since positive definite)
+        (t/is (m/pos? determinant))))))
 
 ;;;DETERMINANT
 (t/deftest determinant-from-lu-test
@@ -56,7 +72,14 @@
     (t/is (Double/isNaN (la/determinant [[]])))
     (t/is= 4.0 (la/determinant [[4.0]]))
     (t/is-approx= -2.0 (la/determinant [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
-    (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)))
+    (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)
+    ;; Large matrix (n > 8) to exercise large LU code path
+    (random/bind-seed 42
+      (let [n 10
+            m (la/rnd-pos-definite-matrix-finite! n)
+            det (la/determinant m)]
+        ;; Determinant of positive definite matrix is positive
+        (t/is (m/pos? det))))))
 
 ;;;MINORS AND COFACTORS
 (t/deftest minor-test
@@ -129,7 +152,15 @@
           inv (la/inverse m)
           product (mx/mx* m inv)]
       (t/is-data-approx= [[1.0 0.0] [0.0 1.0]] product :tolerance 1e-10))
-    (t/is= ::anom/no-solve (::anom/category (la/inverse [[1.0 2.0] [2.0 4.0]])))))
+    (t/is= ::anom/no-solve (::anom/category (la/inverse [[1.0 2.0] [2.0 4.0]])))
+    ;; Large matrix (n > 8) to exercise large LU code path
+    (random/bind-seed 42
+      (let [n 10
+            m (la/rnd-pos-definite-matrix-finite! n)
+            inv (la/inverse m)
+            product (mx/mx* m inv)
+            identity-n (mx/identity-matrix n)]
+        (t/is-data-approx= identity-n product :tolerance 1e-8)))))
 
 ;;;SOLVE LINEAR SYSTEM
 (t/deftest solve-test
@@ -151,7 +182,16 @@
       ;; Verify Ax is close to b (least squares sense)
       (let [Ax (mapv (fn [row] (reduce + (map * row x))) A)
             residual (reduce + (map #(m/sq (- %1 %2)) Ax b))]
-        (t/is (< residual 0.5))))))
+        (t/is (< residual 0.5))))
+    ;; Large square system (n > 8) to exercise large LU code path
+    (random/bind-seed 42
+      (let [n 10
+            A (la/rnd-pos-definite-matrix-finite! n)
+            ;; Create a known solution and compute b = A * x_true
+            x-true (vec (repeat n 1.0))
+            b (mapv (fn [row] (reduce + (map * row x-true))) A)
+            x (la/solve A b)]
+        (t/is-data-approx= x-true x :tolerance 1e-8)))))
 
 ;;;CHOLESKY DECOMPOSITION
 (t/deftest cholesky-decomposition-test
@@ -642,3 +682,123 @@
       (t/is-approx= (- (m/sin t)) (get-in result [0 1]) :tolerance 1e-4)
       (t/is-approx= (m/sin t) (get-in result [1 0]) :tolerance 1e-4)
       (t/is-approx= (m/cos t) (get-in result [1 1]) :tolerance 1e-4))))
+
+;;;PRINCIPAL COMPONENT ANALYSIS
+(t/deftest pca-test
+  (t/with-instrument `la/pca
+    (t/is-spec-check la/pca {:num-tests 30}))
+  (t/with-instrument :all
+    ;; Empty matrix returns nil
+    (t/is= nil (la/pca [[]]))
+    ;; Single row returns nil (can't compute variance)
+    (t/is= nil (la/pca [[1.0 2.0]]))
+    ;; Simple 2D data along a line y = x
+    ;; Data: [1,1], [2,2], [3,3] - perfectly correlated
+    ;; Mean: [2,2], variance is all along first PC
+    (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
+          result (la/pca data)
+          {::la/keys [pca-eigenvalues pca-explained-variance-ratio pca-mean
+                      pca-principal-components]} result]
+      (t/is (some? result))
+      ;; Mean should be [2, 2]
+      (t/is-data-approx= [2.0 2.0] pca-mean :tolerance 1e-10)
+      ;; First eigenvalue should capture all variance
+      (t/is-approx= 1.0 (first pca-explained-variance-ratio) :tolerance 1e-10)
+      ;; Second eigenvalue should be 0 (no variance in perpendicular direction)
+      (t/is-approx= 0.0 (second pca-explained-variance-ratio) :tolerance 1e-10)
+      ;; First PC should be along [1/sqrt(2), 1/sqrt(2)] or [-1/sqrt(2), -1/sqrt(2)]
+      (let [pc1 (first pca-principal-components)]
+        (t/is-approx= (m/abs (first pc1)) (/ 1.0 (m/sqrt 2.0)) :tolerance 1e-10)
+        (t/is-approx= (m/abs (second pc1)) (/ 1.0 (m/sqrt 2.0)) :tolerance 1e-10)))
+    ;; 3x2 matrix with known covariance
+    ;; Data centered on [0,0]: [-1, -2], [0, 0], [1, 2]
+    ;; X^T * X = [[2, 4], [4, 8]], cov = [[1, 2], [2, 4]] (sample covariance with n-1)
+    ;; Eigenvalues of [[1, 2], [2, 4]]: det(A - lambda*I) = (1-l)(4-l) - 4 = l^2 - 5l
+    ;; So eigenvalues are 5 and 0
+    (let [data [[-1.0 -2.0] [0.0 0.0] [1.0 2.0]]
+          result (la/pca data)
+          {::la/keys [pca-eigenvalues pca-mean]} result]
+      (t/is-data-approx= [0.0 0.0] pca-mean :tolerance 1e-10)
+      (t/is-approx= 5.0 (first pca-eigenvalues) :tolerance 1e-10)
+      (t/is-approx= 0.0 (second pca-eigenvalues) :tolerance 1e-10))
+    ;; Uncorrelated data - identity covariance
+    (let [data [[1.0 0.0] [0.0 1.0] [-1.0 0.0] [0.0 -1.0]]
+          result (la/pca data)
+          {::la/keys [pca-eigenvalues pca-explained-variance-ratio]} result]
+      ;; Both eigenvalues should be equal (variance equal in both directions)
+      ;; Sample variance: sum of (x - mean)^2 / (n-1)
+      ;; For x: [1, 0, -1, 0], mean = 0, sum of squares = 2, variance = 2/3
+      ;; For y: [0, 1, 0, -1], mean = 0, sum of squares = 2, variance = 2/3
+      (t/is-approx= (first pca-eigenvalues) (second pca-eigenvalues) :tolerance 1e-10)
+      (t/is-approx= 0.5 (first pca-explained-variance-ratio) :tolerance 1e-10)
+      (t/is-approx= 0.5 (second pca-explained-variance-ratio) :tolerance 1e-10))))
+
+(t/deftest pca-transform-test
+  (t/with-instrument `la/pca-transform
+    (t/is-spec-check la/pca-transform {:num-tests 20}))
+  (t/with-instrument :all
+    ;; Empty matrix returns nil
+    (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
+      (t/is= nil (la/pca-transform [[]] pca-result 1)))
+    ;; Transform data onto principal components
+    (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
+          pca-result (la/pca data)
+          ;; Transform original data with all components
+          transformed (la/pca-transform data pca-result 2)]
+      (t/is (some? transformed))
+      (t/is= 3 (mx/rows transformed))
+      (t/is= 2 (mx/columns transformed))
+      ;; Second column should be all zeros (no variance in that direction)
+      (t/is-approx= 0.0 (get-in transformed [0 1]) :tolerance 1e-10)
+      (t/is-approx= 0.0 (get-in transformed [1 1]) :tolerance 1e-10)
+      (t/is-approx= 0.0 (get-in transformed [2 1]) :tolerance 1e-10))
+    ;; Transform with reduced dimensions
+    (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
+          pca-result (la/pca data)
+          transformed-1 (la/pca-transform data pca-result 1)]
+      (t/is (some? transformed-1))
+      (t/is= 3 (mx/rows transformed-1))
+      (t/is= 1 (mx/columns transformed-1)))
+    ;; Dimension mismatch returns nil
+    (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
+      (t/is= nil (la/pca-transform [[1.0 2.0 3.0]] pca-result 2)))
+    ;; n-components > available components returns nil
+    (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
+      (t/is= nil (la/pca-transform [[1.0 2.0]] pca-result 5)))))
+
+(t/deftest pca-inverse-transform-test
+  (t/with-instrument `la/pca-inverse-transform
+    (t/is-spec-check la/pca-inverse-transform {:num-tests 20}))
+  (t/with-instrument :all
+    ;; Empty matrix returns nil
+    (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
+      (t/is= nil (la/pca-inverse-transform [[]] pca-result)))
+    ;; Round-trip with all components recovers original data
+    (let [data [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
+          pca-result (la/pca data)
+          transformed (la/pca-transform data pca-result 2)
+          reconstructed (la/pca-inverse-transform transformed pca-result)]
+      (t/is (some? reconstructed))
+      (t/is-data-approx= data reconstructed :tolerance 1e-10))
+    ;; Partial reconstruction with 1 component
+    (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
+          pca-result (la/pca data)
+          transformed-1 (la/pca-transform data pca-result 1)
+          reconstructed (la/pca-inverse-transform transformed-1 pca-result)]
+      (t/is (some? reconstructed))
+      ;; Since all variance is in PC1, reconstruction should be exact
+      (t/is-data-approx= data reconstructed :tolerance 1e-10))
+    ;; Partial reconstruction loses information in other directions
+    (let [data [[1.0 0.0] [0.0 1.0] [-1.0 0.0] [0.0 -1.0]]
+          pca-result (la/pca data)
+          transformed-1 (la/pca-transform data pca-result 1)
+          reconstructed (la/pca-inverse-transform transformed-1 pca-result)]
+      (t/is (some? reconstructed))
+      ;; Should be 4 samples with 2 features
+      (t/is= 4 (mx/rows reconstructed))
+      (t/is= 2 (mx/columns reconstructed))
+      ;; Mean should be [0, 0] still
+      (let [mean-x (/ (reduce + (mapv first reconstructed)) 4.0)
+            mean-y (/ (reduce + (mapv second reconstructed)) 4.0)]
+        (t/is-approx= 0.0 mean-x :tolerance 1e-10)
+        (t/is-approx= 0.0 mean-y :tolerance 1e-10)))))

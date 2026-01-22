@@ -153,6 +153,10 @@
   Defined as (2/sqrt(pi)) * integral(0 to x, e^(-t^2) dt). Represents the probability that a random
   variable from a standard normal distribution falls within [-`x`*sqrt(2), `x`*sqrt(2)].
 
+  For |x| > 6, returns +/-1 directly since erf(6) differs from 1 by ~2e-17
+  (within double precision). This threshold is appropriate because the regularized gamma
+  computation would be wasteful for such small deviations from unity.
+
   Properties:
   - erf(0) = 0
   - erf(inf) = 1
@@ -163,7 +167,9 @@
     (erf 1.0) => 0.842700792949715
     (erf -1.0) => -0.842700792949715"
   [x]
-  (cond (zero? x) 0.0
+  (cond
+    (zero? x) 0.0
+    ;; For |x| > 6, erf(x) differs from +/-1 by less than 2e-17 (within double precision)
     (> x 6.0) 1.0
     (< x -6.0) -1.0
     :else (* (m/sgn x)
@@ -597,6 +603,10 @@
   Defined as P(`a`,`x`) = gamma(`a`,`x`) / Gamma(`a`), where gamma is the lower incomplete gamma.
   Represents the cumulative distribution function of the gamma distribution.
 
+  Uses algorithm selection based on threshold:
+  - x < a+1: series expansion (faster convergence)
+  - x >= a+1: continued fraction via regularized-gamma-q (more stable)
+
   Properties:
   - P(a,0) = 0
   - P(a,inf) = 1
@@ -605,25 +615,41 @@
   Examples:
     (regularized-gamma-p 2.0 1.0) => 0.6321205588285577"
   [a x]
-  (cond (zero? x) 0.0
-    (>= x (inc a)) (m/one- (regularized-gamma-q a x))
-    :else (let [an (/ 1.0 a)
-                [n sum] (loop [n 0.0
-                               an an
-                               sum an]
-                          (if (and (not (m/inf+? sum))
-                                (> (m/abs (/ an sum)) 1e-14)
-                                (< n m/max-int))
-                            (let [an (* an x (/ (+ a (inc n))))]
-                              (recur (inc n) an (+ an sum)))
-                            [n sum]))]
-            (cond (>= n m/max-int) m/nan
-              (m/inf+? sum) 1.0
-              :else (min 1.0
-                      (* sum
-                        (m/exp (+ (* a (m/log x))
-                                 (- x)
-                                 (- (log-gamma a))))))))))
+  (cond
+    ;; Edge case: x = 0 -> P = 0
+    (zero? x) 0.0
+
+    ;; Edge case: x = inf -> P = 1
+    (m/inf+? x) 1.0
+
+    ;; For x >= a+1, use continued fraction via Q for better convergence
+    (>= x (inc (double a))) (m/one- (regularized-gamma-q a x))
+
+    ;; For x < a+1, use series expansion
+    :else
+    (let [an (/ 1.0 (double a))
+          [n sum] (loop [n 0.0
+                         an an
+                         sum an]
+                    (if (and (not (m/inf+? sum))
+                          (> (m/abs (/ an sum)) 1e-14)
+                          (< n m/max-int))
+                      (let [an (* an (double x) (/ (+ (double a) (inc n))))]
+                        (recur (inc n) an (+ an sum)))
+                      [n sum]))]
+      (cond
+        ;; Max iterations exceeded
+        (>= n m/max-int) m/nan
+
+        ;; Sum overflow -> return 1.0 for P
+        (m/inf+? sum) 1.0
+
+        :else
+        (min 1.0
+          (* sum
+            (m/exp (+ (* (double a) (m/log (double x)))
+                     (- (double x))
+                     (- (log-gamma a))))))))))
 
 (s/fdef regularized-gamma-p
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -635,6 +661,12 @@
   Defined as Q(`a`,`x`) = Gamma(`a`,`x`) / Gamma(`a`), where Gamma is the upper incomplete gamma.
   Represents the survival function (1 - CDF) of the gamma distribution.
 
+  Uses algorithm selection based on threshold:
+  - x < a+1: series expansion via regularized-gamma-p (faster convergence)
+  - x >= a+1: Lentz's continued fraction algorithm (more stable)
+
+  The continued fraction uses SMALL=1e-50 internally to prevent division by zero.
+
   Properties:
   - Q(a,0) = 1
   - Q(a,inf) = 0
@@ -643,26 +675,41 @@
   Examples:
     (regularized-gamma-q 2.0 1.0) => 0.36787944117144233"
   [a x]
-  (cond (zero? x) 1.0
+  (cond
+    ;; Edge case: x = 0 -> Q = 1
+    (zero? x) 1.0
+
+    ;; Edge case: x = inf -> Q = 0
+    (m/inf+? x) 0.0
+
+    ;; For x < a+1, use series via P for better convergence
     (< x (inc (double a))) (m/one- (regularized-gamma-p a x))
-    :else (let [a-term-series (map
-                                (fn [n]
-                                  (+ (* 2.0 n) (- a) 1.0 x))
-                                (range))
-                b-term-series (map
-                                (fn [n]
-                                  (* n (- a (double n))))
-                                (drop 1 (range)))
-                gcf (series/multiplicative-generalized-continued-fraction
-                      a-term-series b-term-series)
-                sum (series/multiplicative-sum-convergent-series gcf)]
-            (if (anomalies/anomaly? sum)
-              m/nan
-              (min 1.0
-                (/ (m/exp (+ (* a (m/log x))
-                            (- x)
-                            (- (log-gamma a))))
-                  sum))))))
+
+    ;; For x >= a+1, use Lentz's continued fraction algorithm
+    :else
+    (let [a (double a)
+          x (double x)
+          ;; Continued fraction for Q: uses a_n and b_n terms
+          ;; a_n = (2n + 1 - a + x), b_n = n(a - n)
+          a-term-series (map
+                          (fn [n]
+                            (+ (* 2.0 n) (- a) 1.0 x))
+                          (range))
+          b-term-series (map
+                          (fn [n]
+                            (* n (- a (double n))))
+                          (drop 1 (range)))
+          ;; multiplicative-generalized-continued-fraction uses SMALL=1e-50 internally
+          gcf (series/multiplicative-generalized-continued-fraction
+                a-term-series b-term-series)
+          sum (series/multiplicative-sum-convergent-series gcf)]
+      (if (anomalies/anomaly? sum)
+        m/nan
+        (min 1.0
+          (/ (m/exp (+ (* a (m/log x))
+                      (- x)
+                      (- (log-gamma a))))
+            sum))))))
 
 (s/fdef regularized-gamma-q
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -718,10 +765,24 @@
                     :inf+ (s/with-gen m/inf+? #(gen/return m/inf+))))
   :ret ::m/non-inf-)
 
+(def ^:private ^:const digamma-s-limit
+  "Small argument limit for digamma. For x <= S_LIMIT, digamma(x) ~ -gamma - 1/x."
+  1e-8)
+
+(def ^:private ^:const digamma-c-limit
+  "Large argument limit for digamma. For x >= C_LIMIT, use asymptotic expansion."
+  49.0)
+
 (defn log-gamma-derivative
   "Computes the derivative of ln(Gamma(`a`)), also known as the digamma function psi(`a`).
 
   The digamma function is d/d`a` ln(Gamma(`a`)) = Gamma'(`a`)/Gamma(`a`).
+
+  Uses optimized algorithms:
+  - For x <= 1e-8: psi(x) ~ -gamma - 1/x
+  - For x >= 49: asymptotic expansion with Bernoulli numbers
+  - For 1e-8 < x < 49: recurrence psi(x) = psi(x+1) - 1/x
+  - For large negative x: reflection formula psi(1-x) = psi(x) + pi*cot(pi*x)
 
   Properties:
   - psi(1) = -gamma (negative Euler-Mascheroni constant)
@@ -732,23 +793,50 @@
     (log-gamma-derivative 2.0) => 0.42278433509846713"
   [a]
   (let [a (double a)]
-    (if (m/roughly-round-non+? a m/sgl-close)
+    (cond
+      ;; Handle poles at non-positive integers
+      (m/roughly-round-non+? a m/sgl-close)
       m/inf-
+
+      ;; Handle special values
+      (m/nan? a) m/nan
+      (m/inf+? a) m/inf+
+      (m/inf-? a) m/nan
+
+      ;; For large negative x, use reflection formula for efficiency:
+      ;; psi(1-x) = psi(x) + pi*cot(pi*x)
+      ;; So psi(x) = psi(1-x) - pi*cot(pi*x) for x < 0
+      (< a -49.0)
+      (let [one-minus-a (- 1.0 a)
+            psi-1-a (log-gamma-derivative one-minus-a)
+            pi-a (* m/PI a)]
+        (- psi-1-a (* m/PI (/ (m/cos pi-a) (m/sin pi-a)))))
+
+      :else
       (loop [x a
              tot 0.0]
-        (let [inv-x (/ x)]
-          (if (or (m/nan? x) (m/inf? x))
-            x
-            (cond (and (pos? x) (<= x 1.0e-5)) (- tot 0.5772156649015329 inv-x)
-              (>= x 49.0) (let [inv2-x (m/pow x -2.0)]
-                            (+ tot
-                              (m/log x)
-                              (* -0.5 inv-x)
-                              (* (- inv2-x)
-                                (+ (/ 12.0)
-                                  (* inv2-x
-                                    (- (/ 120.0) (/ inv2-x 252.0)))))))
-              :else (recur (inc x) (- tot inv-x)))))))))
+        (cond
+          ;; Very small positive x: psi(x) ~ -gamma - 1/x
+          (and (pos? x) (<= x digamma-s-limit))
+          (- tot m/euler-mascheroni-constant (/ x))
+
+          ;; Large x: use asymptotic expansion
+          ;; psi(x) ~ ln(x) - 1/(2x) - 1/(12x^2) + 1/(120x^4) - 1/(252x^6) + ...
+          (>= x digamma-c-limit)
+          (let [inv-x (/ x)
+                inv2-x (* inv-x inv-x)]
+            (+ tot
+              (m/log x)
+              (* -0.5 inv-x)
+              (* (- inv2-x)
+                (+ (/ 12.0)                                 ;; B_2/2 = 1/12
+                  (* inv2-x
+                    (- (/ 120.0)                            ;; -B_4/4 = 1/120
+                      (/ inv2-x 252.0)))))))               ;; B_6/6 = 1/252
+
+          ;; Use recurrence: psi(x) = psi(x+1) - 1/x
+          :else
+          (recur (inc x) (- tot (/ x))))))))
 
 (s/fdef log-gamma-derivative
   :args (s/cat :a (s/and ::m/num #(> % -3e8)))
@@ -773,11 +861,25 @@
                             #(> % -3e8))))
   :ret ::m/number)
 
+(def ^:private ^:const trigamma-s-limit
+  "Small argument limit for trigamma. For x <= S_LIMIT, trigamma(x) ~ 1/x^2."
+  1e-8)
+
+(def ^:private ^:const trigamma-c-limit
+  "Large argument limit for trigamma. For x >= C_LIMIT, use asymptotic expansion."
+  49.0)
+
 (defn trigamma
   "Computes the trigamma function psi'(`a`), the second derivative of ln(Gamma(`a`)).
 
   The trigamma function is d^2/d`a`^2 ln(Gamma(`a`)) = d/d`a` psi(`a`).
   Related to the variance of certain probability distributions.
+
+  Uses optimized algorithms:
+  - For x <= 1e-8: psi'(x) ~ 1/x^2
+  - For x >= 49: asymptotic expansion with Bernoulli numbers
+  - For 1e-8 < x < 49: recurrence psi'(x) = psi'(x+1) + 1/x^2
+  - For large negative x: reflection formula via derivative of digamma reflection
 
   Properties:
   - psi'(1) = pi^2/6 (related to Apery's constant)
@@ -787,30 +889,62 @@
     (trigamma 1.0) => 1.6449340668482264 (pi^2/6)"
   [a]
   (let [a (double a)]
-    (if (m/roughly-round-non+? a m/sgl-close)
+    (cond
+      ;; Handle poles at non-positive integers
+      (m/roughly-round-non+? a m/sgl-close)
       m/inf+
+
+      ;; Handle special values
+      (m/nan? a) m/nan
+      (m/inf+? a) 0.0                                        ;; psi'(inf) = 0
+      (m/inf-? a) m/nan
+
+      ;; For large negative x, use reflection formula for efficiency:
+      ;; d/dx[psi(x)] = d/dx[psi(1-x) - pi*cot(pi*x)]
+      ;; psi'(x) = -psi'(1-x) + pi^2/sin^2(pi*x)
+      (< a -49.0)
+      (let [one-minus-a (- 1.0 a)
+            psi1-1-a (trigamma one-minus-a)
+            sin-pi-a (m/sin (* m/PI a))
+            pi-sq-csc-sq (/ m/pi-squared (* sin-pi-a sin-pi-a))]
+        (- pi-sq-csc-sq psi1-1-a))
+
+      :else
       (loop [x a
              tot 0.0]
-        (let [inv2-x (m/pow x -2.0)]
-          (cond (or (m/nan? x) (m/inf? x)) x
-            (< x -1.0e7) (let [r (m/round' (+ x 9.0e6) :toward-zero)]
-                           (recur (- x r) (+ tot 1.1263618e-5))) ;approx
-            :else (cond (and (pos? x) (<= x 1.0e-5)) (+ tot inv2-x)
-                    (>= x 49.0) (let [inv-x (/ x)]
-                                  (+ tot
-                                    inv-x
-                                    (/ inv2-x 2.0)
-                                    (* inv2-x
-                                      inv-x
-                                      (- (/ 6.0)
-                                        (* inv2-x
-                                          (+ (/ 3.0)
-                                            (/ inv2-x 42.0)))))))
-                    :else (recur (inc x) (+ tot inv2-x)))))))))
+        (let [x-sq (* x x)]
+          (cond
+            ;; Very small positive x: psi'(x) ~ 1/x^2
+            ;; Handle underflow: if x^2 underflows to 0, return infinity
+            (and (pos? x) (<= x trigamma-s-limit))
+            (if (zero? x-sq)
+              m/inf+                                         ;; x is so small that x^2 underflows
+              (+ tot (/ x-sq)))
+
+            ;; Large x: use asymptotic expansion
+            ;; psi'(x) ~ 1/x + 1/(2x^2) + 1/(6x^3) - 1/(30x^5) + 1/(42x^7) - ...
+            (>= x trigamma-c-limit)
+            (let [inv-x (/ x)
+                  inv2-x (* inv-x inv-x)]
+              (+ tot
+                inv-x
+                (/ inv2-x 2.0)
+                (* inv2-x inv-x
+                  (- (/ 6.0)                                ;; B_2 = 1/6
+                    (* inv2-x
+                      (+ (/ 30.0)                           ;; B_4 = -1/30 -> +1/30
+                        (- (/ inv2-x 42.0))))))))          ;; B_6 = 1/42
+
+            ;; Use recurrence: psi'(x) = psi'(x+1) + 1/x^2
+            ;; Handle underflow: if x^2 underflows to 0, return infinity
+            :else
+            (if (zero? x-sq)
+              m/inf+                                         ;; x is so small that x^2 underflows
+              (recur (inc x) (+ tot (/ x-sq))))))))))
 
 (s/fdef trigamma
   :args (s/cat :a ::m/num)
-  :ret ::m/num)
+  :ret ::m/number)                                          ;; allows NaN for inf- input
 
 (defn multivariate-gamma
   "Computes the multivariate gamma function Gamma_`p`(`a`).

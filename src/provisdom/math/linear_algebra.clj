@@ -8,13 +8,15 @@
   - Induced matrix norms (1-norm, infinity-norm, spectral norm)
   - Positive definite/semi-definite matrix utilities
   - Correlation/covariance matrix conversions
+  - Principal Component Analysis (PCA)
 
   All functions operate on matrices represented as vectors of vectors.
   Matrices should be created using provisdom.math.matrix functions.
 
   Complexity notes:
-  - Most decompositions are O(n³) for n×n matrices
-  - SVD and eigendecomposition use iterative methods"
+  - Most decompositions are O(n^3) for n x n matrices
+  - SVD and eigendecomposition use iterative methods
+  - PCA is O(n * p^2 + p^3) where n = samples, p = features"
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -65,6 +67,11 @@
 (s/def ::schur-Q ::mx/square-matrix)
 (s/def ::schur-T ::mx/square-matrix)
 (s/def ::least-squares-solution (s/nilable ::vector/vector))
+(s/def ::n-components ::m/int+)
+(s/def ::pca-eigenvalues ::vector/vector-finite)
+(s/def ::pca-explained-variance-ratio ::vector/vector-finite)
+(s/def ::pca-mean ::vector/vector-finite)
+(s/def ::pca-principal-components ::mx/matrix-finite)
 
 (s/def ::correlation-matrix
   (s/with-gen
@@ -115,9 +122,55 @@
 
 ;;;LU DECOMPOSITION
 ;; Forward declarations for functions used in compute-inverse-from-lu
+
+;; Threshold for small matrix optimization path
+(def ^:private ^:const small-matrix-threshold 8)
+
+(defn- square-matrix-generator
+  "Generator for square matrices with dimensions 0-12 to test large matrix code path.
+  Takes an element generator (e.g., `(s/gen ::m/number)` or `(s/gen ::m/finite)`)."
+  [element-gen]
+  (gen/fmap
+    vector
+    (gen/bind (gen/choose 0 12)
+      (fn [n]
+        (if (zero? n)
+          (gen/return [[]])
+          (gen/vector (gen/vector element-gen n) n))))))
+
+(defn- ^doubles matrix->double-array
+  "Converts a vector-of-vectors matrix to a flat row-major double-array.
+  For an n x n matrix, element [i,j] is at index i*n + j."
+  ^doubles [m ^long n]
+  (let [arr (double-array (* n n))]
+    (loop [i 0]
+      (when (< i n)
+        (let [row (get m i)]
+          (loop [j 0]
+            (when (< j n)
+              (aset arr (+ (* i n) j) (double (get row j)))
+              (recur (inc j)))))
+        (recur (inc i))))
+    arr))
+
+(defn- double-array->matrix
+  "Converts a flat row-major double-array back to vector-of-vectors.
+  For an n x n matrix, element [i,j] is at index i*n + j."
+  [^doubles arr ^long n]
+  (loop [i 0
+         result (transient [])]
+    (if (< i n)
+      (let [row (loop [j 0
+                       row-result (transient [])]
+                  (if (< j n)
+                    (recur (inc j) (conj! row-result (aget arr (+ (* i n) j))))
+                    (persistent! row-result)))]
+        (recur (inc i) (conj! result row)))
+      (persistent! result))))
+
 (defn- swap-rows
   "Swaps rows i and j in matrix m."
-  [m i j]
+  [m ^long i ^long j]
   (if (= i j)
     m
     (let [row-i (get m i)
@@ -126,55 +179,160 @@
         (assoc i row-j)
         (assoc j row-i)))))
 
+(defn- lu-decomposition-impl-small
+  "LU decomposition optimized for small matrices (n <= 8).
+  Uses transients and optimized loop/recur. Returns [L U P singular?] where PA = LU."
+  [m ^long n]
+  (loop [k (long 0)
+         U (mapv #(mapv double %) m)
+         L (mx/identity-matrix n)
+         P (mx/identity-matrix n)
+         singular? false]
+    (if (>= k n)
+      [L U P singular?]
+      (let [;; Find pivot row with largest absolute value in column k
+            pivot-row (loop [best-row k
+                             row (inc k)
+                             best-abs (m/abs (double (get-in U [k k])))]
+                        (if (>= row n)
+                          best-row
+                          (let [val-abs (m/abs (double (get-in U [row k])))]
+                            (if (> val-abs best-abs)
+                              (recur row (inc row) val-abs)
+                              (recur best-row (inc row) best-abs)))))
+            U (swap-rows U k pivot-row)
+            P (swap-rows P k pivot-row)
+            L (if (and (pos? k) (not= k pivot-row))
+                (let [L-row-k (subvec (get L k) 0 k)
+                      L-row-pivot (subvec (get L pivot-row) 0 k)]
+                  (-> L
+                    (update k #(vec (concat L-row-pivot (subvec % k))))
+                    (update pivot-row #(vec (concat L-row-k (subvec % k))))))
+                L)
+            pivot-val (double (get-in U [k k]))
+            is-singular? (or singular? (m/roughly? pivot-val 0.0 m/dbl-close))]
+        (if is-singular?
+          (recur (inc k) U L P true)
+          ;; Eliminate below pivot using loop/recur instead of reduce
+          (let [[new-L new-U]
+                (loop [i (inc k)
+                       L-acc L
+                       U-acc U]
+                  (if (>= i n)
+                    [L-acc U-acc]
+                    (let [factor (/ (double (get-in U-acc [i k])) pivot-val)
+                          L-acc (assoc-in L-acc [i k] factor)
+                          U-row-i (get U-acc i)
+                          U-row-k (get U-acc k)
+                          ;; Build new row with loop
+                          new-U-row-i (loop [col 0
+                                             row-acc (transient [])]
+                                        (if (>= col n)
+                                          (persistent! row-acc)
+                                          (recur (inc col)
+                                            (conj! row-acc
+                                              (- (double (get U-row-i col))
+                                                (* factor (double (get U-row-k col))))))))
+                          U-acc (assoc U-acc i new-U-row-i)]
+                      (recur (inc i) L-acc U-acc))))]
+            (recur (inc k) new-U new-L P is-singular?)))))))
+
+(defn- lu-decomposition-impl-large
+  "LU decomposition optimized for large matrices (n > 8).
+  Uses flat double-arrays for cache-friendly access. Returns [L U P singular?] where PA = LU."
+  [m ^long n]
+  (let [;; Convert to flat arrays for cache-friendly access
+        ^doubles U-arr (matrix->double-array m n)
+        ^doubles L-arr (double-array (* n n))
+        ^ints perm (int-array n)]
+    ;; Initialize L as identity and perm as 0,1,2,...,n-1
+    (loop [i 0]
+      (when (< i n)
+        (aset L-arr (+ (* i n) i) 1.0)
+        (aset perm i i)
+        (recur (inc i))))
+    ;; Main LU decomposition loop
+    (let [singular?
+          (loop [k (long 0)
+                 singular? false]
+            (if (>= k n)
+              singular?
+              (let [;; Find pivot row
+                    pivot-row
+                    (loop [best-row k
+                           row (inc k)
+                           best-abs (m/abs (aget U-arr (+ (* k n) k)))]
+                      (if (>= row n)
+                        best-row
+                        (let [val-abs (m/abs (aget U-arr (+ (* row n) k)))]
+                          (if (> val-abs best-abs)
+                            (recur row (inc row) val-abs)
+                            (recur best-row (inc row) best-abs)))))]
+                ;; Swap rows in U and perm
+                (when (not= k pivot-row)
+                  ;; Swap U rows
+                  (loop [j 0]
+                    (when (< j n)
+                      (let [idx-k (+ (* k n) j)
+                            idx-p (+ (* pivot-row n) j)
+                            tmp (aget U-arr idx-k)]
+                        (aset U-arr idx-k (aget U-arr idx-p))
+                        (aset U-arr idx-p tmp))
+                      (recur (inc j))))
+                  ;; Swap L rows (only columns 0 to k-1)
+                  (loop [j 0]
+                    (when (< j k)
+                      (let [idx-k (+ (* k n) j)
+                            idx-p (+ (* pivot-row n) j)
+                            tmp (aget L-arr idx-k)]
+                        (aset L-arr idx-k (aget L-arr idx-p))
+                        (aset L-arr idx-p tmp))
+                      (recur (inc j))))
+                  ;; Swap perm
+                  (let [tmp (aget perm k)]
+                    (aset perm k (aget perm pivot-row))
+                    (aset perm pivot-row tmp)))
+                (let [pivot-val (aget U-arr (+ (* k n) k))
+                      is-singular? (or singular? (m/roughly? pivot-val 0.0 m/dbl-close))]
+                  (if is-singular?
+                    (recur (inc k) true)
+                    (do
+                      ;; Eliminate below pivot
+                      (loop [i (inc k)]
+                        (when (< i n)
+                          (let [factor (/ (aget U-arr (+ (* i n) k)) pivot-val)]
+                            (aset L-arr (+ (* i n) k) factor)
+                            ;; Update U row i
+                            (loop [j k]
+                              (when (< j n)
+                                (let [idx (+ (* i n) j)]
+                                  (aset U-arr idx
+                                    (- (aget U-arr idx)
+                                      (* factor (aget U-arr (+ (* k n) j))))))
+                                (recur (inc j)))))
+                          (recur (inc i))))
+                      (recur (inc k) false)))))))
+          ;; Convert back to vector-of-vectors
+          L (double-array->matrix L-arr n)
+          U (double-array->matrix U-arr n)
+          ;; Build permutation matrix from perm array
+          P (mapv (fn [row]
+                    (let [col (aget perm row)]
+                      (mapv (fn [j] (if (= j col) 1.0 0.0)) (range n))))
+              (range n))]
+      [L U P singular?])))
+
 (defn- lu-decomposition-impl
   "Implementation of LU decomposition with partial pivoting.
+  Uses optimized path for small matrices (n <= 8) and array-based path for larger matrices.
   Returns [L U P singular?] where PA = LU."
   [m]
-  (let [n (mx/rows m)]
+  (let [n (long (mx/rows m))]
     (if (zero? n)
       [[[]] [[]] [[]] false]
-      (loop [k 0
-             U (mapv #(mapv double %) m)
-             L (mx/identity-matrix n)
-             P (mx/identity-matrix n)
-             singular? false]
-        (if (>= k n)
-          [L U P singular?]
-          (let [pivot-row (reduce (fn [best-row row]
-                                    (if (> (m/abs (get-in U [row k]))
-                                          (m/abs (get-in U [best-row k])))
-                                      row
-                                      best-row))
-                            k
-                            (range k n))
-                U (swap-rows U k pivot-row)
-                P (swap-rows P k pivot-row)
-                L (if (and (pos? k) (not= k pivot-row))
-                    (let [L-row-k (subvec (get L k) 0 k)
-                          L-row-pivot (subvec (get L pivot-row) 0 k)]
-                      (-> L
-                        (update k #(vec (concat L-row-pivot (subvec % k))))
-                        (update pivot-row #(vec (concat L-row-k (subvec % k))))))
-                    L)
-                pivot-val (get-in U [k k])
-                is-singular? (or singular? (m/roughly? pivot-val 0.0 m/dbl-close))]
-            (if is-singular?
-              (recur (inc k) U L P true)
-              (let [[new-L new-U]
-                    (reduce (fn [[L-acc U-acc] i]
-                              (let [factor (m/div (get-in U-acc [i k]) pivot-val)
-                                    L-acc (assoc-in L-acc [i k] factor)
-                                    U-row-i (get U-acc i)
-                                    U-row-k (get U-acc k)
-                                    new-U-row-i (mapv (fn [col]
-                                                        (- (get U-row-i col)
-                                                          (* factor (get U-row-k col))))
-                                                  (range n))
-                                    U-acc (assoc U-acc i new-U-row-i)]
-                                [L-acc U-acc]))
-                      [L U]
-                      (range (inc k) n))]
-                (recur (inc k) new-U new-L P is-singular?)))))))))
+      (if (<= n small-matrix-threshold)
+        (lu-decomposition-impl-small m n)
+        (lu-decomposition-impl-large m n)))))
 
 (defn- compute-determinant-from-lu
   "Computes determinant from L, U, P matrices."
@@ -258,7 +416,9 @@
            ::inverse        inv})))))
 
 (s/fdef lu-decomposition
-  :args (s/cat :square-m ::mx/square-matrix)
+  :args (s/with-gen
+          (s/cat :square-m ::mx/square-matrix)
+          #(square-matrix-generator (s/gen ::m/number)))
   :ret (s/nilable (s/keys :req [::L ::U ::LU-permutation ::singular? ::determinant ::inverse])))
 
 ;;;DETERMINANT
@@ -304,7 +464,9 @@
     :else (determinant-from-lu (lu-decomposition square-m))))
 
 (s/fdef determinant
-  :args (s/cat :square-m ::mx/square-matrix)
+  :args (s/with-gen
+          (s/cat :square-m ::mx/square-matrix)
+          #(square-matrix-generator (s/gen ::m/number)))
   :ret (s/nilable ::determinant))
 
 ;;;MINORS AND COFACTORS
@@ -420,35 +582,44 @@
 
 ;;;FORWARD/BACK SUBSTITUTION
 (defn- forward-substitution
-  "Solves Lx = b where L is lower triangular with 1s on diagonal."
+  "Solves Lx = b where L is lower triangular with 1s on diagonal.
+  Uses loop/recur with double-array for O(n^2) performance."
   [L b]
-  (let [n (count b)]
-    (reduce (fn [x i]
-              (let [sum (reduce (fn [acc j]
-                                  (+ acc (* (get-in L [i j]) (get x j))))
-                          0.0
-                          (range i))
-                    xi (- (get b i) sum)]
-                (conj x xi)))
-      []
-      (range n))))
+  (let [n (long (count b))
+        ^doubles result (double-array n)]
+    (loop [i (long 0)]
+      (when (< i n)
+        (let [L-row (get L i)
+              sum (loop [j (long 0)
+                         acc 0.0]
+                    (if (< j i)
+                      (recur (inc j) (+ acc (* (double (get L-row j)) (aget result j))))
+                      acc))]
+          (aset result i (- (double (get b i)) sum))
+          (recur (inc i)))))
+    (vec result)))
 
 (defn- back-substitution
-  "Solves Ux = b where U is upper triangular."
+  "Solves Ux = b where U is upper triangular.
+  Uses loop/recur with double-array for O(n^2) performance."
   [U b]
-  (let [n (count b)]
-    (reduce (fn [x i]
-              (let [sum (reduce (fn [acc j]
-                                  (+ acc (* (get-in U [i j]) (get x j 0.0))))
-                          0.0
-                          (range (inc i) n))
-                    diag (get-in U [i i])
-                    xi (if (m/roughly? diag 0.0 m/dbl-close)
-                         m/nan
-                         (m/div (- (get b i) sum) diag))]
-                (assoc x i xi)))
-      (vec (repeat n 0.0))
-      (reverse (range n)))))
+  (let [n (long (count b))
+        ^doubles result (double-array n)]
+    (loop [i (dec n)]
+      (when (>= i 0)
+        (let [U-row (get U i)
+              sum (loop [j (inc i)
+                         acc 0.0]
+                    (if (< j n)
+                      (recur (inc j) (+ acc (* (double (get U-row j)) (aget result j))))
+                      acc))
+              diag (double (get U-row i))
+              xi (if (m/roughly? diag 0.0 m/dbl-close)
+                   m/nan
+                   (/ (- (double (get b i)) sum) diag))]
+          (aset result i xi)
+          (recur (dec i)))))
+    (vec result)))
 
 ;;;INVERSE
 (defn inverse-from-lu
@@ -503,7 +674,9 @@
        ::anom/message  "LU decomposition failed (matrix may be ill-conditioned)"})))
 
 (s/fdef inverse
-  :args (s/cat :square-m ::mx/square-matrix-finite)
+  :args (s/with-gen
+          (s/cat :square-m ::mx/square-matrix-finite)
+          #(square-matrix-generator (s/gen ::m/finite)))
   :ret (s/or :matrix ::mx/square-matrix :anomaly ::anom/anomaly))
 
 ;;;SOLVE LINEAR SYSTEM
@@ -1958,11 +2131,11 @@
                     [(tensor/add N (tensor/multiply coef M-k))
                      (tensor/add D (tensor/multiply (* sign coef) M-k))]))
           [(mx/constant-matrix n n 0.0) (mx/constant-matrix n n 0.0)]
-          (range (inc order)))]
-    ;; Return N * D^(-1)
-    (let [D-inv (inverse denom)]
-      (when-not (anom/anomaly? D-inv)
-        (mx/mx* numer D-inv)))))
+          (range (inc order)))
+        ;; Return N * D^(-1)
+        D-inv (inverse denom)]
+    (when-not (anom/anomaly? D-inv)
+      (mx/mx* numer D-inv))))
 
 (defn matrix-exp
   "Computes the matrix exponential e^M using scaling and squaring with Padé approximation.
@@ -2008,3 +2181,213 @@
   :args (s/cat :m ::mx/square-matrix-finite
           :opts (s/? (s/keys :opt-un [::pade-order])))
   :ret (s/nilable ::mx/square-matrix))
+
+;;;PRINCIPAL COMPONENT ANALYSIS
+(defn pca
+  "Computes Principal Component Analysis (PCA) on a data matrix.
+
+  PCA finds the directions of maximum variance in the data by computing
+  the eigendecomposition of the covariance matrix.
+
+  Input `data-matrix` should have rows as samples and columns as features.
+  The data is centered by subtracting the mean of each feature.
+
+  Complexity: O(n * p^2 + p^3) where n = samples, p = features
+
+  Returns a map with keys:
+  - `::pca-eigenvalues` - eigenvalues (variances) in descending order
+  - `::pca-explained-variance-ratio` - proportion of variance explained by each component
+  - `::pca-mean` - mean of each feature (for centering)
+  - `::pca-principal-components` - eigenvectors as rows (each row is a component)
+
+  Returns `nil` if the input matrix is empty, has only one row (cannot compute
+  variance), or if eigendecomposition fails.
+
+  Examples:
+    (pca [[1 2] [3 4] [5 6]])
+    ;=> {::pca-eigenvalues [8.0 0.0]
+    ;    ::pca-explained-variance-ratio [1.0 0.0]
+    ;    ::pca-mean [3.0 4.0]
+    ;    ::pca-principal-components [[0.707 0.707] [-0.707 0.707]]}
+
+  See also: [[pca-transform]], [[pca-inverse-transform]], [[eigen-decomposition]]"
+  [data-matrix]
+  (when (and (mx/matrix? data-matrix)
+          (not (mx/empty-matrix? data-matrix))
+          (> (mx/rows data-matrix) 1))
+    (let [n (mx/rows data-matrix)
+          p (mx/columns data-matrix)
+          ;; Compute mean of each column (feature)
+          col-means (mapv (fn [j]
+                            (/ (reduce + (mapv #(get % j) data-matrix))
+                              (double n)))
+                      (range p))
+          ;; Center the data
+          centered (mapv (fn [row]
+                           (mapv (fn [j]
+                                   (- (double (get row j)) (get col-means j)))
+                             (range p)))
+                     data-matrix)
+          ;; Compute covariance matrix: (1/(n-1)) * X^T * X
+          centered-T (mx/transpose centered)
+          cov-unnorm (mx/mx* centered-T centered)
+          cov-matrix (tensor/multiply (/ 1.0 (dec n)) cov-unnorm)
+          ;; Eigendecomposition of covariance matrix
+          eigen-result (eigen-decomposition cov-matrix)]
+      (when eigen-result
+        (let [eigenvalues (::eigenvalues eigen-result)
+              eigenvectors (::eigenvectors eigen-result)
+              ;; Eigenvalues are already sorted by absolute value descending
+              ;; For covariance matrix, they should all be non-negative
+              eigenvalues-non-neg (mapv #(max 0.0 %) eigenvalues)
+              total-var (reduce + eigenvalues-non-neg)
+              explained-ratio (if (pos? total-var)
+                                (mapv #(/ % total-var) eigenvalues-non-neg)
+                                (vec (repeat p 0.0)))
+              ;; Principal components are eigenvectors as rows (transposed)
+              ;; so that PC_i is the i-th row
+              principal-components (mx/transpose eigenvectors)]
+          {::pca-eigenvalues              eigenvalues-non-neg
+           ::pca-explained-variance-ratio explained-ratio
+           ::pca-mean                     col-means
+           ::pca-principal-components     principal-components})))))
+
+(s/fdef pca
+  :args (s/cat :data-matrix ::mx/matrix-finite)
+  :ret (s/nilable (s/keys :req [::pca-eigenvalues
+                                ::pca-explained-variance-ratio
+                                ::pca-mean
+                                ::pca-principal-components])))
+
+(defn pca-transform
+  "Projects data onto principal components.
+
+  Takes data and a PCA result from [[pca]], and projects the data onto
+  the first `n-components` principal components.
+
+  Input `data-matrix` should have rows as samples and columns as features,
+  with the same number of features as the original PCA data.
+
+  Complexity: O(n * p * k) where n = samples, p = features, k = n-components
+
+  Returns a matrix with rows as samples and columns as principal component scores,
+  or `nil` if inputs are invalid or dimensions don't match.
+
+  Examples:
+    (let [pca-result (pca [[1 2] [3 4] [5 6]])]
+      (pca-transform [[2 3] [4 5]] pca-result 2))
+    ;=> projected data matrix
+
+  See also: [[pca]], [[pca-inverse-transform]]"
+  [data-matrix pca-result n-components]
+  (when (and (mx/matrix? data-matrix)
+          (not (mx/empty-matrix? data-matrix))
+          (map? pca-result)
+          (pos-int? n-components))
+    (let [{::keys [pca-mean pca-principal-components]} pca-result
+          p (mx/columns data-matrix)
+          p-pca (count pca-mean)
+          k (mx/rows pca-principal-components)]
+      (when (and (= p p-pca)
+              (<= n-components k))
+        ;; Center the data using the stored mean
+        (let [centered (mapv (fn [row]
+                               (mapv (fn [j]
+                                       (- (double (get row j)) (get pca-mean j)))
+                                 (range p)))
+                         data-matrix)
+              ;; Take first n-components rows (principal components)
+              components-subset (subvec pca-principal-components 0 n-components)
+              ;; Project: X_centered * W^T where W has components as rows
+              ;; Result is n_samples x n_components
+              W-T (mx/transpose components-subset)]
+          (mx/mx* centered W-T))))))
+
+(s/fdef pca-transform
+  :args (s/with-gen
+          (s/cat :data-matrix ::mx/matrix-finite
+            :pca-result (s/keys :req [::pca-mean ::pca-principal-components])
+            :n-components ::n-components)
+          #(gen/bind (gen/tuple (gen/choose 1 5)            ; n-samples
+                       (gen/choose 1 5)                     ; p (features)
+                       (gen/choose 1 4))                    ; k-max (total components)
+             (fn [[n p k-max]]
+               (gen/bind (gen/choose 1 k-max)               ; n-components to use
+                 (fn [k]
+                   (gen/tuple
+                     ;; data-matrix: n x p
+                     (gen/vector
+                       (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
+                       n)
+                     ;; pca-result with matching p
+                     (gen/hash-map
+                       ::pca-mean (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
+                       ::pca-principal-components (gen/vector
+                                                    (gen/vector (gen/double* {:min -1.0 :max 1.0 :NaN? false :infinite? false}) p)
+                                                    k-max))
+                     ;; n-components <= k-max
+                     (gen/return k)))))))
+  :ret (s/nilable ::mx/matrix))
+
+(defn pca-inverse-transform
+  "Reconstructs data from principal component scores.
+
+  Takes transformed data (from [[pca-transform]]) and a PCA result,
+  and reconstructs an approximation of the original data.
+
+  Input `transformed-matrix` should have rows as samples and columns as
+  principal component scores.
+
+  Complexity: O(n * k * p) where n = samples, k = n-components, p = features
+
+  Returns a matrix with rows as samples and columns as features (in original space),
+  or `nil` if inputs are invalid or dimensions don't match.
+
+  Examples:
+    (let [pca-result (pca [[1 2] [3 4] [5 6]])
+          transformed (pca-transform [[1 2] [3 4] [5 6]] pca-result 1)]
+      (pca-inverse-transform transformed pca-result))
+    ;=> reconstructed approximation of original data
+
+  See also: [[pca]], [[pca-transform]]"
+  [transformed-matrix pca-result]
+  (when (and (mx/matrix? transformed-matrix)
+          (not (mx/empty-matrix? transformed-matrix))
+          (map? pca-result))
+    (let [{::keys [pca-mean pca-principal-components]} pca-result
+          k (mx/columns transformed-matrix)
+          k-pca (mx/rows pca-principal-components)]
+      (when (<= k k-pca)
+        ;; Take the first k principal components
+        (let [components-subset (subvec pca-principal-components 0 k)
+              ;; Reconstruct: X_transformed * W + mean
+              ;; where W has components as rows
+              reconstructed-centered (mx/mx* transformed-matrix components-subset)
+              ;; Add back the mean
+              p (count pca-mean)]
+          (mapv (fn [row]
+                  (mapv (fn [j]
+                          (+ (double (get row j)) (get pca-mean j)))
+                    (range p)))
+            reconstructed-centered))))))
+
+(s/fdef pca-inverse-transform
+  :args (s/with-gen
+          (s/cat :transformed-matrix ::mx/matrix-finite
+            :pca-result (s/keys :req [::pca-mean ::pca-principal-components]))
+          #(gen/bind (gen/tuple (gen/choose 1 5)            ; n-samples
+                       (gen/choose 1 4)                     ; k (n-components used)
+                       (gen/choose 1 5))                    ; p (original features)
+             (fn [[n k p]]
+               (gen/tuple
+                 ;; transformed-matrix: n x k
+                 (gen/vector
+                   (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) k)
+                   n)
+                 ;; pca-result with matching dimensions
+                 (gen/hash-map
+                   ::pca-mean (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
+                   ::pca-principal-components (gen/vector
+                                                (gen/vector (gen/double* {:min -1.0 :max 1.0 :NaN? false :infinite? false}) p)
+                                                k))))))
+  :ret (s/nilable ::mx/matrix))

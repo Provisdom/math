@@ -33,7 +33,8 @@
   get-slices-as-matrix lower-triangular-matrix? matrix-finite-non-? matrix-finite? matrix-prob?
   matrix? mx* row-matrix row-matrix? rows size-of-symmetric-or-triangular-matrix
   size-of-symmetric-or-triangular-matrix-without-diag some-kv square-matrix?
-  symmetric-matrix-by-averaging symmetric-matrix? to-matrix transpose upper-triangular-matrix?)
+  symmetric-matrix-by-averaging symmetric-matrix-finite-non-? symmetric-matrix? to-matrix transpose
+  upper-triangular-matrix?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -221,6 +222,16 @@
          (gen/fmap deserialize-symmetric-matrix
            (gen/vector
              (s/gen ::m/number)
+             (ecount-of-symmetric-or-triangular-matrix i)))))))
+
+(s/def ::symmetric-matrix-finite-non-
+  (s/with-gen
+    #(symmetric-matrix-finite-non-? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/fmap deserialize-symmetric-matrix
+           (gen/vector
+             (s/gen ::m/finite-non-)
              (ecount-of-symmetric-or-triangular-matrix i)))))))
 
 (s/def ::top-left ::matrix)
@@ -590,6 +601,23 @@
   (and (square-matrix? x) (tensor/=== (transpose x) x)))
 
 (s/fdef symmetric-matrix?
+  :args (s/cat :x any?)
+  :ret boolean?)
+
+(defn symmetric-matrix-finite-non-?
+  "Returns `true` if `x` is a symmetric matrix of finite non-negative numbers.
+
+  Combines [[symmetric-matrix?]] and [[matrix-finite-non-?]] checks: the matrix must be square,
+  equal to its transpose, and all elements must be finite and >= 0.
+
+  Examples:
+    (symmetric-matrix-finite-non-? [[1 2] [2 3]]) ;=> true
+    (symmetric-matrix-finite-non-? [[1 2] [3 4]]) ;=> false (not symmetric)
+    (symmetric-matrix-finite-non-? [[1 -2] [-2 3]]) ;=> false (negative values)"
+  [x]
+  (and (symmetric-matrix? x) (matrix-finite-non-? x)))
+
+(s/fdef symmetric-matrix-finite-non-?
   :args (s/cat :x any?)
   :ret boolean?)
 
@@ -2084,14 +2112,15 @@
    (when (= (columns m1) (rows m2))
      (if (empty-matrix? m1)
        [[]]
-       (mapv (fn [a]
-               (mapv (fn [b]
-                       (apply + (map (fn [i j]
-                                       (* (double i) j))
-                                  a
-                                  b)))
-                 (transpose m2)))
-         m1))))
+       (let [m2t (transpose m2)]
+         (mapv (fn [a]
+                 (mapv (fn [b]
+                         (apply + (map (fn [i j]
+                                         (* (double i) (double j)))
+                                    a
+                                    b)))
+                   m2t))
+           m1)))))
   ([m1 m2 & ms]
    (when-let [m3 (mx* m1 m2)]
      (apply mx* m3 ms))))

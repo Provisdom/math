@@ -90,6 +90,7 @@ Matrix decompositions and linear system solving:
 - QR decomposition using Householder reflections
 - Eigendecomposition for symmetric matrices
 - Singular Value Decomposition (SVD)
+- Schur decomposition for quasi-triangularization
 - Linear system solving (exact and least squares)
 - Matrix inverse and Moore-Penrose pseudoinverse
 - Determinant, condition number, and matrix rank
@@ -99,6 +100,7 @@ Matrix decompositions and linear system solving:
 - Induced matrix norms (1-norm, infinity-norm, spectral norm)
 - Positive definite/semi-definite utilities
 - Correlation/covariance matrix conversions
+- PCA (principal component analysis with transform and inverse-transform)
 
 ### Matrix (`provisdom.math.matrix`)
 Comprehensive matrix operations:

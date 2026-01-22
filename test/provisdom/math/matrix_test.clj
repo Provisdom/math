@@ -7,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anom]))
 
-;;41 seconds
+;;43 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -192,6 +192,19 @@
   (t/with-instrument :all
     (t/is-not (mx/symmetric-matrix? [[1.0 0.5] [2.0 4.0]]))
     (t/is (mx/symmetric-matrix? [[1.0 0.5] [0.5 2.0]]))))
+
+(t/deftest symmetric-matrix-finite-non-?-test
+  (t/with-instrument `mx/symmetric-matrix-finite-non-?
+    (t/is-spec-check mx/symmetric-matrix-finite-non-?))
+  (t/with-instrument :all
+    (t/is (mx/symmetric-matrix-finite-non-? [[1.0 2.0] [2.0 3.0]]))
+    (t/is (mx/symmetric-matrix-finite-non-? [[0.0]]))
+    ;; Not symmetric
+    (t/is-not (mx/symmetric-matrix-finite-non-? [[1.0 2.0] [3.0 4.0]]))
+    ;; Negative values
+    (t/is-not (mx/symmetric-matrix-finite-non-? [[1.0 -2.0] [-2.0 3.0]]))
+    ;; Infinite values
+    (t/is-not (mx/symmetric-matrix-finite-non-? [[1.0 m/inf+] [m/inf+ 3.0]]))))
 
 ;;;CONSTRUCTORS
 (t/deftest to-matrix-test

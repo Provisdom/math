@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
-;;14 seconds
+;;13 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -221,7 +221,8 @@
     (t/is= m/inf+ (special-fns/upper-gamma m/inf+ 0.0))
     (t/is= 9.51350769866873 (special-fns/upper-gamma 0.1 0.0))
     (t/is= 0.1224564282529819 (special-fns/upper-gamma 1.0 2.1))
-    (t/is (m/nan? (special-fns/upper-gamma 0.1 m/inf+)))
+    ;; upper-gamma(a, inf+) = 0 since integral from inf to inf is 0
+    (t/is= 0.0 (special-fns/upper-gamma 0.1 m/inf+))
     (t/is-approx= 0.33287108369807955 (special-fns/upper-gamma 1 1.1) :tolerance 1e-14)
     (t/is= 0.36787944117144233 (special-fns/upper-gamma 1 1))
     (t/is= 1.0 (special-fns/upper-gamma 1 0))
@@ -249,7 +250,8 @@
     (t/is= 0.0 (special-fns/regularized-gamma-p m/inf+ 0.0))
     (t/is= 0.0 (special-fns/regularized-gamma-p 0.1 0.0))
     (t/is= 0.8775435717470181 (special-fns/regularized-gamma-p 1.0 2.1))
-    (t/is (m/nan? (special-fns/regularized-gamma-p 0.1 m/inf+)))
+    ;; P(a, inf+) = 1 by definition (CDF at infinity)
+    (t/is= 1.0 (special-fns/regularized-gamma-p 0.1 m/inf+))
     (t/is= 0.6671289163019202 (special-fns/regularized-gamma-p 1 1.1))
     (t/is= 0.6321205588285578 (special-fns/regularized-gamma-p 1 1))
     (t/is= 0.0 (special-fns/regularized-gamma-p 1 0))
@@ -267,7 +269,8 @@
     (t/is= 0.1224564282529819 (special-fns/regularized-gamma-q 1.0 2.1))
     ;;;Math 2.20904969985854413727761295823203798477070873992E-5
     (t/is= 2.209049699858544E-5 (special-fns/regularized-gamma-q 0.5 9.0))
-    (t/is (m/nan? (special-fns/regularized-gamma-q 0.1 m/inf+)))
+    ;; Q(a, inf+) = 0 by definition (survival function at infinity)
+    (t/is= 0.0 (special-fns/regularized-gamma-q 0.1 m/inf+))
     (t/is= 0.33287108369807983 (special-fns/regularized-gamma-q 1 1.1))
     (t/is= 0.3678794411714422 (special-fns/regularized-gamma-q 1 1))
     (t/is= 1.0 (special-fns/regularized-gamma-q 1 0))
@@ -329,15 +332,21 @@
   (t/with-instrument `special-fns/trigamma
     (t/is-spec-check special-fns/trigamma))
   (t/with-instrument :all
-    (t/is= m/inf+ (special-fns/trigamma m/inf+))
-    (t/is= 101.43329914974142 (special-fns/trigamma 0.1))
-    (t/is= 0.6068528687496855 (special-fns/trigamma 2.1))
-    (t/is= 1.4332991497414205 (special-fns/trigamma 1.1))
-    (t/is= 1.6449340657861162 (special-fns/trigamma 1))
+    ;; trigamma(inf+) = 0 (derivative of digamma at infinity)
+    (t/is= 0.0 (special-fns/trigamma m/inf+))
+    ;;Math PolyGamma[1, 0.1] = 101.43329915079277595296917696697536
+    (t/is-approx= 101.43329915079275 (special-fns/trigamma 0.1) :tolerance 1e-10)
+    ;;Math PolyGamma[1, 2.1] = 0.60685286980102334073509282050...
+    (t/is-approx= 0.6068528698010234 (special-fns/trigamma 2.1) :tolerance 1e-10)
+    ;;Math PolyGamma[1, 1.1] = 1.43329915079275868054941651...
+    (t/is-approx= 1.4332991507927586 (special-fns/trigamma 1.1) :tolerance 1e-10)
+    ;;Math PolyGamma[1, 1] = Pi^2/6 = 1.6449340668482264...
+    (t/is-approx= 1.6449340668482264 (special-fns/trigamma 1) :tolerance 1e-10)
     (t/is= m/inf+ (special-fns/trigamma 0.0))
-    (t/is= 2.8340491557052214 (special-fns/trigamma 0.7))
+    ;;Math PolyGamma[1, 0.7] = 2.83404915669461...
+    (t/is-approx= 2.8340491566946113 (special-fns/trigamma 0.7) :tolerance 1e-10)
     ;;Math PolyGamma[1, -0.1] = 101.92253995947712366536098339457686606168266562299
-    (t/is= 101.9225399585074 (special-fns/trigamma -0.1))
+    (t/is-approx= 101.92253995947712 (special-fns/trigamma -0.1) :tolerance 1e-8)
     (t/is= m/inf+ (special-fns/trigamma -2.0))))
 
 (t/deftest multivariate-gamma-test
