@@ -1237,13 +1237,13 @@
     number
     (let [number (double number)
           number (case round-type
-                   :down (* -1 (Math/round (- number)))
+                   :down (long (* -1.0 (Math/round (- number))))
 
                    :away-from-zero
-                   (* (sgn number) (Math/round ^double (abs number)))
+                   (long (* (double (sgn number)) (Math/round ^double (abs number))))
 
                    :toward-zero
-                   (* -1 (sgn number) (Math/round ^double (- (abs number))))
+                   (long (* -1.0 (double (sgn number)) (Math/round ^double (- (abs number)))))
 
                    :toward-even
                    (long (Math/rint number))
