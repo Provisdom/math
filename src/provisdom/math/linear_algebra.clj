@@ -379,12 +379,12 @@
   Complexity: O(n^3) for n x n matrix
 
   Returns a map with keys:
-  - `::L` - lower triangular matrix
-  - `::U` - upper triangular matrix
-  - `::LU-permutation` - permutation matrix P
-  - `::singular?` - `true` if matrix is singular (not invertible)
-  - `::determinant` - the determinant of the matrix
-  - `::inverse` - the inverse matrix (`nil` if singular)
+    `::L` - lower triangular matrix
+    `::U` - upper triangular matrix
+    `::LU-permutation` - permutation matrix P
+    `::singular?` - `true` if matrix is singular (not invertible)
+    `::determinant` - the determinant of the matrix
+    `::inverse` - the inverse matrix (`nil` if singular)
 
   Returns `nil` for non-square, empty, non-finite, or numerically unstable matrices (where the
   decomposition fails to produce valid triangular matrices).
@@ -532,15 +532,15 @@
 
   Complexity: O(n⁵) for n×n matrix (n² cofactors, each O(n³))
 
-  Returns nil for empty matrices or if any cofactor calculation fails
-  (e.g., for ill-conditioned submatrices). For 1×1 matrices, returns [[1.0]]
-  since the determinant of the empty 0×0 matrix is 1 by convention.
+  Returns `nil` for empty matrices or if any cofactor calculation fails (e.g., for ill-conditioned
+  submatrices). For 1×1 matrices, returns `[[1.0]]` since the determinant of the empty 0×0 matrix is
+  1 by convention.
 
   Examples:
     (cofactor-matrix [[1 2] [3 4]]) ;=> [[4.0 -3.0] [-2.0 1.0]]
     (cofactor-matrix [[5]]) ;=> [[1.0]]
 
-  See also: cofactor, adjugate, inverse"
+  See also: [[cofactor]], [[adjugate]], [[inverse]]"
   [square-m]
   (let [n (mx/rows square-m)]
     (cond
@@ -566,12 +566,12 @@
 
   Complexity: O(n⁵) for n×n matrix
 
-  Returns nil for empty matrices.
+  Returns `nil` for empty matrices.
 
   Examples:
     (adjugate [[1 2] [3 4]]) ;=> [[4.0 -2.0] [-3.0 1.0]]
 
-  See also: cofactor-matrix, inverse, determinant"
+  See also: [[cofactor-matrix]], [[inverse]], [[determinant]]"
   [square-m]
   (when-let [cof (cofactor-matrix square-m)]
     (mx/transpose cof)))
@@ -637,7 +637,7 @@
     (let [lu (lu-decomposition [[4 7] [2 6]])]
       (inverse-from-lu lu)) ;=> [[0.6 -0.7] [-0.2 0.4]]
 
-  See also: lu-decomposition, inverse"
+  See also: [[lu-decomposition]], [[inverse]]"
   [{::keys [inverse singular?]}]
   (if (or singular? (nil? inverse))
     {::anom/category ::anom/no-solve
@@ -664,7 +664,7 @@
     (inverse [[4 7] [2 6]]) ;=> [[0.6 -0.7] [-0.2 0.4]]
     (inverse [[1 2] [2 4]]) ;=> anomaly (singular matrix)
 
-  See also: pseudoinverse, determinant, solve, inverse-from-lu"
+  See also: [[pseudoinverse]], [[determinant]], [[solve]], [[inverse-from-lu]]"
   [square-m]
   (if (mx/empty-matrix? square-m)
     square-m
@@ -716,7 +716,7 @@
     (solve [[1 1] [2 1] [3 1]] [1 2 4]) ;=> least squares solution
     (solve [[1 2] [2 4]] [1 2]) ;=> anomaly (singular)
 
-  See also: least-squares, inverse, lu-decomposition"
+  See also: [[least-squares]], [[inverse]], [[lu-decomposition]]"
   [A b]
   (let [nr (mx/rows A)
         nc (mx/columns A)
@@ -753,8 +753,8 @@
 (defn cholesky-decomposition
   "Computes Cholesky decomposition of a symmetric positive-definite matrix.
 
-  Decomposes a symmetric positive-definite matrix A into A = L * L^T where
-  L is a lower triangular matrix. This is essentially the matrix square root.
+  Decomposes a symmetric positive-definite matrix A into A = L * L^T where L is a lower triangular
+  matrix. This is essentially the matrix square root.
 
   Complexity: O(n³/3) for n×n matrix - faster than LU
 
@@ -764,17 +764,17 @@
   - Testing positive-definiteness
 
   Returns a map with keys:
-  - ::cholesky-L - lower triangular matrix L
-  - ::cholesky-LT - upper triangular matrix L^T (transpose of L)
+    `::cholesky-L` - lower triangular matrix L
+    `::cholesky-LT` - upper triangular matrix L^T (transpose of L)
 
-  Returns nil if the matrix is not positive-definite.
+  Returns `nil` if the matrix is not positive-definite.
 
   Examples:
     (cholesky-decomposition [[4 2] [2 2]])
     ;=> {::cholesky-L [[2.0 0.0] [1.0 1.0]]
     ;    ::cholesky-LT [[2.0 1.0] [0.0 1.0]]}
 
-  See also: pos-definite-matrix-finite?, lu-decomposition"
+  See also: [[pos-definite-matrix-finite?]], [[lu-decomposition]]"
   [symmetric-pos-def-m]
   (when (and (mx/symmetric-matrix? symmetric-pos-def-m)
           (not (mx/empty-matrix? symmetric-pos-def-m)))
@@ -829,14 +829,14 @@
   Uses eigendecomposition: A = V × D × V^T, then B = V × sqrt(D) for positive eigenvalues only.
 
   Parameters:
-  - pos-semidefinite-m: symmetric positive semi-definite matrix
-  - tolerance: eigenvalues below this threshold are considered zero
+    `pos-semidefinite-m` - symmetric positive semi-definite matrix
+    `tolerance` - eigenvalues below this threshold are considered zero
 
   Returns a map with keys:
-  - ::rectangular-root - n×r matrix B where A ≈ B × B^T
-  - ::rank - number of columns with positive eigenvalues (r)
+    `::rectangular-root` - n×r matrix B where A ≈ B × B^T
+    `::rank` - number of columns with positive eigenvalues (r)
 
-  Returns nil for non-symmetric or empty matrices.
+  Returns `nil` for non-symmetric or empty matrices.
   Returns anomaly if matrix is not positive semi-definite.
 
   Examples:
@@ -848,7 +848,7 @@
     (rectangular-cholesky-decomposition [[1 1] [1 1]] 1e-10)
     ;=> {::rectangular-root [[...] [...]] ::rank 1}
 
-  See also: cholesky-decomposition, pos-semidefinite-matrix-finite?, eigen-decomposition"
+  See also: [[cholesky-decomposition]], [[pos-semidefinite-matrix-finite?]], [[eigen-decomposition]]"
   [pos-semidefinite-m tolerance]
   (when (and (mx/symmetric-matrix? pos-semidefinite-m)
           (not (mx/empty-matrix? pos-semidefinite-m)))
@@ -1166,11 +1166,10 @@
 
   Complexity: O(mn²) for m×n matrix
 
-  1-arity: Returns a map with keys ::Q and ::R, or nil for empty matrices.
+  1-arity: Returns a map with keys `::Q` and `::R`, or `nil` for empty matrices.
 
-  2-arity: Also computes the least-squares solution for Ax = b, returning
-  ::least-squares-solution in addition to ::Q and ::R. The solution is nil
-  if the matrix has more columns than rows.
+  2-arity: Also computes the least-squares solution for Ax = b, returning `::least-squares-solution`
+  in addition to `::Q` and `::R`. The solution is `nil` if the matrix has more columns than rows.
 
   Examples:
     (qr-decomposition [[1 2] [3 4] [5 6]])
@@ -1180,7 +1179,7 @@
     (qr-decomposition [[1 1] [2 1] [3 1]] [1 2 4])
     ;=> includes ::least-squares-solution [1.5 -0.333]
 
-  See also: least-squares, eigen-decomposition"
+  See also: [[least-squares]], [[eigen-decomposition]]"
   ([m]
    (when (and (mx/matrix? m) (not (mx/empty-matrix? m)))
      (let [nr (mx/rows m)
@@ -1242,21 +1241,21 @@
   - R is upper triangular with diagonal elements in decreasing order of magnitude
   - P is a permutation matrix
 
-  Column pivoting selects the column with the largest remaining norm at each step,
-  which reveals the numerical rank of the matrix.
+  Column pivoting selects the column with the largest remaining norm at each step, which reveals the
+  numerical rank of the matrix.
 
   Parameters:
-    m         - Input matrix (m × n)
-    tolerance - Threshold for determining rank. Diagonal elements of R with
-                absolute value below this are considered zero.
+    `m` - Input matrix (m × n)
+    `tolerance` - Threshold for determining rank. Diagonal elements of R with
+                  absolute value below this are considered zero.
 
   Returns a map containing:
-    ::Q                - Orthogonal matrix (m × m)
-    ::R                - Upper triangular matrix (m × n)
-    ::RRQR-permutation - Permutation matrix (n × n), such that A × P = Q × R
-    ::rank             - Numerical rank of the matrix
+    `::Q` - Orthogonal matrix (m × m)
+    `::R` - Upper triangular matrix (m × n)
+    `::RRQR-permutation` - Permutation matrix (n × n), such that A × P = Q × R
+    `::rank` - Numerical rank of the matrix
 
-  Returns nil for empty matrices.
+  Returns `nil` for empty matrices.
 
   Complexity: O(mn²) for m×n matrix
 
@@ -1350,14 +1349,14 @@
 
   Complexity: O(mn²) for m×n matrix
 
-  Returns nil if matrix has more columns than rows or is rank-deficient.
+  Returns `nil` if matrix has more columns than rows or is rank-deficient.
 
   Examples:
     ;; Fit line y = mx + c to points (1,1), (2,2), (3,4)
     (least-squares [[1 1] [2 1] [3 1]] [1 2 4])
     ;=> approximately [1.5 -0.333]
 
-  See also: solve, qr-decomposition"
+  See also: [[solve]], [[qr-decomposition]]"
   [A b]
   (when (and (mx/matrix? A)
           (not (mx/empty-matrix? A))
@@ -1463,9 +1462,8 @@
                 (recur (inc k) H-after-right Q-new)))))))))
 
 (defn- schur-converged?
-  "Checks if Schur decomposition has converged.
-  Converged when all subdiagonal elements are negligible except possibly
-  within 2x2 blocks for complex eigenvalues."
+  "Checks if Schur decomposition has converged. Converged when all subdiagonal elements are
+  negligible except possibly within 2x2 blocks for complex eigenvalues."
   [T tolerance]
   (let [n (mx/rows T)]
     (if (< n 2)
@@ -1549,10 +1547,10 @@
   Complexity: O(n^3) with iterative refinement
 
   Options:
-  - :max-iterations - Maximum QR iterations (default 100)
-  - :tolerance - Convergence tolerance (default 1e-12)
+    `:max-iterations` - Maximum QR iterations (default 100)
+    `:tolerance` - Convergence tolerance (default 1e-12)
 
-  Returns a map with ::schur-Q and ::schur-T, or nil for invalid input.
+  Returns a map with `::schur-Q` and `::schur-T`, or `nil` for invalid input.
 
   Examples:
     (schur-decomposition [[4 1] [2 3]])
@@ -1567,7 +1565,7 @@
   - Complex conjugate eigenvalue pairs appear as 2x2 blocks on the diagonal
   - More numerically stable than eigendecomposition for non-symmetric matrices
 
-  See also: eigen-decomposition, qr-decomposition"
+  See also: [[eigen-decomposition]], [[qr-decomposition]]"
   ([square-m] (schur-decomposition square-m {}))
   ([square-m {:keys [max-iterations tolerance]
               :or   {max-iterations 100
@@ -1676,17 +1674,17 @@
   Only works reliably for symmetric matrices.
 
   Options:
-  - :max-iterations (default 1000)
-  - :tolerance (default 1e-10)
+    `:max-iterations` (default 1000)
+    `:tolerance` (default 1e-10)
 
-  Returns a map with ::eigenvalues, ::eigenvalues-matrix, ::eigenvectors,
-  ::eigenvectorsT, or nil if fails.
+  Returns a map with `::eigenvalues`, `::eigenvalues-matrix`, `::eigenvectors`,
+  `::eigenvectorsT`, or `nil` if fails.
 
   Examples:
     (eigen-decomposition [[2 1] [1 2]])
     ;=> eigenvalues [3.0 1.0]
 
-  See also: sv-decomposition, cholesky-decomposition"
+  See also: [[sv-decomposition]], [[cholesky-decomposition]]"
   ([symmetric-m] (eigen-decomposition symmetric-m {}))
   ([symmetric-m {:keys [max-iterations tolerance]
                  :or   {max-iterations 1000
@@ -1738,14 +1736,14 @@
 
   Complexity: O(min(mn², m²n))
 
-  Returns a map with ::svd-left (U), ::singular-values, ::singular-values-matrix (Σ),
-  ::svd-right (V^T), ::rank, ::condition-number, ::norm-spectral, or nil if fails.
+  Returns a map with `::svd-left` (U), `::singular-values`, `::singular-values-matrix` (Σ),
+  `::svd-right` (V^T), `::rank`, `::condition-number`, `::norm-spectral`, or `nil` if fails.
 
   Examples:
     (sv-decomposition [[1 2] [3 4] [5 6]])
     ;=> U is 3x3, Σ is 3x2 diagonal, V^T is 2x2
 
-  See also: eigen-decomposition, pseudoinverse, condition-number"
+  See also: [[eigen-decomposition]], [[pseudoinverse]], [[condition-number]]"
   ([m] (sv-decomposition m {}))
   ([m {:keys [rank-tolerance]
        :or   {rank-tolerance 1e-10}}]
@@ -1832,13 +1830,13 @@
 
   This avoids redundant computation when you need both the SVD and the condition number.
 
-  Takes the map returned by `sv-decomposition` which includes ::condition-number.
+  Takes the map returned by [[sv-decomposition]] which includes `::condition-number`.
 
   Examples:
     (let [svd (sv-decomposition [[1 2] [3 4]])]
       (condition-number-from-svd svd)) ;=> ~14.93
 
-  See also: sv-decomposition, condition-number"
+  See also: [[sv-decomposition]], [[condition-number]]"
   [{::keys [condition-number]}]
   condition-number)
 
@@ -1856,7 +1854,7 @@
     (condition-number [[1 0] [0 1]]) ;=> 1.0
     (condition-number [[1 1] [1 1.001]]) ;=> ~2001
 
-  See also: sv-decomposition, matrix-rank, condition-number-from-svd"
+  See also: [[sv-decomposition]], [[matrix-rank]], [[condition-number-from-svd]]"
   [m]
   (if (mx/empty-matrix? m)
     m/nan
@@ -1878,7 +1876,7 @@
     (matrix-rank [[1 2] [3 4]]) ;=> 2
     (matrix-rank [[1 2] [2 4]]) ;=> 1
 
-  See also: sv-decomposition, condition-number"
+  See also: [[sv-decomposition]], [[condition-number]]"
   ([m] (matrix-rank m {}))
   ([m {:keys [tolerance]}]
    (if (mx/empty-matrix? m)
@@ -1905,7 +1903,7 @@
     (norm-1 [[1 -2] [3 4]]) ;=> 6.0
     (norm-1 [[1 0] [0 1]]) ;=> 1.0
 
-  See also: norm-inf-matrix, norm-spectral"
+  See also: [[norm-inf-matrix]], [[norm-spectral]]"
   [m]
   (if (mx/empty-matrix? m)
     0.0
@@ -1922,7 +1920,7 @@
     (norm-inf-matrix [[1 -2] [3 4]]) ;=> 7.0
     (norm-inf-matrix [[1 0] [0 1]]) ;=> 1.0
 
-  See also: norm-1, norm-spectral"
+  See also: [[norm-1]], [[norm-spectral]]"
   [m]
   (if (mx/empty-matrix? m)
     0.0
@@ -1937,13 +1935,13 @@
 
   This avoids redundant computation when you need both the SVD and the spectral norm.
 
-  Takes the map returned by `sv-decomposition` which includes ::norm-spectral.
+  Takes the map returned by [[sv-decomposition]] which includes `::norm-spectral`.
 
   Examples:
     (let [svd (sv-decomposition [[3 0] [0 4]])]
       (norm-spectral-from-svd svd)) ;=> 4.0
 
-  See also: sv-decomposition, norm-spectral"
+  See also: [[sv-decomposition]], [[norm-spectral]]"
   [{::keys [norm-spectral]}]
   norm-spectral)
 
@@ -1960,7 +1958,7 @@
     (norm-spectral [[1 0] [0 1]]) ;=> 1.0
     (norm-spectral [[3 0] [0 4]]) ;=> 4.0
 
-  See also: norm-1, norm-inf-matrix, sv-decomposition, norm-spectral-from-svd"
+  See also: [[norm-1]], [[norm-inf-matrix]], [[sv-decomposition]], [[norm-spectral-from-svd]]"
   [m]
   (if (mx/empty-matrix? m)
     0.0
@@ -1980,20 +1978,20 @@
 
   For A = U * Σ * V^T, the pseudoinverse is A+ = V * Σ+ * U^T.
 
-  Takes the map returned by `sv-decomposition` which includes
-  ::svd-left, ::singular-values, and ::svd-right.
+  Takes the map returned by [[sv-decomposition]] which includes
+  `::svd-left`, `::singular-values`, and `::svd-right`.
 
   Options:
-  - :tolerance - threshold for zero singular values (default 1e-10)
+    `:tolerance` - threshold for zero singular values (default 1e-10)
 
-  Note: For best results, call sv-decomposition with {:rank-tolerance 0.0}
+  Note: For best results, call [[sv-decomposition]] with `{:rank-tolerance 0.0}`
   to get all singular values, then use this function's :tolerance option.
 
   Examples:
     (let [svd (sv-decomposition [[1 0] [0 2]] {:rank-tolerance 0.0})]
       (pseudoinverse-from-svd svd)) ;=> [[1.0 0.0] [0.0 0.5]]
 
-  See also: sv-decomposition, pseudoinverse"
+  See also: [[sv-decomposition]], [[pseudoinverse]]"
   ([svd-result] (pseudoinverse-from-svd svd-result {}))
   ([{::keys [svd-left singular-values svd-right]} {:keys [tolerance] :or {tolerance 1e-10}}]
    (let [nr (mx/rows svd-left)
@@ -2031,7 +2029,7 @@
   Examples:
     (pseudoinverse [[1 0] [0 2]]) ;=> [[1.0 0.0] [0.0 0.5]]
 
-  See also: inverse, sv-decomposition, solve, pseudoinverse-from-svd"
+  See also: [[inverse]], [[sv-decomposition]], [[solve]], [[pseudoinverse-from-svd]]"
   ([m] (pseudoinverse m {}))
   ([m opts]
    (when-not (mx/empty-matrix? m)
@@ -2064,7 +2062,7 @@
     (matrix-power [[1 2] [3 4]] 0) ;=> [[1.0 0.0] [0.0 1.0]]
     (matrix-power [[2 0] [0 3]] -1) ;=> [[0.5 0.0] [0.0 0.333...]]
 
-  See also: inverse, mx*"
+  See also: [[inverse]], [[provisdom.math.matrix/mx*]]"
   [square-m n]
   (cond
     (not (mx/square-matrix? square-m))
@@ -2158,7 +2156,7 @@
     (matrix-exp [[1 0] [0 1]]) ;=> [[e 0] [0 e]] ≈ [[2.718... 0] [0 2.718...]]
     (matrix-exp [[0 1] [-1 0]]) ;=> rotation matrix
 
-  See also: matrix-power, eigen-decomposition"
+  See also: [[matrix-power]], [[eigen-decomposition]]"
   ([m] (matrix-exp m {}))
   ([m {:keys [pade-order] :or {pade-order 6}}]
    (when (and (mx/square-matrix? m) (not (mx/empty-matrix? m)))

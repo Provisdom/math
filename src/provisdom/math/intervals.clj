@@ -9,8 +9,7 @@
   - Specialized bounds for positive definite matrices
   
   Intervals are represented as [lower, upper] vectors.
-  Bounds are maps with `::lower`, `::upper`, `::open-lower?`, `::open-upper?`
-    keys."
+  Bounds are maps with `::lower`, `::upper`, `::open-lower?`, `::open-upper?` keys."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -70,8 +69,8 @@
   "Generator for long integer intervals within [`min`, `max`] bounds.
 
   Returns a generator that produces `[lower, upper]` tuples where both values are long integers
-  within the specified range. Note: generated intervals may not be sorted (`lower` could be
-  greater than `upper`).
+  within the specified range. Note: generated intervals may not be sorted (`lower` could be greater
+  than `upper`).
 
   Examples:
     (gen/sample (long-interval-gen 0 100))
@@ -163,8 +162,8 @@
 (defn bound-by-interval
   "Constrains a number to lie within an interval.
 
-  Returns the closest value to `number` that lies within `[lower, upper]`. If `number` is already
-  in the interval, returns `number` unchanged.
+  Returns the closest value to `number` that lies within `[lower, upper]`. If `number` is already in
+  the interval, returns `number` unchanged.
 
   Examples:
     (bound-by-interval [0 10] 5)   ;=> 5 (unchanged)
@@ -554,8 +553,7 @@
   :ret ::bound-entry)
 
 (defn sort-bounds
-  "Returns a vector of bounds sorted by lower bound first (by default) or upper
-  bound first."
+  "Returns a vector of bounds sorted by lower bound first (by default) or upper bound first."
   ([vector-bounds] (sort-bounds vector-bounds {}))
   ([vector-bounds {::keys [by-upper?] :or {by-upper? false}}]
    (let [f (if by-upper?

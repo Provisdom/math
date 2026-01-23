@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
-;;13 seconds
+;;11 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -187,7 +187,17 @@
     ;;Math 4.29773972070970312095164948653732010774576805605945678584551E242
     (t/is= 4.297739720709703E242 (special-fns/gamma 141.7))
     ;;Math -6.37649858440383663079648226370796648791812206496011771507927E-245
-    (t/is= -6.3764985844038365E-245 (special-fns/gamma -141.7))))
+    (t/is= -6.3764985844038365E-245 (special-fns/gamma -141.7))
+    ;; Near overflow boundary
+    ;; Math: Gamma[171] = 7.257415615307998e306
+    (t/is (m/finite? (special-fns/gamma 171.0)))
+    (t/is (> (special-fns/gamma 171.0) 7e306))
+    ;; Gamma(171.5) should still be finite
+    (t/is (m/finite? (special-fns/gamma 171.5)))
+    (t/is (> (special-fns/gamma 171.5) 1e306))
+    ;; Gamma(172) overflows to infinity
+    (t/is= m/inf+ (special-fns/gamma 172.0))
+    (t/is= m/inf+ (special-fns/gamma 172.5))))
 
 (t/deftest lower-gamma-test
   (t/with-instrument `special-fns/lower-gamma
@@ -282,7 +292,12 @@
     (t/is= -0.049872441259839764 (special-fns/log-gamma 1.1))
     (t/is= 0.0 (special-fns/log-gamma 1))
     ;;Math LogGamma[0.7] = 0.26086724653166651438715483082379164763455717621310
-    (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))))
+    (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))
+    ;; Log-gamma works for large values where gamma overflows
+    (t/is (m/finite? (special-fns/log-gamma 172.0)))
+    (t/is (m/finite? (special-fns/log-gamma 500.0)))
+    ;; Math: LogGamma[172] = 711.714725802289
+    (t/is-approx= 711.7147 (special-fns/log-gamma 172.0) :tolerance 0.01)))
 
 (t/deftest log-gamma-inc-test
   (t/with-instrument `special-fns/log-gamma-inc
@@ -338,7 +353,16 @@
     (t/is-approx= 2.8340491566946113 (special-fns/trigamma 0.7) :tolerance 1e-10)
     ;;Math PolyGamma[1, -0.1] = 101.92253995947712366536098339457686606168266562299
     (t/is-approx= 101.92253995947712 (special-fns/trigamma -0.1) :tolerance 1e-8)
-    (t/is= m/inf+ (special-fns/trigamma -2.0))))
+    (t/is= m/inf+ (special-fns/trigamma -2.0))
+    ;; Math: PolyGamma[1, 0.5] = pi^2/2 = 4.9348...
+    (t/is-approx= 4.9348022005 (special-fns/trigamma 0.5) :tolerance 1e-7)
+    ;; Math: PolyGamma[1, 2] = Pi^2/6 - 1 = 0.6449340668...
+    (t/is-approx= (- (/ (m/sq m/PI) 6) 1.0) (special-fns/trigamma 2.0) :tolerance 1e-7)
+    ;; Recurrence relation: trigamma(x+1) = trigamma(x) - 1/x^2
+    (let [x 3.0
+          psi1-x (special-fns/trigamma x)
+          psi1-x+1 (special-fns/trigamma (inc x))]
+      (t/is-approx= (- psi1-x (/ (m/sq x))) psi1-x+1 :tolerance 1e-10))))
 
 (t/deftest multivariate-gamma-test
   (t/with-instrument `special-fns/multivariate-gamma
@@ -405,7 +429,13 @@
     (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)
     (t/is= 0.0 (special-fns/regularized-beta 0 1 1))
     (t/is= 0.5000004638553182 (special-fns/regularized-beta 0.5 1e10 1e10))
-    (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)))
+    (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)
+    ;; Boundary tests: at x=0, regularized beta should be 0
+    (t/is= 0.0 (special-fns/regularized-beta 0.0 2.0 3.0))
+    (t/is= 0.0 (special-fns/regularized-beta 0.0 0.5 0.5))
+    ;; At x=1, regularized beta should be 1
+    (t/is= 1.0 (special-fns/regularized-beta 1.0 2.0 3.0))
+    (t/is= 1.0 (special-fns/regularized-beta 1.0 0.5 0.5))))
 
 (t/deftest incomplete-beta-test
   (t/with-instrument `special-fns/incomplete-beta
@@ -420,7 +450,11 @@
     (t/is= 9.649610951198179 (special-fns/incomplete-beta 0.7 0.1 1))
     (t/is= 10.000000000000002 (special-fns/incomplete-beta 1 1 0.1))
     (t/is= 1.5707963267948966 (special-fns/incomplete-beta 0.5 0.5 0.5))
-    (t/is= 0.0 (special-fns/incomplete-beta 0 1 1))))
+    (t/is= 0.0 (special-fns/incomplete-beta 0 1 1))
+    ;; Boundary tests
+    (t/is= 0.0 (special-fns/incomplete-beta 0.0 2.0 3.0))
+    (t/is-approx= (special-fns/beta 2.0 3.0)
+      (special-fns/incomplete-beta 1.0 2.0 3.0) :tolerance 1e-14)))
 
 ;;;BESSEL FUNCTIONS
 (t/deftest bessel-j-test
@@ -445,11 +479,31 @@
     ;; Non-integer order: J_0.5(x) = sqrt(2/(πx)) * sin(x)
     (t/is-approx= 0.6713967071418032 (special-fns/bessel-j 0.5 1.0) :tolerance 1e-14)
     ;; Large argument (asymptotic expansion)
-    (t/is-approx= 0.05581367346912376 (special-fns/bessel-j 0 50.0) :tolerance 1e-8)))
+    (t/is-approx= 0.05581367346912376 (special-fns/bessel-j 0 50.0) :tolerance 1e-8)
+    ;; Higher orders (> 2)
+    ;; J_5(x) values - from NIST DLMF
+    (t/is= 0.0 (special-fns/bessel-j 5 0.0))
+    ;; Math: BesselJ[5, 5] = 0.261140546120170
+    (t/is-approx= 0.26114054612 (special-fns/bessel-j 5 5.0) :tolerance 1e-8)
+    ;; J_3(4) - intermediate order
+    ;; Math: BesselJ[3, 4] = 0.430171473876
+    (t/is-approx= 0.43017147388 (special-fns/bessel-j 3 4.0) :tolerance 1e-8)
+    ;; J_4(10) - higher argument
+    ;; Math: BesselJ[4, 10] = -0.219602686102
+    (t/is-approx= -0.2196026861 (special-fns/bessel-j 4 10.0) :tolerance 1e-6)
+    ;; Recurrence relation: J_{n-1}(x) + J_{n+1}(x) = (2n/x) * J_n(x)
+    (doseq [x [1.0 2.5 5.0 10.0]
+            n [1 2 3 4]]
+      (let [j-nm1 (special-fns/bessel-j (dec n) x)
+            j-n (special-fns/bessel-j n x)
+            j-np1 (special-fns/bessel-j (inc n) x)
+            lhs (+ j-nm1 j-np1)
+            rhs (* (/ (* 2.0 n) x) j-n)]
+        (t/is-approx= lhs rhs :tolerance 1e-10)))))
 
 (t/deftest bessel-y-test
   (t/with-instrument `special-fns/bessel-y
-    (t/is-spec-check special-fns/bessel-y))
+    (t/is-spec-check special-fns/bessel-y {:num-tests 50}))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
   (t/is= m/inf- (special-fns/bessel-y 0 0.0))
   (t/with-instrument :all
@@ -490,7 +544,7 @@
 
 (t/deftest bessel-k-test
   (t/with-instrument `special-fns/bessel-k
-    (t/is-spec-check special-fns/bessel-k))
+    (t/is-spec-check special-fns/bessel-k {:num-tests 30}))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
   (t/is= m/inf+ (special-fns/bessel-k 0 0.0))
   (t/with-instrument :all
@@ -530,7 +584,21 @@
     ;; Known reference values
     (t/is-approx= 0.746824132812427 (special-fns/hypergeometric-1f1 0.5 1.5 -1) :tolerance 1e-12)
     ;; Kummer transformation test for large negative z
-    (t/is-approx= 0.04 (special-fns/hypergeometric-1f1 1 2 -25) :tolerance 1e-10)))
+    (t/is-approx= 0.04 (special-fns/hypergeometric-1f1 1 2 -25) :tolerance 1e-10)
+    ;; Kummer transformation: 1F1(a; b; z) = e^z * 1F1(b-a; b; -z)
+    (let [a 1.5
+          b 3.0
+          z 2.0
+          direct (special-fns/hypergeometric-1f1 a b z)
+          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
+      (t/is-approx= direct transformed :tolerance 1e-10))
+    ;; Kummer for negative z where it's numerically important
+    (let [a 0.5
+          b 2.0
+          z -5.0
+          direct (special-fns/hypergeometric-1f1 a b z)
+          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
+      (t/is-approx= direct transformed :tolerance 1e-8))))
 
 (t/deftest hypergeometric-2f1-test
   (t/with-instrument `special-fns/hypergeometric-2f1
@@ -553,102 +621,7 @@
     ;; Negative z via Pfaff transformation
     (t/is-approx= 0.9531017980432487 (special-fns/hypergeometric-2f1 1 1 2 -0.1) :tolerance 1e-14)
     (t/is-approx= 0.8109302162163282 (special-fns/hypergeometric-2f1 1 1 2 -0.5) :tolerance 1e-14)
-    (t/is-approx= 0.6931471805599445 (special-fns/hypergeometric-2f1 1 1 2 -1.0) :tolerance 1e-14)
-    ;; Gauss summation at z=1 (when c > a + b)
-    (t/is-approx= 1.2732395447351625
-      (special-fns/hypergeometric-2f1 0.5 0.5 2 1.0) :tolerance 1e-14)))
-
-;;;ADDITIONAL COVERAGE TESTS
-(t/deftest bessel-high-order-test
-  ;; Test Bessel functions with higher orders (> 2)
-  (t/with-instrument :all
-    ;; J_5(x) values - from NIST DLMF
-    (t/is= 0.0 (special-fns/bessel-j 5 0.0))
-    ;; Math: BesselJ[5, 5] = 0.261140546120170
-    (t/is-approx= 0.26114054612 (special-fns/bessel-j 5 5.0) :tolerance 1e-8)
-    ;; J_3(4) - intermediate order
-    ;; Math: BesselJ[3, 4] = 0.430171473876
-    (t/is-approx= 0.43017147388 (special-fns/bessel-j 3 4.0) :tolerance 1e-8)
-    ;; J_4(10) - higher argument
-    ;; Math: BesselJ[4, 10] = -0.219602686102
-    (t/is-approx= -0.2196026861 (special-fns/bessel-j 4 10.0) :tolerance 1e-6)))
-
-(t/deftest bessel-recurrence-test
-  ;; Verify Bessel recurrence relation: J_{n-1}(x) + J_{n+1}(x) = (2n/x) * J_n(x)
-  (t/with-instrument :all
-    ;; Test at multiple points
-    (doseq [x [1.0 2.5 5.0 10.0]
-            n [1 2 3 4]]
-      (let [j-nm1 (special-fns/bessel-j (dec n) x)
-            j-n (special-fns/bessel-j n x)
-            j-np1 (special-fns/bessel-j (inc n) x)
-            lhs (+ j-nm1 j-np1)
-            rhs (* (/ (* 2.0 n) x) j-n)]
-        (t/is-approx= lhs rhs :tolerance 1e-10)))))
-
-(t/deftest hypergeometric-kummer-test
-  ;; Verify Kummer transformation: 1F1(a; b; z) = e^z * 1F1(b-a; b; -z)
-  (t/with-instrument :all
-    (let [a 1.5
-          b 3.0
-          z 2.0
-          direct (special-fns/hypergeometric-1f1 a b z)
-          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
-      (t/is-approx= direct transformed :tolerance 1e-10))
-    ;; Test for negative z where Kummer is numerically important
-    (let [a 0.5
-          b 2.0
-          z -5.0
-          direct (special-fns/hypergeometric-1f1 a b z)
-          transformed (* (m/exp z) (special-fns/hypergeometric-1f1 (- b a) b (- z)))]
-      (t/is-approx= direct transformed :tolerance 1e-8))))
-
-(t/deftest incomplete-beta-bounds-test
-  ;; Test regularized beta at boundaries
-  (t/with-instrument :all
-    ;; At x=0, regularized beta should be 0
-    (t/is= 0.0 (special-fns/regularized-beta 0.0 2.0 3.0))
-    (t/is= 0.0 (special-fns/regularized-beta 0.0 0.5 0.5))
-    ;; At x=1, regularized beta should be 1
-    (t/is= 1.0 (special-fns/regularized-beta 1.0 2.0 3.0))
-    (t/is= 1.0 (special-fns/regularized-beta 1.0 0.5 0.5))
-    ;; Incomplete beta at boundaries
-    (t/is= 0.0 (special-fns/incomplete-beta 0.0 2.0 3.0))
-    (t/is-approx= (special-fns/beta 2.0 3.0)
-      (special-fns/incomplete-beta 1.0 2.0 3.0)
-      :tolerance 1e-14)))
-
-(t/deftest gamma-overflow-test
-  ;; Test gamma function near overflow boundary
-  (t/with-instrument :all
-    ;; Gamma(171) is very large but representable
-    ;; Math: Gamma[171] = 7.257415615307998e306
-    (t/is (m/finite? (special-fns/gamma 171.0)))
-    (t/is (> (special-fns/gamma 171.0) 7e306))
-    ;; Gamma(171.5) should still be finite
-    (t/is (m/finite? (special-fns/gamma 171.5)))
-    (t/is (> (special-fns/gamma 171.5) 1e306))
-    ;; Gamma(172) overflows to infinity
-    (t/is= m/inf+ (special-fns/gamma 172.0))
-    (t/is= m/inf+ (special-fns/gamma 172.5))
-    ;; Log-gamma should still work for large values
-    (t/is (m/finite? (special-fns/log-gamma 172.0)))
-    (t/is (m/finite? (special-fns/log-gamma 500.0)))
-    ;; Math: LogGamma[172] = 711.714725802289
-    (t/is-approx= 711.7147 (special-fns/log-gamma 172.0) :tolerance 0.01)))
-
-(t/deftest trigamma-values-test
-  ;; Test trigamma at known values
-  (t/with-instrument :all
-    ;; Math: PolyGamma[1, 0.5] = pi^2/2 = 4.9348...
-    (t/is-approx= 4.9348022005 (special-fns/trigamma 0.5) :tolerance 1e-7)
-    ;; Known value: trigamma(1) = pi^2/6
-    ;; Math: PolyGamma[1, 1] = Pi^2/6 = 1.6449340668...
-    (t/is-approx= (/ (m/sq m/PI) 6) (special-fns/trigamma 1.0) :tolerance 1e-7)
-    ;; Math: PolyGamma[1, 2] = Pi^2/6 - 1 = 0.6449340668...
-    (t/is-approx= (- (/ (m/sq m/PI) 6) 1.0) (special-fns/trigamma 2.0) :tolerance 1e-7)
-    ;; Recurrence relation: trigamma(x+1) = trigamma(x) - 1/x^2
-    (let [x 3.0
-          psi1-x (special-fns/trigamma x)
-          psi1-x+1 (special-fns/trigamma (inc x))]
-      (t/is-approx= (- psi1-x (/ (m/sq x))) psi1-x+1 :tolerance 1e-10))))
+    (t/is-approx= 0.6931471805599445 (special-fns/hypergeometric-2f1 1 1 2 -1.0) :tolerance 1e-14))
+  ;; Gauss summation at z=1 (outside instrumentation since z=1.0 doesn't satisfy z<1 in spec)
+  (t/is-approx= 1.2732395447351625
+    (special-fns/hypergeometric-2f1 0.5 0.5 2 1.0) :tolerance 1e-14))

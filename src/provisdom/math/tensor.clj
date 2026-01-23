@@ -244,8 +244,8 @@
 (defn fill-tensor
   "Creates a tensor with `shape` using values from sequence `numbers`.
   
-  Fills the tensor in row-major order. If `numbers` is too short, remaining
-  elements are filled with 0.0. If too long, extra values are ignored.
+  Fills the tensor in row-major order. If `numbers` is too short, remaining elements are filled with
+  0.0. If too long, extra values are ignored.
   
   Examples:
     (fill-tensor [2 2] [1 2 3 4]) => [[1 2] [3 4]]
@@ -374,8 +374,8 @@
 (defn every-kv?
   "Returns true if the predicate function returns true for every tensor element.
 
-  The predicate receives (indices element) where indices is a vector of
-  coordinates for the element's position.
+  The predicate receives (indices element) where indices is a vector of coordinates for the
+  element's position.
 
   Examples:
     (every-kv? (fn [idx val] (pos? val)) [[1 2] [3 4]]) => true
@@ -552,8 +552,7 @@
 
 ;;;TENSOR MANIPULATION
 (defn- expandable-shape?
-  "Tests whether a tensor with `shape` can be expanded into
-  `desired-expanded-shape`."
+  "Tests whether a tensor with `shape` can be expanded into `desired-expanded-shape`."
   [shape desired-expanded-shape]
   (every? zero? (map -
                   (take-last (count shape) desired-expanded-shape)
@@ -679,8 +678,8 @@
 (defn emap-kv
   "Applies a function element-wise with coordinate information.
   
-  Like emap, but the function also receives the indices (coordinates) of
-  each element as its first argument.
+  Like emap, but the function also receives the indices (coordinates) of each element as its first
+  argument.
   
   Examples:
     (emap-kv (fn [idx val] (+ (apply + idx) val)) [[1 2] [3 4]])
@@ -725,8 +724,8 @@
 (defn partition-recursively
   "Recursively partitions a 1D tensor into nested chunks of size n.
   
-  Creates a roughly cubic tensor by repeatedly partitioning into groups
-  of n elements. May leave some elements unused if they don't fit evenly.
+  Creates a roughly cubic tensor by repeatedly partitioning into groups of n elements. May leave
+  some elements unused if they don't fit evenly.
   
   Examples:
     (partition-recursively 2 [1 2 3 4]) => [[1 2] [3 4]]
@@ -799,8 +798,8 @@
 (defn subtract
   "Performs element-wise subtraction of tensors.
 
-  With one argument, negates all elements. With multiple arguments,
-  subtracts subsequent tensors from the first. Supports broadcasting.
+  With one argument, negates all elements. With multiple arguments, subtracts subsequent tensors
+  from the first. Supports broadcasting.
 
   Examples:
     (subtract [5 3]) => [-5 -3]
@@ -855,8 +854,8 @@
 (defn divide
   "Performs element-wise division of tensors.
 
-  With one argument, computes 1/x for each element. With multiple arguments,
-  divides the first tensor by subsequent tensors. Supports broadcasting.
+  With one argument, computes 1/x for each element. With multiple arguments, divides the first
+  tensor by subsequent tensors. Supports broadcasting.
 
   Examples:
     (divide [8 6]) => [0.125 0.167...] (reciprocals)
@@ -881,8 +880,8 @@
 (defn average
   "Calculates the arithmetic mean of all elements in `tensor`.
 
-  For scalars, returns the scalar itself. For tensors, computes the sum
-  of all elements divided by the total count.
+  For scalars, returns the scalar itself. For tensors, computes the sum of all elements divided by
+  the total count.
 
   Examples:
     (average 5) => 5
@@ -975,8 +974,8 @@
 (defn normalize1
   "Normalizes `tensor` to unit L1 norm.
   
-  Divides each element by the L1 norm of `tensor`, resulting in
-  a tensor where the sum of absolute values equals 1.
+  Divides each element by the L1 norm of `tensor`, resulting in a tensor where the sum of absolute
+  values equals 1.
   
   Examples:
     (normalize1 [3 6]) => [0.333... 0.666...]"
@@ -991,8 +990,8 @@
 (defn normalize
   "Normalizes `tensor` to unit L2 norm.
   
-  Divides each element by the L2 norm of `tensor`, resulting in
-  a tensor with Euclidean length of 1. Also available as normalize2.
+  Divides each element by the L2 norm of `tensor`, resulting in a tensor with Euclidean length of 1.
+  Also available as normalize2.
   
   Examples:
     (normalize [3 4]) => [0.6 0.8]"
@@ -1009,8 +1008,7 @@
 (defn normalize-p
   "Normalizes `tensor` to unit Lp norm using exponent `p`.
   
-  Divides each element by the Lp norm of `tensor`, resulting in
-  a tensor with Lp norm equal to 1.
+  Divides each element by the Lp norm of `tensor`, resulting in a tensor with Lp norm equal to 1.
   
   Examples:
     (normalize-p [2 4 6] 1) => [0.167... 0.333... 0.5] (L1 normalized)"
@@ -1025,8 +1023,8 @@
 (defn normalize-inf
   "Normalizes `tensor` to unit L-infinity norm.
 
-  Divides each element by the L-infinity norm of `tensor`, resulting in
-  a tensor where the maximum absolute value equals 1.
+  Divides each element by the L-infinity norm of `tensor`, resulting in a tensor where the maximum
+  absolute value equals 1.
 
   Examples:
     (normalize-inf [3 -6]) => [0.5 -1.0]
@@ -1044,8 +1042,8 @@
 (defn inner-product
   "Computes the inner product (generalized dot product) of `tensor1` and `tensor2`.
   
-  Multiplies corresponding elements and sums all results. For vectors,
-  this is the standard dot product. Both tensors must have the same shape.
+  Multiplies corresponding elements and sums all results. For vectors, this is the standard dot
+  product. Both tensors must have the same shape.
   
   Examples:
     (inner-product [1 2 3] [4 5 6]) => 32 (1*4 + 2*5 + 3*6)
@@ -1076,8 +1074,8 @@
 (defn roughly?
   "Tests if `tensor1` and `tensor2` are approximately equal within tolerance `accu`.
 
-  Returns true if tensors have the same shape and all corresponding
-  elements are within the specified accuracy of each other.
+  Returns true if tensors have the same shape and all corresponding elements are within the
+  specified accuracy of each other.
 
   Examples:
     (roughly? [1.0 2.0] [1.001 1.999] 0.01) => true
@@ -1100,8 +1098,8 @@
 (defn roughly-distinct
   "Removes approximately duplicate elements from `tensor` within tolerance `accu`.
   
-  Keeps only the first occurrence of elements that are approximately equal
-  (within the specified tolerance). Works on top-level elements.
+  Keeps only the first occurrence of elements that are approximately equal (within the specified
+  tolerance). Works on top-level elements.
   
   Examples:
     (roughly-distinct [1.0 1.001 2.0 1.002] 0.01) => [1.0 2.0]

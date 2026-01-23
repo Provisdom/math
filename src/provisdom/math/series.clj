@@ -1,19 +1,70 @@
 (ns provisdom.math.series
   "Infinite series summation with convergence testing and acceleration.
 
+  ## Usage Guide
+
+  ### Choosing a Summation Method
+
+  | Function                   | Use when...                                              |
+  |----------------------------|----------------------------------------------------------|
+  | [[sum-convergent-series]]  | Default choice for infinite series with unknown terms    |
+  | [[sum-with-diagnostics]]   | Need convergence info (iterations, error estimate)       |
+  | [[neumaier-sum]]           | Finite sequence with widely varying magnitudes           |
+  | [[pairwise-sum]]           | Finite sequence, want parallelization or O(log n) error  |
+
+  For infinite series, use `sum-convergent-series` or `sum-with-diagnostics`. For finite
+  sequences where you just need a sum, use `neumaier-sum` (most accurate) or `pairwise-sum`
+  (parallel-friendly).
+
+  ### Choosing an Acceleration Method
+
+  | Function                  | Best for...                                               |
+  |---------------------------|-----------------------------------------------------------|
+  | [[wynn-epsilon]]          | General purpose; try this first                           |
+  | [[euler-transform]]       | Alternating series (signs flip each term)                 |
+  | [[aitken-accelerate]]     | Linearly convergent sequences; simple and fast            |
+  | [[richardson-extrapolate]]| Numerical integration with halved step sizes              |
+
+  Acceleration methods transform partial sums into faster-converging sequences:
+  ```clojure
+  (->> terms
+       (reductions +)           ; partial sums
+       wynn-epsilon             ; accelerate
+       (take 20)
+       last)                    ; best estimate
+  ```
+
+  ### Continued Fractions
+
+  | Function                                          | Use when...                            |
+  |---------------------------------------------------|----------------------------------------|
+  | [[continued-fraction]]                            | Standard continued fraction conversion |
+  | [[multiplicative-continued-fraction]]             | Better numerical stability needed      |
+  | [[generalized-continued-fraction]]                | Have separate `a` and `b` sequences    |
+  | [[multiplicative-generalized-continued-fraction]] | Generalized + stability (special fns)  |
+
+  The multiplicative variants avoid division-by-zero issues and are preferred for evaluating
+  special functions.
+
+  ### Power Series Operations
+
+  - [[power-series-fn]], [[power-series-derivative-fn]], [[power-series-integral-fn]] - Create
+    functions from coefficient sequences
+  - [[cauchy-product]] - Multiply two power series
+  - [[power-series-compose]] - Compute `f(g(x))` from coefficients
+  - [[power-series-inverse]] - Find compositional inverse
+  - [[radius-of-convergence]] - Estimate where series converges
+
+  ### Rational Approximation
+
+  Use [[pade-approximant]] + [[evaluate-pade]] when Taylor series converge slowly or diverge.
+  Padé approximants often work outside the radius of convergence.
+
+  ---
+
   Provides robust algorithms for summing infinite series with adaptive convergence detection.
   Supports multiple summation strategies and series acceleration methods for improved numerical
-  stability.
-
-  Key features:
-  - Adaptive convergence testing with customizable criteria
-  - Kahan and Neumaier summation for reduced floating-point error
-  - Pairwise summation for parallel-friendly computation
-  - Series acceleration: Aitken, Wynn epsilon, Euler, Richardson
-  - Power series operations: multiplication, composition, inversion
-  - Padé approximants for rational function approximation
-  - Convergence diagnostics with detailed result information
-  - Anomaly handling for non-convergent series"
+  stability."
   (:require
     [clojure.spec.alpha :as s]
     [provisdom.math.core :as m]
@@ -94,8 +145,8 @@
 (defn power-series-integral-fn
   "Returns a function that evaluates the indefinite integral of a power series.
 
-  Takes coefficients `term-series` `[a0 a1 a2 ...]` and returns a function computing the
-  integral: `sum(an * x^(n+1) / (n+1))`.
+  Takes coefficients `term-series` `[a0 a1 a2 ...]` and returns a function computing the integral:
+  `sum(an * x^(n+1) / (n+1))`.
 
   Example:
     `((power-series-integral-fn [1 2 3]) 2)` => `[2.0 4.0 8.0]` (integrals)"
@@ -372,8 +423,8 @@
   Given a sequence of approximations `approxs` computed at different step sizes (assumed to be
   halved each time), extrapolates to the limit value.
 
-  The `::order` option specifies the order of the error term being eliminated (default `2`,
-  suitable for trapezoidal rule errors).
+  The `::order` option specifies the order of the error term being eliminated (default `2`, suitable
+  for trapezoidal rule errors).
 
   Returns a sequence of progressively refined estimates.
 
@@ -438,8 +489,7 @@
 (defn power-series-compose
   "Computes the composition of two power series.
 
-  Given `outer-coeffs` for `f(x)` and `inner-coeffs` for `g(x)`, returns coefficients for
-  `f(g(x))`.
+  Given `outer-coeffs` for `f(x)` and `inner-coeffs` for `g(x)`, returns coefficients for `f(g(x))`.
 
   IMPORTANT: `g(0)` must be `0` (i.e., first coefficient of inner must be `0`) for the composition
   to be well-defined as a power series.
@@ -533,8 +583,8 @@
 (defn radius-of-convergence
   "Estimates the radius of convergence of a power series.
 
-  Uses the ratio test `(lim |a(n+1)/an|)` and root test `(lim |an|^(1/n))` on the given `coeffs`
-  to estimate the radius of convergence.
+  Uses the ratio test `(lim |a(n+1)/an|)` and root test `(lim |an|^(1/n))` on the given `coeffs` to
+  estimate the radius of convergence.
 
   Returns a map with:
     `::ratio-estimate` - estimate from ratio test

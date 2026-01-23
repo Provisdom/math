@@ -67,7 +67,7 @@
 (def ^:const ^long min-long Long/MIN_VALUE)
 (def ^:const ^long max-int Integer/MAX_VALUE)
 (def ^:const ^long min-int Integer/MIN_VALUE)
-(def ^:const ^double log-half (Math/log 0.5))               ;;since marked as const, should use Math/log
+(def ^:const ^double log-half (Math/log 0.5))
 (def ^:const ^double log-two (Math/log 2.0))
 (def ^:const ^double log-pi (Math/log PI))
 (def ^:const ^double log-two-pi (+ log-two log-pi))

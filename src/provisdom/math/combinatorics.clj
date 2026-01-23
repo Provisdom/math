@@ -13,8 +13,8 @@
   - Direct access: nth-combination, nth-permutation for random sampling
   - Counting functions for combinatorial enumeration
 
-  Includes both exact computations for small values and log-space calculations
-  for larger values to avoid overflow."
+  Includes both exact computations for small values and log-space calculations for larger values to
+  avoid overflow."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -62,7 +62,7 @@
   "Computes the factorial of a number.
   
   Returns x! = x × (x-1) × ... × 2 × 1. Uses the gamma function identity:
-  x! = Γ(x+1) for accurate computation of non-integer factorials.
+  x! = Γ(x+1) for accurate computation of noninteger factorials.
   
   Examples:
     (factorial 5)    ;=> 120.0
@@ -79,8 +79,8 @@
 (defn factorial'
   "Computes the factorial of a number, returning a long when possible.
   
-  Like [[factorial]] but returns a long if the result fits in long range,
-  otherwise returns a double. Useful for exact integer arithmetic.
+  Like [[factorial]] but returns a long if the result fits in long range, otherwise returns a
+  double. Useful for exact integer arithmetic.
   
   Examples:
     (factorial' 5)   ;=> 120 (long)
@@ -96,8 +96,8 @@
 (defn log-factorial
   "Computes the natural logarithm of the factorial.
   
-  Returns ln(x!). More numerically stable than computing factorial and then
-  taking the log, especially for large x where x! would overflow.
+  Returns ln(x!). More numerically stable than computing factorial and then taking the log,
+  especially for large x where x! would overflow.
   
   Examples:
     (log-factorial 5)   ;=> 4.787491742782046 (ln(120))
@@ -113,8 +113,8 @@
 (defn subfactorial
   "Computes the subfactorial (number of derangements).
   
-  Returns !x, the number of permutations of x objects where no object appears
-  in its original position. Also known as derangements or discordant permutations.
+  Returns !x, the number of permutations of x objects where no object appears in its original
+  position. Also known as derangements or discordant permutations.
   
   Uses precomputed values for x < 22, otherwise approximates using !x ≈ x!/e.
   
@@ -224,9 +224,9 @@
 (defn choose-k-from-n
   "Calculates binomial coefficient C(n,k) = n! / (k! × (n-k)!).
   
-  Returns the number of ways to choose `k` items from `n` items without regard 
-  to order. Uses optimized algorithm that avoids computing large factorials
-  directly. For very large values, consider using [[log-choose-k-from-n]].
+  Returns the number of ways to choose `k` items from `n` items without regard to order. Uses
+  optimized algorithm that avoids computing large factorials directly. For very large values,
+  consider using [[log-choose-k-from-n]].
   
   Constraints: k ≤ n, both non-negative integers
   
@@ -275,8 +275,8 @@
 (defn log-choose-k-from-n
   "Computes the natural logarithm of the binomial coefficient.
   
-  Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). More numerically stable than 
-  computing the binomial coefficient directly for large values.
+  Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). More numerically stable than computing the binomial
+  coefficient directly for large values.
   
   Constraints: n ≥ k ≥ 0
   
@@ -368,8 +368,7 @@
 (defn log-stirling-number-of-the-second-kind
   "Computes the natural logarithm of the Stirling number of the second kind.
 
-  More numerically stable for large values where the direct computation
-  would overflow (k > 170).
+  More numerically stable for large values where the direct computation would overflow (k > 170).
 
   Examples:
     (log-stirling-number-of-the-second-kind 3 5)  ;=> 3.2188... (ln(25))
@@ -464,7 +463,8 @@
   "Computes the `n`th Bell number.
 
   Returns the total number of ways to partition a set of `n` items into non-empty subsets. This is
-  the sum of Stirling numbers of the second kind: B(`n`) = sum of S(`n`, `k`) for `k` from 0 to `n`."
+  the sum of Stirling numbers of the second kind: B(`n`) = sum of S(`n`, `k`) for `k` from 0 to
+  `n`."
   [n]
   (cond (> n 170) m/nan
     (and (m/non-? n) (< n 27)) (bell-numbers (long n))
@@ -515,14 +515,12 @@
 (defn binomial-probability
   "Computes the binomial probability mass function.
   
-  Returns P(X = k) for a binomial distribution: the probability of exactly
-  `successes` successes in `trials` independent trials, each with probability
-  `success-prob` of success.
+  Returns P(X = k) for a binomial distribution: the probability of exactly `successes` successes in
+  `trials` independent trials, each with probability `success-prob` of success.
   
   Formula: P(X=k) = C(n,k) × p^k × (1-p)^(n-k)
   
-  For large `trials` (>1000), consider using [[log-binomial-probability]]
-  to avoid numerical overflow.
+  For large `trials` (>1000), consider using [[log-binomial-probability]] to avoid numerical overflow.
   
   Examples:
     (binomial-probability 2 5 0.3)  ;=> 0.30869 (2 successes in 5 trials)
@@ -567,8 +565,8 @@
 (defn count-combinations
   "Returns the count of combinations of k items from n items.
 
-  This is equivalent to [[choose-k-from-n]] but with clearer naming
-  for use when counting rather than computing binomial coefficients.
+  This is equivalent to [[choose-k-from-n]] but with clearer naming for use when counting rather
+  than computing binomial coefficients.
 
   Examples:
     (count-combinations 2 5)  ;=> 10.0 (C(5,2))
@@ -629,9 +627,8 @@
 (defn integer-partitions
   "Generates all partitions of integer n as sums of positive integers.
 
-  An integer partition of n is a way of writing n as a sum of positive integers,
-  where order doesn't matter. Each partition is returned as a sequence of parts
-  in descending order.
+  An integer partition of n is a way of writing n as a sum of positive integers, where order doesn't
+  matter. Each partition is returned as a sequence of parts in descending order.
 
   Different from set partitions (Bell numbers) - here we partition a number, not a set.
 
@@ -685,11 +682,10 @@
 ;;;UNORDERED COMBINATIONS
 ;taken from an old version of clojure.math.combinatorics
 (defn- unchunk
-  "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
-  lazy with no chunks. Chunks are good for efficiency when the data items are
-  small, but when being processed via map, for example, a reference is kept to
-  every function result in the chunk until the entire chunk has been processed,
-  which increases the amount of memory in use that cannot be garbage collected."
+  "Given a sequence that may have chunks, return a sequence that is 1-at-a-time lazy with no chunks.
+  Chunks are good for efficiency when the data items are small, but when being processed via map,
+  for example, a reference is kept to every function result in the chunk until the entire chunk has
+  been processed, which increases the amount of memory in use that cannot be garbage collected."
   [s]
   (lazy-seq
     (when (seq s)
@@ -776,7 +772,7 @@
   :ret (s/nilable ::groups-of-items))
 
 (defn combinations-using-all
-  "Generates all ways to partition `items` according to `breakdown`.
+  "Generates all the ways to partition `items` according to `breakdown`.
 
   The `breakdown` is a collection of positive longs that sum to the number of items. Each element in
   `breakdown` specifies the size of one group in the partition."
@@ -825,8 +821,8 @@
 (defn permutations
   "Generates all permutations of items.
   
-  Returns all possible arrangements where order matters. Unlike combinations,
-  [1 2] and [2 1] are different permutations.
+  Returns all possible arrangements where order matters. Unlike combinations, [1 2] and [2 1] are
+  different permutations.
   
   Preserves the input collection type (vector input → vector output).
   
@@ -852,8 +848,7 @@
   "Generates all k-permutations of items (ordered selections of k items).
 
   Returns all possible ways to select and arrange k items from the collection.
-  Unlike `permutations` which returns all n! permutations, this returns P(n,k)
-  arrangements.
+  Unlike `permutations` which returns all n! permutations, this returns P(n,k) arrangements.
 
   When k equals the number of items, equivalent to [[permutations]].
 

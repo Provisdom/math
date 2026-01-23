@@ -93,26 +93,26 @@
     (t/is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3}))))
 
 ;;;SHORTHAND
-(t/deftest unparse-shorthand-test
-  (t/with-instrument `format/unparse-shorthand
-    (t/is-spec-check format/unparse-shorthand))
+(t/deftest format-shorthand-test
+  (t/with-instrument `format/format-shorthand
+    (t/is-spec-check format/format-shorthand))
   (t/with-instrument :all
-    (t/is= "3E+20" (format/unparse-shorthand 3.232348938493849E20 3))
-    (t/is= "3T" (format/unparse-shorthand 3232394349923 3))
-    (t/is= "32B" (format/unparse-shorthand 32323943499 3))
-    (t/is= "323M" (format/unparse-shorthand 323234324 3))
-    (t/is= "32K" (format/unparse-shorthand 32323 2))
-    (t/is= "3K" (format/unparse-shorthand 3232 1))
+    (t/is= "3E+20" (format/format-shorthand 3.232348938493849E20 3))
+    (t/is= "3T" (format/format-shorthand 3232394349923 3))
+    (t/is= "32B" (format/format-shorthand 32323943499 3))
+    (t/is= "323M" (format/format-shorthand 323234324 3))
+    (t/is= "32K" (format/format-shorthand 32323 2))
+    (t/is= "3K" (format/format-shorthand 3232 1))
     (t/is= "323.23432412M"
-      (format/unparse-shorthand 3.23234324123124E8 13 {::format/max-decimal-places 2}))
-    (t/is= "320M" (format/unparse-shorthand 3.23234324123124E8 13 {::format/max-digits 2}))
-    (t/is= "3E-5" (format/unparse-shorthand 3.232E-5 1))
-    (t/is= "NaN" (format/unparse-shorthand m/nan 3))
-    (t/is= "Inf" (format/unparse-shorthand m/inf+ 3))
-    (t/is= "-Inf" (format/unparse-shorthand m/inf- 3))
-    (t/is= "Inf" (format/unparse-shorthand m/inf+ 3 {::format/money? true}))
-    (t/is= "$323M" (format/unparse-shorthand 323234324 3 {::format/money? true}))
-    (t/is= "-$323M" (format/unparse-shorthand -323234324 3 {::format/money? true}))))
+      (format/format-shorthand 3.23234324123124E8 13 {::format/max-decimal-places 2}))
+    (t/is= "320M" (format/format-shorthand 3.23234324123124E8 13 {::format/max-digits 2}))
+    (t/is= "3E-5" (format/format-shorthand 3.232E-5 1))
+    (t/is= "NaN" (format/format-shorthand m/nan 3))
+    (t/is= "Inf" (format/format-shorthand m/inf+ 3))
+    (t/is= "-Inf" (format/format-shorthand m/inf- 3))
+    (t/is= "Inf" (format/format-shorthand m/inf+ 3 {::format/money? true}))
+    (t/is= "$323M" (format/format-shorthand 323234324 3 {::format/money? true}))
+    (t/is= "-$323M" (format/format-shorthand -323234324 3 {::format/money? true}))))
 
 (t/deftest parse-shorthand-test
   (t/with-instrument `format/parse-shorthand
@@ -150,21 +150,21 @@
     (t/is (anomalies/anomaly? (format/parse-shorthand "(println \"test\")")))
     (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
 
-(t/deftest unparse-shorthand-boundary-test
-  (t/with-instrument `format/unparse-shorthand
+(t/deftest format-shorthand-boundary-test
+  (t/with-instrument `format/format-shorthand
     ;; Test boundary between no suffix and K
-    (t/is= "999.0" (format/unparse-shorthand 999 5))
-    (t/is= "1K" (format/unparse-shorthand 1000 5))
+    (t/is= "999.0" (format/format-shorthand 999 5))
+    (t/is= "1K" (format/format-shorthand 1000 5))
     ;; Test boundary between K and M
-    (t/is= "999K" (format/unparse-shorthand 999000 5))
-    (t/is= "1M" (format/unparse-shorthand 1000000 5))))
+    (t/is= "999K" (format/format-shorthand 999000 5))
+    (t/is= "1M" (format/format-shorthand 1000000 5))))
 
 (t/deftest format-parse-roundtrip-test
   (t/with-instrument :all
     ;; Test that parse(unparse(x)) approximately equals x for various values
     (random/bind-seed 42
       (doseq [x [1234 1234567 1234567890 1234567890123 -5678]]
-        (let [formatted (format/unparse-shorthand x 10)
+        (let [formatted (format/format-shorthand x 10)
               parsed (format/parse-shorthand formatted)]
           (when (number? parsed)
             (t/is (m/roughly? x parsed (* (m/abs x) 0.01))
@@ -231,16 +231,16 @@
     (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
 
 ;;;CUSTOM SHORTHAND
-(t/deftest unparse-shorthand-custom-test
-  (t/with-instrument `format/unparse-shorthand-custom
-    (t/is-spec-check format/unparse-shorthand-custom))
+(t/deftest format-shorthand-custom-test
+  (t/with-instrument `format/format-shorthand-custom
+    (t/is-spec-check format/format-shorthand-custom))
   (t/with-instrument :all
     ;; Custom letters
-    (t/is= "1.5k" (format/unparse-shorthand-custom 1500 5 {::format/shorthand-letters {"k" 1000}}))
-    ;; Default behavior matches unparse-shorthand
-    (t/is= "1.5K" (format/unparse-shorthand-custom 1500 5))
+    (t/is= "1.5k" (format/format-shorthand-custom 1500 5 {::format/shorthand-letters {"k" 1000}}))
+    ;; Default behavior matches format-shorthand
+    (t/is= "1.5K" (format/format-shorthand-custom 1500 5))
     ;; Money option
-    (t/is= "$1.5K" (format/unparse-shorthand-custom 1500 5 {::format/money? true}))
+    (t/is= "$1.5K" (format/format-shorthand-custom 1500 5 {::format/money? true}))
     ;; Special values
-    (t/is= "NaN" (format/unparse-shorthand-custom m/nan 5))
-    (t/is= "Inf" (format/unparse-shorthand-custom m/inf+ 5))))
+    (t/is= "NaN" (format/format-shorthand-custom m/nan 5))
+    (t/is= "Inf" (format/format-shorthand-custom m/inf+ 5))))

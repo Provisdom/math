@@ -54,19 +54,19 @@
 
 (s/def ::coefficients
   (s/with-gen (s/coll-of ::m/number :kind vector? :min-count 1)
-    #(s/gen (s/coll-of (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)
-              :kind vector? :min-count 1 :max-count 5))))
+    #(gen/vector (s/gen ::m/finite) 1 5)))
 
 (s/def ::points
   (s/with-gen (s/coll-of (s/tuple ::m/finite ::m/finite) :min-count 1)
-    #(gen/such-that
-       (fn [points] (= (count points) (count (distinct (map first points)))))
-       (gen/vector
-         (gen/tuple
-           (s/gen (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false))
-           (s/gen (s/double-in :min -10.0 :max 10.0 :NaN? false :infinite? false)))
-         1 5)
-       100)))
+    #(gen/bind (gen/choose 1 5)
+       (fn [n]
+         (gen/fmap (fn [[xs ys]]
+                     (mapv vector xs ys))
+           (gen/tuple
+             (gen/fmap (fn [nums] (vec (take n (distinct (map double nums)))))
+               (gen/vector (gen/double* {:min -1e6 :max 1e6 :infinite? false :NaN? false})
+                 n (* n 10)))
+             (gen/vector (gen/double* {:min -1e6 :max 1e6 :infinite? false :NaN? false}) n)))))))
 
 (s/def ::node-count
   (s/with-gen (s/int-in 1 1000)
@@ -233,10 +233,10 @@
   This is useful for integration with systems that expect standard polynomials.
   
   Parameters:
-    chebyshev-factors - Sequence of coefficients for Chebyshev expansion
-  
+    `chebyshev-factors` - Sequence of coefficients for Chebyshev expansion
+
   Options:
-    ::second-kind? - If true, converts from U_n(x) basis instead of T_n(x)
+    `::second-kind?` - If `true`, converts from U_n(x) basis instead of T_n(x)
   
   Returns coefficients for the equivalent standard polynomial.
   
@@ -286,11 +286,11 @@
   P_i(x) depends on the polynomial kind specified.
   
   Parameters:
-    end-degree - Maximum degree of polynomials to include
-  
+    `end-degree` - Maximum degree of polynomials to include
+
   Options:
-    ::start-degree - Minimum degree to include (default 0)
-    ::chebyshev-kind - Polynomial type: 0=standard (x^n), 1=Chebyshev T_n(x), 2=Chebyshev U_n(x)
+    `::start-degree` - Minimum degree to include (default 0)
+    `::chebyshev-kind` - Polynomial type: 0=standard (x^n), 1=Chebyshev T_n(x), 2=Chebyshev U_n(x)
   
   Returns a function that takes a number x and returns a vector of polynomial evaluations.
   
@@ -314,16 +314,16 @@
 
 (defn polynomial-fns
   "Creates a collection of individual polynomial basis functions.
-  
-  Similar to polynomial-fn but returns separate functions rather than a single function that
+
+  Similar to [[polynomial-fn]] but returns separate functions rather than a single function that
   returns a vector.
-  
+
   Parameters:
-    end-degree - Maximum degree of polynomials to include
-  
+    `end-degree` - Maximum degree of polynomials to include
+
   Options:
-    ::start-degree - Minimum degree to include (default 0)
-    ::chebyshev-kind - Polynomial type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+    `::start-degree` - Minimum degree to include (default 0)
+    `::chebyshev-kind` - Polynomial type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
   Returns a sequence of functions, each evaluating one polynomial basis function.
   
@@ -347,15 +347,15 @@
 
 (defn polynomial-2D-count
   "Calculates the number of 2D polynomial terms within degree bounds.
-  
+
   For 2D polynomials up to degree n, counts terms like: 1, x, y, x², xy, y², ...
   The total count follows the formula: Σ(i+1) for i from start-degree to end-degree.
-  
+
   Parameters:
-    end-degree - Maximum total degree to include
-  
+    `end-degree` - Maximum total degree to include
+
   Options:
-    ::start-degree - Minimum total degree to include (default 0)
+    `::start-degree` - Minimum total degree to include (default 0)
   
   Returns the number of polynomial terms.
   
@@ -383,17 +383,17 @@
 
 (defn polynomial-2D-fn-by-degree
   "Creates a 2D polynomial basis function organized by total degree.
-  
+
   Generates all polynomial terms x^i × y^j where i+j ≤ end-degree.
   Terms are ordered by total degree, then by x-power (highest first):
   [1, x, y, x², xy, y², x³, x²y, xy², y³, ...]
-  
+
   Parameters:
-    end-degree - Maximum total degree (i+j) to include
-  
+    `end-degree` - Maximum total degree (i+j) to include
+
   Options:
-    ::start-degree - Minimum total degree to include (default 0)
-    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+    `::start-degree` - Minimum total degree to include (default 0)
+    `::chebyshev-kind` - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
   Returns a function that takes (x, y) and returns a vector of polynomial evaluations.
   
@@ -426,16 +426,16 @@
 
 (defn polynomial-2D-fn-by-basis-count
   "Creates a 2D polynomial basis function with a specified number of terms.
-  
-  Similar to polynomial-2D-fn-by-degree but determines the degree based on
-  the desired number of basis functions rather than a maximum degree.
-  
+
+  Similar to [[polynomial-2D-fn-by-degree]] but determines the degree based on the desired number of
+  basis functions rather than a maximum degree.
+
   Parameters:
-    basis-count - Exact number of polynomial terms to include
-  
+    `basis-count` - Exact number of polynomial terms to include
+
   Options:
-    ::start-degree - Minimum total degree to include (default 0)
-    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+    `::start-degree` - Minimum total degree to include (default 0)
+    `::chebyshev-kind` - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
   Returns a function that takes (x, y) and returns a vector with exactly basis-count polynomial
   evaluations.
@@ -465,22 +465,21 @@
 
 (defn polynomial-ND-fn
   "Creates an N-dimensional polynomial basis function.
-  
-  Generates all polynomial terms up to the specified degree for an arbitrary
-  number of variables. Terms are ordered by total degree, then lexicographically
-  by dimension with a small perturbation to ensure consistent ordering.
-  
+
+  Generates all polynomial terms up to the specified degree for an arbitrary number of variables.
+  Terms are ordered by total degree, then lexicographically by dimension with a small perturbation
+  to ensure consistent ordering.
+
   For variables [x, y, z, ...], generates terms like:
   [1, x, y, z, x², xy, xz, y², yz, z², x³, x²y, x²z, xy², xyz, xz², y³, ...]
-  
+
   Parameters:
-    end-degree - Maximum total degree for polynomial terms
-  
+    `end-degree` - Maximum total degree for polynomial terms
+
   Options:
-    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+    `::chebyshev-kind` - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
-  Returns a function that takes a vector [x y z ...] and returns a vector
-  of polynomial evaluations.
+  Returns a function that takes a vector [x y z ...] and returns a vector of polynomial evaluations.
   
   Example:
     ((polynomial-ND-fn 2) [2.0 3.0 4.0]) ; => all terms up to degree 2"
@@ -512,20 +511,20 @@
 
 (defn polynomial-ND-fn-without-cross-terms
   "Creates an N-dimensional polynomial basis with no interaction terms.
-  
+
   Generates only pure power terms (no cross-products) for each variable:
   [1, x, y, z, x², y², z², x³, y³, z³, ...]
-  
+
   This is useful for additive models where variables don't interact.
-  
+
   Parameters:
-    end-degree - Maximum degree for individual variable terms
-  
+    `end-degree` - Maximum degree for individual variable terms
+
   Options:
-    ::chebyshev-kind - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
+    `::chebyshev-kind` - Basis type: 0=standard, 1=Chebyshev T_n, 2=Chebyshev U_n
   
-  Returns a function that takes a vector [x y z ...] and returns a vector
-  of polynomial evaluations without cross-terms.
+  Returns a function that takes a vector [x y z ...] and returns a vector of polynomial evaluations
+  without cross-terms.
   
   Example:
     ((polynomial-ND-fn-without-cross-terms 2) [2.0 3.0 4.0])
@@ -551,17 +550,17 @@
 (defn horner-eval
   "Evaluates a polynomial at x using Horner's method.
 
-  Horner's method is numerically stable and efficient, requiring only n
-  multiplications and n additions for a degree-n polynomial.
+  Horner's method is numerically stable and efficient, requiring only n multiplications and n
+  additions for a degree-n polynomial.
 
   Coefficients are ordered [a₀ a₁ a₂ ...] representing:
   a₀ + a₁x + a₂x² + ...
 
   Parameters:
-    coefficients - Vector of polynomial coefficients [a₀ a₁ a₂ ...]
-    x - Point at which to evaluate the polynomial
+    `coefficients` - Vector of polynomial coefficients [a₀ a₁ a₂ ...]
+    `x` - Point at which to evaluate the polynomial
 
-  Returns the polynomial value at x.
+  Returns the polynomial value at `x`.
 
   Example:
     (horner-eval [1 2 3] 2.0) ; => 1 + 2*2 + 3*4 = 17.0"
@@ -593,13 +592,13 @@
   Uses the recurrence relation for efficient and stable evaluation.
 
   Parameters:
-    coefficients - Vector of Chebyshev coefficients [c₀ c₁ c₂ ...]
-    x - Point at which to evaluate (typically in [-1, 1])
+    `coefficients` - Vector of Chebyshev coefficients [c₀ c₁ c₂ ...]
+    `x` - Point at which to evaluate (typically in [-1, 1])
 
   Options:
-    ::second-kind? - If true, evaluates sum of U_n(x) instead of T_n(x)
+    `::second-kind?` - If `true`, evaluates sum of U_n(x) instead of T_n(x)
 
-  Returns the value of the Chebyshev series at x.
+  Returns the value of the Chebyshev series at `x`.
 
   Example:
     (clenshaw-eval [1 2 3] 0.5) ; => T₀(0.5) + 2T₁(0.5) + 3T₂(0.5)"
@@ -627,8 +626,8 @@
   Coefficients are ordered [a₀ a₁ a₂ ...] representing a₀ + a₁x + a₂x² + ...
 
   Parameters:
-    coeffs1 - First polynomial coefficients
-    coeffs2 - Second polynomial coefficients
+    `coeffs1` - First polynomial coefficients
+    `coeffs2` - Second polynomial coefficients
 
   Returns coefficient vector of the sum polynomial.
 
@@ -650,10 +649,10 @@
   "Subtracts two polynomials represented as coefficient vectors.
 
   Parameters:
-    coeffs1 - First polynomial coefficients (minuend)
-    coeffs2 - Second polynomial coefficients (subtrahend)
+    `coeffs1` - First polynomial coefficients (minuend)
+    `coeffs2` - Second polynomial coefficients (subtrahend)
 
-  Returns coefficient vector of coeffs1 - coeffs2.
+  Returns coefficient vector of `coeffs1` - `coeffs2`.
 
   Example:
     (poly-subtract [5 7 3] [4 5]) ; => [1.0 2.0 3.0]"
@@ -675,8 +674,8 @@
   Uses convolution of coefficient vectors.
 
   Parameters:
-    coeffs1 - First polynomial coefficients
-    coeffs2 - Second polynomial coefficients
+    `coeffs1` - First polynomial coefficients
+    `coeffs2` - Second polynomial coefficients
 
   Returns coefficient vector of the product polynomial.
 
@@ -708,8 +707,8 @@
   "Scales a polynomial by a constant.
 
   Parameters:
-    coeffs - Polynomial coefficients
-    scalar - Scalar multiplier
+    `coeffs` - Polynomial coefficients
+    `scalar` - Scalar multiplier
 
   Returns scaled coefficient vector.
 
@@ -725,21 +724,25 @@
 (defn poly-divide
   "Divides two polynomials using polynomial long division.
 
-  Returns a map with :quotient and :remainder coefficient vectors.
+  Returns a map with `:quotient` and `:remainder` coefficient vectors.
 
   Parameters:
-    dividend - Dividend polynomial coefficients
-    divisor - Divisor polynomial coefficients
+    `dividend` - Dividend polynomial coefficients
+    `divisor` - Divisor polynomial coefficients
 
-  Returns {:quotient [...] :remainder [...]}
+  Returns `{:quotient [...] :remainder [...]}`
 
   Example:
     (poly-divide [1 0 1] [1 1])
     ; => {:quotient [-1.0 1.0] :remainder [2.0]} (x²+1)/(x+1) = x-1 + 2/(x+1)"
   [dividend divisor]
-  (let [roughly-zero? (fn [x] (< (m/abs x) 1e-14))
-        dividend (mapv double dividend)
+  (let [dividend (mapv double dividend)
         divisor (mapv double divisor)
+        ;; Use relative tolerance based on coefficient magnitudes
+        max-coef (max (reduce max 0.0 (map m/abs dividend))
+                   (reduce max 0.0 (map m/abs divisor)))
+        tol (* 1e-14 (max 1.0 max-coef))
+        roughly-zero? (fn [x] (< (m/abs x) tol))
         ;; Remove trailing zeros from divisor
         divisor (loop [d divisor]
                   (if (and (> (count d) 1) (roughly-zero? (peek d)))
@@ -785,9 +788,9 @@
   These are the optimal interpolation points on [-1, 1] that minimize the Runge phenomenon.
 
   Parameters:
-    n - Number of nodes to generate
+    `n` - Number of nodes to generate
 
-  Returns a vector of n Chebyshev node locations in [-1, 1].
+  Returns a vector of `n` Chebyshev node locations in [-1, 1].
 
   Example:
     (chebyshev-nodes 3) ; => [0.866... 0.0 -0.866...]"
@@ -807,9 +810,9 @@
   These are the points where T_n reaches its extreme values ±1.
 
   Parameters:
-    n - Number of extrema points (n+1 points from 0 to n)
+    `n` - Number of extrema points (n+1 points from 0 to n)
 
-  Returns a vector of n Chebyshev extrema locations in [-1, 1].
+  Returns a vector of `n` Chebyshev extrema locations in [-1, 1].
 
   Example:
     (chebyshev-extrema 3) ; => [1.0 0.5 -0.5 -1.0]"
@@ -834,7 +837,7 @@
   Uses the relationship between powers of x and Chebyshev polynomials.
 
   Parameters:
-    regular-factors - Standard polynomial coefficients [a₀ a₁ a₂ ...]
+    `regular-factors` - Standard polynomial coefficients [a₀ a₁ a₂ ...]
 
   Returns Chebyshev coefficients [c₀ c₁ c₂ ...].
 
@@ -842,7 +845,8 @@
     (regular-poly-factors-to-chebyshev-poly-factors [1 0 1])
     ; => [1.5 0.0 0.5] since x² = (T₂(x) + T₀(x))/2"
   [regular-factors]
-  (let [n (count regular-factors)
+  (let [regular-factors (vec regular-factors)
+        n (count regular-factors)
         ;; Coefficients for x^k in terms of Chebyshev polynomials
         ;; x^0 = T_0
         ;; x^1 = T_1
@@ -893,7 +897,7 @@
   - Solving Laplace's equation
 
   Parameters:
-    degree - Non-negative integer degree of the polynomial
+    `degree` - Non-negative integer degree of the polynomial
 
   Returns a function that evaluates P_n(x).
 
@@ -929,11 +933,11 @@
   Used in quantum mechanics (harmonic oscillator) and probability theory.
 
   Parameters:
-    degree - Non-negative integer degree of the polynomial
+    `degree` - Non-negative integer degree of the polynomial
 
   Options:
-    ::physicist? - If true (default), uses physicist's convention H_n
-                   If false, uses probabilist's convention He_n
+    `::physicist?` - If `true` (default), uses physicist's convention H_n
+                     If `false`, uses probabilist's convention He_n
 
   Returns a function that evaluates the Hermite polynomial.
 
@@ -985,7 +989,7 @@
   - Solving differential equations with exponential decay
 
   Parameters:
-    degree - Non-negative integer degree of the polynomial
+    `degree` - Non-negative integer degree of the polynomial
 
   Returns a function that evaluates L_n(x).
 
@@ -1016,16 +1020,16 @@
 (defn lagrange-interpolation-fn
   "Creates a Lagrange interpolating polynomial for given data points.
 
-  Given n points (x₀,y₀), (x₁,y₁), ..., constructs the unique polynomial
-  of degree at most n-1 passing through all points.
+  Given n points (x₀,y₀), (x₁,y₁), ..., constructs the unique polynomial of degree at most n-1
+  passing through all points.
 
   Parameters:
-    points - Sequence of [x y] coordinate pairs
+    `points` - Sequence of [x y] coordinate pairs
 
-  Returns a function that evaluates the interpolating polynomial at any x.
+  Returns a function that evaluates the interpolating polynomial at any `x`.
 
-  Note: For many points or points outside the data range, consider using
-  Chebyshev interpolation for better numerical stability.
+  Note: For many points or points outside the data range, consider using Chebyshev interpolation for
+  better numerical stability.
 
   Example:
     (def f (lagrange-interpolation-fn [[0 1] [1 2] [2 5]]))
@@ -1060,7 +1064,7 @@
   such that p(x) = a₀ + a₁x + ... + a_{n-1}x^{n-1} passes through all points.
 
   Parameters:
-    points - Sequence of [x y] coordinate pairs
+    `points` - Sequence of [x y] coordinate pairs
 
   Returns coefficient vector [a₀ a₁ a₂ ...].
 
@@ -1103,11 +1107,11 @@
   This form is more efficient for adding new points incrementally.
 
   Parameters:
-    points - Sequence of [x y] coordinate pairs
+    `points` - Sequence of [x y] coordinate pairs
 
   Returns a map with:
-    :coefficients - Newton form coefficients
-    :xs - The x-values for computing the polynomial
+    `:coefficients` - Newton form coefficients
+    `:xs` - The x-values for computing the polynomial
 
   Example:
     (newton-interpolation-coefficients [[0 1] [1 2] [2 5]])"
@@ -1140,9 +1144,9 @@
   Uses Newton's divided differences for efficient evaluation.
 
   Parameters:
-    points - Sequence of [x y] coordinate pairs
+    `points` - Sequence of [x y] coordinate pairs
 
-  Returns a function that evaluates the interpolating polynomial at any x.
+  Returns a function that evaluates the interpolating polynomial at any `x`.
 
   Example:
     (def f (newton-interpolation-fn [[0 1] [1 2] [2 5]]))

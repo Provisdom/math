@@ -3,7 +3,7 @@
     [provisdom.math.polynomials :as poly]
     [provisdom.test.core :as t]))
 
-;;22 seconds
+;;12 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -154,7 +154,7 @@
 
 (t/deftest polynomial-ND-fn-test
   (t/with-instrument `poly/polynomial-ND-fn
-    (t/is-spec-check poly/polynomial-ND-fn))
+    (t/is-spec-check poly/polynomial-ND-fn {:num-tests 200}))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0 4.0 4.0 6.0 8.0 9.0 12.0 16.0 12.0 16.0 18.0 24.0 32.0 36.0 48.0 36.0 48.0
             64.0 72.0 96.0 144.0 144.0 192.0 288.0 576.0]
@@ -279,20 +279,22 @@
     (t/is= -1.0 (last (poly/chebyshev-extrema 5)))))
 
 (t/deftest regular-poly-factors-to-chebyshev-poly-factors-test
-  ;; Skip spec-check and instrumentation due to internal function calls that have issues
-  ;; x² = (T₂ + T₀)/2, so [1 0 1] (1+x²) => [1.5 0 0.5]
-  (let [result (poly/regular-poly-factors-to-chebyshev-poly-factors [1 0 1])]
-    (t/is= 3 (count result))
-    (t/is-approx= 1.5 (nth result 0) :tolerance 1e-10)
-    (t/is-approx= 0.0 (nth result 1) :tolerance 1e-10)
-    (t/is-approx= 0.5 (nth result 2) :tolerance 1e-10))
-  ;; constant: 5 = 5*T₀
-  (t/is-approx= 5.0
-    (first (poly/regular-poly-factors-to-chebyshev-poly-factors [5])) :tolerance 1e-10)
-  ;; x = T₁
-  (let [result (poly/regular-poly-factors-to-chebyshev-poly-factors [0 1])]
-    (t/is-approx= 0.0 (first result) :tolerance 1e-10)
-    (t/is-approx= 1.0 (second result) :tolerance 1e-10)))
+  (t/with-instrument `poly/regular-poly-factors-to-chebyshev-poly-factors
+    (t/is-spec-check poly/regular-poly-factors-to-chebyshev-poly-factors))
+  (t/with-instrument :all
+    ;; x² = (T₂ + T₀)/2, so [1 0 1] (1+x²) => [1.5 0 0.5]
+    (let [result (poly/regular-poly-factors-to-chebyshev-poly-factors [1 0 1])]
+      (t/is= 3 (count result))
+      (t/is-approx= 1.5 (nth result 0) :tolerance 1e-10)
+      (t/is-approx= 0.0 (nth result 1) :tolerance 1e-10)
+      (t/is-approx= 0.5 (nth result 2) :tolerance 1e-10))
+    ;; constant: 5 = 5*T₀
+    (t/is-approx= 5.0
+      (first (poly/regular-poly-factors-to-chebyshev-poly-factors [5])) :tolerance 1e-10)
+    ;; x = T₁
+    (let [result (poly/regular-poly-factors-to-chebyshev-poly-factors [0 1])]
+      (t/is-approx= 0.0 (first result) :tolerance 1e-10)
+      (t/is-approx= 1.0 (second result) :tolerance 1e-10))))
 
 ;;;ORTHOGONAL POLYNOMIALS
 (t/deftest legendre-polynomial-fn-test
@@ -357,39 +359,45 @@
       (t/is= 3.25 (f 1.5))))) ; 1 + 1.5² = 3.25
 
 (t/deftest lagrange-interpolation-coefficients-test
-  ;; Skip spec-check and instrumentation due to internal poly-multiply/scale calls
-  ;; Points (0,1), (1,2), (2,5) lie on y = 1 + x²
-  (let [coeffs (poly/lagrange-interpolation-coefficients [[0 1] [1 2] [2 5]])]
-    (t/is= 3 (count coeffs))
-    (t/is-approx= 1.0 (nth coeffs 0) :tolerance 1e-10)
-    (t/is-approx= 0.0 (nth coeffs 1) :tolerance 1e-10)
-    (t/is-approx= 1.0 (nth coeffs 2) :tolerance 1e-10))
-  ;; Linear: (0,0), (1,2) => y = 2x
-  (let [coeffs (poly/lagrange-interpolation-coefficients [[0 0] [1 2]])]
-    (t/is= 2 (count coeffs))
-    (t/is-approx= 0.0 (first coeffs) :tolerance 1e-10)
-    (t/is-approx= 2.0 (second coeffs) :tolerance 1e-10)))
+  (t/with-instrument `poly/lagrange-interpolation-coefficients
+    (t/is-spec-check poly/lagrange-interpolation-coefficients))
+  (t/with-instrument :all
+    ;; Points (0,1), (1,2), (2,5) lie on y = 1 + x²
+    (let [coeffs (poly/lagrange-interpolation-coefficients [[0 1] [1 2] [2 5]])]
+      (t/is= 3 (count coeffs))
+      (t/is-approx= 1.0 (nth coeffs 0) :tolerance 1e-10)
+      (t/is-approx= 0.0 (nth coeffs 1) :tolerance 1e-10)
+      (t/is-approx= 1.0 (nth coeffs 2) :tolerance 1e-10))
+    ;; Linear: (0,0), (1,2) => y = 2x
+    (let [coeffs (poly/lagrange-interpolation-coefficients [[0 0] [1 2]])]
+      (t/is= 2 (count coeffs))
+      (t/is-approx= 0.0 (first coeffs) :tolerance 1e-10)
+      (t/is-approx= 2.0 (second coeffs) :tolerance 1e-10))))
 
 (t/deftest newton-interpolation-coefficients-test
-  ;; Skip spec-check due to issues with generated points
-  ;; Points (0,1), (1,2), (2,5)
-  (let [{:keys [coefficients xs]} (poly/newton-interpolation-coefficients [[0 1] [1 2] [2 5]])]
-    (t/is= [0 1 2] xs)
-    ;; c₀ = f(x₀) = 1
-    ;; c₁ = (f(x₁)-f(x₀))/(x₁-x₀) = (2-1)/(1-0) = 1
-    ;; c₂ = divided difference = 1
-    (t/is= 3 (count coefficients))
-    (t/is-approx= 1.0 (nth coefficients 0) :tolerance 1e-10)
-    (t/is-approx= 1.0 (nth coefficients 1) :tolerance 1e-10)
-    (t/is-approx= 1.0 (nth coefficients 2) :tolerance 1e-10)))
+  (t/with-instrument `poly/newton-interpolation-coefficients
+    (t/is-spec-check poly/newton-interpolation-coefficients))
+  (t/with-instrument :all
+    ;; Points (0,1), (1,2), (2,5)
+    (let [{:keys [coefficients xs]} (poly/newton-interpolation-coefficients [[0 1] [1 2] [2 5]])]
+      (t/is= [0 1 2] xs)
+      ;; c₀ = f(x₀) = 1
+      ;; c₁ = (f(x₁)-f(x₀))/(x₁-x₀) = (2-1)/(1-0) = 1
+      ;; c₂ = divided difference = 1
+      (t/is= 3 (count coefficients))
+      (t/is-approx= 1.0 (nth coefficients 0) :tolerance 1e-10)
+      (t/is-approx= 1.0 (nth coefficients 1) :tolerance 1e-10)
+      (t/is-approx= 1.0 (nth coefficients 2) :tolerance 1e-10))))
 
 (t/deftest newton-interpolation-fn-test
-  ;; Skip spec-check due to factory function issues
-  ;; Should produce same results as Lagrange
-  (let [points [[0 1] [1 2] [2 5]]
-        lagrange (poly/lagrange-interpolation-fn points)
-        newton (poly/newton-interpolation-fn points)]
-    (t/is-approx= (lagrange 0.0) (newton 0.0) :tolerance 1e-10)
-    (t/is-approx= (lagrange 1.0) (newton 1.0) :tolerance 1e-10)
-    (t/is-approx= (lagrange 1.5) (newton 1.5) :tolerance 1e-10)
-    (t/is-approx= (lagrange 2.0) (newton 2.0) :tolerance 1e-10)))
+  (t/with-instrument `poly/newton-interpolation-fn
+    (t/is-spec-check poly/newton-interpolation-fn))
+  (t/with-instrument :all
+    ;; Should produce same results as Lagrange
+    (let [points [[0 1] [1 2] [2 5]]
+          lagrange (poly/lagrange-interpolation-fn points)
+          newton (poly/newton-interpolation-fn points)]
+      (t/is-approx= (lagrange 0.0) (newton 0.0) :tolerance 1e-10)
+      (t/is-approx= (lagrange 1.0) (newton 1.0) :tolerance 1e-10)
+      (t/is-approx= (lagrange 1.5) (newton 1.5) :tolerance 1e-10)
+      (t/is-approx= (lagrange 2.0) (newton 2.0) :tolerance 1e-10))))

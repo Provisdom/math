@@ -281,8 +281,8 @@
 (defn vector-roughly-prob?
   "Returns true if `x` is a vector of values that are approximately probabilities.
   
-  Elements are considered probability values if they are within the
-  specified accuracy tolerance `accu` of the range [0, 1].
+  Elements are considered probability values if they are within the specified accuracy tolerance
+  `accu` of the range [0, 1].
   
   Examples:
     (vector-roughly-prob? [0.3 1.01] 0.02) => true (1.01 is close to 1)
@@ -338,8 +338,8 @@
 (defn roughly-probs?
   "Returns true if `x` is approximately a probability distribution vector.
   
-  Elements must be approximately in [0, 1] within `accu` tolerance,
-  and the sum must be approximately 1.0 within `sum-accu` tolerance.
+  Elements must be approximately in [0, 1] within `accu` tolerance, and the sum must be
+  approximately 1.0 within `sum-accu` tolerance.
   
   Examples:
     (roughly-probs? [0.31 0.69] 0.01 1e-8) => true
@@ -493,8 +493,8 @@
   "Finds the first element in vector `v` where predicate `index+number->bool` returns a truthy
   value.
   
-  The predicate receives (index value) and the function returns the
-  first value for which the predicate is truthy, or nil if none found.
+  The predicate receives (index value) and the function returns the first value for which the
+  predicate is truthy, or nil if none found.
   
   Examples:
     (some-kv (fn [i v] (when (> v 5) v)) [1 3 7 2]) => 7
@@ -558,8 +558,8 @@
 (defn concat-by-index
   "Concatenates collections `coll1` and `coll2` with the second starting at index `i`.
   
-  Overlays `coll2` onto `coll1` starting at index `i`. Values from `coll2` take
-  precedence over `coll1`. Gaps are filled with nil.
+  Overlays `coll2` onto `coll1` starting at index `i`. Values from `coll2` take precedence over
+  `coll1`. Gaps are filled with nil.
   
   Examples:
     (concat-by-index [1 2 3] [8 9] 1) => (1 8 9)
@@ -664,8 +664,8 @@
 (defn kahan-sum
   "Computes the sum of `numbers` using Kahan summation algorithm for improved accuracy.
   
-  Reduces floating-point errors that accumulate in naive summation,
-  providing better precision than regular addition for large sequences.
+  Reduces floating-point errors that accumulate in naive summation, providing better precision than
+  regular addition for large sequences.
   
   Examples:
     (kahan-sum [0.1 0.1 0.1]) => 0.30000000000000004 (more accurate than +)
@@ -740,8 +740,8 @@
   For 3D vectors: returns a vector perpendicular to both inputs with magnitude |`v1`| |`v2`|
   sin(theta). Direction follows right-hand rule.
   
-  For 2D vectors: returns the z-component of the 3D cross product,
-  which is the signed area of the parallelogram formed by the vectors.
+  For 2D vectors: returns the z-component of the 3D cross product, which is the signed area of the
+  parallelogram formed by the vectors.
   
   Examples:
     (cross-product [1 0 0] [0 1 0]) => [0 0 1] (right-hand rule)

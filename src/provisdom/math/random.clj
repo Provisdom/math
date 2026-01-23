@@ -39,23 +39,21 @@
   "Protocol for splittable random number generators."
   (rand-long [rng]
     "Returns a random long based on the given immutable RNG.
-    Note: to maintain independence you should not call more than one
-    function in the IRandom protocol with the same argument")
+    Note: to maintain independence you should not call more than one function in the IRandom
+    protocol with the same argument")
   (rand-double [rng]
-    "Returns a random double between 0.0 (inclusive) and 1.0 (exclusive)
-    based on the given immutable RNG.
-    Note: to maintain independence you should not call more than one
-    function in the IRandom protocol with the same argument")
+    "Returns a random double between 0.0 (inclusive) and 1.0 (exclusive) based on the given
+    immutable RNG.
+    Note: to maintain independence you should not call more than one function in the IRandom
+    protocol with the same argument")
   (split [rng]
-    "Returns two new RNGs [rng1 rng2], which should generate
-    sufficiently independent random data.
-    Note: to maintain independence you should not call more than one
-    function in the IRandom protocol with the same argument")
+    "Returns two new RNGs [rng1 rng2], which should generate sufficiently independent random data.
+    Note: to maintain independence you should not call more than one function in the IRandom
+    protocol with the same argument")
   (split-n [rng n]
-    "Returns a collection of `n` RNGs, which should generate
-    sufficiently independent random data.
-    Note: to maintain independence you should not call more than one
-    function in the IRandom protocol with the same argument"))
+    "Returns a collection of `n` RNGs, which should generate sufficiently independent random data.
+    Note: to maintain independence you should not call more than one function in the IRandom
+    protocol with the same argument"))
 
 (def ^:const ^:private default-algorithm "L64X128MixRandom")
 
@@ -213,8 +211,8 @@
 (defn random-normal
   "Converts uniform random value `rnd` to a standard normal distribution.
 
-  Uses the inverse CDF transformation method to generate normally
-  distributed values with mean=0 and standard deviation=1.
+  Uses the inverse CDF transformation method to generate normally distributed values with mean=0 and
+  standard deviation=1.
 
   Parameters:
     `rnd` - Random double in [0,1)
@@ -342,8 +340,8 @@
 (defn rnd-uuid
   "Generates a random UUID (version 4) from `rng`.
 
-  Creates a random UUID following RFC 4122 version 4 format,
-  using two independent random doubles from split RNGs.
+  Creates a random UUID following RFC 4122 version 4 format, using two independent random doubles
+  from split RNGs.
 
   Parameters:
     `rng` - Random number generator
@@ -360,8 +358,8 @@
 (defn rng-lazy
   "Creates a lazy sequence of independent RNG instances.
   
-  Each RNG in the sequence is split from the previous one, ensuring
-  statistical independence for parallel computation.
+  Each RNG in the sequence is split from the previous one, ensuring statistical independence for
+  parallel computation.
   
   Parameters:
     `rng` - Initial random number generator
@@ -406,8 +404,8 @@
 (defn rng-gen
   "Creates a stateful RNG generator function from an initial RNG.
 
-  The returned function maintains an internal sequence of split RNGs to ensure each call produces
-  an independent generator.
+  The returned function maintains an internal sequence of split RNGs to ensure each call produces an
+  independent generator.
 
   Parameters:
     `rng` - initial random number generator
@@ -504,8 +502,8 @@
 (defn rnd-bool!
   "Generates a random boolean using the bound RNG.
 
-  Returns `true` or `false` with equal probability. Requires the bound RNG context ([[bind-seed]]
-  or [[set-seed!]])."
+  Returns `true` or `false` with equal probability. Requires the bound RNG context ([[bind-seed]] or
+  [[set-seed!]])."
   []
   (rnd-bool (rng!)))
 

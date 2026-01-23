@@ -1,9 +1,9 @@
 (ns provisdom.math.format
   "Number formatting and parsing utilities.
 
-  Provides intelligent number formatting that automatically chooses between
-  fixed-point and scientific notation based on magnitude and display constraints.
-  Includes shorthand notation (K, M, B, T) for large numbers and money formatting.
+  Provides intelligent number formatting that automatically chooses between fixed-point and
+  scientific notation based on magnitude and display constraints. Includes shorthand notation
+  (K, M, B, T) for large numbers and money formatting.
 
   Key features:
   - Adaptive formatting (fixed vs scientific notation)
@@ -61,7 +61,7 @@
   This corresponds to 10^-4."
   0.0001)
 
-(def by-letter
+(def shorthand-multipliers
   "Default shorthand letter multipliers for K, M, B, T suffixes."
   {"B" 1000000000
    "K" 1000
@@ -408,7 +408,7 @@
   :ret string?)
 
 ;;;SHORTHAND
-(defn unparse-shorthand
+(defn format-shorthand
   "Converts numbers to shorthand notation with K, M, B, T suffixes.
 
   Formats large numbers using shorthand suffixes (K=thousands, M=millions, B=billions, T=trillions)
@@ -421,13 +421,13 @@
     `::money?` - Add `$` prefix for currency formatting
 
   Examples:
-    (unparse-shorthand 1500 5)                    ;=> \"1.5K\"
-    (unparse-shorthand 2300000 6)                 ;=> \"2.3M\"
-    (unparse-shorthand 1500 5 {::money? true})    ;=> \"$1.5K\"
-    (unparse-shorthand -500000 7 {::money? true}) ;=> \"-$500K\"
-    (unparse-shorthand 42 5)                      ;=> \"42\"
-    (unparse-shorthand ##NaN 5)                   ;=> \"NaN\""
-  ([number max-length] (unparse-shorthand number max-length {}))
+    (format-shorthand 1500 5)                    ;=> \"1.5K\"
+    (format-shorthand 2300000 6)                 ;=> \"2.3M\"
+    (format-shorthand 1500 5 {::money? true})    ;=> \"$1.5K\"
+    (format-shorthand -500000 7 {::money? true}) ;=> \"-$500K\"
+    (format-shorthand 42 5)                      ;=> \"42\"
+    (format-shorthand ##NaN 5)                   ;=> \"NaN\""
+  ([number max-length] (format-shorthand number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits money?]}]
    (cond
      (m/nan? number) "NaN"
@@ -448,7 +448,7 @@
            absolute-value (m/abs shortened-number)
            f (fn [x letter]
                (let [adjusted-number (str (format-number
-                                            (/ x (by-letter letter))
+                                            (/ x (shorthand-multipliers letter))
                                             (max 1 (dec max-length))))
                      without-ending (if (str/ends-with? adjusted-number ".0")
                                       (strings/butlast-string
@@ -459,10 +459,10 @@
            s (cond (>= absolute-value 1e15)
                (format-number shortened-number max-length)
 
-               (>= absolute-value (by-letter "T")) (f shortened-number "T")
-               (>= absolute-value (by-letter "B")) (f shortened-number "B")
-               (>= absolute-value (by-letter "M")) (f shortened-number "M")
-               (>= absolute-value (by-letter "K")) (f shortened-number "K")
+               (>= absolute-value (shorthand-multipliers "T")) (f shortened-number "T")
+               (>= absolute-value (shorthand-multipliers "B")) (f shortened-number "B")
+               (>= absolute-value (shorthand-multipliers "M")) (f shortened-number "M")
+               (>= absolute-value (shorthand-multipliers "K")) (f shortened-number "K")
                :else (format-number shortened-number max-length))]
        (if money?
          (if (neg? shortened-number)
@@ -470,7 +470,7 @@
            (str "$" s))
          s)))))
 
-(s/fdef unparse-shorthand
+(s/fdef format-shorthand
   :args (s/cat :number ::m/number
           :max-length ::max-length
           :opts (s/? (s/keys :opt [::max-decimal-places
@@ -485,7 +485,7 @@
   numeric equivalents. Also handles scientific notation (e.g., `\"1.23E+4\"`). Returns an anomaly if
   parsing fails.
 
-  Handles special values and all formats produced by [[unparse-shorthand]].
+  Handles special values and all formats produced by [[format-shorthand]].
 
   Examples:
     (parse-shorthand \"1.5K\")    ;=> 1500.0
@@ -512,7 +512,7 @@
         "-Inf" m/inf-
         (let [f (fn [x letter]
                   (when-let [n (safe-parse-number (strings/butlast-string x))]
-                    (* (by-letter letter) n)))
+                    (* (shorthand-multipliers letter) n)))
               result (cond
                        ;; Handle scientific notation first
                        (scientific-notation? removed-money)
@@ -534,21 +534,21 @@
   :ret (s/or :anomaly ::anomalies/anomaly
          :number ::m/number))
 
-(defn unparse-shorthand-custom
-  "Like [[unparse-shorthand]] but with customizable shorthand letters.
+(defn format-shorthand-custom
+  "Like [[format-shorthand]] but with customizable shorthand letters.
 
   Options:
-    ::shorthand-letters - Map of letter to multiplier (default by-letter)
+    ::shorthand-letters - Map of letter to multiplier (default shorthand-multipliers)
     ::max-decimal-places - Limit decimal precision
     ::max-digits - Limit significant digits
     ::money? - Add $ prefix
 
   Examples:
-    (unparse-shorthand-custom 1500 5 {::shorthand-letters {\"k\" 1000}})
+    (format-shorthand-custom 1500 5 {::shorthand-letters {\"k\" 1000}})
     ;=> \"1.5k\""
-  ([number max-length] (unparse-shorthand-custom number max-length {}))
+  ([number max-length] (format-shorthand-custom number max-length {}))
   ([number max-length {::keys [max-decimal-places max-digits money? shorthand-letters]
-                       :or    {shorthand-letters by-letter}}]
+                       :or    {shorthand-letters shorthand-multipliers}}]
    (cond
      (m/nan? number) "NaN"
      (m/inf+? number) "Inf"
@@ -588,7 +588,7 @@
            (str "$" s))
          s)))))
 
-(s/fdef unparse-shorthand-custom
+(s/fdef format-shorthand-custom
   :args (s/cat :number ::m/number
           :max-length ::max-length
           :opts (s/? (s/keys :opt [::max-decimal-places

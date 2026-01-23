@@ -13,8 +13,8 @@
   Matrices are represented as vectors of vectors with consistent row lengths.
   Supports both dense and sparse representations for memory efficiency.
 
-  For linear algebra operations (decompositions, solve, inverse, etc.),
-  see provisdom.math.linear-algebra."
+  For linear algebra operations (decompositions, solve, inverse, etc.), see
+  provisdom.math.linear-algebra."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]

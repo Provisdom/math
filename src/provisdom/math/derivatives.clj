@@ -24,27 +24,24 @@
 
   Choosing a derivative function:
 
-  `derivative-fn` - Basic finite differences. Use when you need a quick derivative
-  and know the function is well-behaved. Fast and simple, but accuracy depends on
-  choosing a good step size h.
+  `derivative-fn` - Basic finite differences. Use when you need a quick derivative and know the
+  function is well-behaved. Fast and simple, but accuracy depends on choosing a good step size h.
 
-  `richardson-derivative-fn` - Richardson extrapolation. Use when you need higher
-  accuracy without manually tuning h. Computes derivatives at multiple step sizes
-  and extrapolates to eliminate truncation error. Typically 2-4 orders of magnitude
-  more accurate than basic. Best for smooth functions where roundoff isn't dominant.
+  `richardson-derivative-fn` - Richardson extrapolation. Use when you need higher accuracy without
+  manually tuning h. Computes derivatives at multiple step sizes and extrapolates to eliminate
+  truncation error. Typically 2-4 orders of magnitude more accurate than basic. Best for smooth
+  functions where roundoff isn't dominant.
 
-  `adaptive-derivative-fn` - Automatic step size selection. Use when you want the
-  algorithm to find the right step size automatically. Adapts to the function and
-  converges to specified tolerance. Best for black-box functions or production code
-  where robustness matters more than speed.
+  `adaptive-derivative-fn` - Automatic step size selection. Use when you want the algorithm to find
+  the right step size automatically. Adapts to the function and converges to specified tolerance.
+  Best for black-box functions or production code where robustness matters more than speed.
 
-  `derivative-with-error-fn` - Returns value with error estimate. Use when you need
-  to know how accurate your derivative is. Useful for sensitivity analysis,
-  optimization convergence checks, or propagating uncertainty.
+  `derivative-with-error-fn` - Returns value with error estimate. Use when you need to know how
+  accurate your derivative is. Useful for sensitivity analysis, optimization convergence checks, or
+  propagating uncertainty.
 
-  Supports central, forward, and backward difference schemes with configurable
-  accuracy levels. Uses pre-computed finite difference coefficients for optimal
-  precision."
+  Supports central, forward, and backward difference schemes with configurable accuracy levels. Uses
+  pre-computed finite difference coefficients for optimal precision."
   (:require
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
@@ -665,9 +662,9 @@
 (defn richardson-derivative-fn
   "Creates derivative function with Richardson extrapolation for improved accuracy.
 
-  Computes derivatives at h, h/2, h/4, ... and uses Richardson extrapolation
-  to eliminate leading error terms. For central differences with order p error,
-  extrapolation eliminates O(h^p), O(h^(p+2)), etc.
+  Computes derivatives at h, h/2, h/4, ... and uses Richardson extrapolation to eliminate leading
+  error terms. For central differences with order p error, extrapolation eliminates
+  O(h^p), O(h^(p+2)), etc.
 
   Options:
     ::derivative - Order of derivative (default 1)
@@ -715,8 +712,7 @@
   "Creates derivative function with automatic step size selection.
 
   Iteratively refines step size until estimates converge within tolerance.
-  Uses Richardson extrapolation internally to estimate errors and determine
-  optimal stopping point.
+  Uses Richardson extrapolation internally to estimate errors and determine optimal stopping point.
 
   Options:
     ::derivative - Order of derivative (default 1)
@@ -767,8 +763,8 @@
 (defn derivative-with-error-fn
   "Creates derivative function that returns value with error estimate.
 
-  Uses Richardson extrapolation to compute both the derivative and an
-  estimate of the truncation error.
+  Uses Richardson extrapolation to compute both the derivative and an estimate of the truncation
+  error.
 
   Options:
     ::derivative - Order of derivative (default 1)
@@ -817,12 +813,11 @@
          :ret ::derivative-result))
 
 ;;;VECTOR CALCULUS FUNCTIONS
-
 (defn directional-derivative-fn
   "Creates function computing the directional derivative.
 
   For function f: R^n -> R and direction vector d, computes:
-    D_d f(x) = grad(f)(x) . d/|d|
+     D_d f(x) = grad(f)(x) . d/|d|
 
   The direction is automatically normalized to unit length.
 
@@ -1026,8 +1021,8 @@
 (defn sparse-jacobian-fn
   "Creates Jacobian function that only computes specified entries.
 
-  For large sparse systems, this is much more efficient than computing
-  the full Jacobian and extracting entries.
+  For large sparse systems, this is much more efficient than computing the full Jacobian and
+  extracting entries.
 
   Args:
     v->v - Vector-valued function

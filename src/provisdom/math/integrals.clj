@@ -128,8 +128,7 @@
 ;;;;for integration:
 ;;;;    See Wiki and http://www.gnu.org/software/gsl/manual/html_node/ for more
 ;;;;    http://ab-initio.mit.edu/wiki/index.php/Cubature
-;;;;    extend to n-dim integration over functions that output vectors or
-;;;;    matrices
+;;;;    extend to n-dim integration over functions that output vectors or matrices
 
 ;;;NUMERICAL INTEGRATION
 ;;;GAUSSIAN-KRONROD CONSTANTS
