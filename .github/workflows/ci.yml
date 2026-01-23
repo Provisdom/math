@@ -18,7 +18,7 @@ jobs:
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@13.4
         with:
-          cli: 1.12.1.1561
+          cli: 1.12.2.1565
 
       - name: Cache clojure dependencies
         uses: actions/cache@v4
@@ -39,3 +39,12 @@ jobs:
         with:
           report_paths: 'reports/junit.xml'
           include_time_in_summary: true
+
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
