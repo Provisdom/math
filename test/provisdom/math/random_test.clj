@@ -102,14 +102,14 @@
   (t/with-instrument `random/rnd-lazy
     (t/is-spec-check random/rnd-lazy))
   (t/with-instrument :all
-    (t/is= '(0.17343824438608113 0.5672348695804793 0.4407296095269242)
+    (t/is= '(0.6647522234423441 0.9435968775103368 0.11310782708569878)
       (take 3 (random/rnd-lazy (random/rng 3))))))
 
 (t/deftest rnd-long-lazy-test
   (t/with-instrument `random/rnd-long-lazy
     (t/is-spec-check random/rnd-long-lazy))
   (t/with-instrument :all
-    (t/is= '(3199370906783531226 -7983107604874433585 8130026312649114387)
+    (t/is= '(-6184229935439241264 -1040453965524906477 2086471138983279185)
       (take 3 (random/rnd-long-lazy (random/rng 3))))))
 
 ;;;BOUND RNG
@@ -167,14 +167,14 @@
   (t/with-instrument `random/rnd-lazy!
     (t/is-spec-check random/rnd-lazy!))
   (t/with-instrument :all
-    (t/is= '(0.17343824438608113 0.5672348695804793 0.4407296095269242)
+    (t/is= '(0.6647522234423441 0.9435968775103368 0.11310782708569878)
       (take 3 (random/bind-seed 3 (random/rnd-lazy!))))))
 
 (t/deftest rnd-long-lazy!-test
   (t/with-instrument `random/rnd-long-lazy!
     (t/is-spec-check random/rnd-long-lazy!))
   (t/with-instrument :all
-    (t/is= '(3199370906783531226 -7983107604874433585 8130026312649114387)
+    (t/is= '(-6184229935439241264 -1040453965524906477 2086471138983279185)
       (take 3 (random/bind-seed 3 (random/rnd-long-lazy!))))))
 
 ;;;USE CLOCK
@@ -219,7 +219,7 @@
   (t/with-instrument `random/rnd-doubles
     (t/is-spec-check random/rnd-doubles))
   (t/with-instrument :all
-    (t/is= [0.17343824438608113 0.5672348695804793 0.4407296095269242]
+    (t/is= [0.6647522234423441 0.9435968775103368 0.11310782708569878]
       (random/rnd-doubles (random/rng 3) 3))
     (t/is= [] (random/rnd-doubles (random/rng 3) 0))))
 
@@ -227,35 +227,35 @@
   (t/with-instrument `random/rnd-doubles!
     (t/is-spec-check random/rnd-doubles!))
   (t/with-instrument :all
-    (t/is= [0.17343824438608113 0.5672348695804793 0.4407296095269242]
+    (t/is= [0.6647522234423441 0.9435968775103368 0.11310782708569878]
       (random/bind-seed 3 (random/rnd-doubles! 3)))))
 
 (t/deftest rnd-longs-test
   (t/with-instrument `random/rnd-longs
     (t/is-spec-check random/rnd-longs))
   (t/with-instrument :all
-    (t/is= [3199370906783531226 -7983107604874433585 8130026312649114387]
+    (t/is= [-6184229935439241264 -1040453965524906477 2086471138983279185]
       (random/rnd-longs (random/rng 3) 3))))
 
 (t/deftest rnd-longs!-test
   (t/with-instrument `random/rnd-longs!
     (t/is-spec-check random/rnd-longs!))
   (t/with-instrument :all
-    (t/is= [3199370906783531226 -7983107604874433585 8130026312649114387]
+    (t/is= [-6184229935439241264 -1040453965524906477 2086471138983279185]
       (random/bind-seed 3 (random/rnd-longs! 3)))))
 
 (t/deftest rnd-normals-test
   (t/with-instrument `random/rnd-normals
     (t/is-spec-check random/rnd-normals))
   (t/with-instrument :all
-    (t/is= [-0.9406651398679139 0.16933867009164844 -0.14911965219889575]
+    (t/is= [0.4254679878903436 1.58570499753794 -1.2101648206296136]
       (random/rnd-normals (random/rng 3) 3))))
 
 (t/deftest rnd-normals!-test
   (t/with-instrument `random/rnd-normals!
     (t/is-spec-check random/rnd-normals!))
   (t/with-instrument :all
-    (t/is= [-0.9406651398679139 0.16933867009164844 -0.14911965219889575]
+    (t/is= [0.4254679878903436 1.58570499753794 -1.2101648206296136]
       (random/bind-seed 3 (random/rnd-normals! 3)))))
 
 ;;;CONVENIENCE FUNCTIONS

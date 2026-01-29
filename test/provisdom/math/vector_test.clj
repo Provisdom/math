@@ -127,9 +127,9 @@
     (random/bind-seed 0
       (t/is= [] (vector/rnd-vector! 0)))
     (random/bind-seed 0
-      (t/is= [0.2961287401299688] (vector/rnd-vector! 1)))
+      (t/is= [0.0023434341918648904] (vector/rnd-vector! 1)))
     (random/bind-seed 0
-      (t/is= [0.2961287401299688 0.8622994122994543] (vector/rnd-vector! 2)))))
+      (t/is= [0.0023434341918648904 0.355610453579705] (vector/rnd-vector! 2)))))
 
 (t/deftest sparse->vector-test
   (t/with-instrument `vector/sparse->vector

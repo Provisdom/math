@@ -90,14 +90,14 @@
     (t/is-spec-check tensor/rnd-tensor! {:num-tests 20}))
   (t/with-instrument :all
     (random/bind-seed 0
-      (t/is= 0.2961287401299688 (tensor/rnd-tensor! [])))
+      (t/is= 0.0023434341918648904 (tensor/rnd-tensor! [])))
     (random/bind-seed 0
       (t/is= [] (tensor/rnd-tensor! [0])))
     (random/bind-seed 0
       (t/is= [[]] (tensor/rnd-tensor! [1 0])))
     (random/bind-seed 0
-      (t/is= [[0.2961287401299688 0.8622994122994543 0.07868284113948965]
-              [0.548683671433349 0.11620266042486127 0.5772125043785624]]
+      (t/is= [[0.0023434341918648904 0.355610453579705 0.8462878193318439]
+              [0.6940010275147983 0.8119067024046234 0.14220466649514807]]
         (tensor/rnd-tensor! [2 3])))))
 
 ;;INFO
@@ -143,7 +143,7 @@
                                   (boolean (and (seq indices)
                                              (> (first indices) v))))
                 [1.0 0.5]))
-    (t/is (tensor/every-kv? (fn [indices v]
+    (t/is (tensor/every-kv? (fn [indices _v]
                               (boolean (and (seq indices)
                                          (> (first indices) -1))))
             [1.0 0.5]))

@@ -374,13 +374,14 @@
 
 (defn rnd-lazy
   "Creates a lazy sequence of random doubles from independent RNGs.
-  
+
   Parameters:
     `rng` - Initial random number generator
-  
+
   Returns a lazy sequence of doubles in [0, 1)."
   [rng]
-  (map rand-double (rng-lazy rng)))
+  (let [[_ rng-branch] (split rng)]
+    (map rand-double (rng-lazy rng-branch))))
 
 (s/fdef rnd-lazy
   :args (s/cat :rng ::rng)
@@ -394,7 +395,8 @@
 
   Returns a lazy sequence of random longs."
   [rng]
-  (map rand-long (rng-lazy rng)))
+  (let [[_ rng-branch] (split rng)]
+    (map rand-long (rng-lazy rng-branch))))
 
 (s/fdef rnd-long-lazy
   :args (s/cat :rng ::rng)
@@ -674,7 +676,8 @@
 
   Returns a vector of doubles in `[0, 1)`."
   [rng n]
-  (mapv rand-double (take n (rng-lazy rng))))
+  (let [[_ rng-branch] (split rng)]
+    (mapv rand-double (take n (rng-lazy rng-branch)))))
 
 (s/fdef rnd-doubles
   :args (s/cat :rng ::rng :n ::n)
@@ -703,7 +706,8 @@
 
   Returns a vector of random longs."
   [rng n]
-  (mapv rand-long (take n (rng-lazy rng))))
+  (let [[_ rng-branch] (split rng)]
+    (mapv rand-long (take n (rng-lazy rng-branch)))))
 
 (s/fdef rnd-longs
   :args (s/cat :rng ::rng :n ::n)
@@ -732,7 +736,8 @@
 
   Returns a vector of standard normal values (`mean=0`, `std=1`)."
   [rng n]
-  (mapv (comp random-normal rand-double) (take n (rng-lazy rng))))
+  (let [[_ rng-branch] (split rng)]
+    (mapv (comp random-normal rand-double) (take n (rng-lazy rng-branch)))))
 
 (s/fdef rnd-normals
   :args (s/cat :rng ::rng :n ::n)
