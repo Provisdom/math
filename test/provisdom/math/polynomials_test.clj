@@ -154,6 +154,7 @@
 
 (t/deftest polynomial-ND-fn-test
   (t/with-instrument `poly/polynomial-ND-fn
+    ;;:num-tests 200; N-dimensional polynomial evaluation with variable degree creates large search space
     (t/is-spec-check poly/polynomial-ND-fn {:num-tests 200}))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0 4.0 4.0 6.0 8.0 9.0 12.0 16.0 12.0 16.0 18.0 24.0 32.0 36.0 48.0 36.0 48.0

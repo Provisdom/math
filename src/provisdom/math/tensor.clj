@@ -24,7 +24,7 @@
 
 (s/def ::index
   (s/with-gen ::m/int-non-
-    #(gen/large-integer* {:min 0 :max mdl})))
+    #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::indices
   (s/with-gen (s/coll-of ::index)
@@ -46,7 +46,7 @@
 (s/def ::tensor2D
   (s/with-gen
     #(and (tensor? %) (= 2 (rank %)))
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
@@ -56,8 +56,8 @@
 (s/def ::tensor3D
   (s/with-gen
     #(and (tensor? %) (= 3 (rank %)))
-    #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-                 (gen/large-integer* {:min 1 :max mdl}))
+    #(gen/bind (gen/tuple (gen/large-integer* {:max mdl :min 0})
+                 (gen/large-integer* {:max mdl :min 1}))
        (fn [[i j]]
          (gen/vector
            (gen/vector
@@ -70,9 +70,9 @@
   (s/with-gen
     #(and (tensor? %) (= 4 (rank %)))
     #(gen/bind
-       (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-         (gen/large-integer* {:min 1 :max mdl})
-         (gen/large-integer* {:min 1 :max mdl}))
+       (gen/tuple (gen/large-integer* {:max mdl :min 0})
+         (gen/large-integer* {:max mdl :min 1})
+         (gen/large-integer* {:max mdl :min 1}))
        (fn [[i j k]]
          (gen/vector
            (gen/vector
@@ -87,10 +87,10 @@
   (s/with-gen
     #(and (tensor? %) (>= (rank %) 5))
     #(gen/bind
-       (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-         (gen/large-integer* {:min 1 :max mdl})
-         (gen/large-integer* {:min 1 :max mdl})
-         (gen/large-integer* {:min 1 :max mdl}))
+       (gen/tuple (gen/large-integer* {:max mdl :min 0})
+         (gen/large-integer* {:max mdl :min 1})
+         (gen/large-integer* {:max mdl :min 1})
+         (gen/large-integer* {:max mdl :min 1}))
        (fn [[i j k l]]
          (gen/vector
            (gen/vector
@@ -116,7 +116,7 @@
 (s/def ::axes
   (s/with-gen
     (s/coll-of ::index :kind vector?)
-    #(gen/bind (gen/large-integer* {:min 0 :max 4})
+    #(gen/bind (gen/large-integer* {:max 4 :min 0})
        (fn [n] (gen/fmap vec (gen/shuffle (range n)))))))
 
 ;;;TENSOR TYPES
@@ -158,8 +158,8 @@
     (to-tensor \"hello\") => nil"
   [x]
   (let [ret (cond (number? x) x
-                  (sequential? x) (mapv to-tensor x)
-                  :else nil)]
+              (sequential? x) (mapv to-tensor x)
+              :else nil)]
     (when (tensor? ret) ret)))
 
 (s/fdef to-tensor
@@ -262,7 +262,7 @@
                             (take tot numbers)
                             (concat numbers (repeat rem 0.0))))]
           (reduce (fn [tot sh]
-                    (vec (map vec (partition sh tot))))
+                    (mapv vec (partition sh tot)))
             tensor
             (reverse (rest shape))))))))
 
@@ -299,8 +299,8 @@
     (first-number nil) => nil"
   [tensor]
   (cond (number? tensor) tensor
-        (nil? tensor) tensor
-        :else (first-number (first tensor))))
+    (nil? tensor) tensor
+    :else (first-number (first tensor))))
 
 (s/fdef first-number
   :args (s/cat :tensor (s/nilable ::tensor))
@@ -737,7 +737,7 @@
 (s/fdef partition-recursively
   :args (s/cat :n (s/with-gen
                     (s/int-in 2 m/max-int)
-                    #(gen/large-integer* {:min 2 :max mdl}))
+                    #(gen/large-integer* {:max mdl :min 2}))
           :tensor ::tensor)
   :ret (s/nilable ::tensor))
 
@@ -1110,8 +1110,8 @@
     (loop [[h & t] tensor
            seen []]
       (cond (not h) seen
-            (some #(roughly? h % accu) seen) (recur t seen)
-            :else (recur t (conj seen h))))))
+        (some #(roughly? h % accu) seen) (recur t seen)
+        :else (recur t (conj seen h))))))
 
 (s/fdef roughly-distinct
   :args (s/cat :tensor ::tensor

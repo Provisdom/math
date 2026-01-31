@@ -1,12 +1,11 @@
 (ns provisdom.math.series-test
   (:require
-    [clojure.test.check.generators :as gen]
     [provisdom.math.combinatorics :as cm]
     [provisdom.math.core :as m]
     [provisdom.math.series :as series]
     [provisdom.test.core :as t]))
 
-;;6 seconds
+;;10 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -62,9 +61,9 @@
 (defn sin-series
   [x]
   (map #(* (/ (cm/factorial (inc (* 2 %))))
-           x
-           (m/pow (- (m/sq x)) %))
-       (range)))
+          x
+          (m/pow (- (m/sq x)) %))
+    (range)))
 
 (t/deftest sum-convergent-series-test
   (t/with-instrument `series/sum-convergent-series
@@ -81,7 +80,11 @@
     (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 3.0 m/PI))) :tolerance 1e-12)
     (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 3.5 m/PI))) :tolerance 1e-12)
     (t/is= 0.9999999999999877
-      (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))))
+      (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))
+    ;; Harmonic series diverges - should return anomaly
+    (let [harmonic (map #(/ 1.0 (inc %)) (range))
+          result (series/sum-convergent-series harmonic {::series/max-iter 100})]
+      (t/is (map? result)))))
 
 (t/deftest multiplicative-sum-convergent-series-test
   (t/with-instrument `series/multiplicative-sum-convergent-series
@@ -93,7 +96,7 @@
 ;;;SERIES ACCELERATION
 (t/deftest aitken-accelerate-test
   (t/with-instrument `series/aitken-accelerate
-    (t/is-spec-check series/aitken-accelerate {:num-tests 20}))
+    (t/is-spec-check series/aitken-accelerate))
   (t/with-instrument :all
     ;; Test on alternating harmonic series partial sums
     (let [terms (map #(/ (m/pow -1 %) (inc %)) (range 20))
@@ -105,11 +108,19 @@
               0.6932106782106783 0.6930967180967181 0.6931879423258734
               0.6931137858557215 0.6931748806748808 0.6931239512121866
               0.6931668512550866 0.6931303775344023]
-        accelerated))))
+        accelerated))
+    ;; Verify acceleration is closer to true value than naive sum
+    (let [ln2 0.6931471805599453
+          terms (map #(/ (m/pow -1.0 %) (inc %)) (range 50))
+          partial-sums (vec (reductions + terms))
+          naive-50 (last partial-sums)
+          aitken-result (last (series/aitken-accelerate partial-sums))]
+      (t/is (< (m/abs (- aitken-result ln2)) (m/abs (- naive-50 ln2))))
+      (t/is-approx= ln2 naive-50 :tolerance 0.02))))
 
 (t/deftest wynn-epsilon-test
   (t/with-instrument `series/wynn-epsilon
-    (t/is-spec-check series/wynn-epsilon {:num-tests 20}))
+    (t/is-spec-check series/wynn-epsilon))
   (t/with-instrument :all
     (let [terms (map #(/ (m/pow -1 %) (inc %)) (range 20))
           partial-sums (reductions + terms)
@@ -125,7 +136,7 @@
 
 (t/deftest euler-transform-test
   (t/with-instrument `series/euler-transform
-    (t/is-spec-check series/euler-transform {:num-tests 20}))
+    (t/is-spec-check series/euler-transform))
   (t/with-instrument :all
     (let [terms (map #(/ 1.0 (inc %)) (range 10))
           transformed (vec (take 5 (series/euler-transform terms)))]
@@ -135,7 +146,7 @@
 
 (t/deftest richardson-extrapolate-test
   (t/with-instrument `series/richardson-extrapolate
-    (t/is-spec-check series/richardson-extrapolate {:num-tests 20}))
+    (t/is-spec-check series/richardson-extrapolate))
   (t/with-instrument :all
     (let [approxs [2.0 1.5 1.25 1.125]
           refined (vec (series/richardson-extrapolate approxs))]
@@ -144,7 +155,7 @@
 ;;;POWER SERIES OPERATIONS
 (t/deftest cauchy-product-test
   (t/with-instrument `series/cauchy-product
-    (t/is-spec-check series/cauchy-product {:num-tests 20}))
+    (t/is-spec-check series/cauchy-product))
   (t/with-instrument :all
     ;; (1+x+x²)(1+x) = 1+2x+2x²+x³
     (t/is= [1.0 2.0 2.0 1.0] (series/cauchy-product [1 1 1] [1 1]))
@@ -155,7 +166,7 @@
 
 (t/deftest power-series-compose-test
   (t/with-instrument `series/power-series-compose
-    (t/is-spec-check series/power-series-compose {:num-tests 10}))
+    (t/is-spec-check series/power-series-compose))
   (t/with-instrument :all
     ;; f(x)=1+x+x², g(x)=2x → f(2x)=1+2x+4x²
     (t/is= [1.0 2.0 4.0] (series/power-series-compose [1 1 1] [0 2]))
@@ -164,7 +175,7 @@
 
 (t/deftest power-series-inverse-test
   (t/with-instrument `series/power-series-inverse
-    (t/is-spec-check series/power-series-inverse {:num-tests 10}))
+    (t/is-spec-check series/power-series-inverse))
   (t/with-instrument :all
     ;; Inverse of f(x)=x should be g(x)=x
     (let [result (series/power-series-inverse [0 1])]
@@ -174,24 +185,49 @@
     ;; Invalid input: first coeff not 0
     (t/is (map? (series/power-series-inverse [1 1])))
     ;; Invalid input: second coeff is 0
-    (t/is (map? (series/power-series-inverse [0 0 1])))))
+    (t/is (map? (series/power-series-inverse [0 0 1])))
+    ;; f(x) = x + x² has inverse related to Catalan numbers
+    (let [f-coeffs [0 1 1 0 0 0 0 0]
+          g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 8})]
+      (t/is (vector? g-coeffs))
+      (t/is (m/roughly? 0.0 (nth g-coeffs 0) 1e-10))
+      (t/is (m/roughly? 1.0 (nth g-coeffs 1) 1e-10))
+      (t/is (m/roughly? -1.0 (nth g-coeffs 2) 1e-10))
+      (t/is (m/roughly? 2.0 (nth g-coeffs 3) 1e-10)))
+    ;; Verify composition f(g(x)) ≈ x for first few terms
+    (let [f-coeffs [0 1 1]
+          g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 4})
+          composed (series/power-series-compose f-coeffs g-coeffs)]
+      (t/is (m/roughly? 0.0 (nth composed 0) 1e-8))
+      (t/is (m/roughly? 1.0 (nth composed 1) 1e-8)))))
 
 (t/deftest radius-of-convergence-test
   (t/with-instrument `series/radius-of-convergence
-    (t/is-spec-check series/radius-of-convergence {:num-tests 20}))
+    (t/is-spec-check series/radius-of-convergence))
   (t/with-instrument :all
     ;; Geometric series [1,1,1,...] has R=1
     (let [result (series/radius-of-convergence [1 1 1 1 1 1 1 1 1 1])]
       (t/is= 1.0 (::series/ratio-estimate result))
       (t/is= 1.0 (::series/root-estimate result))
-      (t/is= 1.0 (::series/combined-estimate result)))))
+      (t/is= 1.0 (::series/combined-estimate result)))
+    ;; Alternating signs - should converge for |x| < 1
+    (let [alt-coeffs (mapv #(* (m/pow -1 %) 1.0) (range 20))
+          result (series/radius-of-convergence alt-coeffs)]
+      (t/is-approx= 1.0 (::series/combined-estimate result) :tolerance 0.01))
+    ;; Coefficients that grow - smaller radius
+    (let [growing-coeffs (mapv double (range 1 11))
+          result (series/radius-of-convergence growing-coeffs)]
+      (t/is (< (::series/combined-estimate result) 2.0)))
+    ;; Geometric coefficients 1,r,r^2,... - radius = 1/r
+    (let [r 0.5
+          geometric (mapv #(m/pow r %) (range 15))
+          result (series/radius-of-convergence geometric)]
+      (t/is-approx= 2.0 (::series/combined-estimate result) :tolerance 0.1))))
 
 ;;;PADÉ APPROXIMANTS
 (t/deftest pade-approximant-test
   (t/with-instrument `series/pade-approximant
-    (t/is-spec-check series/pade-approximant
-      {:num-tests 20
-       :gen       {::m/int-non- #(gen/choose 0 6)}}))
+    (t/is-spec-check series/pade-approximant))
   (t/with-instrument :all
     ;; [1/1] Padé for e^x ≈ (1+0.5x)/(1-0.5x)
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24)]
@@ -205,19 +241,30 @@
 
 (t/deftest evaluate-pade-test
   (t/with-instrument `series/evaluate-pade
-    (t/is-spec-check series/evaluate-pade {:num-tests 20}))
+    (t/is-spec-check series/evaluate-pade))
   (t/with-instrument :all
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120)]
           pade22 (series/pade-approximant e-coeffs 2 2)]
       ;; [2/2] Padé at x=1 should approximate e
       (t/is (m/roughly? m/E (series/evaluate-pade pade22 1.0) 0.01))
       ;; At x=0, should equal 1
-      (t/is= 1.0 (series/evaluate-pade pade22 0.0)))))
+      (t/is= 1.0 (series/evaluate-pade pade22 0.0)))
+    ;; Higher-order Padé approximants
+    (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720)]
+          pade22 (series/pade-approximant e-coeffs 2 2)]
+      (t/is-approx= m/E (series/evaluate-pade pade22 1.0) :tolerance 0.01)
+      (t/is-approx= (m/exp 2.0) (series/evaluate-pade pade22 2.0) :tolerance 0.5))
+    ;; [3/2] Padé - asymmetric
+    (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720) (/ 5040)]
+          pade32 (series/pade-approximant e-coeffs 3 2)]
+      (t/is= 4 (count (::series/numerator pade32)))
+      (t/is= 3 (count (::series/denominator pade32)))
+      (t/is-approx= m/E (series/evaluate-pade pade32 1.0) :tolerance 0.001))))
 
 ;;;IMPROVED SUMMATION
 (t/deftest neumaier-sum-test
   (t/with-instrument `series/neumaier-sum
-    (t/is-spec-check series/neumaier-sum {:num-tests 20}))
+    (t/is-spec-check series/neumaier-sum))
   (t/with-instrument :all
     ;; Standard case
     (t/is= 6.0 (series/neumaier-sum [1 2 3]))
@@ -228,7 +275,7 @@
 
 (t/deftest pairwise-sum-test
   (t/with-instrument `series/pairwise-sum
-    (t/is-spec-check series/pairwise-sum {:num-tests 20}))
+    (t/is-spec-check series/pairwise-sum))
   (t/with-instrument :all
     ;; Sum of 1 to 1000 = 500500
     (t/is= 500500.0 (series/pairwise-sum (range 1 1001)))
@@ -239,7 +286,7 @@
 
 (t/deftest sum-with-diagnostics-test
   (t/with-instrument `series/sum-with-diagnostics
-    (t/is-spec-check series/sum-with-diagnostics {:num-tests 10}))
+    (t/is-spec-check series/sum-with-diagnostics))
   (t/with-instrument :all
     ;; Geometric series converges to 2
     (let [terms (map #(m/pow 0.5 %) (range))
@@ -250,89 +297,9 @@
     ;; Finite sequence
     (let [result (series/sum-with-diagnostics [1 2 3])]
       (t/is (::series/converged? result))
-      (t/is= 6.0 (::series/sum result)))))
-
-;;;ADDITIONAL COVERAGE TESTS
-(t/deftest acceleration-comparison-test
-  ;; Compare acceleration methods on alternating harmonic series
-  ;; sum = ln(2) ≈ 0.693147
-  (t/with-instrument :all
-    (let [ln2 0.6931471805599453
-          terms (map #(/ (m/pow -1.0 %) (inc %)) (range 50))
-          partial-sums (vec (reductions + terms))
-          ;; Without acceleration - take 50 partial sums
-          naive-50 (last partial-sums)
-          ;; With Aitken acceleration
-          aitken-result (last (series/aitken-accelerate partial-sums))]
-      ;; Verify Aitken acceleration is closer to true value than naive sum
-      (t/is (< (m/abs (- aitken-result ln2)) (m/abs (- naive-50 ln2))))
-      ;; Naive partial sum should be reasonably close
-      (t/is-approx= ln2 naive-50 :tolerance 0.02))))
-
-(t/deftest power-series-inverse-nontrivial-test
-  ;; Test power series inverse with non-trivial cases
-  (t/with-instrument :all
-    ;; f(x) = x + x² has inverse related to Catalan numbers
-    ;; g(x) = x - x² + 2x³ - 5x⁴ + 14x⁵ - ... (Catalan generating function offset)
-    (let [f-coeffs [0 1 1 0 0 0 0 0]
-          g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 8})]
-      (t/is (vector? g-coeffs))
-      (t/is (m/roughly? 0.0 (nth g-coeffs 0) 1e-10))  ; g(0) = 0
-      (t/is (m/roughly? 1.0 (nth g-coeffs 1) 1e-10))  ; g'(0) = 1
-      (t/is (m/roughly? -1.0 (nth g-coeffs 2) 1e-10)) ; -C₁
-      (t/is (m/roughly? 2.0 (nth g-coeffs 3) 1e-10))) ; C₂
-    ;; Verify composition f(g(x)) ≈ x for first few terms
-    (let [f-coeffs [0 1 1]
-          g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 4})
-          composed (series/power-series-compose f-coeffs g-coeffs)]
-      (t/is (m/roughly? 0.0 (nth composed 0) 1e-8))
-      (t/is (m/roughly? 1.0 (nth composed 1) 1e-8)))))
-
-(t/deftest pade-higher-order-test
-  ;; Test higher-order Padé approximants
-  (t/with-instrument :all
-    ;; [2/2] Padé for e^x should be accurate near origin
-    (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720)]
-          pade22 (series/pade-approximant e-coeffs 2 2)]
-      ;; At x=1, should approximate e ≈ 2.718
-      (t/is-approx= m/E (series/evaluate-pade pade22 1.0) :tolerance 0.01)
-      ;; At x=2, Padé degrades (7.0 vs 7.389) - check within 6%
-      (t/is-approx= (m/exp 2.0) (series/evaluate-pade pade22 2.0) :tolerance 0.5))
-    ;; [3/2] Padé - asymmetric
-    (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720) (/ 5040)]
-          pade32 (series/pade-approximant e-coeffs 3 2)]
-      (t/is= 4 (count (::series/numerator pade32)))   ; degree 3 + 1 coeffs
-      (t/is= 3 (count (::series/denominator pade32))) ; degree 2 + 1 coeffs
-      ;; Should be more accurate at x=1
-      (t/is-approx= m/E (series/evaluate-pade pade32 1.0) :tolerance 0.001))))
-
-(t/deftest radius-of-convergence-edge-cases-test
-  ;; Test radius of convergence for edge cases
-  (t/with-instrument :all
-    ;; Alternating signs with decay - should converge for |x| < 1
-    (let [alt-coeffs (mapv #(* (m/pow -1 %) 1.0) (range 20))  ; 1,-1,1,-1,...
-          result (series/radius-of-convergence alt-coeffs)]
-      (t/is-approx= 1.0 (::series/combined-estimate result) :tolerance 0.01))
-    ;; Coefficients that grow - smaller radius
-    (let [growing-coeffs (mapv double (range 1 11))  ; 1,2,3,4,...,10
-          result (series/radius-of-convergence growing-coeffs)]
-      ;; Radius should be around 1 (ratio test)
-      (t/is (< (::series/combined-estimate result) 2.0)))
-    ;; Geometric series coefficients 1,r,r^2,... - radius = 1/r
-    (let [r 0.5
-          geometric (mapv #(m/pow r %) (range 15))
-          result (series/radius-of-convergence geometric)]
-      (t/is-approx= 2.0 (::series/combined-estimate result) :tolerance 0.1))))
-
-(t/deftest non-convergent-series-test
-  ;; Test detection of non-convergent series
-  (t/with-instrument :all
-    ;; Harmonic series diverges: 1 + 1/2 + 1/3 + ...
-    (let [harmonic (map #(/ 1.0 (inc %)) (range))
-          result (series/sum-convergent-series harmonic {::series/max-iter 100})]
-      ;; Should return an anomaly or fail to converge
-      (t/is (map? result)))
-    ;; Sum with diagnostics should report non-convergence
+      (t/is= 6.0 (::series/sum result)))
+    ;; Harmonic series diverges - should report non-convergence
     (let [harmonic (map #(/ 1.0 (inc %)) (range))
           result (series/sum-with-diagnostics harmonic {::series/max-iter 100})]
       (t/is-not (::series/converged? result)))))
+

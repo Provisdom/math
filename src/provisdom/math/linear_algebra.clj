@@ -110,13 +110,13 @@
 
 (s/def ::svd-result
   (s/with-gen
-    (s/keys :req [::svd-left ::singular-values ::svd-right])
+    (s/keys :req [::singular-values ::svd-left ::svd-right])
     #(gen/fmap (fn [m]
                  (if-let [svd (sv-decomposition m {:rank-tolerance 0.0})]
                    (select-keys svd [::svd-left ::singular-values ::svd-right])
                    ;; Fallback for matrices where SVD fails
-                   {::svd-left        [[1.0]]
-                    ::singular-values [1.0]
+                   {::singular-values [1.0]
+                    ::svd-left        [[1.0]]
                     ::svd-right       [[1.0]]}))
        (s/gen ::mx/matrix-finite))))
 
@@ -138,7 +138,7 @@
           (gen/return [[]])
           (gen/vector (gen/vector element-gen n) n))))))
 
-(defn- ^doubles matrix->double-array
+(defn- matrix->double-array
   "Converts a vector-of-vectors matrix to a flat row-major double-array.
   For an n x n matrix, element [i,j] is at index i*n + j."
   ^doubles [m ^long n]
@@ -409,11 +409,11 @@
         (let [det (compute-determinant-from-lu U P)
               inv (compute-inverse-from-lu L U P singular?)]
           {::L              L
-           ::U              U
            ::LU-permutation P
-           ::singular?      singular?
+           ::U              U
            ::determinant    det
-           ::inverse        inv})))))
+           ::inverse        inv
+           ::singular?      singular?})))))
 
 (s/fdef lu-decomposition
   :args (s/with-gen
@@ -866,8 +866,8 @@
           (let [positive-indices (filterv #(> (get eigenvalues %) tolerance) (range n))
                 r (count positive-indices)]
             (if (zero? r)
-              {::rectangular-root [[]]
-               ::rank             0}
+              {::rank             0
+               ::rectangular-root [[]]}
               ;; B = V × sqrt(D) for positive eigenvalues only
               ;; B[i,j] = V[i, positive-indices[j]] * sqrt(eigenvalues[positive-indices[j]])
               (let [B (mapv (fn [i]
@@ -878,8 +878,8 @@
                                         (* v-ij (m/sqrt lambda))))
                                 (range r)))
                         (range n))]
-                {::rectangular-root B
-                 ::rank             r})))))
+                {::rank             r
+                 ::rectangular-root B})))))
       ;; Eigendecomposition failed
       nil)))
 
@@ -1810,19 +1810,19 @@
                cond-num (if (m/roughly? min-sigma 0.0 m/dbl-close)
                           m/inf+
                           (/ max-sigma min-sigma))]
-           {::svd-left               U
+           {::condition-number       cond-num
+            ::norm-spectral          max-sigma
+            ::rank                   numerical-rank
             ::singular-values        singular-values
             ::singular-values-matrix sigma-matrix
-            ::svd-right              (mx/transpose V)
-            ::rank                   numerical-rank
-            ::condition-number       cond-num
-            ::norm-spectral          max-sigma}))))))
+            ::svd-left               U
+            ::svd-right              (mx/transpose V)}))))))
 
 (s/fdef sv-decomposition
   :args (s/cat :m ::mx/matrix
           :opts (s/? (s/keys :opt-un [::rank-tolerance])))
-  :ret (s/nilable (s/keys :req [::svd-left ::singular-values ::singular-values-matrix
-                                ::svd-right ::rank ::condition-number ::norm-spectral])))
+  :ret (s/nilable (s/keys :req [::svd-left ::singular-values ::singular-values-matrix ::svd-right
+                                ::rank ::condition-number ::norm-spectral])))
 
 ;;;CONDITION NUMBER
 (defn condition-number-from-svd
@@ -2315,14 +2315,16 @@
                    (gen/tuple
                      ;; data-matrix: n x p
                      (gen/vector
-                       (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
+                       (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
                        n)
                      ;; pca-result with matching p
                      (gen/hash-map
-                       ::pca-mean (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
-                       ::pca-principal-components (gen/vector
-                                                    (gen/vector (gen/double* {:min -1.0 :max 1.0 :NaN? false :infinite? false}) p)
-                                                    k-max))
+                       ::pca-mean
+                       (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
+                       ::pca-principal-components
+                       (gen/vector
+                         (gen/vector (m/finite-gen {:max 1.0 :min -1.0}) p)
+                         k-max))
                      ;; n-components <= k-max
                      (gen/return k)))))))
   :ret (s/nilable ::mx/matrix))
@@ -2380,12 +2382,14 @@
                (gen/tuple
                  ;; transformed-matrix: n x k
                  (gen/vector
-                   (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) k)
+                   (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) k)
                    n)
                  ;; pca-result with matching dimensions
                  (gen/hash-map
-                   ::pca-mean (gen/vector (gen/double* {:min -10.0 :max 10.0 :NaN? false :infinite? false}) p)
-                   ::pca-principal-components (gen/vector
-                                                (gen/vector (gen/double* {:min -1.0 :max 1.0 :NaN? false :infinite? false}) p)
-                                                k))))))
+                   ::pca-mean
+                   (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
+                   ::pca-principal-components
+                   (gen/vector
+                     (gen/vector (m/finite-gen {:max 1.0 :min -1.0}) p)
+                     k))))))
   :ret (s/nilable ::mx/matrix))

@@ -1,5 +1,7 @@
 (ns provisdom.math.core-test
   (:require
+    [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
@@ -7,7 +9,7 @@
 
 (set! *warn-on-reflection* true)
 
-;;TYPE TESTS
+;;;TEST FOR NUMERIC TYPES
 (t/deftest numbers?-test
   (t/with-instrument `m/numbers?
     (t/is-spec-check m/numbers?))
@@ -96,6 +98,30 @@
     (t/is-not (m/finite? m/inf-))
     (t/is-not (m/finite? m/nan))))
 
+(t/deftest finite-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/finite-spec {:min 0 :max 10})]
+    (t/is (s/valid? test-spec 5.0))
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec 10))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 15.0))
+    (t/is-not (s/valid? test-spec m/inf+))
+    (t/is-not (s/valid? test-spec m/nan))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
+(t/deftest finite-gen-test
+  ;;generator test - verify produces valid values
+  (let [gen-vals (gen/sample (m/finite-gen) 100)]
+    (t/is (every? m/finite? gen-vals))
+    (t/is-not (some m/nan? gen-vals))
+    (t/is-not (some m/inf? gen-vals)))
+  (let [bounded-gen (m/finite-gen {:min 0 :max 100})
+        gen-vals (gen/sample bounded-gen 100)]
+    (t/is (every? m/finite? gen-vals))
+    (t/is (every? #(and (>= % 0) (<= % 100)) gen-vals))))
+
 (t/deftest finite+?-test
   (t/with-instrument `m/finite+?
     (t/is-spec-check m/finite+?))
@@ -106,6 +132,31 @@
     (t/is-not (m/finite+? m/inf+))
     (t/is-not (m/finite+? m/inf-))
     (t/is-not (m/finite+? m/nan))))
+
+(t/deftest finite+-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/finite+-spec 100)]
+    (t/is (s/valid? test-spec 5.0))
+    (t/is (s/valid? test-spec 1))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec 0))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    (t/is-not (s/valid? test-spec m/inf+))
+    (t/is-not (s/valid? test-spec m/nan))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
+(t/deftest finite+-gen-test
+  ;;generator test - verify produces valid values
+  (let [gen-vals (gen/sample (m/finite+-gen) 100)]
+    (t/is (every? m/finite+? gen-vals))
+    (t/is (every? m/pos? gen-vals))
+    (t/is-not (some m/nan? gen-vals)))
+  (let [bounded-gen (m/finite+-gen {:max 50})
+        gen-vals (gen/sample bounded-gen 100)]
+    (t/is (every? m/finite+? gen-vals))
+    (t/is (every? #(<= % 50) gen-vals))))
 
 (t/deftest finite-?-test
   (t/with-instrument `m/finite-?
@@ -129,6 +180,30 @@
     (t/is-not (m/finite-non-? m/inf-))
     (t/is-not (m/finite-non-? m/nan))
     (t/is-not (m/finite-non-? "A"))))
+
+(t/deftest finite-non--spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/finite-non--spec 100)]
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec 50))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    (t/is-not (s/valid? test-spec m/inf+))
+    (t/is-not (s/valid? test-spec m/nan))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
+(t/deftest finite-non--gen-test
+  ;;generator test - verify produces valid values
+  (let [gen-vals (gen/sample (m/finite-non--gen) 100)]
+    (t/is (every? m/finite-non-? gen-vals))
+    (t/is (every? m/non-? gen-vals))
+    (t/is-not (some m/nan? gen-vals)))
+  (let [bounded-gen (m/finite-non--gen {:max 50})
+        gen-vals (gen/sample bounded-gen 100)]
+    (t/is (every? m/finite-non-? gen-vals))
+    (t/is (every? #(<= % 50) gen-vals))))
 
 (t/deftest finite-non+?-test
   (t/with-instrument `m/finite-non+?
@@ -211,6 +286,18 @@
     (t/is-not (m/long? -3.3E30))
     (t/is-not (m/long? m/nan))))
 
+(t/deftest long-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/long-spec {:min -10 :max 10})]
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec -10))
+    (t/is (s/valid? test-spec 10))
+    (t/is-not (s/valid? test-spec -11))
+    (t/is-not (s/valid? test-spec 11))
+    (t/is-not (s/valid? test-spec 5.0))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
 (t/deftest long+?-test
   (t/with-instrument `m/long+?
     (t/is-spec-check m/long+?))
@@ -224,6 +311,18 @@
     (t/is-not (m/long+? 3.3E30))
     (t/is-not (m/long+? -3.3E30))
     (t/is-not (m/long+? m/nan))))
+
+(t/deftest long+-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/long+-spec 100)]
+    (t/is (s/valid? test-spec 1))
+    (t/is (s/valid? test-spec 50))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec 0))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
 
 (t/deftest long-?-test
   (t/with-instrument `m/long-?
@@ -254,6 +353,17 @@
     (t/is-not (m/long-non-? -3.3E30))
     (t/is-not (m/long-non-? m/nan))))
 
+(t/deftest long-non--spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/long-non--spec 100)]
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec 50))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
 (t/deftest long-non+?-test
   (t/with-instrument `m/long-non+?
     (t/is-spec-check m/long-non+?))
@@ -282,6 +392,18 @@
     (t/is-not (m/int? -3.3E30))
     (t/is-not (m/int? m/nan))))
 
+(t/deftest int-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/int-spec {:min -10 :max 10})]
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec -10))
+    (t/is (s/valid? test-spec 10))
+    (t/is-not (s/valid? test-spec -11))
+    (t/is-not (s/valid? test-spec 11))
+    (t/is-not (s/valid? test-spec 5.0))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+
 (t/deftest int+?-test
   (t/with-instrument `m/int+?
     (t/is-spec-check m/int+?))
@@ -295,6 +417,18 @@
     (t/is-not (m/int+? 3.3E30))
     (t/is-not (m/int+? -3.3E30))
     (t/is-not (m/int+? m/nan))))
+
+(t/deftest int+-spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/int+-spec 100)]
+    (t/is (s/valid? test-spec 1))
+    (t/is (s/valid? test-spec 50))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec 0))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
 
 (t/deftest int-?-test
   (t/with-instrument `m/int-?
@@ -324,6 +458,17 @@
     (t/is-not (m/int-non-? 3.3E30))
     (t/is-not (m/int-non-? -3.3E30))
     (t/is-not (m/int-non-? m/nan))))
+
+(t/deftest int-non--spec-test
+  ;;macro test - no spec-check
+  (let [test-spec (m/int-non--spec 100)]
+    (t/is (s/valid? test-spec 0))
+    (t/is (s/valid? test-spec 50))
+    (t/is (s/valid? test-spec 100))
+    (t/is-not (s/valid? test-spec -1))
+    (t/is-not (s/valid? test-spec 101))
+    ;;verify generator produces valid values
+    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
 
 (t/deftest int-non+?-test
   (t/with-instrument `m/int-non+?
@@ -507,7 +652,7 @@
     (t/is (m/nan? (m/maybe-long-able m/nan)))
     (t/is (nil? (m/maybe-long-able nil)))))
 
-;;BASIC MATH TESTS
+;;;BASIC MATH
 (t/deftest ===-test
   (t/with-instrument `m/===
     (t/is-spec-check m/===))
@@ -570,6 +715,18 @@
     (t/is= m/inf+ (m/one- m/inf-))
     (t/is= 4.0 (m/one- -3.0))))
 
+(t/deftest sq-test
+  (t/with-instrument `m/sq
+    (t/is-spec-check m/sq))
+  (t/with-instrument :all
+    (t/is= 9.0 (m/sq 3))
+    (t/is= 9.0 (m/sq -3))
+    (t/is (m/nan? (m/sq m/nan)))
+    (t/is= m/inf+ (m/sq m/inf+))
+    (t/is= m/inf+ (m/sq m/inf-))
+    (t/is= 0.0 (m/sq 0))
+    (t/is= 2.25 (m/sq 1.5))))
+
 (t/deftest sq'-test
   (t/with-instrument `m/sq'
     (t/is-spec-check m/sq'))
@@ -580,6 +737,18 @@
     (t/is= m/inf+ (m/sq' m/inf+))
     (t/is= m/inf+ (m/sq' m/inf-))
     (t/is= 9 (m/sq' -3.0))))
+
+(t/deftest cube-test
+  (t/with-instrument `m/cube
+    (t/is-spec-check m/cube))
+  (t/with-instrument :all
+    (t/is= 27.0 (m/cube 3))
+    (t/is= -27.0 (m/cube -3))
+    (t/is (m/nan? (m/cube m/nan)))
+    (t/is= m/inf+ (m/cube m/inf+))
+    (t/is= m/inf- (m/cube m/inf-))
+    (t/is= 0.0 (m/cube 0))
+    (t/is= 3.375 (m/cube 1.5))))
 
 (t/deftest cube'-test
   (t/with-instrument `m/cube'
@@ -605,6 +774,30 @@
     (t/is (zero? (m/sgn 0.0)))
     (t/is= -1 (m/sgn -3.0))))
 
+(t/deftest exp-test
+  (t/with-instrument `m/exp
+    (t/is-spec-check m/exp))
+  (t/with-instrument :all
+    (t/is= 1.0 (m/exp 0))
+    (t/is-approx= m/E (m/exp 1))
+    (t/is-approx= (/ m/E) (m/exp -1))
+    (t/is= m/inf+ (m/exp m/inf+))
+    (t/is= 0.0 (m/exp m/inf-))
+    (t/is (m/nan? (m/exp m/nan)))
+    (t/is= 20.085536923187668 (m/exp 3))))
+
+(t/deftest dec-exp-test
+  (t/with-instrument `m/dec-exp
+    (t/is-spec-check m/dec-exp))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/dec-exp 0))
+    (t/is-approx= (dec m/E) (m/dec-exp 1))
+    (t/is= m/inf+ (m/dec-exp m/inf+))
+    (t/is= -1.0 (m/dec-exp m/inf-))
+    (t/is (m/nan? (m/dec-exp m/nan)))
+    ;;useful for small values
+    (t/is= 1.0000000000000007E-15 (m/dec-exp 1e-15))))
+
 (t/deftest safe-exp-test
   (t/with-instrument `m/safe-exp
     (t/is-spec-check m/safe-exp))
@@ -622,6 +815,31 @@
     ;; Edge of threshold
     (t/is (m/pos? (m/safe-exp -699.0)))
     (t/is (m/finite? (m/safe-exp 699.0)))))
+
+(t/deftest log-test
+  (t/with-instrument `m/log
+    (t/is-spec-check m/log))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/log 1))
+    (t/is= 1.0 (m/log m/E))
+    (t/is= m/inf- (m/log 0))
+    (t/is= m/inf+ (m/log m/inf+))
+    (t/is (m/nan? (m/log -1)))
+    (t/is (m/nan? (m/log m/nan)))
+    (t/is= 1.0986122886681096 (m/log 3))))
+
+(t/deftest log-inc-test
+  (t/with-instrument `m/log-inc
+    (t/is-spec-check m/log-inc))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/log-inc 0))
+    (t/is= 1.0 (m/log-inc (dec m/E)))
+    (t/is= m/inf- (m/log-inc -1))
+    (t/is= m/inf+ (m/log-inc m/inf+))
+    (t/is (m/nan? (m/log-inc -2)))
+    (t/is (m/nan? (m/log-inc m/nan)))
+    ;;useful for small values
+    (t/is= 9.999999999999995E-16 (m/log-inc 1e-15))))
 
 (t/deftest log-sum-exp-test
   (t/with-instrument `m/log-sum-exp
@@ -657,6 +875,19 @@
     (t/is= 0.0 (m/log2 1.0))
     (t/is= -0.15200309344504997 (m/log2 0.9))))
 
+(t/deftest log10-test
+  (t/with-instrument `m/log10
+    (t/is-spec-check m/log10))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/log10 1))
+    (t/is= 1.0 (m/log10 10))
+    (t/is= 2.0 (m/log10 100))
+    (t/is= m/inf- (m/log10 0))
+    (t/is= m/inf+ (m/log10 m/inf+))
+    (t/is (m/nan? (m/log10 -1)))
+    (t/is (m/nan? (m/log10 m/nan)))
+    (t/is= 0.47712125471966244 (m/log10 3))))
+
 (t/deftest logn-test
   (t/with-instrument `m/logn
     (t/is-spec-check m/logn))
@@ -673,6 +904,34 @@
     (t/is= 0.0 (m/logn 0.9 0))
     (t/is= -0.0 (m/logn 0.9 m/inf+))))
 
+(t/deftest pow-test
+  (t/with-instrument `m/pow
+    (t/is-spec-check m/pow))
+  (t/with-instrument :all
+    (t/is= 1.0 (m/pow 1 100))
+    (t/is= 8.0 (m/pow 2 3))
+    (t/is= 0.125 (m/pow 2 -3))
+    (t/is= 1.0 (m/pow 2 0))
+    (t/is= 0.0 (m/pow 0 1))
+    (t/is= 1.0 (m/pow 0 0))
+    (t/is= m/inf+ (m/pow m/inf+ 1))
+    (t/is= 0.0 (m/pow m/inf+ -1))
+    (t/is (m/nan? (m/pow m/nan 1)))
+    (t/is (m/nan? (m/pow -1 0.5)))
+    (t/is= 27.0 (m/pow 3 3))))
+
+(t/deftest abs-test
+  (t/with-instrument `m/abs
+    (t/is-spec-check m/abs))
+  (t/with-instrument :all
+    (t/is= 3.3 (m/abs -3.3))
+    (t/is= 3.0 (m/abs -3))
+    (t/is= 0.0 (m/abs 0))
+    (t/is= 0.0 (m/abs 0.0))
+    (t/is= m/inf+ (m/abs m/inf+))
+    (t/is= m/inf+ (m/abs m/inf-))
+    (t/is (m/nan? (m/abs m/nan)))))
+
 (t/deftest abs'-test
   (t/with-instrument `m/abs'
     (t/is-spec-check m/abs'))
@@ -686,6 +945,18 @@
     (t/is= m/inf+ (m/abs' m/inf-))
     (t/is (m/nan? (m/abs' m/nan)))))
 
+(t/deftest sqrt-test
+  (t/with-instrument `m/sqrt
+    (t/is-spec-check m/sqrt))
+  (t/with-instrument :all
+    (t/is= 3.0 (m/sqrt 9))
+    (t/is= 1.4142135623730951 (m/sqrt 2))
+    (t/is= 0.0 (m/sqrt 0))
+    (t/is= m/inf+ (m/sqrt m/inf+))
+    (t/is (m/nan? (m/sqrt -1)))
+    (t/is (m/nan? (m/sqrt m/nan)))
+    (t/is= 10.0 (m/sqrt 100))))
+
 (t/deftest cbrt-test
   (t/with-instrument `m/cbrt
     (t/is-spec-check m/cbrt))
@@ -698,7 +969,7 @@
     (t/is= m/inf- (m/cbrt m/inf-))
     (t/is (m/nan? (m/cbrt m/nan)))))
 
-;;TRIGONOMETRY
+;;;TRIGONOMETRY
 (t/deftest sin-test
   (t/with-instrument `m/sin
     (t/is-spec-check m/sin)))
@@ -779,7 +1050,7 @@
   (t/with-instrument `m/hypot
     (t/is-spec-check m/hypot)))
 
-;;ROUNDING
+;;;ROUNDING
 (t/deftest round'-test
   (t/with-instrument `m/round'
     (t/is-spec-check m/round'))

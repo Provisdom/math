@@ -21,7 +21,7 @@
 (declare intersection)
 
 (s/def ::size
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
 
 (defmacro interval-spec
   ([spec] `(interval-spec ~spec ~spec))
@@ -76,8 +76,8 @@
     (gen/sample (long-interval-gen 0 100))
     ;=> ([45 23] [0 99] [12 78] ...)"
   [min max]
-  (gen/tuple (gen/large-integer* {:min min :max max})
-    (gen/large-integer* {:min min :max max})))
+  (gen/tuple (gen/large-integer* {:max max :min min})
+    (gen/large-integer* {:max max :min min})))
 
 (s/def ::lower ::m/number)
 (s/def ::upper ::m/number)
@@ -260,17 +260,17 @@
   :args (s/cat :bounds ::bounds :number ::m/number)
   :ret ::m/number)
 
-(defn bounds-width
-  "Returns the width (span) of bounds.
+(defn bounds-finite-width
+  "Returns the width (span) of finite bounds.
 
   Examples:
-    (bounds-width ([[bounds]] 0 10))   ;=> 10.0
-    (bounds-width ([[bounds]] -5 5))   ;=> 10.0"
+    (bounds-finite-width ([[bounds]] 0 10))   ;=> 10.0
+    (bounds-finite-width ([[bounds]] -5 5))   ;=> 10.0"
   [{::keys [lower upper]}]
   (- upper (double lower)))
 
-(s/fdef bounds-width
-  :args (s/cat :bounds ::bounds-num)
+(s/fdef bounds-finite-width
+  :args (s/cat :bounds ::bounds-finite)
   :ret ::m/non-)
 
 (defn bounds-midpoint
@@ -657,5 +657,5 @@
 (s/fdef union
   :args (s/cat :vector-bounds ::vector-bounds)
   :ret ::vector-bounds)
-  
+
 

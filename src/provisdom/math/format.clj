@@ -21,14 +21,14 @@
 
 (s/def ::digits
   (s/with-gen ::m/int+
-    #(gen/large-integer* {:min 1 :max 35})))
+    #(gen/large-integer* {:max 35 :min 1})))
 
 (s/def ::max-digits ::digits)
 (s/def ::max-length ::m/int+)
 
 (s/def ::decimal-places
   (s/with-gen ::m/int-non-
-    #(gen/large-integer* {:min 0 :max 35})))
+    #(gen/large-integer* {:max 35 :min 0})))
 
 (s/def ::max-decimal-places ::decimal-places)
 (s/def ::money? boolean?)
@@ -498,8 +498,8 @@
   [s]
   (if (str/blank? s)
     {::anomalies/category ::anomalies/incorrect
-     ::anomalies/message  "Cannot parse empty or blank string"
-     ::anomalies/data     {:input s}}
+     ::anomalies/data     {:input s}
+     ::anomalies/message  "Cannot parse empty or blank string"}
     (let [removed-money (cond (str/starts-with? s "$") (strings/rest-string s)
 
                           (str/starts-with? s "-$")
@@ -526,8 +526,8 @@
           (if (some? result)
             result
             {::anomalies/category ::anomalies/incorrect
-             ::anomalies/message  "Failed to parse number string"
-             ::anomalies/data     {:input s}}))))))
+             ::anomalies/data     {:input s}
+             ::anomalies/message  "Failed to parse number string"}))))))
 
 (s/fdef parse-shorthand
   :args (s/cat :s string?)

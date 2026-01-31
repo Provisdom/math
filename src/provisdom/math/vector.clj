@@ -28,47 +28,47 @@
 
 (s/def ::size
   (s/with-gen ::m/int-non-
-    #(gen/large-integer* {:min 0 :max mdl})))
+    #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::vector ::tensor/tensor1D)
 
 (s/def ::vector-2D
   (s/with-gen
     (s/coll-of ::m/number
-               :kind clojure.core/vector?
-               :into []
-               :min-count 2
-               :max-count 2)
+      :kind clojure.core/vector?
+      :into []
+      :min-count 2
+      :max-count 2)
     #(gen/vector (s/gen ::m/number) 2)))
 
 (s/def ::vector-3D
   (s/with-gen
     (s/coll-of ::m/number
-               :kind clojure.core/vector?
-               :into []
-               :min-count 3
-               :max-count 3)
+      :kind clojure.core/vector?
+      :into []
+      :min-count 3
+      :max-count 3)
     #(gen/vector (s/gen ::m/number) 3)))
 
 (s/def ::vector-num
   (s/with-gen
     (s/coll-of ::m/num
-               :kind clojure.core/vector?
-               :into [])
+      :kind clojure.core/vector?
+      :into [])
     #(gen/vector (s/gen ::m/num) 0 mdl)))
 
 (s/def ::vector-finite
   (s/with-gen
     (s/coll-of ::m/finite
-               :kind clojure.core/vector?
-               :into [])
+      :kind clojure.core/vector?
+      :into [])
     #(gen/vector (s/gen ::m/finite) 0 mdl)))
 
 (s/def ::vector-int-non-
   (s/with-gen
     (s/coll-of ::m/int-non-
-               :kind clojure.core/vector?
-               :into [])
+      :kind clojure.core/vector?
+      :into [])
     #(gen/vector (s/gen ::m/int-non-) 0 mdl)))
 
 (defmacro vector-of-spec
@@ -81,24 +81,24 @@
                min-count 0}}]
   `(s/with-gen
      (s/coll-of ~pred
-                :distinct? ~d?
-                :into []
-                :kind clojure.core/vector?
-                :max-count (if ~max-count
-                             (max ~max-count ~min-count)
-                             m/max-int)
-                :min-count ~min-count)
+       :distinct? ~d?
+       :into []
+       :kind clojure.core/vector?
+       :max-count (if ~max-count
+                    (max ~max-count ~min-count)
+                    m/max-int)
+       :min-count ~min-count)
      #(if ~d?
         (gen/vector-distinct (s/gen ~pred)
-                             {:max-elements (if ~max-count
-                                              (max ~max-count ~min-count)
-                                              (+ ~min-count mdl))
-                              :min-elements ~min-count})
+          {:max-elements (if ~max-count
+                           (max ~max-count ~min-count)
+                           (+ ~min-count mdl))
+           :min-elements ~min-count})
         (gen/vector (s/gen ~pred)
-                    ~min-count
-                    (if ~max-count
-                      (max ~max-count ~min-count)
-                      (+ ~min-count mdl))))))
+          ~min-count
+          (if ~max-count
+            (max ~max-count ~min-count)
+            (+ ~min-count mdl))))))
 
 (defmacro vector-finite-spec
   [{d?        :distinct?
@@ -112,29 +112,29 @@
                min-count 0}}]
   `(s/with-gen
      (s/coll-of ::m/finite
-                :distinct? ~d?
-                :into []
-                :kind clojure.core/vector?
-                :max-count (if ~max-count
-                             (max ~max-count ~min-count)
-                             m/max-int)
-                :min-count ~min-count)
+       :distinct? ~d?
+       :into []
+       :kind clojure.core/vector?
+       :max-count (if ~max-count
+                    (max ~max-count ~min-count)
+                    m/max-int)
+       :min-count ~min-count)
      #(if ~d? (gen/vector-distinct (s/gen ::m/finite)
-                                   {:max-elements (if ~max-count
-                                                    (max ~max-count ~min-count)
-                                                    (+ ~min-count mdl))
-                                    :min-elements ~min-count})
-              (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2}))
-                          ~min-count
-                          (if ~max-count
-                            (max ~max-count ~min-count)
-                            (+ ~min-count mdl))))))
+                {:max-elements (if ~max-count
+                                 (max ~max-count ~min-count)
+                                 (+ ~min-count mdl))
+                 :min-elements ~min-count})
+        (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1}))
+          ~min-count
+          (if ~max-count
+            (max ~max-count ~min-count)
+            (+ ~min-count mdl))))))
 
 (s/def ::vector-finite+
   (s/with-gen
     (s/coll-of ::m/finite+
-               :kind clojure.core/vector?
-               :into [])
+      :kind clojure.core/vector?
+      :into [])
     #(gen/vector (s/gen ::m/finite+) 0 mdl)))
 
 (s/def ::vector-non-
@@ -154,17 +154,17 @@
 (s/def ::vector-prob
   (s/with-gen
     (s/coll-of ::m/prob
-               :kind clojure.core/vector?
-               :into [])
+      :kind clojure.core/vector?
+      :into [])
     #(gen/vector (s/gen ::m/prob) 0 mdl)))
 
 (s/def ::vector-probs
   (s/with-gen
     (s/and (s/coll-of ::m/prob
-                      :kind clojure.core/vector?
-                      :into []
-                      :min-count 1)
-           #(probs? % 1e-8))
+             :kind clojure.core/vector?
+             :into []
+             :min-count 1)
+      #(probs? % 1e-8))
     (fn []
       (gen/fmap
         (fn [weights]
@@ -176,10 +176,10 @@
 (s/def ::vector-open-probs
   (s/with-gen
     (s/and (s/coll-of ::m/open-prob
-                      :kind clojure.core/vector?
-                      :into []
-                      :min-count 2)
-           #(open-probs? % 1e-8))
+             :kind clojure.core/vector?
+             :into []
+             :min-count 2)
+      #(open-probs? % 1e-8))
     (fn []
       (gen/fmap
         (fn [weights]
@@ -191,22 +191,22 @@
 (s/def ::sparse-vector
   (s/with-gen
     (s/coll-of (s/tuple ::m/int-non- ::m/number))
-    #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-                          (gen/large-integer* {:min 0 :max mdl}))
+    #(gen/bind (gen/tuple (gen/large-integer* {:max mdl :min 0})
+                 (gen/large-integer* {:max mdl :min 0}))
        (fn [[i j]]
          (gen/vector
            (gen/tuple
-             (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
+             (gen/large-integer* {:max (max 0 (dec (max i j))) :min 0})
              (s/gen ::m/number))
            (min i j))))))
 
 (s/def ::index->number
   (s/fspec :args (s/cat :index ::tensor/index)
-           :ret ::m/number))
+    :ret ::m/number))
 
 (s/def ::index+number->bool
   (s/fspec :args (s/cat :index ::tensor/index :number ::m/number)
-           :ret boolean?))
+    :ret boolean?))
 
 ;;;VECTOR TYPES
 (defn vector?
@@ -238,7 +238,7 @@
     (vector-finite? [1.0 ##NaN]) => false"
   [x]
   (and (vector? x)
-       (every? m/finite? x)))
+    (every? m/finite? x)))
 
 (s/fdef vector-finite?
   :args (s/cat :x any?)
@@ -255,7 +255,7 @@
     (vector-prob? [0.3 1.2]) => false (1.2 > 1)"
   [x]
   (and (vector? x)
-       (every? m/prob? x)))
+    (every? m/prob? x)))
 
 (s/fdef vector-prob?
   :args (s/cat :x any?)
@@ -272,7 +272,7 @@
     (vector-open-prob? [0.3 1.0]) => false (contains 1)"
   [x]
   (and (vector? x)
-       (every? m/open-prob? x)))
+    (every? m/open-prob? x)))
 
 (s/fdef vector-open-prob?
   :args (s/cat :x any?)
@@ -289,13 +289,13 @@
     (vector-roughly-prob? [0.3 1.1] 0.02) => false (1.1 too far from 1)"
   [x accu]
   (and (vector? x)
-       (every? (fn [number]
-                 (m/roughly-prob? number accu))
-         x)))
+    (every? (fn [number]
+              (m/roughly-prob? number accu))
+      x)))
 
 (s/fdef vector-roughly-prob?
   :args (s/cat :x any?
-               :accu ::m/accu)
+          :accu ::m/accu)
   :ret boolean?)
 
 (defn probs?
@@ -310,11 +310,11 @@
     (probs? [0.3 0.6] 1e-8) => false (sums to 0.9)"
   [x sum-accu]
   (and (vector-prob? x)
-       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+    (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef probs?
   :args (s/cat :x any?
-               :sum-accu ::m/accu)
+          :sum-accu ::m/accu)
   :ret boolean?)
 
 (defn open-probs?
@@ -328,11 +328,11 @@
     (open-probs? [0.0 1.0] 1e-8) => false (contains boundary values)"
   [x sum-accu]
   (and (vector-open-prob? x)
-       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+    (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef open-probs?
   :args (s/cat :x any?
-               :sum-accu ::m/accu)
+          :sum-accu ::m/accu)
   :ret boolean?)
 
 (defn roughly-probs?
@@ -346,12 +346,12 @@
     (roughly-probs? [-0.01 1.01] 0.02 1e-8) => true (values close to [0,1])"
   [x accu sum-accu]
   (and (vector-roughly-prob? x accu)
-       (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+    (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef roughly-probs?
   :args (s/cat :x any?
-               :accu ::m/accu
-               :sum-accu ::m/accu)
+          :accu ::m/accu
+          :sum-accu ::m/accu)
   :ret boolean?)
 
 ;;;VECTOR CONSTRUCTORS
@@ -408,8 +408,8 @@
 
 (s/fdef compute-coll
   :args (s/cat :size ::size
-               :index->any (s/fspec :args (s/cat :index ::tensor/index)
-                                    :ret any?))
+          :index->any (s/fspec :args (s/cat :index ::tensor/index)
+                        :ret any?))
   :ret coll?)
 
 (defn rnd-vector!
@@ -461,7 +461,7 @@
   [number v]
   (vec (keep-indexed (fn [i n]
                        (when (= n number) i))
-                     v)))
+         v)))
 
 (s/fdef indexes-of
   :args (s/cat :number ::m/number :v ::vector)
@@ -531,8 +531,8 @@
 
 (s/fdef insertv
   :args (s/cat :v ::vector
-               :index ::tensor/index
-               :number ::m/number)
+          :index ::tensor/index
+          :number ::m/number)
   :ret (s/nilable ::vector))
 
 (defn removev
@@ -581,9 +581,9 @@
 
 (s/fdef concat-by-index
   :args (s/cat :coll1 (s/coll-of any?)
-               :coll2 (s/coll-of any?)
-               :i (s/with-gen ::m/int
-                    #(gen/large-integer* {:min (- mdl) :max mdl})))
+          :coll2 (s/coll-of any?)
+          :i (s/with-gen ::m/int
+               #(gen/large-integer* {:max mdl :min (- mdl)})))
   :ret coll?)
 
 (defn replace-nan
@@ -606,7 +606,7 @@
            (if (m/nan? number)
              replacement-number
              number))
-         numbers)))
+      numbers)))
 
 (s/fdef replace-nan
   :args (s/cat :replacement-number ::m/number :numbers ::m/numbers)
@@ -625,14 +625,14 @@
   (mapv (fn [p]
           (if (m/roughly-prob? p accu)
             (cond (> p 1.0) 1.0
-                  (neg? p) 0.0
-                  :else p)
+              (neg? p) 0.0
+              :else p)
             p))
     v))
 
 (s/fdef round-roughly-vector-prob
   :args (s/cat :v ::vector
-               :accu ::m/accu)
+          :accu ::m/accu)
   :ret ::vector)
 
 (defn rnd-shuffle-vector!
@@ -652,9 +652,9 @@
         (let [x (v' i)
               y (v' j)]
           (recur (-> v'
-                     (assoc! j x)
-                     (assoc! i y))
-                 (dec n)))))))
+                   (assoc! j x)
+                   (assoc! i y))
+            (dec n)))))))
 
 (s/fdef rnd-shuffle-vector!
   :args (s/cat :v ::vector)
@@ -724,14 +724,14 @@
   [v1 v2]
   (apply + (map (fn [a b]
                   (* (double a) b))
-                v1
-                v2)))
+             v1
+             v2)))
 
 (s/fdef dot-product
   :args (s/and (s/cat :v1 ::vector
-                      :v2 ::vector)
-               (fn [{:keys [v1 v2]}]
-                 (= (count v1) (count v2))))
+                 :v2 ::vector)
+          (fn [{:keys [v1 v2]}]
+            (= (count v1) (count v2))))
   :ret ::m/number)
 
 (defn cross-product
@@ -763,14 +763,14 @@
 
 (s/fdef cross-product
   :args (s/and (s/cat :v1 (s/or :vector-2D ::vector-2D
-                                :vector-3D ::vector-3D)
-                      :v2 (s/or :vector-2D ::vector-2D
-                                :vector-3D ::vector-3D))
-               (fn [{:keys [v1 v2]}]
-                 (let [v1-type (first v1)
-                       v2-type (first v2)]
-                   (or (and (= v1-type :vector-2D) (= v2-type :vector-2D))
-                       (and (= v1-type :vector-3D) (= v2-type :vector-3D))))))
+                            :vector-3D ::vector-3D)
+                 :v2 (s/or :vector-2D ::vector-2D
+                       :vector-3D ::vector-3D))
+          (fn [{:keys [v1 v2]}]
+            (let [v1-type (first v1)
+                  v2-type (first v2)]
+              (or (and (= v1-type :vector-2D) (= v2-type :vector-2D))
+                (and (= v1-type :vector-3D) (= v2-type :vector-3D))))))
   :ret (s/or :number ::m/number :v ::vector))
 
 (defn projection
@@ -790,8 +790,8 @@
 
 (s/fdef projection
   :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-               (fn [{:keys [v1 v2]}]
-                 (= (count v1) (count v2))))
+          (fn [{:keys [v1 v2]}]
+            (= (count v1) (count v2))))
   :ret ::vector)
 
 (defn orthogonal?
@@ -809,8 +809,8 @@
 
 (s/fdef orthogonal?
   :args (s/and (s/cat :v1 ::vector :v2 ::vector :accu ::m/accu)
-               (fn [{:keys [v1 v2]}]
-                 (= (count v1) (count v2))))
+          (fn [{:keys [v1 v2]}]
+            (= (count v1) (count v2))))
   :ret boolean?)
 
 (defn angle-between
@@ -834,8 +834,8 @@
 
 (s/fdef angle-between
   :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-               (fn [{:keys [v1 v2]}]
-                 (= (count v1) (count v2))))
+          (fn [{:keys [v1 v2]}]
+            (= (count v1) (count v2))))
   :ret ::m/number)
 
 (defn distance
@@ -853,6 +853,6 @@
 
 (s/fdef distance
   :args (s/and (s/cat :v1 ::vector :v2 ::vector)
-               (fn [{:keys [v1 v2]}]
-                 (= (count v1) (count v2))))
+          (fn [{:keys [v1 v2]}]
+            (= (count v1) (count v2))))
   :ret ::m/number)

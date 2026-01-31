@@ -67,17 +67,39 @@
   stability."
   (:require
     [clojure.spec.alpha :as s]
+    [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
     [provisdom.utility-belt.anomalies :as anomalies]))
 
-
 ;;;DECLARATIONS
-(s/def ::term-series (s/every ::m/number))
-(s/def ::coefficients (s/every ::m/number))
+(s/def ::term-series
+  (s/with-gen
+    (s/every ::m/number)
+    #(gen/vector (s/gen ::m/finite) 0 10)))
+
+(s/def ::coefficients
+  (s/with-gen
+    (s/every ::m/number)
+    #(gen/vector (s/gen ::m/finite) 0 10)))
+
 (s/def ::kahan? boolean?)
 (s/def ::neumaier? boolean?)
 
 (s/def ::denominator ::coefficients)
+
+(s/def ::inverse-coefficients
+  ;;coefficients valid for power-series-inverse: [0 non-zero ...]
+  (s/with-gen
+    (s/and ::coefficients
+      #(and (>= (count %) 2)
+         (m/roughly? (first %) 0.0 m/quad-close)
+         (not (m/roughly? (second %) 0.0 m/quad-close))))
+    #(gen/fmap (fn [[a1 rest-coeffs]]
+                 (vec (concat [0.0 a1] rest-coeffs)))
+       (gen/tuple
+         (gen/such-that (fn [x] (not (m/roughly? x 0.0 m/quad-close))) (s/gen ::m/finite))
+         (gen/vector (s/gen ::m/finite) 0 8)))))
+
 (s/def ::max-iter ::m/int+)
 (s/def ::num-terms ::m/int+)
 (s/def ::numerator ::coefficients)
@@ -258,8 +280,8 @@
   "Computes generalized continued fraction for `a-term-series` and `b-term-series` using
   multiplicative algorithm.
 
-  More numerically stable than standard algorithm, especially useful for special functions. Based
-  on Didonato and Morris (1992) Algorithm 708.
+  More numerically stable than standard algorithm, especially useful for special functions. Based on
+  Didonato and Morris (1992) Algorithm 708.
 
   Options:
     `::rel-accu` - relative accuracy threshold (default `1e-50`)
@@ -312,7 +334,10 @@
   [partial-sums]
   (letfn [(f [[s0 s1 s2 & rest]]
             (when s2
-              (let [d1 (- s1 s0)
+              (let [s0 (double s0)
+                    s1 (double s1)
+                    s2 (double s2)
+                    d1 (- s1 s0)
                     d2 (- s2 s1)
                     denom (- d2 d1)]
                 (lazy-seq
@@ -353,7 +378,7 @@
                    (let [prev-k-1 (get tbl [(dec n) (dec k)] 0.0)
                          prev-k (get tbl [(dec n) k] 0.0)
                          curr-k-1 (get tbl [n (dec k)] 0.0)
-                         diff (- curr-k-1 prev-k-1)]
+                         diff (- (double curr-k-1) prev-k-1)]
                      (if (m/roughly? diff 0.0 m/quad-close)
                        tbl
                        (recur (inc k)
@@ -395,7 +420,7 @@
     => approximates `ln(2)` faster than naive summation"
   [terms]
   (letfn [(binomial-row [row]
-            (vec (concat [1] (map + row (rest row)) [1])))
+            (vec (concat [1.0] (map + row (rest row)) [1.0])))
           (transform [ts binomial-coeffs n]
             (when (seq ts)
               (let [ts-vec (vec (take (inc n) ts))
@@ -403,15 +428,15 @@
                            nil
                            (/ (reduce + (map-indexed
                                           (fn [k ak]
-                                            (* (nth binomial-coeffs k 0)
-                                              (if (even? k) ak (- ak))))
+                                            (* (double (nth binomial-coeffs k 0))
+                                              (if (even? k) (double ak) (- (double ak)))))
                                           ts-vec))
-                             (m/pow 2 (inc n))))]
+                             (m/pow 2.0 (inc n))))]
                 (when term
                   (lazy-seq
                     (cons term
                       (transform (rest ts) (binomial-row binomial-coeffs) (inc n))))))))]
-    (or (transform terms [1 1] 1) '())))
+    (or (transform terms [1.0 1.0] 1) '())))
 
 (s/fdef euler-transform
   :args (s/cat :terms ::term-series)
@@ -526,9 +551,13 @@
                  new-result)))))))))
 
 (s/fdef power-series-compose
-  :args (s/cat :outer-coeffs ::coefficients
-          :inner-coeffs ::coefficients
-          :opts (s/? (s/keys :opt [::max-iter])))
+  :args (s/with-gen
+          (s/cat :outer-coeffs ::coefficients
+            :inner-coeffs ::coefficients
+            :opts (s/? (s/keys :opt [::max-iter])))
+          #(gen/tuple (s/gen ::coefficients)
+             (s/gen ::coefficients)
+             (gen/fmap (fn [n] {::max-iter n}) (gen/choose 2 20))))
   :ret ::coefficients)
 
 (defn power-series-inverse
@@ -552,14 +581,14 @@
          a1 (nth cs 1 0)]
      (cond
        (not (m/roughly? a0 0.0 m/quad-close))
-       {::anomalies/message "First coefficient must be 0 for power series inverse"
-        ::anomalies/fn (var power-series-inverse)
-        ::anomalies/category ::anomalies/incorrect}
+       {::anomalies/category ::anomalies/incorrect
+        ::anomalies/fn       (var power-series-inverse)
+        ::anomalies/message  "First coefficient must be 0 for power series inverse"}
 
        (m/roughly? a1 0.0 m/quad-close)
-       {::anomalies/message "Second coefficient must be non-zero for power series inverse"
-        ::anomalies/fn (var power-series-inverse)
-        ::anomalies/category ::anomalies/incorrect}
+       {::anomalies/category ::anomalies/incorrect
+        ::anomalies/fn       (var power-series-inverse)
+        ::anomalies/message  "Second coefficient must be non-zero for power series inverse"}
 
        :else
        (loop [n 1
@@ -570,13 +599,20 @@
                  composed (power-series-compose cs result-padded {::max-iter max-iter})
                  cn+1 (nth composed (inc n) 0.0)
                  b1 (nth result 1)
-                 new-coeff (- (/ cn+1 (m/pow b1 (inc n))))]
-             (recur (inc n)
-               (conj result new-coeff)))))))))
+                 b1-pow (m/pow b1 (inc n))]
+             (if (zero? b1-pow)
+               {::anomalies/category ::anomalies/incorrect
+                ::anomalies/fn       (var power-series-inverse)
+                ::anomalies/message  "Numerical underflow: coefficient too large for inverse computation"}
+               (recur (inc n)
+                 (conj result (- (/ cn+1 b1-pow))))))))))))
 
 (s/fdef power-series-inverse
-  :args (s/cat :coeffs ::coefficients
-          :opts (s/? (s/keys :opt [::max-iter])))
+  :args (s/with-gen
+          (s/cat :coeffs ::coefficients
+            :opts (s/? (s/keys :opt [::max-iter])))
+          #(gen/tuple (s/gen ::inverse-coefficients)
+             (gen/fmap (fn [n] {::max-iter n}) (gen/choose 2 10))))
   :ret (s/or :coefficients ::coefficients
          :anomaly ::anomalies/anomaly))
 
@@ -602,9 +638,9 @@
    (let [cs (vec (take num-terms coeffs))
          n (count cs)]
      (if (< n 3)
-       {::ratio-estimate m/inf+
-        ::root-estimate m/inf+
-        ::combined-estimate m/inf+}
+       {::combined-estimate m/inf+
+        ::ratio-estimate    m/inf+
+        ::root-estimate     m/inf+}
        (let [;; Ratio test: R = lim |aₙ/aₙ₊₁|
              ratios (for [i (range (dec n))
                           :let [ai (m/abs (nth cs i))
@@ -629,9 +665,9 @@
                         (m/finite? ratio-est) ratio-est
                         (m/finite? root-est) root-est
                         :else m/inf+)]
-         {::ratio-estimate ratio-est
-          ::root-estimate root-est
-          ::combined-estimate combined})))))
+         {::combined-estimate combined
+          ::ratio-estimate    ratio-est
+          ::root-estimate     root-est})))))
 
 (s/fdef radius-of-convergence
   :args (s/cat :coeffs ::coefficients
@@ -661,8 +697,8 @@
         c (fn [i] (double (nth cs i 0.0)))]
     (if (zero? M)
       ;; No denominator, just truncated series
-      {::numerator (mapv double (take (inc L) cs))
-       ::denominator [1.0]}
+      {::denominator [1.0]
+       ::numerator   (mapv double (take (inc L) cs))}
       ;; Solve linear system for denominator coefficients
       ;; Q(x) = 1 + q₁x + q₂x² + ... + qₘxᴹ
       ;; System: Σⱼ qⱼ·c_{L+i-j} = -c_{L+1+i} for i = 0..M-1, j = 0..M-1
@@ -728,11 +764,15 @@
             numer (vec (for [k (range (inc L))]
                          (reduce + (for [j (range (inc (min k M)))]
                                      (* (nth denom j 0.0) (c (- k j)))))))]
-        {::numerator numer
-         ::denominator denom}))))
+        {::denominator denom
+         ::numerator   numer}))))
 
 (s/fdef pade-approximant
-  :args (s/cat :coeffs ::coefficients :L ::m/int-non- :M ::m/int-non-)
+  :args (s/with-gen
+          (s/cat :coeffs ::coefficients :L ::m/int-non- :M ::m/int-non-)
+          #(gen/tuple (s/gen ::coefficients)
+             (gen/choose 0 5)
+             (gen/choose 0 5)))
   :ret (s/keys :req [::numerator ::denominator]))
 
 (defn evaluate-pade
@@ -787,7 +827,7 @@
                                             (or (<= (m/abs val) m/quad-close)
                                               (<= (m/abs (m/div val sum))
                                                 m/quad-close))))
-                         error-pred     (fn [sum i val]
+                         error-pred     (fn [sum i _val]
                                           (or (> i 10000)
                                             (not (m/finite? sum))))}}]
    (loop [i 0
@@ -796,23 +836,23 @@
           carry 0.0]
      (cond (not val) sum
 
-           (error-pred sum i val)
-           {::anomalies/message  (str "Error predicate true. "
-                                   " Sum: " sum
-                                   " Iteration: " i
-                                   " Next value: " val)
-            ::anomalies/fn       (var sum-convergent-series)
-            ::anomalies/category ::anomalies/no-solve}
+       (error-pred sum i val)
+       {::anomalies/category ::anomalies/no-solve
+        ::anomalies/fn       (var sum-convergent-series)
+        ::anomalies/message  (str "Error predicate true. "
+                               " Sum: " sum
+                               " Iteration: " i
+                               " Next value: " val)}
 
-           (converged-pred sum i val) (+ sum val)
+       (converged-pred sum i val) (+ sum val)
 
-           :else
-           (if kahan?
-             (let [y (- val carry)
-                   new-sum (+ y sum)
-                   new-carry (- new-sum sum y)]
-               (recur (inc i) t new-sum new-carry))
-             (recur (inc i) t (+ sum val) 0.0))))))
+       :else
+       (if kahan?
+         (let [y (- val carry)
+               new-sum (+ y sum)
+               new-carry (- new-sum sum y)]
+           (recur (inc i) t new-sum new-carry))
+         (recur (inc i) t (+ sum val) 0.0))))))
 
 (s/fdef sum-convergent-series
   :args (s/cat :term-series ::term-series
@@ -853,16 +893,16 @@
           sum 1.0]
      (cond (not val) (if (zero? i) 0.0 sum)
 
-           (error-pred sum i val)
-           {::anomalies/message  (str "Error predicate true. "
-                                   " Sum: " sum
-                                   " Iteration: " i
-                                   " Next value: " val)
-            ::anomalies/fn       (var multiplicative-sum-convergent-series)
-            ::anomalies/category ::anomalies/no-solve}
+       (error-pred sum i val)
+       {::anomalies/category ::anomalies/no-solve
+        ::anomalies/fn       (var multiplicative-sum-convergent-series)
+        ::anomalies/message  (str "Error predicate true. "
+                               " Sum: " sum
+                               " Iteration: " i
+                               " Next value: " val)}
 
-           (converged-pred sum i val) (* sum val)
-           :else (recur (inc i) t (* sum val))))))
+       (converged-pred sum i val) (* sum val)
+       :else (recur (inc i) t (* sum val))))))
 
 (s/fdef multiplicative-sum-convergent-series
   :args (s/cat :term-series ::term-series
@@ -963,29 +1003,29 @@
      (cond
        ;; End of sequence
        (nil? val)
-       {::sum sum
-        ::iterations i
-        ::final-term 0.0
+       {::converged?       true
         ::estimated-error 0.0
-        ::converged? true}
+        ::final-term      0.0
+        ::iterations      i
+        ::sum             sum}
 
        ;; Max iterations reached
        (>= i max-iter)
-       {::sum (+ sum (double val))
-        ::iterations (inc i)
-        ::final-term (double val)
+       {::converged?       false
         ::estimated-error (m/abs (double val))
-        ::converged? false}
+        ::final-term      (double val)
+        ::iterations      (inc i)
+        ::sum             (+ sum (double val))}
 
        ;; Check convergence
        (and (>= i 5)
          (or (<= (m/abs (double val)) rel-accu)
            (<= (m/abs (m/div (double val) sum)) rel-accu)))
-       {::sum (+ sum (double val))
-        ::iterations (inc i)
-        ::final-term (double val)
+       {::converged?       true
         ::estimated-error (m/abs (double val))
-        ::converged? true}
+        ::final-term      (double val)
+        ::iterations      (inc i)
+        ::sum             (+ sum (double val))}
 
        ;; Continue summing
        :else

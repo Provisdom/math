@@ -40,6 +40,17 @@
       (t/is= 2 (.variant uuid)))
     (t/is= (random/random-uuid 0.5 0.5) (random/random-uuid 0.5 0.5))))
 
+(t/deftest next-rng$-test
+  (t/with-instrument `random/next-rng$
+    (t/is-spec-check random/next-rng$))
+  (t/with-instrument :all
+    ;; Returns an RNG
+    (t/is (satisfies? random/IRandom (random/next-rng$)))
+    ;; Successive calls return independent RNGs (different random values)
+    (let [rng1 (random/next-rng$)
+          rng2 (random/next-rng$)]
+      (t/is-not (= (random/rnd rng1) (random/rnd rng2))))))
+
 ;;;IMMUTABLE RNG
 (t/deftest rng-test
   (t/with-instrument `random/rng
@@ -113,11 +124,38 @@
       (take 3 (random/rnd-long-lazy (random/rng 3))))))
 
 ;;;BOUND RNG
+(t/deftest rng-gen-test
+  (t/with-instrument `random/rng-gen
+    (t/is-spec-check random/rng-gen))
+  (t/with-instrument :all
+    ;; Returns a function
+    (t/is (fn? (random/rng-gen (random/rng 3))))
+    ;; Calling the function produces RNGs
+    (let [gen (random/rng-gen (random/rng 3))]
+      (t/is (satisfies? random/IRandom (gen)))
+      ;; Successive calls produce different RNGs
+      (let [rng1 (gen)
+            rng2 (gen)]
+        (t/is-not (= (random/rnd rng1) (random/rnd rng2)))))))
+
 (t/deftest rng!-test
   (t/with-instrument `random/rng!
     (t/is-spec-check random/rng!))
   (t/with-instrument :all
     (t/is= 0.17343824438608113 (random/rnd (random/bind-seed 3 (random/rng!))))))
+
+(t/deftest set-seed!-test
+  (t/with-instrument `random/set-seed!
+    (t/is-spec-check random/set-seed!))
+  (t/with-instrument :all
+    ;; set-seed! returns an rng-gen function
+    (t/is (fn? (random/set-seed! 42)))
+    ;; After set-seed!, rnd! produces deterministic results
+    (random/set-seed! 3)
+    (t/is= 0.17343824438608113 (random/rnd!))
+    ;; Resetting to same seed produces same sequence
+    (random/set-seed! 3)
+    (t/is= 0.17343824438608113 (random/rnd!))))
 
 (t/deftest rnd!-test
   (t/with-instrument `random/rnd!
@@ -194,6 +232,41 @@
   (t/with-instrument `random/set-seed!$
     (t/is-spec-check random/set-seed!$))
   (t/with-instrument :all))
+
+;;;MACROS
+(t/deftest bind-seed-test
+  ;; Macros cannot have spec-check or instrumentation
+  ;; bind-seed creates a thread-local binding for *rng-gen*
+  (t/is= 0.17343824438608113 (random/bind-seed 3 (random/rnd!)))
+  ;; Multiple calls within same binding produce a sequence
+  (t/is= [0.17343824438608113 0.5672348695804793]
+    (random/bind-seed 3
+      [(random/rnd!) (random/rnd!)]))
+  ;; Same seed produces same results
+  (t/is= (random/bind-seed 42 (random/rnd!))
+    (random/bind-seed 42 (random/rnd!)))
+  ;; Different seeds produce different results
+  (t/is-not (= (random/bind-seed 1 (random/rnd!))
+              (random/bind-seed 2 (random/rnd!))))
+  ;; Binding is thread-local - outer binding unaffected by inner
+  (t/is= [0.17343824438608113 0.5672348695804793]
+    (random/bind-seed 3
+      (let [first-val (random/rnd!)]
+        ;; Inner bind-seed uses different seed
+        (random/bind-seed 100 (random/rnd!))
+        ;; Continue with outer binding
+        [first-val (random/rnd!)]))))
+
+(t/deftest do-set-seed!-test
+  ;; Macros cannot have spec-check or instrumentation
+  ;; do-set-seed! sets global *rng-gen* then executes body
+  (t/is= 0.17343824438608113 (random/do-set-seed! 3 (random/rnd!)))
+  ;; The seed persists after the macro completes (unlike bind-seed)
+  (random/do-set-seed! 3 nil)
+  (t/is= 0.17343824438608113 (random/rnd!))
+  ;; Calling again with same seed resets the sequence
+  (random/do-set-seed! 3 nil)
+  (t/is= 0.17343824438608113 (random/rnd!)))
 
 ;;;INTROSPECTION
 (t/deftest rng-algorithm-test

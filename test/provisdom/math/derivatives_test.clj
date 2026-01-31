@@ -1,10 +1,10 @@
 (ns provisdom.math.derivatives-test
   (:require
-    [provisdom.test.core :as t]
     [provisdom.math.core :as m]
-    [provisdom.math.derivatives :as deriv]))
+    [provisdom.math.derivatives :as deriv]
+    [provisdom.test.core :as t]))
 
-;;20 seconds
+;;73 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -44,12 +44,12 @@
        5.0))
     ;;second deriv of log: -0.04
     (t/is= -0.03999999886872274
-      ((deriv/derivative-fn m/log {::deriv/derivative 2
-                                   ::deriv/accuracy   2})
+      ((deriv/derivative-fn m/log {::deriv/accuracy   2
+                                   ::deriv/derivative 2})
        5.0))
     (t/is= -0.039999989986938544
-      ((deriv/derivative-fn m/log {::deriv/derivative 2
-                                   ::deriv/accuracy   8})
+      ((deriv/derivative-fn m/log {::deriv/accuracy   8
+                                   ::deriv/derivative 2})
        5.0))
     ;;third deriv: 105166.413159103
     (t/is= 105166.41574213281 ((deriv/derivative-fn der-f {::deriv/derivative 3}) 5.0))
@@ -62,8 +62,8 @@
                                    ::deriv/h          1e-9})
        5.0))
     (t/is= 105166.41574213281
-      ((deriv/derivative-fn der-f {::deriv/derivative 3
-                                   ::deriv/accuracy   6})
+      ((deriv/derivative-fn der-f {::deriv/accuracy   6
+                                   ::deriv/derivative 3})
        5.0))
     ;;fourth deriv: 63148.413159103
     (t/is= 63148.41448329389 ((deriv/derivative-fn der-f {::deriv/derivative 4}) 5.0))
@@ -76,12 +76,12 @@
                                    ::deriv/h          1e-9})
        5.0))
     (t/is= 63148.41448329389
-      ((deriv/derivative-fn der-f {::deriv/derivative 4
-                                   ::deriv/accuracy   4})
+      ((deriv/derivative-fn der-f {::deriv/accuracy   4
+                                   ::deriv/derivative 4})
        5.0))
     (t/is= 63148.41448329389
-      ((deriv/derivative-fn der-f {::deriv/derivative 4
-                                   ::deriv/accuracy   6})
+      ((deriv/derivative-fn der-f {::deriv/accuracy   6
+                                   ::deriv/derivative 4})
        5.0))
     ;;fifth deriv: 25348.41315903
     (t/is-approx= 25348.41 ((deriv/derivative-fn der-f {::deriv/derivative 5}) 5.0) :tolerance 0.1)
@@ -180,11 +180,11 @@
     (t/is= [16.000000002236447 51.0000000062405] ((deriv/gradient-fn gf) [3.0 4.0]))
     ;; f(x,y) = x^2 + y^2, grad = [2x, 2y]
     (let [[gx gy] ((deriv/gradient-fn sum-of-squares-2d) [3.0 4.0])]
-      (t/is-approx= 6.0 gx :tolerance 1e-6)
-      (t/is-approx= 8.0 gy :tolerance 1e-6))
+      (t/is-approx= 6.0 gx)
+      (t/is-approx= 8.0 gy))
     (let [[gx gy] ((deriv/gradient-fn sum-of-squares-2d) [0.0 0.0])]
-      (t/is-approx= 0.0 gx :tolerance 1e-6)
-      (t/is-approx= 0.0 gy :tolerance 1e-6))
+      (t/is-approx= 0.0 gx)
+      (t/is-approx= 0.0 gy))
     ;; f(x,y,z) = xyz, grad = [yz, xz, xy]
     (let [[gx gy gz] ((deriv/gradient-fn product-3d) [1.0 2.0 3.0])]
       (t/is-approx= 6.0 gx :tolerance 1e-5)
@@ -221,10 +221,10 @@
       (t/is-approx= 6.0 j11 :tolerance 1e-5))
     ;; F(x,y) = [x+y, x*y], Jacobian = [[1, 1], [y, x]]
     (let [[[j00 j01] [j10 j11]] ((deriv/jacobian-fn sum-product-2d-v) [2.0 3.0])]
-      (t/is-approx= 1.0 j00 :tolerance 1e-6)
-      (t/is-approx= 1.0 j01 :tolerance 1e-6)
-      (t/is-approx= 3.0 j10 :tolerance 1e-6)
-      (t/is-approx= 2.0 j11 :tolerance 1e-6))
+      (t/is-approx= 1.0 j00)
+      (t/is-approx= 1.0 j01)
+      (t/is-approx= 3.0 j10)
+      (t/is-approx= 2.0 j11))
     ;; F(x,y,z) = [x*y, y*z, x*z], Jacobian at (1,2,3)
     ;; [[y, x, 0], [0, z, y], [z, 0, x]] = [[2, 1, 0], [0, 3, 2], [3, 0, 1]]
     (let [jac ((deriv/jacobian-fn products-3d-v) [1.0 2.0 3.0])]
@@ -334,56 +334,68 @@
   (t/with-instrument :all
     (t/is= 1.0000000294496658 ((deriv/second-partial-derivative-xy-of-fxy fxy) 3.0 3.0)))) ;1
 
-;;;IMPROVED DERIVATIVE FUNCTIONS TESTS
+;;;IMPROVED DERIVATIVE FUNCTIONS
 (t/deftest richardson-derivative-fn-test
-  ;; sin'(0) = cos(0) = 1
-  (t/is-approx= 1.0 ((deriv/richardson-derivative-fn m/sin) 0.0) :tolerance 1e-10)
-  ;; sin'(PI) = cos(PI) = -1
-  (t/is-approx= -1.0 ((deriv/richardson-derivative-fn m/sin) m/PI) :tolerance 1e-8)
-  ;; cos'(0) = -sin(0) = 0
-  (t/is-approx= 0.0 ((deriv/richardson-derivative-fn m/cos) 0.0) :tolerance 1e-10)
-  ;; Second derivative: sin''(0) = -sin(0) = 0
-  (t/is-approx= 0.0
-          ((deriv/richardson-derivative-fn m/sin {::deriv/derivative 2}) 0.0)
-          :tolerance 1e-8)
-  ;; Richardson with more levels should be accurate
-  (let [true-deriv (m/cos 1.0)
-        richardson-6 ((deriv/richardson-derivative-fn m/sin {::deriv/richardson-levels 6}) 1.0)]
-    ;; With 6 levels of Richardson, we should get good accuracy
-    (t/is-approx= true-deriv richardson-6 :tolerance 1e-8)))
+  (t/with-instrument `deriv/richardson-derivative-fn
+    (t/is-spec-check deriv/richardson-derivative-fn))
+  (t/with-instrument :all
+    ;; sin'(0) = cos(0) = 1
+    (t/is-approx= 1.0 ((deriv/richardson-derivative-fn m/sin) 0.0) :tolerance 1e-10)
+    ;; sin'(PI) = cos(PI) = -1
+    (t/is-approx= -1.0 ((deriv/richardson-derivative-fn m/sin) m/PI) :tolerance 1e-8)
+    ;; cos'(0) = -sin(0) = 0
+    (t/is-approx= 0.0 ((deriv/richardson-derivative-fn m/cos) 0.0) :tolerance 1e-10)
+    ;; Second derivative: sin''(0) = -sin(0) = 0
+    (t/is-approx= 0.0
+      ((deriv/richardson-derivative-fn m/sin {::deriv/derivative 2}) 0.0)
+      :tolerance 1e-8)
+    ;; Richardson with more levels should be accurate
+    (let [true-deriv (m/cos 1.0)
+          richardson-6 ((deriv/richardson-derivative-fn m/sin {::deriv/richardson-levels 6}) 1.0)]
+      ;; With 6 levels of Richardson, we should get good accuracy
+      (t/is-approx= true-deriv richardson-6 :tolerance 1e-8))))
 
 (t/deftest adaptive-derivative-fn-test
-  ;; sin'(PI) = -1
-  (t/is-approx= -1.0 ((deriv/adaptive-derivative-fn m/sin) m/PI) :tolerance 1e-7)
-  ;; x^2 derivative at x=5 is 10
-  (t/is-approx= 10.0 ((deriv/adaptive-derivative-fn m/sq) 5.0) :tolerance 1e-7)
-  ;; With custom tolerance - note that tighter rel-tol gives better result
-  (t/is-approx= (m/cos 2.0)
-          ((deriv/adaptive-derivative-fn m/sin {::deriv/rel-tol 1e-12}) 2.0)
-          :tolerance 1e-7))
+  (t/with-instrument `deriv/adaptive-derivative-fn
+    (t/is-spec-check deriv/adaptive-derivative-fn))
+  (t/with-instrument :all
+    ;; sin'(PI) = -1
+    (t/is-approx= -1.0 ((deriv/adaptive-derivative-fn m/sin) m/PI) :tolerance 1e-7)
+    ;; x^2 derivative at x=5 is 10
+    (t/is-approx= 10.0 ((deriv/adaptive-derivative-fn m/sq) 5.0) :tolerance 1e-7)
+    ;; With custom tolerance - note that tighter rel-tol gives better result
+    (t/is-approx= (m/cos 2.0)
+      ((deriv/adaptive-derivative-fn m/sin {::deriv/rel-tol 1e-12}) 2.0)
+      :tolerance 1e-7)))
 
 (t/deftest derivative-with-error-fn-test
-  (let [result ((deriv/derivative-with-error-fn m/sin) m/PI)]
-    ;; Value should be close to -1
-    (t/is-approx= -1.0 (::deriv/value result) :tolerance 1e-7)
-    ;; Error bound should be small and non-negative
-    (t/is (m/non-? (::deriv/error-bound result)))
-    (t/is (< (::deriv/error-bound result) 1e-6)))
-  ;; Test with x^2
-  (let [result ((deriv/derivative-with-error-fn m/sq) 3.0)]
-    (t/is-approx= 6.0 (::deriv/value result) :tolerance 1e-7)))
+  (t/with-instrument `deriv/derivative-with-error-fn
+    (t/is-spec-check deriv/derivative-with-error-fn))
+  (t/with-instrument :all
+    (let [result ((deriv/derivative-with-error-fn m/sin) m/PI)]
+      ;; Value should be close to -1
+      (t/is-approx= -1.0 (::deriv/value result) :tolerance 1e-7)
+      ;; Error bound should be small and non-negative
+      (t/is (m/non-? (::deriv/error-bound result)))
+      (t/is (< (::deriv/error-bound result) 1e-6)))
+    ;; Test with x^2
+    (let [result ((deriv/derivative-with-error-fn m/sq) 3.0)]
+      (t/is-approx= 6.0 (::deriv/value result) :tolerance 1e-7))))
 
-;;;VECTOR CALCULUS TESTS
+;;;VECTOR CALCULUS FUNCTIONS
 (t/deftest directional-derivative-fn-test
+  (t/with-instrument `deriv/directional-derivative-fn
+    (t/is-spec-check deriv/directional-derivative-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; f(x,y) = x^2 + y^2, grad = [2x, 2y]
   ;; Direction [1,0] at (3,4) -> 2*3 = 6
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         df-x (deriv/directional-derivative-fn f [1.0 0.0])]
-    (t/is-approx= 6.0 (df-x [3.0 4.0]) :tolerance 1e-6))
+    (t/is-approx= 6.0 (df-x [3.0 4.0])))
   ;; Direction [0,1] at (3,4) -> 2*4 = 8
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         df-y (deriv/directional-derivative-fn f [0.0 1.0])]
-    (t/is-approx= 8.0 (df-y [3.0 4.0]) :tolerance 1e-6))
+    (t/is-approx= 8.0 (df-y [3.0 4.0])))
   ;; Direction [1,1] (normalized) at (3,4) -> (6+8)/sqrt(2) = 14/sqrt(2)
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         df-diag (deriv/directional-derivative-fn f [1.0 1.0])]
@@ -394,6 +406,9 @@
     (t/is (m/nan? (df-zero [3.0 4.0])))))
 
 (t/deftest laplacian-fn-test
+  (t/with-instrument `deriv/laplacian-fn
+    (t/is-spec-check deriv/laplacian-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; f(x,y) = x^2 + y^2, Laplacian = 2 + 2 = 4
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         lap (deriv/laplacian-fn f)]
@@ -405,27 +420,33 @@
     (t/is-approx= 12.0 (lap [1.0 1.0 1.0]) :tolerance 1e-5)))
 
 (t/deftest divergence-fn-test
+  (t/with-instrument `deriv/divergence-fn
+    (t/is-spec-check deriv/divergence-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; F(x,y) = [x, y], div = 1 + 1 = 2
   (let [F (fn [[x y]] [x y])
         divF (deriv/divergence-fn F)]
-    (t/is-approx= 2.0 (divF [3.0 4.0]) :tolerance 1e-6))
+    (t/is-approx= 2.0 (divF [3.0 4.0])))
   ;; F(x,y) = [xy, y^2], div = y + 2y = 3y
   (let [F (fn [[x y]] [(* x y) (m/sq y)])
         divF (deriv/divergence-fn F)]
-    (t/is-approx= 9.0 (divF [2.0 3.0]) :tolerance 1e-6)) ;; 3*3 = 9
+    (t/is-approx= 9.0 (divF [2.0 3.0]))) ;; 3*3 = 9
   ;; F(x,y,z) = [x^2, y^2, z^2], div = 2x + 2y + 2z
   (let [F (fn [[x y z]] [(m/sq x) (m/sq y) (m/sq z)])
         divF (deriv/divergence-fn F)]
-    (t/is-approx= 12.0 (divF [1.0 2.0 3.0]) :tolerance 1e-6))) ;; 2+4+6 = 12
+    (t/is-approx= 12.0 (divF [1.0 2.0 3.0])))) ;; 2+4+6 = 12
 
 (t/deftest curl-fn-test
+  (t/with-instrument `deriv/curl-fn
+    (t/is-spec-check deriv/curl-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; F(x,y,z) = [y, -x, 0], curl = [0, 0, -1-1] = [0, 0, -2]
   (let [F (fn [[x y _z]] [y (- x) 0.0])
         curlF (deriv/curl-fn F)
         result (curlF [1.0 2.0 3.0])]
-    (t/is-approx= 0.0 (nth result 0) :tolerance 1e-6)
-    (t/is-approx= 0.0 (nth result 1) :tolerance 1e-6)
-    (t/is-approx= -2.0 (nth result 2) :tolerance 1e-6))
+    (t/is-approx= 0.0 (nth result 0))
+    (t/is-approx= 0.0 (nth result 1))
+    (t/is-approx= -2.0 (nth result 2)))
   ;; F(x,y,z) = [yz, xz, xy], curl = [x-x, y-y, z-z] = [0, 0, 0]
   (let [F (fn [[x y z]] [(* y z) (* x z) (* x y)])
         curlF (deriv/curl-fn F)
@@ -439,8 +460,12 @@
         result (curlF [1.0 2.0])]
     (t/is (every? m/nan? result))))
 
-;;;HIGHER-ORDER MIXED PARTIALS TEST
+;;;HIGHER-ORDER MIXED PARTIALS
 (t/deftest mixed-partial-fn-test
+  (t/with-instrument `deriv/mixed-partial-fn
+    ;;:num-tests 5; nested derivative calculations are very slow
+    (t/is-spec-check `deriv/mixed-partial-fn {:num-tests 5}))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; f(x,y) = x^2 * y^3
   ;; df/dx = 2xy^3, d^2f/dx^2 = 2y^3
   ;; d^3f/(dx^2 dy) = 6y^2
@@ -457,8 +482,11 @@
         df-dy (deriv/mixed-partial-fn f [0 1])]
     (t/is-approx= 12.0 (df-dy [1.0 2.0]) :tolerance 1e-5)))
 
-;;;SPARSE JACOBIAN AND HESSIAN TESTS
+;;;SPARSE JACOBIANS AND HESSIANS
 (t/deftest sparse-jacobian-fn-test
+  (t/with-instrument `deriv/sparse-jacobian-fn
+    (t/is-spec-check deriv/sparse-jacobian-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; F(x,y) = [x^2, y^2], diagonal Jacobian entries: [2x, 2y]
   (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{[0 0] [1 1]})
         result (sJ [3.0 4.0])]
@@ -466,13 +494,13 @@
     (t/is (= 2 (count result)))
     (let [entry00 (first (filter #(= [0 0] (vec (take 2 %))) result))
           entry11 (first (filter #(= [1 1] (vec (take 2 %))) result))]
-      (t/is-approx= 6.0 (nth entry00 2) :tolerance 1e-6)
-      (t/is-approx= 8.0 (nth entry11 2) :tolerance 1e-6)))
+      (t/is-approx= 6.0 (nth entry00 2))
+      (t/is-approx= 8.0 (nth entry11 2))))
   ;; Test off-diagonal entry: F(x,y) = [x+y, x*y], dF0/dy = 1
   (let [sJ (deriv/sparse-jacobian-fn sum-product-2d-v #{[0 1]})
         result (sJ [2.0 3.0])
         entry01 (first result)]
-    (t/is-approx= 1.0 (nth entry01 2) :tolerance 1e-6))
+    (t/is-approx= 1.0 (nth entry01 2)))
   ;; Test 3D function with sparse pattern
   ;; F(x,y,z) = [x*y, y*z, x*z]
   ;; dF0/dx=y, dF1/dz=y, dF2/dx=z
@@ -480,15 +508,18 @@
         result (sJ [1.0 2.0 3.0])]
     (t/is (= 3 (count result)))
     (let [entry-map (into {} (map (fn [[r c v]] [[r c] v]) result))]
-      (t/is-approx= 2.0 (get entry-map [0 0]) :tolerance 1e-6)  ;; dF0/dx = y = 2
-      (t/is-approx= 2.0 (get entry-map [1 2]) :tolerance 1e-6)  ;; dF1/dz = y = 2
-      (t/is-approx= 3.0 (get entry-map [2 0]) :tolerance 1e-6))) ;; dF2/dx = z = 3
+      (t/is-approx= 2.0 (get entry-map [0 0]))  ;; dF0/dx = y = 2
+      (t/is-approx= 2.0 (get entry-map [1 2]))  ;; dF1/dz = y = 2
+      (t/is-approx= 3.0 (get entry-map [2 0])))) ;; dF2/dx = z = 3
   ;; Empty sparsity pattern
   (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{})
         result (sJ [3.0 4.0])]
     (t/is= [] result)))
 
 (t/deftest sparse-hessian-fn-test
+  (t/with-instrument `deriv/sparse-hessian-fn
+    (t/is-spec-check deriv/sparse-hessian-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; f(x,y) = x^2 + y^2, Hessian diagonal = [2, 2]
   (let [sH (deriv/sparse-hessian-fn sum-of-squares-2d #{[0 0] [1 1]})
         result (sH [3.0 4.0])]

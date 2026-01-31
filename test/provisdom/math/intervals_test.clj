@@ -89,12 +89,12 @@
     (t/is= (m/next-down 10.0)
       (intervals/bound-by-bounds (intervals/bounds 0.0 10.0 false true) 15.0))))
 
-(t/deftest bounds-width-test
-  (t/with-instrument `intervals/bounds-width
-    (t/is-spec-check intervals/bounds-width))
+(t/deftest bounds-finite-width-test
+  (t/with-instrument `intervals/bounds-finite-width
+    (t/is-spec-check intervals/bounds-finite-width))
   (t/with-instrument :all
-    (t/is= 10.0 (intervals/bounds-width (intervals/bounds 0.0 10.0)))
-    (t/is= 10.0 (intervals/bounds-width (intervals/bounds -5.0 5.0)))))
+    (t/is= 10.0 (intervals/bounds-finite-width (intervals/bounds 0.0 10.0)))
+    (t/is= 10.0 (intervals/bounds-finite-width (intervals/bounds -5.0 5.0)))))
 
 (t/deftest bounds-midpoint-test
   (t/with-instrument `intervals/bounds-midpoint

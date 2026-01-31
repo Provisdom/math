@@ -11,7 +11,7 @@
 
 (set! *warn-on-reflection* true)
 
-;;;TYPES
+;;;MATRIX TYPES
 (t/deftest matrix?-test
   (t/with-instrument `mx/matrix?
     (t/is-spec-check mx/matrix?))
@@ -206,7 +206,7 @@
     ;; Infinite values
     (t/is-not (mx/symmetric-matrix-finite-non-? [[1.0 m/inf+] [m/inf+ 3.0]]))))
 
-;;;CONSTRUCTORS
+;;;MATRIX CONSTRUCTORS
 (t/deftest to-matrix-test
   (t/with-instrument `mx/to-matrix
     (t/is-spec-check mx/to-matrix))
@@ -421,7 +421,7 @@
     (t/is= [[3.0 2.0] [2.0 4.0]]
       (mx/sparse->symmetric-matrix [[0 0 3.0] [1 0 2.0]] [[1.0 2.0] [2.0 4.0]]))))
 
-;;;INFO
+;;;MATRIX INFO
 (t/deftest rows-test
   (t/with-instrument `mx/rows
     (t/is-spec-check mx/rows))
@@ -564,24 +564,24 @@
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]] {::mx/exception-column-indices [0 1]}))
     (t/is= [[]]
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]]
-        {::mx/row-indices           0
-         ::mx/exception-row-indices 0}))
+        {::mx/exception-row-indices 0
+         ::mx/row-indices           0}))
     (t/is= [[]]
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]]
-        {::mx/row-indices           [0]
-         ::mx/exception-row-indices 0}))
+        {::mx/exception-row-indices 0
+         ::mx/row-indices           [0]}))
     (t/is= [[]]
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]]
-        {::mx/row-indices           0
-         ::mx/exception-row-indices [0]}))
+        {::mx/exception-row-indices [0]
+         ::mx/row-indices           0}))
     (t/is= [[1.0]]
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]]
-        {::mx/exception-row-indices    1
-         ::mx/exception-column-indices 1}))
+        {::mx/exception-column-indices 1
+         ::mx/exception-row-indices    1}))
     (t/is= [[1.0]]
       (mx/get-slices-as-matrix [[1.0 0.5] [2.0 4.0]]
-        {::mx/row-indices    0
-         ::mx/column-indices 0}))))
+        {::mx/column-indices 0
+         ::mx/row-indices    0}))))
 
 (t/deftest filter-by-row-test
   (t/with-instrument `mx/filter-by-row
@@ -718,6 +718,7 @@
 
 (t/deftest ereduce-kv-test
   (t/with-instrument `mx/ereduce-kv
+    ;;:num-tests 250; fspec with multiple matrix arities adds generator complexity
     (t/is-spec-check mx/ereduce-kv {:num-tests 250}))
   (t/with-instrument :all
     (t/is= 29.9
@@ -779,7 +780,7 @@
     (t/is= [[0 0 1.0] [0 1 0.5] [1 1 4.0]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]]))
     (t/is= [[0 0 1.0] [0 1 0.5]] (mx/symmetric-matrix->sparse [[1.0 0.5] [0.5 4.0]] #(< % 2.1)))))
 
-;;;MANIPULATION
+;;;MATRIX MANIPULATION
 (t/deftest transpose-test
   (t/with-instrument `mx/transpose
     (t/is-spec-check mx/transpose))
@@ -950,26 +951,26 @@
     (t/is-spec-check mx/merge-matrices))
   (t/with-instrument :all
     (t/is= [[]]
-      (mx/merge-matrices {::mx/top-left     [[]]
-                          ::mx/top-right    [[]]
-                          ::mx/bottom-left  [[]]
-                          ::mx/bottom-right [[]]}))
+      (mx/merge-matrices {::mx/bottom-left  [[]]
+                          ::mx/bottom-right [[]]
+                          ::mx/top-left     [[]]
+                          ::mx/top-right    [[]]}))
     (t/is= nil
-      (mx/merge-matrices {::mx/top-left     [[]]
-                          ::mx/top-right    [[]]
-                          ::mx/bottom-left  [[]]
-                          ::mx/bottom-right [[1]]}))
+      (mx/merge-matrices {::mx/bottom-left  [[]]
+                          ::mx/bottom-right [[1]]
+                          ::mx/top-left     [[]]
+                          ::mx/top-right    [[]]}))
     (t/is=
       [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0]]
-      (mx/merge-matrices {::mx/top-left     [[1.0 0.5] [2.0 4.0]]
-                          ::mx/top-right    [[1.0 0.5] [2.0 4.0]]
-                          ::mx/bottom-left  [[1.0 0.5] [2.0 4.0]]
-                          ::mx/bottom-right [[1.0 0.5] [2.0 4.0]]}))
+      (mx/merge-matrices {::mx/bottom-left  [[1.0 0.5] [2.0 4.0]]
+                          ::mx/bottom-right [[1.0 0.5] [2.0 4.0]]
+                          ::mx/top-left     [[1.0 0.5] [2.0 4.0]]
+                          ::mx/top-right    [[1.0 0.5] [2.0 4.0]]}))
     (t/is= [[1.0 0.5 1.0 0.5] [2.0 4.0 2.0 4.0] [1.0 0.5 1.0 0.5]]
-      (mx/merge-matrices {::mx/top-left     [[1.0 0.5] [2.0 4.0]]
-                          ::mx/top-right    [[1.0 0.5] [2.0 4.0]]
-                          ::mx/bottom-left  [[1.0 0.5]]
-                          ::mx/bottom-right [[1.0 0.5]]}))))
+      (mx/merge-matrices {::mx/bottom-left  [[1.0 0.5]]
+                          ::mx/bottom-right [[1.0 0.5]]
+                          ::mx/top-left     [[1.0 0.5] [2.0 4.0]]
+                          ::mx/top-right    [[1.0 0.5] [2.0 4.0]]}))))
 
 (t/deftest replace-submatrix-test
   (t/with-instrument `mx/replace-submatrix
@@ -1012,7 +1013,7 @@
     (t/is= [[3]] (mx/symmetric-matrix-by-averaging [[3]]))
     (t/is= [[1.0 1.25] [1.25 4.0]] (mx/symmetric-matrix-by-averaging [[1.0 0.5] [2.0 4.0]]))))
 
-;;;MATH
+;;;MATRIX MATH
 (t/deftest mx*-test
   (t/with-instrument `mx/mx*
     (t/is-spec-check mx/mx*))
@@ -1029,6 +1030,7 @@
 
 (t/deftest kronecker-product-test
   (t/with-instrument `mx/kronecker-product
+    ;;:num-tests 300; variadic matrix args with limited generator (1-2 matrices)
     (t/is-spec-check mx/kronecker-product {:num-tests 300}))
   (t/with-instrument :all
     (t/is= [[]] (mx/kronecker-product))
@@ -1055,7 +1057,7 @@
     (t/is= [[1.0 0.5 0.5 0.25 0.5 0.25 0.25 0.125]]
       (mx/kronecker-product [[1.0 0.5]] [[1.0 0.5]] [[1.0 0.5]]))))
 
-;;;ROUNDING
+;;;MATRIX ROUNDING
 (t/deftest round-roughly-zero-rows-test
   (t/with-instrument `mx/round-roughly-zero-rows
     (t/is-spec-check mx/round-roughly-zero-rows))

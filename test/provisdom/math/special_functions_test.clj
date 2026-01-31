@@ -1,8 +1,8 @@
 (ns provisdom.math.special-functions-test
   (:require
-    [provisdom.test.core :as t]
     [provisdom.math.core :as m]
-    [provisdom.math.special-functions :as special-fns]))
+    [provisdom.math.special-functions :as special-fns]
+    [provisdom.test.core :as t]))
 
 ;;11 seconds
 
@@ -308,6 +308,7 @@
 
 (t/deftest log-gamma-derivative-test                          ;same as digamma
   (t/with-instrument `special-fns/log-gamma-derivative
+    ;;:num-tests reduced; special function evaluation is computationally expensive
     (t/is-spec-check special-fns/log-gamma-derivative {:num-tests 120}))
   (t/with-instrument :all
     (t/is= m/inf+ (special-fns/log-gamma-derivative m/inf+))
@@ -385,7 +386,7 @@
     (t/is= -0.049872441259839764 (special-fns/multivariate-log-gamma 1.1 1))
     (t/is= 0.9207263597340951 (special-fns/multivariate-log-gamma 1.1 2))))
 
-;;;BETA
+;;;BETA FUNCTIONS
 (t/deftest beta-test
   (t/with-instrument `special-fns/beta
     (t/is-spec-check special-fns/beta))
@@ -503,6 +504,7 @@
 
 (t/deftest bessel-y-test
   (t/with-instrument `special-fns/bessel-y
+    ;;:num-tests reduced; special function evaluation is computationally expensive
     (t/is-spec-check special-fns/bessel-y {:num-tests 50}))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
   (t/is= m/inf- (special-fns/bessel-y 0 0.0))
@@ -544,6 +546,7 @@
 
 (t/deftest bessel-k-test
   (t/with-instrument `special-fns/bessel-k
+    ;;:num-tests reduced; special function evaluation is computationally expensive
     (t/is-spec-check special-fns/bessel-k {:num-tests 30}))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
   (t/is= m/inf+ (special-fns/bessel-k 0 0.0))

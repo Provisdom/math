@@ -64,9 +64,9 @@
                      (mapv vector xs ys))
            (gen/tuple
              (gen/fmap (fn [nums] (vec (take n (distinct (map double nums)))))
-               (gen/vector (gen/double* {:min -1e6 :max 1e6 :infinite? false :NaN? false})
+               (gen/vector (m/finite-gen {:max 1e6 :min -1e6})
                  n (* n 10)))
-             (gen/vector (gen/double* {:min -1e6 :max 1e6 :infinite? false :NaN? false}) n)))))))
+             (gen/vector (m/finite-gen {:max 1e6 :min -1e6}) n)))))))
 
 (s/def ::node-count
   (s/with-gen (s/int-in 1 1000)
@@ -183,37 +183,37 @@
   ([degree derivative {::keys [second-kind?] :or {second-kind? false}}]
    (cond (zero? degree) (constantly 0.0)
 
-         (m/one? derivative)
-         (if second-kind?
-           (let [y (inc degree)]
-             #(if (m/one? (m/abs %))
-                (* (/ 3)
-                  (m/pow (m/sgn %) y)
-                  (- (m/cube y) y))
-                (/ (- (* y ((chebyshev-polynomial-fn y) %))
-                     (* %
-                       ((chebyshev-polynomial-fn degree {::second-kind? true})
-                        %)))
-                  (dec (m/sq %)))))
-           #(* degree
-              ((chebyshev-polynomial-fn (dec degree) {::second-kind? true}) %)))
-
-         (and (= 2 derivative) (not second-kind?))
+     (m/one? derivative)
+     (if second-kind?
+       (let [y (inc degree)]
          #(if (m/one? (m/abs %))
             (* (/ 3)
-              (m/pow (m/sgn %) degree)
-              (- (m/pow degree 4) (m/sq degree)))
-            (let [first-kind ((chebyshev-polynomial-fn degree) %)
-                  second-kind ((chebyshev-polynomial-fn
-                                 degree {::second-kind? true}) %)]
-              (* degree
-                (- (* (inc degree) first-kind) second-kind)
-                (/ (dec (m/sq %))))))
+              (m/pow (m/sgn %) y)
+              (- (m/cube y) y))
+            (/ (- (* y ((chebyshev-polynomial-fn y) %))
+                 (* %
+                   ((chebyshev-polynomial-fn degree {::second-kind? true})
+                    %)))
+              (dec (m/sq %)))))
+       #(* degree
+          ((chebyshev-polynomial-fn (dec degree) {::second-kind? true}) %)))
 
-         :else
-         (derivatives/derivative-fn
-           (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
-           {::derivatives/derivative derivative}))))
+     (and (= 2 derivative) (not second-kind?))
+     #(if (m/one? (m/abs %))
+        (* (/ 3)
+          (m/pow (m/sgn %) degree)
+          (- (m/pow degree 4) (m/sq degree)))
+        (let [first-kind ((chebyshev-polynomial-fn degree) %)
+              second-kind ((chebyshev-polynomial-fn
+                             degree {::second-kind? true}) %)]
+          (* degree
+            (- (* (inc degree) first-kind) second-kind)
+            (/ (dec (m/sq %))))))
+
+     :else
+     (derivatives/derivative-fn
+       (chebyshev-polynomial-fn degree {::second-kind? second-kind?})
+       {::derivatives/derivative derivative}))))
 
 (s/fdef chebyshev-derivative-fn
   :args (s/cat :degree ::degree
@@ -453,8 +453,8 @@
                 basis-count
                 ((polynomial-2D-fn-by-degree
                    end-degree
-                   {::start-degree   start-degree
-                    ::chebyshev-kind chebyshev-kind})
+                   {::chebyshev-kind chebyshev-kind
+                    ::start-degree   start-degree})
                  x
                  y))))))))
 
@@ -536,9 +536,8 @@
        [1.0]
        (vec (cons 1.0
               (apply interleave
-                (map
-                  (polynomial-fn end-degree {::start-degree   1
-                                             ::chebyshev-kind chebyshev-kind})
+                (map (polynomial-fn end-degree {::chebyshev-kind chebyshev-kind
+                                                ::start-degree   1})
                   v))))))))
 
 (s/fdef polynomial-ND-fn-without-cross-terms
@@ -761,7 +760,7 @@
                             (recur (dec d))
                             d))]
             (if (or (neg? deg-rem) (< deg-rem deg-divisor))
-              {:quotient quotient
+              {:quotient  quotient
                :remainder (if (neg? deg-rem)
                             [0.0]
                             (mapv double (take (inc deg-rem) remainder)))}
@@ -797,7 +796,7 @@
   [n]
   (mapv (fn [k]
           (m/cos (* m/PI (/ (- (* 2.0 (inc k)) 1.0)
-                          (* 2.0 n)))))
+                           (* 2.0 n)))))
     (range n)))
 
 (s/fdef chebyshev-nodes
@@ -856,7 +855,7 @@
         power-to-chebyshev (fn [k]
                              (if (zero? k)
                                [1.0]
-                               (loop [coeffs [0.0 1.0]  ; Start with T_1 = x
+                               (loop [coeffs [0.0 1.0]      ; Start with T_1 = x
                                       power 1]
                                  (if (= power k)
                                    coeffs
@@ -1132,7 +1131,7 @@
                                    (range (- n k)))]
                     (recur (conj table next-col) (inc k)))))]
     {:coefficients (mapv first table)
-     :xs xs}))
+     :xs           xs}))
 
 (s/fdef newton-interpolation-coefficients
   :args (s/cat :points ::points)

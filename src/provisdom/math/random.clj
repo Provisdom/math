@@ -67,14 +67,14 @@
    :secure - SecureRandom (cryptographic, NOT splittable)"
   {:default     "L64X128MixRandom"
    :fast        "L32X64MixRandom"
-   :quality     "L128X256MixRandom"
-   :max-quality "L128X1024MixRandom"
    :legacy      "SplittableRandom"
+   :max-quality "L128X1024MixRandom"
+   :quality     "L128X256MixRandom"
    :secure      :secure})
 
-(defn- ^RandomGenerator$SplittableGenerator create-gen
+(defn- create-gen
   "Creates a mutable Java generator from algorithm name and seed."
-  [^String algo ^long seed]
+  ^RandomGenerator$SplittableGenerator [^String algo ^long seed]
   (.create (RandomGeneratorFactory/of algo) seed))
 
 (set! *unchecked-math* :warn-on-boxed)

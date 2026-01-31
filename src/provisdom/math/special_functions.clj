@@ -169,7 +169,7 @@
 
 (s/fdef erf-diff
   :args (s/cat :x1 ::m/num :x2 ::m/num)
-  :ret (s/double-in :min -2.0 :max 2.0))
+  :ret (m/finite-spec {:max 2.0 :min -2.0}))
 
 (defn erf-derivative
   "Computes the derivative of the error function: d/d`x` erf(`x`).
@@ -231,7 +231,7 @@
 
 (s/fdef erfc
   :args (s/cat :x ::m/num)
-  :ret (s/double-in :min 0.0 :max 2.0))
+  :ret (m/finite-non--spec 2.0))
 
 (defn- coeffs-sum
   [a coeffs]
@@ -300,7 +300,7 @@
     :else (inv-erf (m/one- x))))
 
 (s/fdef inv-erfc
-  :args (s/cat :x (s/double-in :min 0.0 :max 2.0))
+  :args (s/cat :x (m/finite-non--spec 2.0))
   :ret ::m/num)
 
 ;;;SIGMOID FUNCTIONS
@@ -421,7 +421,7 @@
   :args (s/cat :p ::m/prob)
   :ret ::m/pos)
 
-;GAMMA FUNCTIONS
+;;;GAMMA FUNCTIONS
 (defn- lanczos2
   [x]
   (reduce (fn [acc i]
@@ -934,7 +934,7 @@
 (s/fdef multivariate-gamma
   :args (s/and (s/cat :a ::m/num
                  :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:min 0 :max 20})))
+                      #(gen/large-integer* {:max 20 :min 0})))
           (fn [{:keys [a p]}]
             (and (< p 1e7)                                  ;for speed
               (not (and (m/roughly-round?
@@ -967,7 +967,7 @@
 (s/fdef multivariate-log-gamma
   :args (s/and (s/cat :a ::m/pos
                  :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:min 0 :max 20})))
+                      #(gen/large-integer* {:max 20 :min 0})))
           (fn [{:keys [a p]}]
             (and (< p 1.0e7)                                ;speed
               (or (m/nan? a) (> a (* 0.5 p))))))
@@ -1971,5 +1971,5 @@
           :c (s/and ::m/num #(not (m/roughly-round-non+? % m/sgl-close)))
           ;; z < 1 is required; z >= 1 causes stack overflow or divergence
           :z (s/with-gen (s/and ::m/finite #(< % 1.0))
-               #(gen/double* {:max (m/next-down 1.0) :infinite? false :NaN? false})))
+               #(m/finite-gen {:max (m/next-down 1.0)})))
   :ret ::m/num)

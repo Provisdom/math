@@ -16,9 +16,9 @@
   Includes both exact computations for small values and log-space calculations for larger values to
   avoid overflow."
   (:require
+    [clojure.core.reducers :as ccr]
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.core.reducers :as ccr]
     [provisdom.math.core :as m]
     [provisdom.math.special-functions :as special-fns]))
 
@@ -38,7 +38,7 @@
 (s/def ::replacement-count
   (s/with-gen
     ::m/int-non-
-    #(gen/large-integer* {:min 0 :max mdl})))
+    #(gen/large-integer* {:max mdl :min 0})))
 
 (defn- n-no-less-than-k?
   [{:keys [k n]}]
@@ -185,7 +185,7 @@
 (s/fdef rising-factorial
   :args (s/with-gen
           (s/cat :x ::m/num :n ::m/int-non-)
-          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:min 0 :max 20})))
+          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:max 20 :min 0})))
   :ret ::m/number)
 
 (def pochhammer-symbol
@@ -213,7 +213,7 @@
 (s/fdef falling-factorial
   :args (s/with-gen
           (s/cat :x ::m/num :n ::m/int-non-)
-          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:min 0 :max 20})))
+          #(gen/tuple (s/gen ::m/num) (gen/large-integer* {:max 20 :min 0})))
   :ret ::m/num)
 
 (def falling-pochhammer-symbol
@@ -437,10 +437,10 @@
           (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
             n-no-less-than-k?)
           #(gen/bind
-             (gen/large-integer* {:min 0 :max 15})
+             (gen/large-integer* {:max 15 :min 0})
              (fn [k]
                (gen/fmap (fn [n] [k n])
-                 (gen/large-integer* {:min k :max 15})))))
+                 (gen/large-integer* {:max 15 :min k})))))
   :ret ::m/num)
 
 (defn stirling-number-of-the-first-kind'
@@ -453,10 +453,10 @@
           (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
             n-no-less-than-k?)
           #(gen/bind
-             (gen/large-integer* {:min 0 :max 15})
+             (gen/large-integer* {:max 15 :min 0})
              (fn [k]
                (gen/fmap (fn [n] [k n])
-                 (gen/large-integer* {:min k :max 15})))))
+                 (gen/large-integer* {:max 15 :min k})))))
   :ret ::m/num)
 
 (defn bell-number
@@ -602,12 +602,12 @@
             :two (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
                    n-no-less-than-k?))
           #(gen/one-of
-             [(gen/fmap vector (gen/large-integer* {:min 0 :max 20}))
+             [(gen/fmap vector (gen/large-integer* {:max 20 :min 0}))
               (gen/bind
-                (gen/large-integer* {:min 0 :max 20})
+                (gen/large-integer* {:max 20 :min 0})
                 (fn [k]
                   (gen/fmap (fn [n] [k n])
-                    (gen/large-integer* {:min k :max 20}))))]))
+                    (gen/large-integer* {:max 20 :min k}))))]))
   :ret ::m/num)
 
 ;;;INTEGER PARTITIONS
@@ -649,11 +649,11 @@
   :args (s/with-gen
           (s/cat :n ::m/int-non- :max-part (s/? ::m/int-non-))
           #(gen/one-of
-             [(gen/fmap vector (gen/large-integer* {:min 0 :max 15}))
+             [(gen/fmap vector (gen/large-integer* {:max 15 :min 0}))
               (gen/fmap (fn [[n mp]] [n mp])
                 (gen/tuple
-                  (gen/large-integer* {:min 0 :max 15})
-                  (gen/large-integer* {:min 0 :max 15})))]))
+                  (gen/large-integer* {:max 15 :min 0})
+                  (gen/large-integer* {:max 15 :min 0})))]))
   :ret (s/coll-of (s/coll-of ::m/int-non-)))
 
 (defn count-integer-partitions

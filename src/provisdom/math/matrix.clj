@@ -57,22 +57,22 @@
     :indices ::tensor/indices))
 
 (s/def ::row
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::column
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::rows
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::columns
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
 
 (s/def ::row-start
-  (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
+  (s/with-gen ::m/int #(gen/large-integer* {:max mdl :min (- mdl)})))
 
 (s/def ::column-start
-  (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
+  (s/with-gen ::m/int #(gen/large-integer* {:max mdl :min (- mdl)})))
 
 (s/def ::sparse-matrix
   (s/with-gen
@@ -80,9 +80,9 @@
       :kind vector?
       :into [])
     #(gen/bind
-       (gen/tuple (gen/large-integer* {:min 0 :max mdl})
-         (gen/large-integer* {:min 0 :max mdl})
-         (gen/large-integer* {:min 0 :max mdl})
+       (gen/tuple (gen/large-integer* {:max mdl :min 0})
+         (gen/large-integer* {:max mdl :min 0})
+         (gen/large-integer* {:max mdl :min 0})
          (s/gen boolean?))
        (fn [[i j k tf?]]
          (let [[a b c] (sort [i j k])
@@ -90,8 +90,8 @@
                        [b c]
                        [c b])]
            (gen/vector
-             (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec c))})
-               (gen/large-integer* {:min 0 :max (max 0 (dec b))})
+             (gen/tuple (gen/large-integer* {:max (max 0 (dec c)) :min 0})
+               (gen/large-integer* {:max (max 0 (dec b)) :min 0})
                (s/gen ::m/number))
              a))))))
 
@@ -110,7 +110,7 @@
 (s/def ::matrix
   (s/with-gen
     #(matrix? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
@@ -120,7 +120,7 @@
 (s/def ::matrix-finite
   (s/with-gen
     #(matrix-finite? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite) i)
@@ -130,7 +130,7 @@
 (s/def ::matrix-finite-non-
   (s/with-gen
     #(matrix-finite-non-? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite-non-) i)
@@ -140,7 +140,7 @@
 (s/def ::matrix-prob
   (s/with-gen
     #(matrix-prob? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/prob) i)
@@ -169,7 +169,7 @@
 (s/def ::square-matrix
   (s/with-gen
     #(square-matrix? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
@@ -183,7 +183,7 @@
              :kind vector?
              :into [])
       (fn [m] (= (rows m) (columns m))))
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite) i)
@@ -197,7 +197,7 @@
 (s/def ::upper-triangular-matrix
   (s/with-gen
     #(upper-triangular-matrix? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/fmap deserialize-upper-triangular-matrix
            (gen/vector
@@ -207,7 +207,7 @@
 (s/def ::lower-triangular-matrix
   (s/with-gen
     #(lower-triangular-matrix? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/fmap deserialize-lower-triangular-matrix
            (gen/vector
@@ -217,7 +217,7 @@
 (s/def ::symmetric-matrix
   (s/with-gen
     #(symmetric-matrix? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/fmap deserialize-symmetric-matrix
            (gen/vector
@@ -227,7 +227,7 @@
 (s/def ::symmetric-matrix-finite-non-
   (s/with-gen
     #(symmetric-matrix-finite-non-? %)
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/fmap deserialize-symmetric-matrix
            (gen/vector
@@ -291,7 +291,7 @@
 (s/def ::matrix-num
   (s/with-gen
     matrix-num?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+    #(gen/bind (gen/large-integer* {:max mdl :min 0})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/num) i)
@@ -370,12 +370,12 @@
        #(and (matrix-finite? %)
           (all-matrix-values? % ~m1 ~m2)
           (matrix-min-size? % ~min-rows ~min-columns))
-       #(gen/bind (gen/large-integer* {:min ~min-columns :max (+ ~min-columns mdl)})
+       #(gen/bind (gen/large-integer* {:max (+ ~min-columns mdl) :min ~min-columns})
           (fn [~columns-sym]
-            (gen/bind (gen/large-integer* {:min ~min-rows :max (+ ~min-rows mdl)})
+            (gen/bind (gen/large-integer* {:max (+ ~min-rows mdl) :min ~min-rows})
               (fn [~rows-sym]
                 (gen/vector
-                  (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2})) ~columns-sym)
+                  (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1})) ~columns-sym)
                   ~rows-sym))))))))
 
 (defmacro sized-matrix-finite-spec
@@ -392,7 +392,7 @@
         (all-matrix-values? % ~m1 ~m2)
         (matrix-size? % ~row-count ~column-count))
      #(gen/vector
-        (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2})) ~column-count)
+        (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1})) ~column-count)
         ~row-count)))
 
 (defn matrix-finite-non-?
@@ -804,8 +804,8 @@
   [r c size numbers]
   (get numbers
     (long (+ c
-             (* r size)
-             (* -0.5 (+ r (m/sq' r)))))
+            (* r size)
+            (* -0.5 (+ r (m/sq' r)))))
     m/nan))
 
 (defn- symmetric-column-fill
@@ -818,8 +818,8 @@
   [r c size numbers]
   (get numbers
     (long (+ c
-             (* r size)
-             (* -0.5 (+ (inc r) (m/sq' (inc r))))))
+            (* r size)
+            (* -0.5 (+ (inc r) (m/sq' (inc r))))))
     m/nan))
 
 (defn- symmetric-without-diagonal-column-fill
@@ -1470,8 +1470,8 @@
                                 tot))
                    #{}
                    symmetric-m)]
-    (get-slices-as-matrix symmetric-m {::row-indices    keep-set
-                                       ::column-indices keep-set})))
+    (get-slices-as-matrix symmetric-m {::column-indices keep-set
+                                       ::row-indices    keep-set})))
 
 (s/fdef filter-symmetric-matrix
   :args (s/cat :v->bool (s/fspec :args (s/cat :row-vector ::vector/vector)
@@ -1493,18 +1493,18 @@
     (matrix-partition [[1 2] [3 4]] 1 1)
     ;=> {::top-left [[1]], ::top-right [[2]], ::bottom-left [[3]], ::bottom-right [[4]]}"
   [m first-bottom-row first-right-column]
-  {::top-left     (get-slices-as-matrix
-                    m {::row-indices    (range first-bottom-row)
-                       ::column-indices (range first-right-column)})
-   ::bottom-left  (get-slices-as-matrix
-                    m {::exception-row-indices (range first-bottom-row)
-                       ::column-indices        (range first-right-column)})
-   ::top-right    (get-slices-as-matrix
-                    m {::row-indices              (range first-bottom-row)
-                       ::exception-column-indices (range first-right-column)})
+  {::bottom-left  (get-slices-as-matrix
+                    m {::column-indices        (range first-right-column)
+                       ::exception-row-indices (range first-bottom-row)})
    ::bottom-right (get-slices-as-matrix
-                    m {::exception-row-indices    (range first-bottom-row)
-                       ::exception-column-indices (range first-right-column)})})
+                    m {::exception-column-indices (range first-right-column)
+                       ::exception-row-indices    (range first-bottom-row)})
+   ::top-left     (get-slices-as-matrix
+                    m {::column-indices (range first-right-column)
+                       ::row-indices    (range first-bottom-row)})
+   ::top-right    (get-slices-as-matrix
+                    m {::exception-column-indices (range first-right-column)
+                       ::row-indices              (range first-bottom-row)})})
 
 (s/fdef matrix-partition
   :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)

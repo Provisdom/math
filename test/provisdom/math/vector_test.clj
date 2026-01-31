@@ -1,5 +1,6 @@
 (ns provisdom.math.vector-test
   (:require
+    [clojure.spec.alpha :as s]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
     [provisdom.math.vector :as vector]
@@ -9,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-;;;TYPES
+;;;VECTOR TYPES
 (t/deftest vector?-test
   (t/with-instrument `vector/vector?
     (t/is-spec-check vector/vector?))
@@ -90,7 +91,20 @@
     (t/is-not (vector/roughly-probs? [0.7 0.7] 0.01 0.02))
     (t/is (vector/roughly-probs? [0.01 1.009] 0.01 0.02))))
 
-;;;CONSTRUCTORS
+(t/deftest vector-of-spec-test
+  (let [test-spec (vector/vector-of-spec {:pred ::m/finite})]
+    (t/is (s/valid? test-spec [1.0 2.0 3.0]))
+    (t/is-not (s/valid? test-spec [1.0 m/inf+]))
+    (t/is (s/valid? test-spec (first (first (s/exercise test-spec 1)))))))
+
+(t/deftest vector-finite-spec-test
+  ;;vector-finite-spec validates finiteness, not min/max bounds (those are for generator only)
+  (let [test-spec (vector/vector-finite-spec {:max 10 :min -10})]
+    (t/is (s/valid? test-spec [1.0 2.0]))
+    (t/is-not (s/valid? test-spec [1.0 m/inf+]))
+    (t/is (s/valid? test-spec (first (first (s/exercise test-spec 1)))))))
+
+;;;VECTOR CONSTRUCTORS
 (t/deftest to-vector-test
   (t/with-instrument `vector/to-vector
     (t/is-spec-check vector/to-vector))
@@ -139,7 +153,7 @@
     (t/is= [0.0 0.0] (vector/sparse->vector [] (vec (repeat 2 0.0))))
     (t/is= [1.0 1.0 2.0 1.0] (vector/sparse->vector [[2 2.0] [4 4.0]] (vec (repeat 4 1.0))))))
 
-;;;INFO
+;;;VECTOR INFO
 (t/deftest indexes-of-test
   (t/with-instrument `vector/indexes-of
     (t/is-spec-check vector/indexes-of))
@@ -165,7 +179,7 @@
     (t/is= 2 (vector/some-kv (fn [k v] (> v k)) [0 2 4 6]))
     (t/is= 0 (vector/some-kv (fn [_k v] (>= v 0)) [0 1 2]))))
 
-;;;MANIPULATION
+;;;VECTOR MANIPULATION
 (t/deftest insertv-test
   (t/with-instrument `vector/insertv
     (t/is-spec-check vector/insertv))
@@ -231,7 +245,7 @@
       (t/is= [5.0 1.0 4.0 8.0 7.0 3.0 0.0 6.0 2.0]
         (vector/rnd-shuffle-vector! [0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0])))))
 
-;;;MATH
+;;;VECTOR MATH
 (t/deftest kahan-sum-test
   (t/with-instrument `vector/kahan-sum
     (t/is-spec-check vector/kahan-sum))

@@ -499,9 +499,9 @@
         err-f #(tensor/average
                  (tensor/emap m/abs
                    (tensor/subtract % high-precision-values)))]
-    {::rectangular-error     (err-f low-precision-values)
-     ::high-precision-values high-precision-values
-     ::one-dimension-errors  (mapv err-f dim1)}))
+    {::high-precision-values high-precision-values
+     ::one-dimension-errors  (mapv err-f dim1)
+     ::rectangular-error     (err-f low-precision-values)}))
 
 (s/fdef get-rectangular-errors-and-high-precision-value
   :args (s/cat :v->tensor ::v->tensor
@@ -520,25 +520,25 @@
         (get-error-and-high-precision-values
           number->tensor [a b] weights-and-nodes)]
     (loop [iter 1
-           error-maps [{:uni-error       error
+           error-maps [{:finite-interval [a b]
                         :high-values     high-precision-values
-                        :finite-interval [a b]}]]
+                        :uni-error       error}]]
       (let [total-error (apply + (flatten (map :uni-error error-maps)))]
         (if (and (>= iter min-iter)
               (not (> total-error tolerance)))              ;using 'not' captures NaN
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
-            {::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))
+            {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature)
-             ::anomalies/category ::anomalies/no-solve})
+             ::anomalies/message  (str "Error contains NaN. Value: "
+                                    (apply tensor/add
+                                      (map :high-values error-maps)))})
           (if (>= iter max-iter)
-            {::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))
+            {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature)
-             ::anomalies/category ::anomalies/no-solve}
+             ::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
+                                    (apply tensor/add
+                                      (map :high-values error-maps)))}
             (let [{[an bn] :finite-interval} (peek error-maps)
                   mn (* 0.5 (+ an bn))
 
@@ -557,12 +557,12 @@
                        number->tensor [an mn] weights-and-nodes)
                      (get-error-and-high-precision-values
                        number->tensor [mn bn] weights-and-nodes)])
-                  new-error-maps [{:uni-error       error1
+                  new-error-maps [{:finite-interval [an mn]
                                    :high-values     high-precision-values1
-                                   :finite-interval [an mn]}
-                                  {:uni-error       error2
+                                   :uni-error       error1}
+                                  {:finite-interval [mn bn]
                                    :high-values     high-precision-values2
-                                   :finite-interval [mn bn]}]
+                                   :uni-error       error2}]
                   new-error-maps (into [] (sort-by (fn [m]
                                                      (if (m/nan? (:uni-error m))
                                                        m/inf+
@@ -582,7 +582,7 @@
          :tensor ::tensor/tensor))
 
 (defn- simple-splitting-importance-fn
-  [rectangular-error one-dimension-errors]
+  [_rectangular-error one-dimension-errors]
   (if (empty? one-dimension-errors)
     m/inf-
     (apply max one-dimension-errors)))
@@ -632,30 +632,30 @@
         (get-rectangular-errors-and-high-precision-value
           v->tensor finite-intervals weights-and-nodes)]
     (loop [iter 1
-           error-maps [{:splitting-importance (splitting-importance-fn
-                                                rectangular-error
-                                                one-dimension-errors)
-                        :rect-error           rectangular-error
+           error-maps [{:finite-intervals     finite-intervals
                         :high-values          high-precision-values
                         :one-dim-errors       one-dimension-errors
-                        :finite-intervals     finite-intervals}]]
+                        :rect-error           rectangular-error
+                        :splitting-importance (splitting-importance-fn
+                                                rectangular-error
+                                                one-dimension-errors)}]]
       (let [total-error (apply + (map :rect-error error-maps))]
         (if (and (>= iter min-iter) (not (> total-error tolerance))) ;using 'not' captures NaN
           (if (<= total-error tolerance)
             (apply tensor/add (map :high-values error-maps))
-            {::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))
+            {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
-             ::anomalies/category ::anomalies/no-solve})
+             ::anomalies/message  (str "Error contains NaN. Value: "
+                                    (apply tensor/add
+                                      (map :high-values error-maps)))})
           (if (>= iter max-iter)
-            {::anomalies/message  (str "Iteration limit reached.  Error: "
+            {::anomalies/category ::anomalies/no-solve
+             ::anomalies/fn       (var rectangular-adaptive-quadrature)
+             ::anomalies/message  (str "Iteration limit reached.  Error: "
                                     total-error
                                     " Value: "
                                     (apply tensor/add
-                                      (map :high-values error-maps)))
-             ::anomalies/fn       (var rectangular-adaptive-quadrature)
-             ::anomalies/category ::anomalies/no-solve}
+                                      (map :high-values error-maps)))}
             (let [{intervals-n    :finite-intervals
                    one-dim-errors :one-dim-errors} (peek error-maps)
                   dimensions (select-dimensions-fn
@@ -682,14 +682,12 @@
                                       {rect-error     ::rectangular-error
                                        one-dim-errors ::one-dimension-errors
                                        high-values    ::high-precision-values}]
-                                   {:splitting-importance
-                                    (splitting-importance-fn
-                                      rect-error one-dim-errors)
-
-                                    :rect-error       rect-error
-                                    :high-values      high-values
-                                    :one-dim-errors   one-dim-errors
-                                    :finite-intervals finite-intervals})
+                                   {:finite-intervals     finite-intervals
+                                    :high-values          high-values
+                                    :one-dim-errors       one-dim-errors
+                                    :rect-error           rect-error
+                                    :splitting-importance (splitting-importance-fn
+                                                            rect-error one-dim-errors)})
                                  new-intervals
                                  (if parallel?
                                    (async/thread :all new-fns)
@@ -735,31 +733,31 @@
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b))
-    {::multiplicative-fn         (fn [number]
-                                   (let [s (m/sq number)]
-                                     (m/div (inc s) (m/sq (m/one- s)))))
-     ::converter-fn              (fn [number]
+    {::converter-fn              (fn [number]
                                    (m/div number (m/one- (m/sq number))))
-     ::intervals/finite-interval [-1.0 1.0]}
+     ::intervals/finite-interval [-1.0 1.0]
+     ::multiplicative-fn         (fn [number]
+                                   (let [s (m/sq number)]
+                                     (m/div (inc s) (m/sq (m/one- s)))))}
 
     (m/inf+? b)
-    {::multiplicative-fn         (fn [number]
-                                   (m/div (m/sq (m/one- number))))
-     ::converter-fn              (fn [number]
+    {::converter-fn              (fn [number]
                                    (+ a (m/div number (m/one- number))))
-     ::intervals/finite-interval [0.0 1.0]}
+     ::intervals/finite-interval [0.0 1.0]
+     ::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq (m/one- number))))}
 
     (m/inf-? a)
-    {::multiplicative-fn         (fn [number]
-                                   (m/div (m/sq number)))
-     ::converter-fn              (fn [number]
+    {::converter-fn              (fn [number]
                                    (- b (m/div (m/one- number) number)))
-     ::intervals/finite-interval [0.0 1.0]}
+     ::intervals/finite-interval [0.0 1.0]
+     ::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq number)))}
 
     :else
-    {::multiplicative-fn         (constantly 1.0)
-     ::converter-fn              identity
-     ::intervals/finite-interval [a b]}))
+    {::converter-fn              identity
+     ::intervals/finite-interval [a b]
+     ::multiplicative-fn         (constantly 1.0)}))
 
 (s/def ::multiplicative-fn ::number->number)
 (s/def ::converter-fn ::number->number)
@@ -839,11 +837,11 @@
   Known limitations: Very large finite intervals may lose precision due to floating-point limits.
   For such cases, increase `::points` or `::iter-interval`."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
-  ([number->tensor [a b] {::keys [accu iter-interval parallel? points singularities]
+  ([number->tensor [a b] {:as    opts
+                          ::keys [accu iter-interval parallel? points singularities]
                           :or    {accu          m/dbl-close
                                   iter-interval [10 1000]
-                                  parallel?     false}
-                          :as    opts}]
+                                  parallel?     false}}]
    (if (seq singularities)
      ;; Split at singularities and sum sub-integrals
      (let [opts-without-sing (dissoc opts ::singularities)
@@ -979,24 +977,24 @@
         (get-error-and-high-precision-values
           number->tensor [a b] weights-and-nodes)]
     (loop [iter 1
-           error-maps [{:uni-error       error
+           error-maps [{:finite-interval [a b]
                         :high-values     high-precision-values
-                        :finite-interval [a b]}]]
+                        :uni-error       error}]]
       (let [total-error (apply + (flatten (map :uni-error error-maps)))]
         (if (and (>= iter min-iter)
               (not (> total-error tolerance)))
           (if (<= total-error tolerance)
-            {::value          (apply tensor/add (map :high-values error-maps))
-             ::error-estimate total-error}
-            {::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add (map :high-values error-maps)))
+            {::error-estimate total-error
+             ::value          (apply tensor/add (map :high-values error-maps))}
+            {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature-with-error)
-             ::anomalies/category ::anomalies/no-solve})
+             ::anomalies/message  (str "Error contains NaN. Value: "
+                                    (apply tensor/add (map :high-values error-maps)))})
           (if (>= iter max-iter)
-            {::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
-                                    (apply tensor/add (map :high-values error-maps)))
+            {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature-with-error)
-             ::anomalies/category ::anomalies/no-solve}
+             ::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
+                                    (apply tensor/add (map :high-values error-maps)))}
             (let [{[an bn] :finite-interval} (peek error-maps)
                   mn (* 0.5 (+ an bn))
                   [{error1                 ::error
@@ -1014,12 +1012,12 @@
                        number->tensor [an mn] weights-and-nodes)
                      (get-error-and-high-precision-values
                        number->tensor [mn bn] weights-and-nodes)])
-                  new-error-maps [{:uni-error       error1
+                  new-error-maps [{:finite-interval [an mn]
                                    :high-values     high-precision-values1
-                                   :finite-interval [an mn]}
-                                  {:uni-error       error2
+                                   :uni-error       error1}
+                                  {:finite-interval [mn bn]
                                    :high-values     high-precision-values2
-                                   :finite-interval [mn bn]}]
+                                   :uni-error       error2}]
                   new-error-maps (into []
                                    (sort-by (fn [m]
                                               (if (m/nan? (:uni-error m))
@@ -1375,9 +1373,9 @@
          std-error (if variance
                      (* volume (m/sqrt (/ variance n)))
                      m/nan)]
-     {::value          (tensor/multiply volume mean)
+     {::samples        samples
       ::standard-error std-error
-      ::samples        samples})))
+      ::value          (tensor/multiply volume mean)})))
 
 (s/fdef monte-carlo-integration
   :args (s/cat :v->tensor ::v->tensor
@@ -1412,30 +1410,32 @@
   ([v->tensor num-intervals {::keys [samples skip]
                              :or    {samples 10000
                                      skip    20}}]
-   (let [dims (count num-intervals)
-         _ (when (> dims 100)
-             (throw (ex-info "Halton sequences only support up to 100 dimensions" {:dims dims})))
-         intervals-vec (vec num-intervals)
-         volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
-         transform-point (fn [u]
-                           (mapv (fn [ui [a b]]
-                                   (+ a (* (- b a) ui)))
-                             u intervals-vec))
-         points (map #(halton-point (+ skip %) dims) (range samples))
-         transformed (map transform-point points)
-         values (mapv v->tensor transformed)
-         n (double samples)
-         sum (reduce tensor/add values)
-         mean (tensor/multiply (/ n) sum)
-         variance (when (number? (first values))
-                    (/ (reduce + (map #(m/sq (- % mean)) values))
-                      (dec n)))
-         std-error (if variance
-                     (* volume (m/sqrt (/ variance n)))
-                     m/nan)]
-     {::value          (tensor/multiply volume mean)
-      ::standard-error std-error
-      ::samples        samples})))
+   (let [dims (count num-intervals)]
+     (if (> dims 100)
+       {::anomalies/category ::anomalies/incorrect
+        ::anomalies/fn       (var quasi-monte-carlo-integration)
+        ::anomalies/message  (str "Halton sequences only support up to 100 dimensions. Dims: " dims)}
+       (let [intervals-vec (vec num-intervals)
+             volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
+             transform-point (fn [u]
+                               (mapv (fn [ui [a b]]
+                                       (+ a (* (- b a) ui)))
+                                 u intervals-vec))
+             points (map #(halton-point (+ skip %) dims) (range samples))
+             transformed (map transform-point points)
+             values (mapv v->tensor transformed)
+             n (double samples)
+             sum (reduce tensor/add values)
+             mean (tensor/multiply (/ n) sum)
+             variance (when (number? (first values))
+                        (/ (reduce + (map #(m/sq (- % mean)) values))
+                          (dec n)))
+             std-error (if variance
+                         (* volume (m/sqrt (/ variance n)))
+                         m/nan)]
+         {::samples        samples
+          ::standard-error std-error
+          ::value          (tensor/multiply volume mean)})))))
 
 (s/def ::skip ::m/long-non-)
 
@@ -1445,7 +1445,8 @@
   :args (s/cat :v->tensor ::v->tensor
           :num-intervals ::num-intervals
           :opts ::quasi-monte-carlo-opts)
-  :ret ::monte-carlo-result)
+  :ret (s/or :anomaly ::anomalies/anomaly
+         :result ::monte-carlo-result))
 
 ;;;SPARSE GRID (SMOLYAK) INTEGRATION
 (defn- smolyak-indices
@@ -1609,57 +1610,59 @@
   [number->tensor [a b] {::keys [omega oscillation-type points]
                          :or    {oscillation-type :sin
                                  points           21}}]
-  (when-not omega
-    (throw (ex-info "::omega is required for oscillatory-integration" {})))
-  (let [omega (double omega)
-        n (if (even? points) (inc points) points)           ; Need odd for Filon
-        h (/ (- b a) (dec n))
-        xs (mapv #(+ a (* % h)) (range n))
-        fs (mapv number->tensor xs)
-        theta (* omega h)
-        {alpha :alpha beta :beta gamma :gamma} (filon-weights theta)
-        ;; Get oscillation values at each point
-        osc-vals (mapv #(case oscillation-type
-                          :sin (m/sin (* omega %))
-                          :cos (m/cos (* omega %)))
-                   xs)
-        ;; Separate even and odd indexed values (with oscillation)
-        even-pairs (take-nth 2 (map vector fs osc-vals))
-        odd-pairs (take-nth 2 (rest (map vector fs osc-vals)))
-        n-even (count even-pairs)
-        ;; Sums weighted by oscillation values - use tensor/multiply for scaling
-        sum-even (reduce tensor/add
-                   (map-indexed (fn [i [fv ov]]
-                                  (tensor/multiply
-                                    (* ov (if (or (zero? i) (= i (dec n-even)))
-                                            0.5
-                                            1.0))
-                                    fv))
-                     even-pairs))
-        sum-odd (reduce tensor/add
-                  (map (fn [[fv ov]] (tensor/multiply ov fv)) odd-pairs))
-        ;; Boundary terms
-        fa (first fs)
-        fb (last fs)
-        cos-a (m/cos (* omega a))
-        cos-b (m/cos (* omega b))
-        sin-a (m/sin (* omega a))
-        sin-b (m/sin (* omega b))]
-    (case oscillation-type
-      :sin (tensor/multiply h
-             (tensor/add
-               (tensor/multiply alpha
-                 (tensor/subtract (tensor/multiply cos-b fb)
-                   (tensor/multiply cos-a fa)))
-               (tensor/multiply (* beta 2.0) sum-odd)
-               (tensor/multiply gamma sum-even)))
-      :cos (tensor/multiply h
-             (tensor/add
-               (tensor/multiply alpha
-                 (tensor/subtract (tensor/multiply sin-b fb)
-                   (tensor/multiply sin-a fa)))
-               (tensor/multiply (* beta 2.0) sum-odd)
-               (tensor/multiply gamma sum-even))))))
+  (if-not omega
+    {::anomalies/category ::anomalies/incorrect
+     ::anomalies/fn       (var oscillatory-integration)
+     ::anomalies/message  "::omega is required for oscillatory-integration"}
+    (let [omega (double omega)
+          n (if (even? points) (inc points) points)         ; Need odd for Filon
+          h (/ (- b a) (dec n))
+          xs (mapv #(+ a (* % h)) (range n))
+          fs (mapv number->tensor xs)
+          theta (* omega h)
+          {alpha :alpha beta :beta gamma :gamma} (filon-weights theta)
+          ;; Get oscillation values at each point
+          osc-vals (mapv #(case oscillation-type
+                            :sin (m/sin (* omega %))
+                            :cos (m/cos (* omega %)))
+                     xs)
+          ;; Separate even and odd indexed values (with oscillation)
+          even-pairs (take-nth 2 (map vector fs osc-vals))
+          odd-pairs (take-nth 2 (rest (map vector fs osc-vals)))
+          n-even (count even-pairs)
+          ;; Sums weighted by oscillation values - use tensor/multiply for scaling
+          sum-even (reduce tensor/add
+                     (map-indexed (fn [i [fv ov]]
+                                    (tensor/multiply
+                                      (* ov (if (or (zero? i) (= i (dec n-even)))
+                                              0.5
+                                              1.0))
+                                      fv))
+                       even-pairs))
+          sum-odd (reduce tensor/add
+                    (map (fn [[fv ov]] (tensor/multiply ov fv)) odd-pairs))
+          ;; Boundary terms
+          fa (first fs)
+          fb (last fs)
+          cos-a (m/cos (* omega a))
+          cos-b (m/cos (* omega b))
+          sin-a (m/sin (* omega a))
+          sin-b (m/sin (* omega b))]
+      (case oscillation-type
+        :sin (tensor/multiply h
+               (tensor/add
+                 (tensor/multiply alpha
+                   (tensor/subtract (tensor/multiply cos-b fb)
+                     (tensor/multiply cos-a fa)))
+                 (tensor/multiply (* beta 2.0) sum-odd)
+                 (tensor/multiply gamma sum-even)))
+        :cos (tensor/multiply h
+               (tensor/add
+                 (tensor/multiply alpha
+                   (tensor/subtract (tensor/multiply sin-b fb)
+                     (tensor/multiply sin-a fa)))
+                 (tensor/multiply (* beta 2.0) sum-odd)
+                 (tensor/multiply gamma sum-even)))))))
 
 (s/fdef oscillatory-integration
   :args (s/cat :number->tensor ::number->tensor

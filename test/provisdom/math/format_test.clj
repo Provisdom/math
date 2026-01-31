@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-;;;NUMBERS
+;;;PRIMITIVE FORMATTERS
 (t/deftest trim-number-as-string-test
   (t/with-instrument `format/trim-number-as-string
     (t/is-spec-check format/trim-number-as-string))
@@ -48,6 +48,19 @@
     (t/is= "3.2323489384938490000E+20"
       (format/format-as-exponential 3.232348938493849E20 {::format/digits 20}))))
 
+(t/deftest format-as-engineering-test
+  (t/with-instrument `format/format-as-engineering
+    (t/is-spec-check format/format-as-engineering))
+  (t/with-instrument :all
+    (t/is= "12.35E+3" (format/format-as-engineering 12345))
+    (t/is= "1.23E-3" (format/format-as-engineering 0.00123))
+    (t/is= "123.46E+6" (format/format-as-engineering 123456789))
+    (t/is= "1.235E+6" (format/format-as-engineering 1234567 {::format/digits 4}))
+    (t/is= "0E+0" (format/format-as-engineering 0))
+    (t/is= "-12.35E+3" (format/format-as-engineering -12345))
+    (t/is= "1.00E+0" (format/format-as-engineering 1))))
+
+;;;NUMBER FORMATTING
 (t/deftest format-number-test
   (t/with-instrument `format/format-number
     (t/is-spec-check format/format-number))
@@ -91,6 +104,52 @@
       (format/format-number -2.342311111114234E11 12 {::format/max-decimal-places 1}))
     (t/is= "-2.3423E+11" (format/format-number -2.342311111114234E11 12 {::format/max-digits 5}))
     (t/is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3}))))
+
+(t/deftest format-number-extended-test
+  (t/with-instrument `format/format-number-extended
+    (t/is-spec-check format/format-number-extended))
+  (t/with-instrument :all
+    ;; Thousand separators (note: integers formatted as doubles have .0 suffix)
+    (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true}))
+    (t/is= "-1,234,567.0"
+      (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
+    ;; With decimal places specified (format-number still adds .0 for round numbers)
+    (t/is= "1,234,567.0"
+      (format/format-number-extended 1234567 15 {::format/max-decimal-places 0
+                                                 ::format/thousands-sep?     true}))
+    ;; Engineering notation
+    (t/is= "12.35E+3" (format/format-number-extended 12345 10 {::format/engineering? true}))
+    ;; Localization (note: must escape decimal first to avoid double replacement)
+    (t/is= "1.234,56" (format/format-number-extended 1234.56 15
+                        {::format/decimal-symbol  \,
+                         ::format/grouping-symbol \.
+                         ::format/thousands-sep?  true}))
+    ;; Special values
+    (t/is= "NaN" (format/format-number-extended m/nan 5))
+    (t/is= "Inf" (format/format-number-extended m/inf+ 5))
+    (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
+
+(t/deftest format-number-max-length-test
+  (t/with-instrument `format/format-number
+    ;; max-length of 1 should still produce something
+    (t/is (string? (format/format-number 123456 1)))
+    ;; Very large max-length shouldn't cause issues
+    (t/is= "123456.0" (format/format-number 123456 1000))))
+
+;;;PERCENT
+(t/deftest format-percent-test
+  (t/with-instrument `format/format-percent
+    (t/is-spec-check format/format-percent))
+  (t/with-instrument :all
+    (t/is= "15%" (format/format-percent 0.15))
+    (t/is= "16%" (format/format-percent 0.156 {::format/precision 0}))
+    (t/is= "15.6%" (format/format-percent 0.156 {::format/precision 1}))
+    (t/is= "150%" (format/format-percent 1.5))
+    (t/is= "-25%" (format/format-percent -0.25))
+    (t/is= "0%" (format/format-percent 0))
+    (t/is= "NaN" (format/format-percent m/nan))
+    (t/is= "Inf" (format/format-percent m/inf+))
+    (t/is= "-Inf" (format/format-percent m/inf-))))
 
 ;;;SHORTHAND
 (t/deftest format-shorthand-test
@@ -170,67 +229,6 @@
             (t/is (m/roughly? x parsed (* (m/abs x) 0.01))
               (str "Roundtrip failed for " x " -> " formatted " -> " parsed))))))))
 
-(t/deftest format-number-max-length-test
-  (t/with-instrument `format/format-number
-    ;; max-length of 1 should still produce something
-    (t/is (string? (format/format-number 123456 1)))
-    ;; Very large max-length shouldn't cause issues
-    (t/is= "123456.0" (format/format-number 123456 1000))))
-
-;;;PERCENT
-(t/deftest format-percent-test
-  (t/with-instrument `format/format-percent
-    (t/is-spec-check format/format-percent))
-  (t/with-instrument :all
-    (t/is= "15%" (format/format-percent 0.15))
-    (t/is= "16%" (format/format-percent 0.156 {::format/precision 0}))
-    (t/is= "15.6%" (format/format-percent 0.156 {::format/precision 1}))
-    (t/is= "150%" (format/format-percent 1.5))
-    (t/is= "-25%" (format/format-percent -0.25))
-    (t/is= "0%" (format/format-percent 0))
-    (t/is= "NaN" (format/format-percent m/nan))
-    (t/is= "Inf" (format/format-percent m/inf+))
-    (t/is= "-Inf" (format/format-percent m/inf-))))
-
-;;;ENGINEERING NOTATION
-(t/deftest format-as-engineering-test
-  (t/with-instrument `format/format-as-engineering
-    (t/is-spec-check format/format-as-engineering))
-  (t/with-instrument :all
-    (t/is= "12.35E+3" (format/format-as-engineering 12345))
-    (t/is= "1.23E-3" (format/format-as-engineering 0.00123))
-    (t/is= "123.46E+6" (format/format-as-engineering 123456789))
-    (t/is= "1.235E+6" (format/format-as-engineering 1234567 {::format/digits 4}))
-    (t/is= "0E+0" (format/format-as-engineering 0))
-    (t/is= "-12.35E+3" (format/format-as-engineering -12345))
-    (t/is= "1.00E+0" (format/format-as-engineering 1))))
-
-;;;EXTENDED FORMATTING
-(t/deftest format-number-extended-test
-  (t/with-instrument `format/format-number-extended
-    (t/is-spec-check format/format-number-extended))
-  (t/with-instrument :all
-    ;; Thousand separators (note: integers formatted as doubles have .0 suffix)
-    (t/is= "1,234,567.0" (format/format-number-extended 1234567 15 {::format/thousands-sep? true}))
-    (t/is= "-1,234,567.0"
-      (format/format-number-extended -1234567 15 {::format/thousands-sep? true}))
-    ;; With decimal places specified (format-number still adds .0 for round numbers)
-    (t/is= "1,234,567.0"
-      (format/format-number-extended 1234567 15 {::format/thousands-sep?     true
-                                                 ::format/max-decimal-places 0}))
-    ;; Engineering notation
-    (t/is= "12.35E+3" (format/format-number-extended 12345 10 {::format/engineering? true}))
-    ;; Localization (note: must escape decimal first to avoid double replacement)
-    (t/is= "1.234,56" (format/format-number-extended 1234.56 15
-                        {::format/thousands-sep?  true
-                         ::format/decimal-symbol  \,
-                         ::format/grouping-symbol \.}))
-    ;; Special values
-    (t/is= "NaN" (format/format-number-extended m/nan 5))
-    (t/is= "Inf" (format/format-number-extended m/inf+ 5))
-    (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
-
-;;;CUSTOM SHORTHAND
 (t/deftest format-shorthand-custom-test
   (t/with-instrument `format/format-shorthand-custom
     (t/is-spec-check format/format-shorthand-custom))

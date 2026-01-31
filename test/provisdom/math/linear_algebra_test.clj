@@ -69,7 +69,7 @@
   (t/with-instrument `la/determinant
     (t/is-spec-check la/determinant))
   (t/with-instrument :all
-    (t/is (Double/isNaN (la/determinant [[]])))
+    (t/is (m/nan? (la/determinant [[]])))
     (t/is= 4.0 (la/determinant [[4.0]]))
     (t/is-approx= -2.0 (la/determinant [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
     (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)
@@ -215,6 +215,7 @@
 
 (t/deftest rectangular-cholesky-decomposition-test
   (t/with-instrument `la/rectangular-cholesky-decomposition
+    ;;:num-tests 50; matrix decomposition with variable dimensions
     (t/is-spec-check la/rectangular-cholesky-decomposition {:num-tests 50}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
@@ -298,6 +299,7 @@
 
 (t/deftest covariance-matrix->correlation-matrix-test
   (t/with-instrument `la/covariance-matrix->correlation-matrix
+    ;;:num-tests 300; increased for better coverage of correlation matrix edge cases
     (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 300}))
   (t/with-instrument :all
     (let [cov [[4.0 2.0] [2.0 9.0]]
@@ -306,6 +308,7 @@
 
 (t/deftest correlation-matrix->covariance-matrix-test
   (t/with-instrument `la/correlation-matrix->covariance-matrix
+    ;;:num-tests 200; increased for better coverage of covariance matrix edge cases
     (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 200}))
   (t/with-instrument :all
     (let [corr [[1.0 0.5] [0.5 1.0]]
@@ -429,6 +432,7 @@
 ;;;SCHUR DECOMPOSITION
 (t/deftest schur-decomposition-test
   (t/with-instrument `la/schur-decomposition
+    ;;:num-tests 20; matrix decomposition with variable dimensions
     (t/is-spec-check la/schur-decomposition {:num-tests 20}))
   (t/with-instrument :all
     (t/is= nil (la/schur-decomposition [[]]))
@@ -473,6 +477,7 @@
 ;;;EIGENDECOMPOSITION
 (t/deftest eigen-decomposition-test
   (t/with-instrument `la/eigen-decomposition
+    ;;:num-tests 20; matrix decomposition with variable dimensions
     (t/is-spec-check la/eigen-decomposition {:num-tests 20}))
   (t/with-instrument :all
     (t/is= nil (la/eigen-decomposition [[]]))
@@ -502,6 +507,7 @@
 ;;;SVD (SINGULAR VALUE DECOMPOSITION)
 (t/deftest sv-decomposition-test
   (t/with-instrument `la/sv-decomposition
+    ;;:num-tests 30; matrix decomposition with variable dimensions
     (t/is-spec-check la/sv-decomposition {:num-tests 30}))
   (t/with-instrument :all
     (t/is= nil (la/sv-decomposition [[]]))
@@ -542,9 +548,10 @@
 
 (t/deftest condition-number-test
   (t/with-instrument `la/condition-number
+    ;;:num-tests 30; requires SVD with variable matrix dimensions
     (t/is-spec-check la/condition-number {:num-tests 30}))
   (t/with-instrument :all
-    (t/is (Double/isNaN (la/condition-number [[]])))
+    (t/is (m/nan? (la/condition-number [[]])))
     (t/is-approx= 1.0 (la/condition-number [[2.0]]) :tolerance 1e-10)
     (t/is-approx= 1.0 (la/condition-number [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
     (t/is-approx= 2.0 (la/condition-number [[1.0 0.0] [0.0 2.0]]) :tolerance 1e-10)
@@ -555,6 +562,7 @@
 ;;;MATRIX RANK
 (t/deftest matrix-rank-test
   (t/with-instrument `la/matrix-rank
+    ;;:num-tests 40; requires SVD with variable matrix dimensions
     (t/is-spec-check la/matrix-rank {:num-tests 40}))
   (t/with-instrument :all
     (t/is= 0 (la/matrix-rank [[]]))
@@ -592,6 +600,7 @@
 
 (t/deftest norm-spectral-test
   (t/with-instrument `la/norm-spectral
+    ;;:num-tests 30; requires SVD with variable matrix dimensions
     (t/is-spec-check la/norm-spectral {:num-tests 30}))
   (t/with-instrument :all
     (t/is= 0.0 (la/norm-spectral [[]]))
@@ -601,6 +610,7 @@
 ;;;PSEUDOINVERSE
 (t/deftest pseudoinverse-from-svd-test
   (t/with-instrument `la/pseudoinverse-from-svd
+    ;;:num-tests 40; SVD result with variable matrix dimensions
     (t/is-spec-check la/pseudoinverse-from-svd {:num-tests 40}))
   (t/with-instrument :all
     (let [svd (la/sv-decomposition [[1.0 0.0] [0.0 2.0]] {:rank-tolerance 0.0})
@@ -615,6 +625,7 @@
 
 (t/deftest pseudoinverse-test
   (t/with-instrument `la/pseudoinverse
+    ;;:num-tests 40; requires SVD with variable matrix dimensions
     (t/is-spec-check la/pseudoinverse {:num-tests 40}))
   (t/with-instrument :all
     (t/is= nil (la/pseudoinverse [[]]))
@@ -659,6 +670,7 @@
 ;;;MATRIX EXPONENTIAL
 (t/deftest matrix-exp-test
   (t/with-instrument `la/matrix-exp
+    ;;:num-tests 50; iterative algorithm with variable matrix dimensions
     (t/is-spec-check la/matrix-exp {:num-tests 50}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
@@ -686,6 +698,7 @@
 ;;;PRINCIPAL COMPONENT ANALYSIS
 (t/deftest pca-test
   (t/with-instrument `la/pca
+    ;;:num-tests 30; requires eigendecomposition with variable matrix dimensions
     (t/is-spec-check la/pca {:num-tests 30}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
@@ -697,7 +710,7 @@
     ;; Mean: [2,2], variance is all along first PC
     (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
           result (la/pca data)
-          {::la/keys [pca-eigenvalues pca-explained-variance-ratio pca-mean
+          {::la/keys [_pca-eigenvalues pca-explained-variance-ratio pca-mean
                       pca-principal-components]} result]
       (t/is (some? result))
       ;; Mean should be [2, 2]
@@ -735,6 +748,7 @@
 
 (t/deftest pca-transform-test
   (t/with-instrument `la/pca-transform
+    ;;:num-tests 20; PCA with variable matrix dimensions
     (t/is-spec-check la/pca-transform {:num-tests 20}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
@@ -768,6 +782,7 @@
 
 (t/deftest pca-inverse-transform-test
   (t/with-instrument `la/pca-inverse-transform
+    ;;:num-tests 20; PCA with variable matrix dimensions
     (t/is-spec-check la/pca-inverse-transform {:num-tests 20}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
