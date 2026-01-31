@@ -1,6 +1,6 @@
 {:paths   ["src"]
  :deps    {provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                   :git/sha "1b73a2a39bff6fa950f43e7c79ace2df791947af"}}
+                                   :git/sha "66aad3a19c8de8f2c5bf8d9911a978fe174dd703"}}
  :aliases {:dev             {:extra-paths ["siderail"]}
            :local           {:override-deps {provisdom/test         {:local/root "../test"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
@@ -11,7 +11,7 @@
 
                                            provisdom/test
                                            {:git/url "https://github.com/Provisdom/test.git"
-                                            :git/sha "b59af7bf2d9cb9d81dc1695c6ef6f618f271dccc"}}}
+                                            :git/sha "415aefa15843a246fa70f6b8cfc36db3e61d4353"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
