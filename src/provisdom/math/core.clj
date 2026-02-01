@@ -496,7 +496,7 @@
   (and (number? x) (or (clojure.core/int? x) (instance? Long x))))
 
 (s/def ::long
-  (s/spec long? :gen (gen/large-integer* {})))
+  (s/spec long? :gen #(gen/large-integer* {})))
 
 (defmacro long-spec
   [{m1  :max
