@@ -843,13 +843,19 @@
 
   Computes the L2 norm of the difference: |v1 - v2|.
   Treats vectors as points in n-dimensional space.
+  Equal elements (including infinities) contribute 0 to the distance.
 
   Examples:
     (distance [0 0] [3 4]) => 5.0
     (distance [1 2 3] [1 2 3]) => 0.0
     (distance [0 0] [1 1]) => 1.4142135623730951"
   [v1 v2]
-  (tensor/norm (tensor/subtract v1 v2)))
+  (m/sqrt (reduce + 0.0
+            (map (fn [a b]
+                   (if (= a b)
+                     0.0
+                     (m/sq (- a b))))
+              v1 v2))))
 
 (s/fdef distance
   :args (s/and (s/cat :v1 ::vector :v2 ::vector)

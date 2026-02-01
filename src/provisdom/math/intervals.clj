@@ -197,7 +197,9 @@
     (interval-width [-5 5])   ;=> 10.0
     (interval-width [3 3])    ;=> 0.0"
   [[lower upper]]
-  (- upper lower))
+  (if (= lower upper)
+    0.0
+    (- upper lower)))
 
 (s/fdef interval-width
   :args (s/cat :interval ::interval)
