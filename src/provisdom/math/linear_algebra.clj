@@ -94,7 +94,7 @@
 ;; Generator bounds entry values to ±1e50. The m*mᵀ construction squares and sums
 ;; entries; with unbounded finite values (up to ±1.7e308), extreme test.check size
 ;; scaling produces entries that overflow when squared. 1e50 is still enormous for
-;; any real-world matrix while avoiding generator-induced overflow.
+;; any real-world matrix while avoiding generator-induced overflow. --ME
 (s/def ::pos-definite-matrix-finite
   (s/with-gen
     #(pos-definite-matrix-finite? %)
@@ -110,7 +110,7 @@
                (gen/vector (m/finite-gen {:max 1e50 :min -1e50}) n)
                n)))))))
 
-;; Generator bounds entry values to ±1e50. See ::pos-definite-matrix-finite for rationale.
+;; Generator bounds entry values to ±1e50. See ::pos-definite-matrix-finite for rationale. --ME
 (s/def ::pos-semidefinite-matrix-finite
   (s/with-gen
     #(pos-semidefinite-matrix-finite? % m/sgl-close)
