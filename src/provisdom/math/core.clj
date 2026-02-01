@@ -319,15 +319,16 @@
   Options:
     :min - minimum value (default min-dbl)
     :max - maximum value (default max-dbl)"
-  [{m1 :max, m2 :min, :or {m1 max-dbl, m2 min-dbl}}]
-  (gen/one-of
-    [(gen/double* {:NaN? false
-                   :infinite? false
-                   :max m1
-                   :min m2})
-     (gen/large-integer*
-       {:max (min max-long (ceil' m1))
-        :min (max min-long (floor' m2))})]))
+  ([] (finite-gen {}))
+  ([{m1 :max, m2 :min, :or {m1 max-dbl, m2 min-dbl}}]
+   (gen/one-of
+     [(gen/double* {:NaN? false
+                    :infinite? false
+                    :max m1
+                    :min m2})
+      (gen/large-integer*
+        {:max (min max-long (ceil' m1))
+         :min (max min-long (floor' m2))})])))
 
 (s/def ::nan-or-finite
   (s/spec #(or (nan? %) (finite? %))
