@@ -91,6 +91,10 @@
                            (m/div cov-ij (m/sqrt (* d-i d-j)))))))))
        (s/gen ::mx/square-matrix-finite))))
 
+;; Generator bounds entry values to ±1e50. The m*mᵀ construction squares and sums
+;; entries; with unbounded finite values (up to ±1.7e308), extreme test.check size
+;; scaling produces entries that overflow when squared. 1e50 is still enormous for
+;; any real-world matrix while avoiding generator-induced overflow.
 (s/def ::pos-definite-matrix-finite
   (s/with-gen
     #(pos-definite-matrix-finite? %)
@@ -98,15 +102,28 @@
                  (let [mt (mx/transpose m)]
                    (tensor/add (mx/mx* m mt)
                      (mx/diagonal-matrix (mx/rows m) (constantly 0.1)))))
-       (s/gen ::mx/square-matrix-finite))))
+       (gen/bind (gen/choose 0 12)
+         (fn [n]
+           (if (zero? n)
+             (gen/return [[]])
+             (gen/vector
+               (gen/vector (m/finite-gen {:max 1e50 :min -1e50}) n)
+               n)))))))
 
+;; Generator bounds entry values to ±1e50. See ::pos-definite-matrix-finite for rationale.
 (s/def ::pos-semidefinite-matrix-finite
   (s/with-gen
     #(pos-semidefinite-matrix-finite? % m/sgl-close)
     #(gen/fmap (fn [m]
                  (let [mt (mx/transpose m)]
                    (mx/mx* m mt)))
-       (s/gen ::mx/square-matrix-finite))))
+       (gen/bind (gen/choose 0 12)
+         (fn [n]
+           (if (zero? n)
+             (gen/return [[]])
+             (gen/vector
+               (gen/vector (m/finite-gen {:max 1e50 :min -1e50}) n)
+               n)))))))
 
 (s/def ::svd-result
   (s/with-gen

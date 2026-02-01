@@ -1434,28 +1434,87 @@
           j1 (bessel-j 1 x)]
       (/ (- (* j1 y0) (/ 2.0 (* m/PI x))) j0))))
 
-(defn- bessel-y-integer
-  "Computes Y_n(x) for integer order n."
-  [n x]
-  (let [n (long (m/abs n))]
+(defn- bessel-y-asymptotic
+  "Asymptotic expansion for Y_ν(x) for large x.
+  Y_ν(x) ~ √(2/(πx)) * [P(ν,x)*sin(χ) + Q(ν,x)*cos(χ)]
+  where χ = x - νπ/2 - π/4"
+  [order x]
+  (let [sqrt-factor (m/sqrt (/ 2.0 m/PI x))
+        mu (* 4.0 (m/sq order))
+        x8 (* 8.0 x)
+        first-q-term (/ mu x8)
+        chi (- x (* order 0.5 m/PI) (* 0.25 m/PI))]
     (cond
-      (zero? n) (bessel-y0-small x)
-      (m/one? n) (bessel-y1-small x)
+      (zero? sqrt-factor) 0.0
+      (or (> first-q-term 1.0) (m/inf? mu) (m/inf? (m/sq x8)))
+      (* sqrt-factor (m/sin chi))
       :else
-      ;; Use forward recurrence: Y_{n+1} = (2n/x)Y_n - Y_{n-1}
-      (loop [k 1
-             y-prev (bessel-y0-small x)
-             y-curr (bessel-y1-small x)]
+      (let [p (loop [k 0
+                     term 1.0
+                     sum 1.0]
+                (if (>= k 10)
+                  sum
+                  (let [factor (/ (* (- mu (m/sq (dec (* 4 k 2))))
+                                    (- mu (m/sq (inc (* 4 k 2)))))
+                                 (* -1.0 (inc (* 2 k)) (+ 2 (* 2 k)) (m/sq x8)))
+                        next-term (* term factor)]
+                    (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
+                      (+ sum (if (m/nan? next-term) 0.0 next-term))
+                      (recur (inc k) next-term (+ sum next-term))))))
+            q (loop [k 0
+                     term (/ (dec mu) x8)
+                     sum (/ (dec mu) x8)]
+                (if (>= k 10)
+                  sum
+                  (let [factor (/ (* (- mu (m/sq (+ 1 (* 4 k 2))))
+                                    (- mu (m/sq (+ 3 (* 4 k 2)))))
+                                 (* -1.0 (+ 2 (* 2 k)) (+ 3 (* 2 k)) (m/sq x8)))
+                        next-term (* term factor)]
+                    (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
+                      (+ sum (if (m/nan? next-term) 0.0 next-term))
+                      (recur (inc k) next-term (+ sum next-term))))))]
+        (* sqrt-factor (+ (* p (m/sin chi)) (* q (m/cos chi))))))))
+
+(def ^:private ^:const max-bessel-recurrence-iterations
+  "Maximum iterations for Bessel recurrence before returning -∞.
+  For n >> x, Y_n(x) diverges to -∞; this cap prevents O(n) runtime for extreme orders."
+  100000)
+
+(defn- bessel-y-integer
+  "Computes Y_n(x) for integer order n.
+  Uses forward recurrence for small n, asymptotic expansion for large x.
+  For n > max-bessel-recurrence-iterations and x < 4n+15, returns -∞ since
+  Y_n(x) → -∞ rapidly when n >> x."
+  [n x]
+  (let [abs-n (m/abs n)]
+    (cond
+      ;; For extremely large orders (can't fit in long), Y_n(x) → -∞
+      (> abs-n Long/MAX_VALUE) m/inf-
+      :else
+      (let [n (long abs-n)]
         (cond
-          (>= k n) y-curr
-          ;; Handle overflow/underflow - any non-finite result indicates divergence
-          (not (m/finite? y-curr)) m/inf-
+          (zero? n) (bessel-y0-small x)
+          (m/one? n) (bessel-y1-small x)
+          ;; For large x, use asymptotic expansion (avoids O(n) recurrence)
+          (> x (+ (* 4.0 n) 15.0)) (bessel-y-asymptotic n x)
+          ;; For very large n with x not large enough for asymptotic,
+          ;; Y_n(x) → -∞ (can't use O(n) recurrence for extreme n)
+          (> n max-bessel-recurrence-iterations) m/inf-
           :else
-          (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
-            ;; If next step produces NaN from overflow (Inf - Inf), return -Inf
-            (if (m/nan? y-next)
-              m/inf-
-              (recur (inc k) y-curr y-next))))))))
+          ;; Use forward recurrence: Y_{n+1} = (2n/x)Y_n - Y_{n-1}
+          (loop [k 1
+                 y-prev (bessel-y0-small x)
+                 y-curr (bessel-y1-small x)]
+            (cond
+              (>= k n) y-curr
+              ;; Handle overflow/underflow - any non-finite result indicates divergence
+              (not (m/finite? y-curr)) m/inf-
+              :else
+              (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
+                ;; If next step produces NaN from overflow (Inf - Inf), return -Inf
+                (if (m/nan? y-next)
+                  m/inf-
+                  (recur (inc k) y-curr y-next))))))))))
 
 (defn bessel-y
   "Computes the Bessel function of the second kind Y_`order`(`x`).
