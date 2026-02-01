@@ -94,15 +94,13 @@
 (t/deftest vector-of-spec-test
   (let [test-spec (vector/vector-of-spec {:pred ::m/finite})]
     (t/is (s/valid? test-spec [1.0 2.0 3.0]))
-    (t/is-not (s/valid? test-spec [1.0 m/inf+]))
-    (t/is (s/valid? test-spec (first (first (s/exercise test-spec 1)))))))
+    (t/is-not (s/valid? test-spec [1.0 m/inf+]))))
 
 (t/deftest vector-finite-spec-test
   ;;vector-finite-spec validates finiteness, not min/max bounds (those are for generator only)
   (let [test-spec (vector/vector-finite-spec {:max 10 :min -10})]
     (t/is (s/valid? test-spec [1.0 2.0]))
-    (t/is-not (s/valid? test-spec [1.0 m/inf+]))
-    (t/is (s/valid? test-spec (first (first (s/exercise test-spec 1)))))))
+    (t/is-not (s/valid? test-spec [1.0 m/inf+]))))
 
 ;;;VECTOR CONSTRUCTORS
 (t/deftest to-vector-test

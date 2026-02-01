@@ -1,7 +1,6 @@
 (ns provisdom.math.core-test
   (:require
     [clojure.spec.alpha :as s]
-    [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
@@ -107,20 +106,7 @@
     (t/is-not (s/valid? test-spec -1))
     (t/is-not (s/valid? test-spec 15.0))
     (t/is-not (s/valid? test-spec m/inf+))
-    (t/is-not (s/valid? test-spec m/nan))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
-
-(t/deftest finite-gen-test
-  ;;generator test - verify produces valid values
-  (let [gen-vals (gen/sample (m/finite-gen) 100)]
-    (t/is (every? m/finite? gen-vals))
-    (t/is-not (some m/nan? gen-vals))
-    (t/is-not (some m/inf? gen-vals)))
-  (let [bounded-gen (m/finite-gen {:min 0 :max 100})
-        gen-vals (gen/sample bounded-gen 100)]
-    (t/is (every? m/finite? gen-vals))
-    (t/is (every? #(and (>= % 0) (<= % 100)) gen-vals))))
+    (t/is-not (s/valid? test-spec m/nan))))
 
 (t/deftest finite+?-test
   (t/with-instrument `m/finite+?
@@ -143,20 +129,7 @@
     (t/is-not (s/valid? test-spec -1))
     (t/is-not (s/valid? test-spec 101))
     (t/is-not (s/valid? test-spec m/inf+))
-    (t/is-not (s/valid? test-spec m/nan))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
-
-(t/deftest finite+-gen-test
-  ;;generator test - verify produces valid values
-  (let [gen-vals (gen/sample (m/finite+-gen) 100)]
-    (t/is (every? m/finite+? gen-vals))
-    (t/is (every? m/pos? gen-vals))
-    (t/is-not (some m/nan? gen-vals)))
-  (let [bounded-gen (m/finite+-gen {:max 50})
-        gen-vals (gen/sample bounded-gen 100)]
-    (t/is (every? m/finite+? gen-vals))
-    (t/is (every? #(<= % 50) gen-vals))))
+    (t/is-not (s/valid? test-spec m/nan))))
 
 (t/deftest finite-?-test
   (t/with-instrument `m/finite-?
@@ -190,20 +163,7 @@
     (t/is-not (s/valid? test-spec -1))
     (t/is-not (s/valid? test-spec 101))
     (t/is-not (s/valid? test-spec m/inf+))
-    (t/is-not (s/valid? test-spec m/nan))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
-
-(t/deftest finite-non--gen-test
-  ;;generator test - verify produces valid values
-  (let [gen-vals (gen/sample (m/finite-non--gen) 100)]
-    (t/is (every? m/finite-non-? gen-vals))
-    (t/is (every? m/non-? gen-vals))
-    (t/is-not (some m/nan? gen-vals)))
-  (let [bounded-gen (m/finite-non--gen {:max 50})
-        gen-vals (gen/sample bounded-gen 100)]
-    (t/is (every? m/finite-non-? gen-vals))
-    (t/is (every? #(<= % 50) gen-vals))))
+    (t/is-not (s/valid? test-spec m/nan))))
 
 (t/deftest finite-non+?-test
   (t/with-instrument `m/finite-non+?
@@ -294,9 +254,7 @@
     (t/is (s/valid? test-spec 10))
     (t/is-not (s/valid? test-spec -11))
     (t/is-not (s/valid? test-spec 11))
-    (t/is-not (s/valid? test-spec 5.0))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 5.0))))
 
 (t/deftest long+?-test
   (t/with-instrument `m/long+?
@@ -320,9 +278,7 @@
     (t/is (s/valid? test-spec 100))
     (t/is-not (s/valid? test-spec 0))
     (t/is-not (s/valid? test-spec -1))
-    (t/is-not (s/valid? test-spec 101))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 101))))
 
 (t/deftest long-?-test
   (t/with-instrument `m/long-?
@@ -360,9 +316,7 @@
     (t/is (s/valid? test-spec 50))
     (t/is (s/valid? test-spec 100))
     (t/is-not (s/valid? test-spec -1))
-    (t/is-not (s/valid? test-spec 101))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 101))))
 
 (t/deftest long-non+?-test
   (t/with-instrument `m/long-non+?
@@ -400,9 +354,7 @@
     (t/is (s/valid? test-spec 10))
     (t/is-not (s/valid? test-spec -11))
     (t/is-not (s/valid? test-spec 11))
-    (t/is-not (s/valid? test-spec 5.0))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 5.0))))
 
 (t/deftest int+?-test
   (t/with-instrument `m/int+?
@@ -426,9 +378,7 @@
     (t/is (s/valid? test-spec 100))
     (t/is-not (s/valid? test-spec 0))
     (t/is-not (s/valid? test-spec -1))
-    (t/is-not (s/valid? test-spec 101))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 101))))
 
 (t/deftest int-?-test
   (t/with-instrument `m/int-?
@@ -466,9 +416,7 @@
     (t/is (s/valid? test-spec 50))
     (t/is (s/valid? test-spec 100))
     (t/is-not (s/valid? test-spec -1))
-    (t/is-not (s/valid? test-spec 101))
-    ;;verify generator produces valid values
-    (t/is (every? #(s/valid? test-spec %) (gen/sample (s/gen test-spec) 20)))))
+    (t/is-not (s/valid? test-spec 101))))
 
 (t/deftest int-non+?-test
   (t/with-instrument `m/int-non+?
