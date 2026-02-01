@@ -1,12 +1,17 @@
 #kaocha/v1
-        {:tests                                          [{:kaocha.filter/skip ["provisdom.math.integrals-test"]}]
-         :reporter                                       #profile {:default kaocha.report/dots
-                                                                   :ci      kaocha.report/documentation}
-         :color?                                         #profile {:default true :ci false}
-         :plugins                                        #profile {:default []
-                                                                   :ci      [:kaocha.plugin/print-invocations
-                                                                             :kaocha.plugin/profiling
-                                                                             :kaocha.plugin/junit-xml]}
-         :kaocha.plugin.profiling/count                  10
-         :kaocha.plugin.junit-xml/target-file            "reports/junit.xml"
-         :kaocha.plugin.junit-xml/add-location-metadata? true}
+ {:tests                                          [{:kaocha.filter/skip ["provisdom.math.integrals-test"]}]
+  :reporter                                       #profile {:default kaocha.report/dots
+                                                            :ci      kaocha.report/documentation}
+  :color?                                         #profile {:default true :ci false}
+  :plugins                                        #profile {:default []
+                                                            :ci      [:kaocha.plugin/print-invocations
+                                                                      :kaocha.plugin/profiling
+                                                                      :kaocha.plugin/junit-xml
+                                                                      :kaocha.plugin/hooks]}
+  :kaocha.hooks/config                            [provisdom.test.kaocha-timeout/config-hook]
+  :kaocha.hooks/wrap-run                          [provisdom.test.kaocha-timeout/wrap-run-hook]
+  :kaocha.hooks/post-test                         [provisdom.test.kaocha-timeout/post-test-hook]
+  :kaocha.plugin.profiling/count                  10
+  :kaocha.plugin.junit-xml/target-file            "reports/junit.xml"
+  :kaocha.plugin.junit-xml/add-location-metadata? true
+  :provisdom.test.kaocha-timeout/timeout-seconds  100}
