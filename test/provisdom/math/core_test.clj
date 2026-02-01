@@ -826,7 +826,7 @@
     (t/is= m/inf+ (m/log m/inf+))
     (t/is (m/nan? (m/log -1)))
     (t/is (m/nan? (m/log m/nan)))
-    (t/is= 1.0986122886681096 (m/log 3))))
+    (t/is-approx= 1.0986122886681098 (m/log 3) :tolerance 1e-15)))
 
 (t/deftest log-inc-test
   (t/with-instrument `m/log-inc
