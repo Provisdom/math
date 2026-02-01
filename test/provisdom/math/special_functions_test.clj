@@ -504,8 +504,8 @@
 
 (t/deftest bessel-y-test
   (t/with-instrument `special-fns/bessel-y
-    ;;:num-tests reduced; special function evaluation is computationally expensive
-    (t/is-spec-check special-fns/bessel-y {:num-tests 50}))
+    ;;:num-tests reduced; special function evaluation is computationally expensive (~2 sec/test)
+    (t/is-spec-check special-fns/bessel-y {:num-tests 20}))
   ;; Singularity at x=0 (outside instrumentation since x=0 fails spec)
   (t/is= m/inf- (special-fns/bessel-y 0 0.0))
   (t/with-instrument :all
