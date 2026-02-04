@@ -47,3 +47,8 @@ public/build
 # Operating System Files
 # ================================
 .DS_Store
+
+# ================================
+# Test Reports
+# ================================
+/reports/
