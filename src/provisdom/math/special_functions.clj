@@ -169,7 +169,7 @@
 
 (s/fdef erf-diff
   :args (s/cat :x1 ::m/num :x2 ::m/num)
-  :ret (m/finite-spec {:max 2.0 :min -2.0}))
+  :ret (m/finite-spec {:min -2.0 :max 2.0}))
 
 (defn erf-derivative
   "Computes the derivative of the error function: d/d`x` erf(`x`).
@@ -934,7 +934,7 @@
 (s/fdef multivariate-gamma
   :args (s/and (s/cat :a ::m/num
                  :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:max 20 :min 0})))
+                      #(gen/large-integer* {:min 0 :max 20})))
           (fn [{:keys [a p]}]
             (and (< p 1e7)                                  ;for speed
               (not (and (m/roughly-round?
@@ -967,7 +967,7 @@
 (s/fdef multivariate-log-gamma
   :args (s/and (s/cat :a ::m/pos
                  :p (s/with-gen ::m/int-non-
-                      #(gen/large-integer* {:max 20 :min 0})))
+                      #(gen/large-integer* {:min 0 :max 20})))
           (fn [{:keys [a p]}]
             (and (< p 1.0e7)                                ;speed
               (or (m/nan? a) (> a (* 0.5 p))))))

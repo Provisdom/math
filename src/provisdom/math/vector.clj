@@ -28,7 +28,7 @@
 
 (s/def ::size
   (s/with-gen ::m/int-non-
-    #(gen/large-integer* {:max mdl :min 0})))
+    #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::vector ::tensor/tensor1D)
 
@@ -124,7 +124,7 @@
                                  (max ~max-count ~min-count)
                                  (+ ~min-count mdl))
                  :min-elements ~min-count})
-        (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1}))
+        (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2}))
           ~min-count
           (if ~max-count
             (max ~max-count ~min-count)
@@ -191,12 +191,12 @@
 (s/def ::sparse-vector
   (s/with-gen
     (s/coll-of (s/tuple ::m/int-non- ::m/number))
-    #(gen/bind (gen/tuple (gen/large-integer* {:max mdl :min 0})
-                 (gen/large-integer* {:max mdl :min 0}))
+    #(gen/bind (gen/tuple (gen/large-integer* {:min 0 :max mdl})
+                 (gen/large-integer* {:min 0 :max mdl}))
        (fn [[i j]]
          (gen/vector
            (gen/tuple
-             (gen/large-integer* {:max (max 0 (dec (max i j))) :min 0})
+             (gen/large-integer* {:min 0 :max (max 0 (dec (max i j)))})
              (s/gen ::m/number))
            (min i j))))))
 
@@ -583,7 +583,7 @@
   :args (s/cat :coll1 (s/coll-of any?)
           :coll2 (s/coll-of any?)
           :i (s/with-gen ::m/int
-               #(gen/large-integer* {:max mdl :min (- mdl)})))
+               #(gen/large-integer* {:min (- mdl) :max mdl})))
   :ret coll?)
 
 (defn replace-nan

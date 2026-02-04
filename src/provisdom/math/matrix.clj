@@ -57,22 +57,22 @@
     :indices ::tensor/indices))
 
 (s/def ::row
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::column
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::rows
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::columns
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (s/def ::row-start
-  (s/with-gen ::m/int #(gen/large-integer* {:max mdl :min (- mdl)})))
+  (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
 
 (s/def ::column-start
-  (s/with-gen ::m/int #(gen/large-integer* {:max mdl :min (- mdl)})))
+  (s/with-gen ::m/int #(gen/large-integer* {:min (- mdl) :max mdl})))
 
 (s/def ::sparse-matrix
   (s/with-gen
@@ -80,9 +80,9 @@
       :kind vector?
       :into [])
     #(gen/bind
-       (gen/tuple (gen/large-integer* {:max mdl :min 0})
-         (gen/large-integer* {:max mdl :min 0})
-         (gen/large-integer* {:max mdl :min 0})
+       (gen/tuple (gen/large-integer* {:min 0 :max mdl})
+         (gen/large-integer* {:min 0 :max mdl})
+         (gen/large-integer* {:min 0 :max mdl})
          (s/gen boolean?))
        (fn [[i j k tf?]]
          (let [[a b c] (sort [i j k])
@@ -90,8 +90,8 @@
                        [b c]
                        [c b])]
            (gen/vector
-             (gen/tuple (gen/large-integer* {:max (max 0 (dec c)) :min 0})
-               (gen/large-integer* {:max (max 0 (dec b)) :min 0})
+             (gen/tuple (gen/large-integer* {:min 0 :max (max 0 (dec c))})
+               (gen/large-integer* {:min 0 :max (max 0 (dec b))})
                (s/gen ::m/number))
              a))))))
 
@@ -110,7 +110,7 @@
 (s/def ::matrix
   (s/with-gen
     #(matrix? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
@@ -120,7 +120,7 @@
 (s/def ::matrix-finite
   (s/with-gen
     #(matrix-finite? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite) i)
@@ -130,7 +130,7 @@
 (s/def ::matrix-finite-non-
   (s/with-gen
     #(matrix-finite-non-? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite-non-) i)
@@ -140,7 +140,7 @@
 (s/def ::matrix-prob
   (s/with-gen
     #(matrix-prob? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/prob) i)
@@ -169,7 +169,7 @@
 (s/def ::square-matrix
   (s/with-gen
     #(square-matrix? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
@@ -183,7 +183,7 @@
              :kind vector?
              :into [])
       (fn [m] (= (rows m) (columns m))))
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/finite) i)
@@ -197,7 +197,7 @@
 (s/def ::upper-triangular-matrix
   (s/with-gen
     #(upper-triangular-matrix? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/fmap deserialize-upper-triangular-matrix
            (gen/vector
@@ -207,7 +207,7 @@
 (s/def ::lower-triangular-matrix
   (s/with-gen
     #(lower-triangular-matrix? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/fmap deserialize-lower-triangular-matrix
            (gen/vector
@@ -217,7 +217,7 @@
 (s/def ::symmetric-matrix
   (s/with-gen
     #(symmetric-matrix? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/fmap deserialize-symmetric-matrix
            (gen/vector
@@ -227,7 +227,7 @@
 (s/def ::symmetric-matrix-finite-non-
   (s/with-gen
     #(symmetric-matrix-finite-non-? %)
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/fmap deserialize-symmetric-matrix
            (gen/vector
@@ -291,7 +291,7 @@
 (s/def ::matrix-num
   (s/with-gen
     matrix-num?
-    #(gen/bind (gen/large-integer* {:max mdl :min 0})
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/num) i)
@@ -370,12 +370,12 @@
        #(and (matrix-finite? %)
           (all-matrix-values? % ~m1 ~m2)
           (matrix-min-size? % ~min-rows ~min-columns))
-       #(gen/bind (gen/large-integer* {:max (+ ~min-columns mdl) :min ~min-columns})
+       #(gen/bind (gen/large-integer* {:min ~min-columns :max (+ ~min-columns mdl)})
           (fn [~columns-sym]
-            (gen/bind (gen/large-integer* {:max (+ ~min-rows mdl) :min ~min-rows})
+            (gen/bind (gen/large-integer* {:min ~min-rows :max (+ ~min-rows mdl)})
               (fn [~rows-sym]
                 (gen/vector
-                  (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1})) ~columns-sym)
+                  (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2})) ~columns-sym)
                   ~rows-sym))))))))
 
 (defmacro sized-matrix-finite-spec
@@ -392,7 +392,7 @@
         (all-matrix-values? % ~m1 ~m2)
         (matrix-size? % ~row-count ~column-count))
      #(gen/vector
-        (gen/vector (s/gen (m/finite-spec {:max ~m2 :min ~m1})) ~column-count)
+        (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2})) ~column-count)
         ~row-count)))
 
 (defn matrix-finite-non-?

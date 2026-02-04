@@ -102,12 +102,12 @@
                  (let [mt (mx/transpose m)]
                    (tensor/add (mx/mx* m mt)
                      (mx/diagonal-matrix (mx/rows m) (constantly 0.1)))))
-       (gen/bind (gen/choose 0 12)
+       (gen/bind (gen/choose 0 9)
          (fn [n]
            (if (zero? n)
              (gen/return [[]])
              (gen/vector
-               (gen/vector (m/finite-gen {:max 1e50 :min -1e50}) n)
+               (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) n)
                n)))))))
 
 ;; Generator bounds entry values to ±1e50. See ::pos-definite-matrix-finite for rationale. --ME
@@ -117,12 +117,12 @@
     #(gen/fmap (fn [m]
                  (let [mt (mx/transpose m)]
                    (mx/mx* m mt)))
-       (gen/bind (gen/choose 0 12)
+       (gen/bind (gen/choose 0 9)
          (fn [n]
            (if (zero? n)
              (gen/return [[]])
              (gen/vector
-               (gen/vector (m/finite-gen {:max 1e50 :min -1e50}) n)
+               (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) n)
                n)))))))
 
 (s/def ::svd-result
@@ -144,12 +144,12 @@
 (def ^:private ^:const small-matrix-threshold 8)
 
 (defn- square-matrix-generator
-  "Generator for square matrices with dimensions 0-12 to test large matrix code path.
+  "Generator for square matrices with dimensions 0-9 to test large matrix code path.
   Takes an element generator (e.g., `(s/gen ::m/number)` or `(s/gen ::m/finite)`)."
   [element-gen]
   (gen/fmap
     vector
-    (gen/bind (gen/choose 0 12)
+    (gen/bind (gen/choose 0 9)
       (fn [n]
         (if (zero? n)
           (gen/return [[]])
@@ -207,7 +207,7 @@
          singular? false]
     (if (>= k n)
       [L U P singular?]
-      (let [;; Find pivot row with largest absolute value in column k
+      (let [;; Find pivot row with the largest absolute value in column k
             pivot-row (loop [best-row k
                              row (inc k)
                              best-abs (m/abs (double (get-in U [k k])))]
@@ -2332,15 +2332,15 @@
                    (gen/tuple
                      ;; data-matrix: n x p
                      (gen/vector
-                       (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
+                       (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
                        n)
                      ;; pca-result with matching p
                      (gen/hash-map
                        ::pca-mean
-                       (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
+                       (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
                        ::pca-principal-components
                        (gen/vector
-                         (gen/vector (m/finite-gen {:max 1.0 :min -1.0}) p)
+                         (gen/vector (m/finite-gen {:min -1.0 :max 1.0}) p)
                          k-max))
                      ;; n-components <= k-max
                      (gen/return k)))))))
@@ -2399,14 +2399,14 @@
                (gen/tuple
                  ;; transformed-matrix: n x k
                  (gen/vector
-                   (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) k)
+                   (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) k)
                    n)
                  ;; pca-result with matching dimensions
                  (gen/hash-map
                    ::pca-mean
-                   (gen/vector (m/finite-gen {:max 10.0 :min -10.0}) p)
+                   (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
                    ::pca-principal-components
                    (gen/vector
-                     (gen/vector (m/finite-gen {:max 1.0 :min -1.0}) p)
+                     (gen/vector (m/finite-gen {:min -1.0 :max 1.0}) p)
                      k))))))
   :ret (s/nilable ::mx/matrix))

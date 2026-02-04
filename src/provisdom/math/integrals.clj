@@ -733,31 +733,23 @@
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b))
-    {::converter-fn              (fn [number]
-                                   (m/div number (m/one- (m/sq number))))
-     ::intervals/finite-interval [-1.0 1.0]
-     ::multiplicative-fn         (fn [number]
+    {::intervals/finite-interval [-1.0 1.0] ::converter-fn (fn [number]
+                                   (m/div number (m/one- (m/sq number)))) ::multiplicative-fn (fn [number]
                                    (let [s (m/sq number)]
                                      (m/div (inc s) (m/sq (m/one- s)))))}
 
     (m/inf+? b)
-    {::converter-fn              (fn [number]
-                                   (+ a (m/div number (m/one- number))))
-     ::intervals/finite-interval [0.0 1.0]
-     ::multiplicative-fn         (fn [number]
+    {::intervals/finite-interval [0.0 1.0] ::converter-fn (fn [number]
+                                   (+ a (m/div number (m/one- number)))) ::multiplicative-fn (fn [number]
                                    (m/div (m/sq (m/one- number))))}
 
     (m/inf-? a)
-    {::converter-fn              (fn [number]
-                                   (- b (m/div (m/one- number) number)))
-     ::intervals/finite-interval [0.0 1.0]
-     ::multiplicative-fn         (fn [number]
+    {::intervals/finite-interval [0.0 1.0] ::converter-fn (fn [number]
+                                   (- b (m/div (m/one- number) number))) ::multiplicative-fn (fn [number]
                                    (m/div (m/sq number)))}
 
     :else
-    {::converter-fn              identity
-     ::intervals/finite-interval [a b]
-     ::multiplicative-fn         (constantly 1.0)}))
+    {::intervals/finite-interval [a b] ::converter-fn identity ::multiplicative-fn (constantly 1.0)}))
 
 (s/def ::multiplicative-fn ::number->number)
 (s/def ::converter-fn ::number->number)
@@ -837,9 +829,7 @@
   Known limitations: Very large finite intervals may lose precision due to floating-point limits.
   For such cases, increase `::points` or `::iter-interval`."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
-  ([number->tensor [a b] {:as    opts
-                          ::keys [accu iter-interval parallel? points singularities]
-                          :or    {accu          m/dbl-close
+  ([number->tensor [a b] {::keys [accu iter-interval parallel? points singularities] :as opts :or {accu          m/dbl-close
                                   iter-interval [10 1000]
                                   parallel?     false}}]
    (if (seq singularities)

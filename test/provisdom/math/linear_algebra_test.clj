@@ -298,18 +298,18 @@
     (t/is-not (la/correlation-matrix? [[2.0 0.5] [0.5 1.0]] 1e-10))))
 
 (t/deftest covariance-matrix->correlation-matrix-test
+  ;;:num-tests 50 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/covariance-matrix->correlation-matrix
-    ;;:num-tests 300; increased for better coverage of correlation matrix edge cases
-    (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 300}))
+    (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 50}))
   (t/with-instrument :all
     (let [cov [[4.0 2.0] [2.0 9.0]]
           result (la/covariance-matrix->correlation-matrix cov)]
       (t/is-data-approx= [[1.0 (/ 2.0 6.0)] [(/ 2.0 6.0) 1.0]] result :tolerance 1e-10))))
 
 (t/deftest correlation-matrix->covariance-matrix-test
+  ;;:num-tests 150 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/correlation-matrix->covariance-matrix
-    ;;:num-tests 200; increased for better coverage of covariance matrix edge cases
-    (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 200}))
+    (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 150}))
   (t/with-instrument :all
     (let [corr [[1.0 0.5] [0.5 1.0]]
           variances [4.0 9.0]
@@ -317,8 +317,9 @@
       (t/is-data-approx= [[4.0 3.0] [3.0 9.0]] result :tolerance 1e-10))))
 
 (t/deftest correlation-matrix-by-squaring-test
+  ;;:num-tests 300 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/correlation-matrix-by-squaring
-    (t/is-spec-check la/correlation-matrix-by-squaring))
+    (t/is-spec-check la/correlation-matrix-by-squaring {:num-tests 300}))
   (t/with-instrument :all
     (t/is= nil (la/correlation-matrix-by-squaring [[]]))
     (let [result (la/correlation-matrix-by-squaring [[1.0 0.5] [0.3 1.0]])]

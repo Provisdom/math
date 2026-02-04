@@ -195,7 +195,7 @@
 (s/def ::pos
   (s/spec pos?
     :gen #(gen/one-of
-            [(gen/double* {:NaN? false :min tiny-dbl})
+            [(gen/double* {:min tiny-dbl :NaN? false})
              (gen/large-integer* {:min 1})])))
 
 (s/def ::nan-or-pos
@@ -221,7 +221,7 @@
 (s/def ::neg
   (s/spec neg?
     :gen #(gen/one-of
-            [(gen/double* {:NaN? false :max (- tiny-dbl)})
+            [(gen/double* {:max (- tiny-dbl) :NaN? false})
              (gen/large-integer* {:max -1})])))
 
 (s/def ::nan-or-neg
@@ -246,7 +246,7 @@
 (s/def ::non-
   (s/spec non-?
     :gen #(gen/one-of
-            [(gen/double* {:NaN? false :min 0.0})
+            [(gen/double* {:min 0.0 :NaN? false})
              (gen/large-integer* {:min 0})])))
 
 (s/def ::nan-or-non-
@@ -271,7 +271,7 @@
 (s/def ::non+
   (s/spec non+?
     :gen #(gen/one-of
-            [(gen/double* {:NaN? false :max 0.0})
+            [(gen/double* {:max 0.0 :NaN? false})
              (gen/large-integer* {:max 0})])))
 
 (s/def ::nan-or-non+
@@ -296,7 +296,7 @@
 (s/def ::finite
   (s/spec finite?
     :gen #(gen/one-of
-            [(gen/double* {:NaN? false :infinite? false})
+            [(gen/double* {:infinite? false :NaN? false})
              (gen/large-integer* {})])))
 
 (defmacro finite-spec
@@ -309,10 +309,9 @@
                  (partial <= ~m2)
                  (partial >= ~m1))
      #(gen/one-of
-        [(gen/double* {:NaN? false :max ~m1 :min ~m2})
+        [(gen/double* {:min ~m2 :max ~m1 :NaN? false})
          (gen/large-integer*
-           {:max (min max-long (ceil' ~m1))
-            :min (max min-long (floor' ~m2))})])))
+           {:min (max min-long (floor' ~m2)) :max (min max-long (ceil' ~m1))})])))
 
 (defn finite-gen
   "Generator for finite numbers (doubles and longs). Excludes NaN and infinity.
@@ -322,19 +321,15 @@
   ([] (finite-gen {}))
   ([{m1 :max, m2 :min, :or {m1 max-dbl, m2 min-dbl}}]
    (gen/one-of
-     [(gen/double* {:NaN? false
-                    :infinite? false
-                    :max m1
-                    :min m2})
+     [(gen/double* {:min m2 :max m1 :infinite? false :NaN? false})
       (gen/large-integer*
-        {:max (min max-long (ceil' m1))
-         :min (max min-long (floor' m2))})])))
+        {:min (max min-long (floor' m2)) :max (min max-long (ceil' m1))})])))
 
 (s/def ::nan-or-finite
   (s/spec #(or (nan? %) (finite? %))
     :gen #(gen/one-of
             [(gen/double* {:infinite? false})
-             gen/large-integer])))
+             (gen/large-integer* {})])))
 
 (defn finite+?
   "Returns `true` if `x` is a positive finite number."
@@ -352,10 +347,9 @@
   ;;longs will sometimes get tossed out (prevents execution errors)
   `(s/with-gen (s/and finite+? (partial >= ~m2))
      #(gen/one-of
-        [(finite-gen {:max ~m2 :min tiny-dbl})
+        [(finite-gen {:min tiny-dbl :max ~m2})
          (gen/large-integer*
-           {:max (min max-long (ceil' ~m2))
-            :min 1})])))
+           {:min 1 :max (min max-long (ceil' ~m2))})])))
 
 (defn finite+-gen
   "Generator for positive finite numbers (doubles and longs). Excludes NaN, infinity, zero, and
@@ -365,15 +359,14 @@
   ([] (finite+-gen {}))
   ([{m2 :max, :or {m2 max-dbl}}]
    (gen/one-of
-     [(finite-gen {:max m2 :min tiny-dbl})
+     [(finite-gen {:min tiny-dbl :max m2})
       (gen/large-integer*
-        {:max (min max-long (ceil' m2))
-         :min 1})])))
+        {:min 1 :max (min max-long (ceil' m2))})])))
 
 (s/def ::nan-or-finite+
   (s/spec #(or (nan? %) (finite+? %))
     :gen #(gen/one-of
-            [(gen/double* {:infinite? false :min tiny-dbl})
+            [(gen/double* {:min tiny-dbl :infinite? false})
              (gen/large-integer* {:min 1})])))
 
 (defn finite-?
@@ -390,8 +383,7 @@
 (s/def ::nan-or-finite-
   (s/spec #(or (nan? %) (finite-? %))
     :gen #(gen/one-of
-            [(gen/double* {:infinite? false
-                           :max       (- tiny-dbl)})
+            [(gen/double* {:max (- tiny-dbl) :infinite? false})
              (gen/large-integer* {:max -1})])))
 
 (defn finite-non-?
@@ -410,10 +402,9 @@
   ;;longs will sometimes get tossed out (prevents execution errors)
   `(s/with-gen (s/and finite-non-? (partial >= ~m2))
      #(gen/one-of
-        [(gen/double* {:NaN? false :max ~m2 :min 0.0})
+        [(gen/double* {:min 0.0 :max ~m2 :NaN? false})
          (gen/large-integer*
-           {:max (min max-long (ceil' ~m2))
-            :min 0})])))
+           {:min 0 :max (min max-long (ceil' ~m2))})])))
 
 (defn finite-non--gen
   "Generator for non-negative finite numbers (doubles and longs). Excludes NaN, infinity, and
@@ -423,14 +414,13 @@
   ([] (finite-non--gen {}))
   ([{m2 :max, :or {m2 max-dbl}}]
    (gen/one-of
-     [(finite-gen {:max m2 :min 0.0})
+     [(finite-gen {:min 0.0 :max m2})
       (gen/large-integer*
-        {:max (min max-long (ceil' m2))
-         :min 0})])))
+        {:min 0 :max (min max-long (ceil' m2))})])))
 
 (s/def ::nan-or-finite-non-
   (s/spec #(or (nan? %) (finite-non-? %))
-    :gen #(gen/one-of [(gen/double* {:infinite? false :min 0.0})
+    :gen #(gen/one-of [(gen/double* {:min 0.0 :infinite? false})
                        (gen/large-integer* {:min 0})])))
 
 (defn finite-non+?
@@ -445,7 +435,7 @@
 
 (s/def ::nan-or-finite-non+
   (s/spec #(or (nan? %) (finite-non+? %))
-    :gen #(gen/one-of [(gen/double* {:infinite? false :max 0.0})
+    :gen #(gen/one-of [(gen/double* {:max 0.0 :infinite? false})
                        (gen/large-integer* {:max 0})])))
 
 (s/def ::double
@@ -457,7 +447,7 @@
   (and (double? x) (== x x) (not (infinite? x))))
 
 (s/def ::double-finite
-  (s/spec double-finite? :gen #(gen/double* {:NaN? false :infinite? false})))
+  (s/spec double-finite? :gen #(gen/double* {:infinite? false :NaN? false})))
 
 (defn double-finite+?
   "Returns `true` if `x` is a double and positive finite."
@@ -466,7 +456,7 @@
 
 (s/def ::double-finite+
   (s/spec double-finite+?
-    :gen #(gen/double* {:NaN? false :infinite? false :min tiny-dbl})))
+    :gen #(gen/double* {:min tiny-dbl :infinite? false :NaN? false})))
 
 (defn single?
   "Returns `true` if `x` is a single-precision float (or fits in single range)."
@@ -477,7 +467,7 @@
       (infinite? x))))
 
 (s/def ::single
-  (s/spec single? :gen #(gen/double* {:max max-sgl :min min-sgl})))
+  (s/spec single? :gen #(gen/double* {:min min-sgl :max max-sgl})))
 
 (defn single-finite?
   "Returns `true` if `x` is a single-precision float and finite."
@@ -486,10 +476,7 @@
 
 (s/def ::single-finite
   (s/spec single-finite?
-    :gen #(gen/double* {:NaN?      false
-                        :infinite? false
-                        :max       max-sgl
-                        :min       min-sgl})))
+    :gen #(gen/double* {:min min-sgl :max max-sgl :infinite? false :NaN? false})))
 
 (defn long?
   "Returns `true` if `x` is a long."
@@ -508,8 +495,7 @@
                  (partial <= ~m2)
                  (partial >= ~m1))
      #(gen/large-integer*
-        {:max (min max-long (ceil' ~m1))
-         :min (max min-long (floor' ~m2))})))
+        {:min (max min-long (floor' ~m2)) :max (min max-long (ceil' ~m1))})))
 
 (defn long+?
   "Returns `true` if `x` is a long and is positive."
@@ -523,7 +509,7 @@
   [m2]
   `(s/with-gen (s/and long+? (partial >= ~m2))
      #(gen/large-integer*
-        {:max (min max-long (ceil' ~m2)) :min 1})))
+        {:min 1 :max (min max-long (ceil' ~m2))})))
 
 (defn long-?
   "Returns `true` if `x` is a long and is negative."
@@ -545,7 +531,7 @@
   [m2]
   `(s/with-gen (s/and long-non-? (partial >= ~m2))
      #(gen/large-integer*
-        {:max (min max-long (ceil' ~m2)) :min 0})))
+        {:min 0 :max (min max-long (ceil' ~m2))})))
 
 (defn long-non+?
   "Returns `true` if `x` is a long and is non-positive."
@@ -572,8 +558,7 @@
                  (partial <= ~m2)
                  (partial >= ~m1))
      #(gen/large-integer*
-        {:max (min max-int (ceil' ~m1))
-         :min (max min-int (floor' ~m2))})))
+        {:min (max min-int (floor' ~m2)) :max (min max-int (ceil' ~m1))})))
 
 (defn int+?
   "Returns `true` if `x` is an int and is positive."
@@ -587,7 +572,7 @@
   [m2]
   `(s/with-gen (s/and int+? (partial >= ~m2))
      #(gen/large-integer*
-        {:max (min max-int (ceil' ~m2)) :min 1})))
+        {:min 1 :max (min max-int (ceil' ~m2))})))
 
 (defn int-?
   "Returns `true` if `x` is an int and is negative."
@@ -609,7 +594,7 @@
   [m2]
   `(s/with-gen (s/and int-non-? (partial >= ~m2))
      #(gen/large-integer*
-        {:max (min max-int (ceil' ~m2)) :min 0})))
+        {:min 0 :max (min max-int (ceil' ~m2))})))
 
 (defn int-non+?
   "Returns `true` if `x` is an int and is non-positive."
@@ -707,11 +692,11 @@
   (and (non-? x) (<= x 1)))
 
 (s/def ::prob
-  (s/spec prob? :gen #(gen/double* {:NaN? false :max 1.0 :min 0.0})))
+  (s/spec prob? :gen #(gen/double* {:min 0.0 :max 1.0 :NaN? false})))
 
 (s/def ::nan-or-prob
   (s/spec #(or (nan? %) (prob? %))
-    :gen #(gen/double* {:max 1.0 :min 0.0})))
+    :gen #(gen/double* {:min 0.0 :max 1.0})))
 
 (defn open-prob?
   "Returns `true` if `x` is between 0 and 1, exclusive."
@@ -720,11 +705,11 @@
 
 (s/def ::open-prob
   (s/spec open-prob?
-    :gen #(gen/double* {:NaN? false :max (next-down 1.0) :min tiny-dbl})))
+    :gen #(gen/double* {:min tiny-dbl :max (next-down 1.0) :NaN? false})))
 
 (s/def ::nan-or-open-prob
   (s/spec #(or (nan? %) (open-prob? %))
-    :gen #(gen/double* {:max (next-down 1.0) :min tiny-dbl})))
+    :gen #(gen/double* {:min tiny-dbl :max (next-down 1.0)})))
 
 (defn corr?
   "Returns `true` if `x` is between -1 and 1, inclusive."
@@ -734,11 +719,11 @@
     (>= x -1)))
 
 (s/def ::corr
-  (s/spec corr? :gen #(gen/double* {:NaN? false :max 1.0 :min -1.0})))
+  (s/spec corr? :gen #(gen/double* {:min -1.0 :max 1.0 :NaN? false})))
 
 (s/def ::nan-or-corr
   (s/spec #(or (nan? %) (corr? %))
-    :gen #(gen/double* {:max 1.0 :min -1.0})))
+    :gen #(gen/double* {:min -1.0 :max 1.0})))
 
 (defn open-corr?
   "Returns `true` if `x` is between -1 and 1, exclusive."
@@ -749,11 +734,11 @@
 
 (s/def ::open-corr
   (s/spec open-corr?
-    :gen #(gen/double* {:NaN? false :max (next-down 1.0) :min (next-up -1.0)})))
+    :gen #(gen/double* {:min (next-up -1.0) :max (next-down 1.0) :NaN? false})))
 
 (s/def ::nan-or-open-corr
   (s/spec #(or (nan? %) (open-corr? %))
-    :gen #(gen/double* {:max (next-down 1.0) :min (next-up -1.0)})))
+    :gen #(gen/double* {:min (next-up -1.0) :max (next-down 1.0)})))
 
 (defn maybe-long-able
   "Coerces `x` to long if it's an integer value within long range, otherwise returns `x` unchanged.
@@ -1250,7 +1235,7 @@
 ;;;ROUNDING
 (s/def ::accu
   (s/with-gen ::non-
-    #(gen/double* {:NaN? false :max 1e-3 :min tiny-dbl})))
+    #(gen/double* {:min tiny-dbl :max 1e-3 :NaN? false})))
 
 (s/def ::round-type #{:up :down :away-from-zero :toward-zero :toward-even})
 

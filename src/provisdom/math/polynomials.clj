@@ -64,9 +64,9 @@
                      (mapv vector xs ys))
            (gen/tuple
              (gen/fmap (fn [nums] (vec (take n (distinct (map double nums)))))
-               (gen/vector (m/finite-gen {:max 1e6 :min -1e6})
+               (gen/vector (m/finite-gen {:min -1e6 :max 1e6})
                  n (* n 10)))
-             (gen/vector (m/finite-gen {:max 1e6 :min -1e6}) n)))))))
+             (gen/vector (m/finite-gen {:min -1e6 :max 1e6}) n)))))))
 
 (s/def ::node-count
   (s/with-gen (s/int-in 1 1000)

@@ -21,14 +21,14 @@
 
 (s/def ::digits
   (s/with-gen ::m/int+
-    #(gen/large-integer* {:max 35 :min 1})))
+    #(gen/large-integer* {:min 1 :max 35})))
 
 (s/def ::max-digits ::digits)
 (s/def ::max-length ::m/int+)
 
 (s/def ::decimal-places
   (s/with-gen ::m/int-non-
-    #(gen/large-integer* {:max 35 :min 0})))
+    #(gen/large-integer* {:min 0 :max 35})))
 
 (s/def ::max-decimal-places ::decimal-places)
 (s/def ::money? boolean?)

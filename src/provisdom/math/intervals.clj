@@ -21,7 +21,7 @@
 (declare intersection)
 
 (s/def ::size
-  (s/with-gen ::m/int-non- #(gen/large-integer* {:max mdl :min 0})))
+  (s/with-gen ::m/int-non- #(gen/large-integer* {:min 0 :max mdl})))
 
 (defmacro interval-spec
   ([spec] `(interval-spec ~spec ~spec))
@@ -76,8 +76,8 @@
     (gen/sample (long-interval-gen 0 100))
     ;=> ([45 23] [0 99] [12 78] ...)"
   [min max]
-  (gen/tuple (gen/large-integer* {:max max :min min})
-    (gen/large-integer* {:max max :min min})))
+  (gen/tuple (gen/large-integer* {:min min :max max})
+    (gen/large-integer* {:min min :max max})))
 
 (s/def ::lower ::m/number)
 (s/def ::upper ::m/number)
