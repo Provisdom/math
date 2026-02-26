@@ -22,7 +22,8 @@
     [provisdom.utility-belt.anomalies :as anomalies]))
 
 ;;;DECLARATIONS
-(declare erfc log-beta log-gamma log-gamma-inc regularized-gamma-p regularized-gamma-q)
+(declare erfc inv-cdf-standard-normal log-beta log-gamma log-gamma-inc regularized-gamma-p
+  regularized-gamma-q)
 
 ;;;CONSTANTS
 (def ^:const aperys-constant 1.202056903159594285399738161511449990764986292)
@@ -682,6 +683,87 @@
 (s/fdef regularized-gamma-q
   :args (s/cat :a ::m/pos :x ::m/non-)
   :ret ::m/nan-or-prob)
+
+(defn inv-regularized-gamma-p
+  "Computes the inverse of [[regularized-gamma-p]] with respect to `x`.
+
+  Finds the value `x >= 0` such that `P(a, x) = cumulative-prob`, where P is the regularized lower
+  incomplete gamma function. This is the quantile function of the `Gamma(a, 1)` distribution.
+
+  Uses Wilson-Hilferty normal approximation for `a >= 1` and power approximation for `a < 1`,
+  refined by Halley's method with bisection fallback.
+
+  Examples:
+    (inv-regularized-gamma-p 1.0 0.5) => 0.6931471805599453
+    (inv-regularized-gamma-p 2.0 0.5) => 1.6783469900166608"
+  [a cumulative-prob]
+  (cond
+    (zero? cumulative-prob) 0.0
+    (m/one? cumulative-prob) m/inf+
+    :else
+    (let [a (double a)
+          p (double cumulative-prob)
+          ln-gamma-a (log-gamma a)
+          ;; Wilson-Hilferty normal approximation for a >= 1
+          wh-guess (when (>= a 1.0)
+                     (let [z (inv-cdf-standard-normal p)
+                           w (/ (* 9.0 a))
+                           cube-base (+ 1.0 (- w) (* z (m/sqrt w)))]
+                       (when (m/pos? cube-base)
+                         (let [g (* a (m/cube cube-base))]
+                           (when (m/finite+? g) g)))))
+          ;; Power approximation for small a or as fallback
+          power-guess (let [lg (/ (+ (m/log p) (log-gamma (inc a))) a)]
+                        (when (> lg (- 700.0))
+                          (m/exp lg)))
+          x0 (max m/tiny-dbl (double (or wh-guess power-guess m/tiny-dbl)))]
+      ;; For very large a (>1e6), Wilson-Hilferty is accurate to O(1/a) relative error
+      ;; and regularized-gamma-p is too slow for iterative refinement
+      (if (and wh-guess (> a 1e6))
+        x0
+        (let [;; Initial bracket around guess
+              lo (* 0.01 x0)
+              hi (max (* 100.0 x0) 1.0)]
+          ;; Halley's method with bisection safeguard
+          (loop [x (double x0)
+                 lo (double lo)
+                 hi (double hi)
+                 i 0]
+            (if (>= i 60)
+              x
+              (let [f (- (regularized-gamma-p a x) p)]
+                (if (<= (m/abs f) 1e-14)
+                  x
+                  ;; Update bracket
+                  (let [[lo hi] (if (neg? f) [x hi] [lo x])
+                        ;; f'(x) in log-space for stability
+                        log-fprime (- (* (dec a) (m/log x)) x ln-gamma-a)
+                        fprime (m/exp log-fprime)]
+                    (if (zero? fprime)
+                      ;; Zero derivative: bisect
+                      (let [mid (* 0.5 (+ lo hi))]
+                        (recur mid lo hi (inc i)))
+                      ;; Halley step: f''(x)/f'(x) = (a-1)/x - 1
+                      (let [newton-delta (/ f fprime)
+                            ratio (/ (* f (- (/ (dec a) x) 1.0))
+                                    (* 2.0 fprime))
+                            denom (- 1.0 ratio)
+                            delta (if (and (m/finite? ratio) (m/pos? denom))
+                                    (/ newton-delta denom)
+                                    newton-delta)
+                            x-new (- x delta)
+                            ;; If Halley step escapes bracket, bisect instead
+                            x-new (if (or (m/nan? x-new)
+                                        (<= x-new lo) (>= x-new hi))
+                                    (* 0.5 (+ lo hi))
+                                    x-new)]
+                        (if (<= (m/abs (- x-new x)) (* 1e-13 x))
+                          x-new
+                          (recur x-new lo hi (inc i)))))))))))))))
+
+(s/fdef inv-regularized-gamma-p
+  :args (s/cat :a ::m/pos :cumulative-prob ::m/prob)
+  :ret ::m/nan-or-non-)
 
 (defn log-gamma
   "Computes the natural logarithm of the gamma function ln(Gamma(`a`)).

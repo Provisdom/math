@@ -280,6 +280,31 @@
     (t/is= 0.4999950658122486 (special-fns/regularized-gamma-q 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-q 1e149 1e149)))))
 
+(t/deftest inv-regularized-gamma-p-test
+  (t/with-instrument `special-fns/inv-regularized-gamma-p
+    (t/is-spec-check special-fns/inv-regularized-gamma-p))
+  (t/with-instrument :all
+    ;; Edge cases
+    (t/is= 0.0 (special-fns/inv-regularized-gamma-p 1.0 0.0))
+    (t/is= m/inf+ (special-fns/inv-regularized-gamma-p 1.0 1.0))
+    ;; Known values: a=1 (exponential), inv-cdf = -ln(1-p)
+    ;;Math InverseGammaRegularized[1, 0, 0.5] = 0.69314718055994530941723212145817656807550013436...
+    (t/is-approx= 0.6931471805599453 (special-fns/inv-regularized-gamma-p 1.0 0.5) :tolerance 1e-12)
+    ;;Math InverseGammaRegularized[2, 0, 0.5] = 1.67834699001666081...
+    (t/is-approx= 1.6783469900166608 (special-fns/inv-regularized-gamma-p 2.0 0.5) :tolerance 1e-10)
+    ;; Round-trip: regularized-gamma-p(a, inv-regularized-gamma-p(a, p)) ≈ p
+    (doseq [a [0.1 0.5 1.0 2.0 5.0 10.0 100.0 1e4]
+            p [0.01 0.1 0.25 0.5 0.75 0.9 0.99]]
+      (let [x (special-fns/inv-regularized-gamma-p a p)]
+        (when-not (m/nan? x)
+          (t/is-approx= p (special-fns/regularized-gamma-p a x) :tolerance 1e-10))))
+    ;; Small a — round-trip verified
+    (t/is-approx= 5.933911044602241E-4
+      (special-fns/inv-regularized-gamma-p 0.1 0.5) :tolerance 1e-10)
+    ;; Large a — Wilson-Hilferty approximation (a > 1e6)
+    (t/is-approx= 9999.666668641736
+      (special-fns/inv-regularized-gamma-p 1e4 0.5))))
+
 (t/deftest log-gamma-test
   (t/with-instrument `special-fns/log-gamma
     (t/is-spec-check special-fns/log-gamma))
