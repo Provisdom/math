@@ -121,7 +121,7 @@
 (s/def ::derivative-orders (s/coll-of ::m/int-non- :kind vector? :min-count 1))
 (s/def ::value ::m/number)
 (s/def ::error-bound ::m/finite-non-)
-(s/def ::derivative-result (s/keys :req [::value ::error-bound]))
+(s/def ::derivative-result (s/keys :req [::error-bound ::value]))
 (s/def ::sparsity-pattern (s/coll-of (s/tuple ::m/int-non- ::m/int-non-) :kind set?))
 
 (defn- valid-derivative-opts?
@@ -344,7 +344,7 @@
 (s/fdef derivative-fn
   :args (s/cat :number->number ::number->number
           :opts (s/? (s/and
-                       (s/keys :opt [::derivative ::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::derivative ::h ::type])
                        valid-derivative-opts?)))
   :ret ::number->number)
 
@@ -394,7 +394,7 @@
 (s/fdef gradient-fn
   :args (s/cat :v->number ::v->number
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-first-deriv-opts?)))
   :ret ::v->v)
 
@@ -449,7 +449,7 @@
 (s/fdef jacobian-fn
   :args (s/cat :v->v ::v->v
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        (fn [v]
                          (let [t (get v ::type :central)
                                a (get v ::accuracy 2)]
@@ -548,7 +548,7 @@
 (s/fdef hessian-fn
   :args (s/cat :v->number ::v->number
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-hessian-opts?)))
   :ret ::v->symmetric-m)
 
@@ -716,8 +716,7 @@
 (s/fdef richardson-derivative-fn
   :args (s/cat :number->number ::number->number
           :opts (s/? (s/and
-                       (s/keys :opt [::derivative ::h ::type ::accuracy
-                                     ::richardson-levels])
+                       (s/keys :opt [::accuracy ::derivative ::h ::richardson-levels ::type])
                        valid-derivative-opts?)))
   :ret ::number->number)
 
@@ -770,8 +769,8 @@
 (s/fdef adaptive-derivative-fn
   :args (s/cat :number->number ::number->number
           :opts (s/? (s/and
-                       (s/keys :opt [::derivative ::h ::type ::accuracy
-                                     ::rel-tol ::abs-tol ::max-iterations])
+                       (s/keys :opt [::abs-tol ::accuracy ::derivative ::h ::max-iterations
+                                     ::rel-tol ::type])
                        valid-derivative-opts?)))
   :ret ::number->number)
 
@@ -825,8 +824,7 @@
 (s/fdef derivative-with-error-fn
   :args (s/cat :number->number ::number->number
           :opts (s/? (s/and
-                       (s/keys :opt [::derivative ::h ::type ::accuracy
-                                     ::richardson-levels])
+                       (s/keys :opt [::accuracy ::derivative ::h ::richardson-levels ::type])
                        valid-derivative-opts?)))
   :ret (s/fspec :args (s/cat :number ::m/number)
          :ret ::derivative-result))
@@ -867,7 +865,7 @@
   :args (s/cat :v->number ::v->number
           :direction ::direction
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-first-deriv-opts?)))
   :ret ::v->number)
 
@@ -899,7 +897,7 @@
 (s/fdef laplacian-fn
   :args (s/cat :v->number ::v->number
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-hessian-opts?)))
   :ret ::v->number)
 
@@ -940,7 +938,7 @@
 (s/fdef divergence-fn
   :args (s/cat :v->v ::v->v
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-first-deriv-opts?)))
   :ret ::v->number)
 
@@ -984,7 +982,7 @@
 (s/fdef curl-fn
   :args (s/cat :v->v ::v->v
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        valid-first-deriv-opts?)))
   :ret (s/fspec :args (s/cat :v ::vector/vector)
          :ret ::vector/vector))
@@ -1042,7 +1040,7 @@
   :args (s/cat :v->number ::v->number
           :derivative-orders ::derivative-orders
           :opts (s/? (s/and
-                       (s/keys :opt [::h ::type ::accuracy])
+                       (s/keys :opt [::accuracy ::h ::type])
                        ;; For non-central types, accuracy <=5 is safe for any derivative order
                        (fn [v]
                          (let [t (get v ::type :central)
@@ -1090,7 +1088,7 @@
           (s/cat :v->v ::v->v
             :sparsity-pattern ::sparsity-pattern
             :opts (s/? (s/and
-                         (s/keys :opt [::h ::type ::accuracy])
+                         (s/keys :opt [::accuracy ::h ::type])
                          valid-first-deriv-opts?)))
           ;; Custom generator ensures sparsity indices are valid for generated dimension
           #(gen/bind (gen/choose 1 4)
@@ -1152,7 +1150,7 @@
           (s/cat :v->number ::v->number
             :sparsity-pattern ::sparsity-pattern
             :opts (s/? (s/and
-                         (s/keys :opt [::h ::accuracy])
+                         (s/keys :opt [::accuracy ::h])
                          (fn [v]
                            (let [a (get v ::accuracy 2)]
                              (and (even? a) (<= a 8)))))))

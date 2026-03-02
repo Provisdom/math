@@ -436,7 +436,7 @@
   :args (s/with-gen
           (s/cat :square-m ::mx/square-matrix)
           #(square-matrix-generator (s/gen ::m/number)))
-  :ret (s/nilable (s/keys :req [::L ::U ::LU-permutation ::singular? ::determinant ::inverse])))
+  :ret (s/nilable (s/keys :req [::L ::LU-permutation ::U ::determinant ::inverse ::singular?])))
 
 ;;;DETERMINANT
 (defn determinant-from-lu
@@ -903,7 +903,7 @@
 (s/fdef rectangular-cholesky-decomposition
   :args (s/cat :pos-semidefinite-m ::mx/symmetric-matrix
           :tolerance ::m/finite-non-)
-  :ret (s/nilable (s/or :result (s/keys :req [::rectangular-root ::rank])
+  :ret (s/nilable (s/or :result (s/keys :req [::rank ::rectangular-root])
                     :anomaly ::anom/anomaly)))
 
 ;;;POSITIVE DEFINITE TESTS
@@ -1838,8 +1838,8 @@
 (s/fdef sv-decomposition
   :args (s/cat :m ::mx/matrix
           :opts (s/? (s/keys :opt-un [::rank-tolerance])))
-  :ret (s/nilable (s/keys :req [::svd-left ::singular-values ::singular-values-matrix ::svd-right
-                                ::rank ::condition-number ::norm-spectral])))
+  :ret (s/nilable (s/keys :req [::condition-number ::norm-spectral ::rank ::singular-values
+                                ::singular-values-matrix ::svd-left ::svd-right])))
 
 ;;;CONDITION NUMBER
 (defn condition-number-from-svd

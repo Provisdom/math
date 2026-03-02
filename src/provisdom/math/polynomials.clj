@@ -306,7 +306,7 @@
 
 (s/fdef polynomial-fn
   :args (s/and (s/cat :end-degree ::end-degree
-                 :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                 :opts (s/? (s/keys :opt [::chebyshev-kind ::start-degree])))
           (fn [{:keys [end-degree opts]}]
             (let [{::keys [start-degree]} opts]
               (or (not start-degree) (<= start-degree end-degree)))))
@@ -339,7 +339,7 @@
 
 (s/fdef polynomial-fns
   :args (s/and (s/cat :end-degree ::end-degree
-                 :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                 :opts (s/? (s/keys :opt [::chebyshev-kind ::start-degree])))
           (fn [{:keys [end-degree opts]}]
             (let [{::keys [start-degree]} opts]
               (or (not start-degree) (<= start-degree end-degree)))))
@@ -418,7 +418,7 @@
 
 (s/fdef polynomial-2D-fn-by-degree
   :args (s/and (s/cat :end-degree ::end-degree
-                 :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+                 :opts (s/? (s/keys :opt [::chebyshev-kind ::start-degree])))
           (fn [{:keys [end-degree opts]}]
             (let [{::keys [start-degree]} opts]
               (or (not start-degree) (<= start-degree end-degree)))))
@@ -460,7 +460,7 @@
 
 (s/fdef polynomial-2D-fn-by-basis-count
   :args (s/cat :basis-count ::basis-count
-          :opts (s/? (s/keys :opt [::start-degree ::chebyshev-kind])))
+          :opts (s/? (s/keys :opt [::chebyshev-kind ::start-degree])))
   :ret ::number2->v)
 
 (defn polynomial-ND-fn

@@ -1408,10 +1408,8 @@
 
 (s/fdef get-slices-as-matrix
   :args (s/cat :m ::matrix
-          :opts (s/keys :opt [::row-indices
-                              ::column-indices
-                              ::exception-row-indices
-                              ::exception-column-indices]))
+          :opts (s/keys :opt [::column-indices ::exception-column-indices ::exception-row-indices
+                              ::row-indices]))
   :ret ::matrix)
 
 (defn filter-by-row
@@ -1508,7 +1506,7 @@
 
 (s/fdef matrix-partition
   :args (s/cat :m ::matrix :first-bottom-row ::row :first-right-column ::column)
-  :ret (s/keys :req [::top-left ::bottom-left ::top-right ::bottom-right]))
+  :ret (s/keys :req [::bottom-left ::bottom-right ::top-left ::top-right]))
 
 (defn some-kv
   "Finds the first matrix element satisfying a predicate.
@@ -2025,10 +2023,7 @@
     (when (and top bottom) (concat-rows top bottom))))
 
 (s/fdef merge-matrices
-  :args (s/cat :args (s/keys :req [::top-left
-                                   ::bottom-left
-                                   ::top-right
-                                   ::bottom-right]))
+  :args (s/cat :args (s/keys :req [::bottom-left ::bottom-right ::top-left ::top-right]))
   :ret (s/nilable ::matrix))
 
 (defn replace-submatrix

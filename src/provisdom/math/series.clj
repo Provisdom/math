@@ -672,7 +672,7 @@
 (s/fdef radius-of-convergence
   :args (s/cat :coeffs ::coefficients
           :opts (s/? (s/keys :opt [::num-terms])))
-  :ret (s/keys :req [::ratio-estimate ::root-estimate ::combined-estimate]))
+  :ret (s/keys :req [::combined-estimate ::ratio-estimate ::root-estimate]))
 
 ;;;PADE APPROXIMANTS
 (defn pade-approximant
@@ -773,7 +773,7 @@
           #(gen/tuple (s/gen ::coefficients)
              (gen/choose 0 5)
              (gen/choose 0 5)))
-  :ret (s/keys :req [::numerator ::denominator]))
+  :ret (s/keys :req [::denominator ::numerator]))
 
 (defn evaluate-pade
   "Evaluates a Pade approximant at a given point.
@@ -794,7 +794,7 @@
     (m/div p q)))
 
 (s/fdef evaluate-pade
-  :args (s/cat :pade (s/keys :req [::numerator ::denominator])
+  :args (s/cat :pade (s/keys :req [::denominator ::numerator])
           :x ::m/number)
   :ret ::m/number)
 
@@ -856,7 +856,7 @@
 
 (s/fdef sum-convergent-series
   :args (s/cat :term-series ::term-series
-          :opts (s/? (s/keys :opt [::kahan? ::converged-pred ::error-pred])))
+          :opts (s/? (s/keys :opt [::converged-pred ::error-pred ::kahan?])))
   :ret (s/or :number ::m/number
          :anomaly ::anomalies/anomaly))
 
@@ -1047,5 +1047,5 @@
 
 (s/fdef sum-with-diagnostics
   :args (s/cat :term-series ::term-series
-          :opts (s/? (s/keys :opt [::kahan? ::neumaier? ::rel-accu ::max-iter])))
+          :opts (s/? (s/keys :opt [::kahan? ::max-iter ::neumaier? ::rel-accu])))
   :ret ::convergence-result)

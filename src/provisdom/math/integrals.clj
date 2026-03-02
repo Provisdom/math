@@ -499,9 +499,7 @@
   :args (s/cat :v->tensor ::v->tensor
           :finite-intervals ::finite-intervals
           :weights-and-nodes ::weights-and-nodes)
-  :ret (s/keys :req [::rectangular-error
-                     ::high-precision-values
-                     ::one-dimension-errors]))
+  :ret (s/keys :req [::high-precision-values ::one-dimension-errors ::rectangular-error]))
 
 (defn- adaptive-quadrature
   "Integration. Could be parallelized."
