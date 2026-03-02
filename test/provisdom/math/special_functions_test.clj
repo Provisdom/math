@@ -163,6 +163,34 @@
     (t/is= 4.166666666666667 (special-fns/logit-derivative 0.4))
     (t/is= 4.0 (special-fns/logit-derivative 0.5))))
 
+(t/deftest log-logistic-test
+  (t/with-instrument `special-fns/log-logistic
+    (t/is-spec-check special-fns/log-logistic))
+  (t/with-instrument :all
+    ;;Math Log[1/(1+Exp[-0])] = -Log[2]
+    (t/is= (- m/log-two) (special-fns/log-logistic 0.0))
+    ;;Math Log[1/(1+Exp[-2])] = -0.1269280110429725
+    (t/is= -0.1269280110429725 (special-fns/log-logistic 2.0))
+    (t/is= m/inf- (special-fns/log-logistic m/inf-))
+    (t/is= 0.0 (special-fns/log-logistic m/inf+))
+    ;; Large negative x: log-logistic(x) ≈ x
+    (t/is= -100.0 (special-fns/log-logistic -100.0))))
+
+(t/deftest softplus-test
+  (t/with-instrument `special-fns/softplus
+    (t/is-spec-check special-fns/softplus))
+  (t/with-instrument :all
+    ;;Math Log[1+Exp[0]] = Log[2]
+    (t/is= m/log-two (special-fns/softplus 0.0))
+    ;; For large positive x, softplus(x) ≈ x
+    (t/is= 100.0 (special-fns/softplus 100.0))
+    ;; For large negative x, softplus(x) ≈ exp(x)
+    (t/is= 3.720075976020836E-44 (special-fns/softplus -100.0))
+    ;;Math Log[1+Exp[2]] = 2.1269280110429725
+    (t/is= 2.1269280110429727 (special-fns/softplus 2.0))
+    ;; Relationship: softplus(x) = -log-logistic(-x)
+    (t/is= (- (special-fns/log-logistic -2.0)) (special-fns/softplus 2.0))))
+
 ;;;GAMMA
 (t/deftest gamma-test
   (t/with-instrument `special-fns/gamma

@@ -11,7 +11,7 @@
 
 (set! *warn-on-reflection* true)
 
-;;;INTEGRATION TESTS
+;;;NUMERICAL INTEGRATION
 (t/deftest change-of-variable-test
   (t/with-instrument `integrals/change-of-variable
     (t/is-spec-check integrals/change-of-variable))
@@ -259,6 +259,7 @@
       (fn [_outer]
         [m/inf- -5.0]))))
 
+;;;INTEGRATION WITH ERROR ESTIMATE
 (t/deftest integration-with-error-test
   (t/with-instrument `integrals/integration-with-error
     (t/is-spec-check integrals/integration-with-error {:num-tests 20}))
@@ -277,6 +278,7 @@
   (let [result (integrals/integration-with-error m/cos [0.0 m/PI] {::integrals/accu 1e-10})]
     (t/is-approx= 0.0 (::integrals/value result) :tolerance 1e-10)))
 
+;;;TANH-SINH (DOUBLE EXPONENTIAL) QUADRATURE
 (t/deftest tanh-sinh-integration-test
   (t/with-instrument `integrals/tanh-sinh-integration
     (t/is-spec-check integrals/tanh-sinh-integration))
@@ -307,6 +309,7 @@
       {::integrals/level 4})
     :tolerance 0.001))
 
+;;;CLENSHAW-CURTIS QUADRATURE
 (t/deftest clenshaw-curtis-integration-test
   (t/with-instrument `integrals/clenshaw-curtis-integration
     (t/is-spec-check integrals/clenshaw-curtis-integration {:num-tests 3}))
@@ -332,6 +335,7 @@
     (integrals/clenshaw-curtis-integration m/cube [0.0 2.0])
     :tolerance 0.0001))
 
+;;;MONTE CARLO INTEGRATION
 (t/deftest monte-carlo-integration-test
   ;; 2D integral: ∫∫ (x+y) dx*dy over [0,1]×[0,1] = 1
   (t/with-instrument `integrals/monte-carlo-integration
@@ -379,6 +383,7 @@
                  {::integrals/samples 1000 ::integrals/skip 100})]
     (t/is-approx= 0.333333 (::integrals/value result) :tolerance 0.05)))
 
+;;;SPARSE GRID (SMOLYAK) INTEGRATION
 (t/deftest sparse-grid-integration-test
   ;; 2D integral: ∫∫ (x+y) dx*dy over [0,1]×[0,1] = 1
   ;; Note: sparse-grid-level must be >= dimension for meaningful results
@@ -406,6 +411,7 @@
       {::integrals/sparse-grid-level 5})
     :tolerance 0.0001))
 
+;;;OSCILLATORY INTEGRATION
 (t/deftest oscillatory-integration-test
   ;; Note: Filon method is designed for high-frequency oscillations.
   ;; Low-frequency (omega=1) results have larger error.
@@ -457,3 +463,30 @@
       [0.0 (* 2.0 m/PI)]
       {::integrals/omega 500.0 ::integrals/oscillation-type :cos})
     :tolerance 0.01))
+
+;;;GAUSS-HERMITE QUADRATURE
+(t/deftest gauss-hermite-integration-test
+  (t/with-instrument `integrals/gauss-hermite-integration
+    (t/is-spec-check integrals/gauss-hermite-integration))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  ;; f(x)=1: integral exp(-x^2) dx = sqrt(pi)
+  (t/is= 1.7724538509055157
+    (integrals/gauss-hermite-integration (constantly 1.0)))
+  ;; f(x)=x^2: integral x^2 exp(-x^2) dx = sqrt(pi)/2
+  (t/is= 0.8862269254527579
+    (integrals/gauss-hermite-integration (fn [x] (* x x))))
+  ;; f(x)=x^4: integral x^4 exp(-x^2) dx = 3*sqrt(pi)/4
+  (t/is= 1.329340388179136
+    (integrals/gauss-hermite-integration (fn [x] (m/pow x 4))))
+  ;; Test with 10 points
+  (t/is-approx= 1.7724538509055159
+    (integrals/gauss-hermite-integration
+      (constantly 1.0)
+      {::integrals/gh-points 10})
+    :tolerance 1e-12)
+  ;; Test with 20 points
+  (t/is-approx= 1.7724538509055159
+    (integrals/gauss-hermite-integration
+      (constantly 1.0)
+      {::integrals/gh-points 20})
+    :tolerance 1e-12))

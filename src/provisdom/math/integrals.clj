@@ -14,6 +14,7 @@
   | `quasi-monte-carlo-integration` | High dimensions, smooth (Halton sequences)  |
   | `sparse-grid-integration`       | Moderate dimensions (5-15), smooth functions|
   | `oscillatory-integration`       | Highly oscillatory: f(x)*sin(wx) or cos(wx) |
+  | `gauss-hermite-integration`     | f(x)*exp(-x^2) integrals (exact for polys)  |
 
   ## Method Selection Guide
 
@@ -83,7 +84,6 @@
 (s/def ::parallel? boolean?)
 (s/def ::points #{15 21 31 41 51 61})
 
-;; New specs for enhanced integration methods
 (s/def ::cc-points #{3 5 9 17 33 65})
 (s/def ::error-estimate ::tensor/tensor)
 (s/def ::level (s/int-in 1 6))
@@ -96,11 +96,9 @@
 (s/def ::standard-error ::m/number)
 (s/def ::value ::tensor/tensor)
 
-;; Result specs
 (s/def ::integration-result (s/keys :req [::error-estimate ::value]))
 (s/def ::monte-carlo-result (s/keys :req [::samples ::standard-error ::value]))
 
-;; Options specs
 (s/def ::opts (s/? (s/keys :opt [::accu ::iter-interval ::parallel? ::points ::singularities])))
 (s/def ::cc-opts (s/? (s/keys :opt [::accu ::cc-points ::iter-interval])))
 (s/def ::monte-carlo-opts (s/? (s/keys :opt [::samples ::seed])))
@@ -124,18 +122,12 @@
        (map gen/return
          (list vector/kahan-sum identity)))))
 
-;;;;LOOK AT STIELTJES FOR DISCRETIZING A GAUSSIAN FOR MORE THAN 11 OUTCOMES
-;;;;for integration:
-;;;;    See Wiki and http://www.gnu.org/software/gsl/manual/html_node/ for more
-;;;;    http://ab-initio.mit.edu/wiki/index.php/Cubature
-;;;;    extend to n-dim integration over functions that output vectors or matrices
-
 ;;;NUMERICAL INTEGRATION
-;;;GAUSSIAN-KRONROD CONSTANTS
-;;;can be found here: 
-;;;http://www.advanpix.com/2011/11/07/gauss-kronrod-quadrature-nodes-weights/
-;;;or more generally, can be calculated here: 
-;;;http://keisan.casio.com/exec/system/1289382036
+;; GAUSSIAN-KRONROD CONSTANTS
+;; can be found here:
+;; http://www.advanpix.com/2011/11/07/gauss-kronrod-quadrature-nodes-weights/
+;; or more generally, can be calculated here:
+;; http://keisan.casio.com/exec/system/1289382036
 (s/def ::num-intervals
   (s/with-gen
     (s/coll-of ::intervals/num-interval)
@@ -408,7 +400,7 @@
   :args (s/cat :points ::points)
   :ret ::weights-and-nodes)
 
-;ADAPTIVE INTEGRATION
+;; ADAPTIVE INTEGRATION
 (defn- unnormalize
   "Returns the unnormalized value for a range [a, b] with `value` from
   normalized range [-1, 1]."
@@ -733,31 +725,39 @@
   [[a b]]
   (cond
     (and (m/inf-? a) (m/inf+? b))
-    {::intervals/finite-interval [-1.0 1.0] ::converter-fn (fn [number]
-                                   (m/div number (m/one- (m/sq number)))) ::multiplicative-fn (fn [number]
+    {::converter-fn              (fn [number]
+                                   (m/div number (m/one- (m/sq number))))
+     ::multiplicative-fn         (fn [number]
                                    (let [s (m/sq number)]
-                                     (m/div (inc s) (m/sq (m/one- s)))))}
+                                     (m/div (inc s) (m/sq (m/one- s)))))
+     ::intervals/finite-interval [-1.0 1.0]}
 
     (m/inf+? b)
-    {::intervals/finite-interval [0.0 1.0] ::converter-fn (fn [number]
-                                   (+ a (m/div number (m/one- number)))) ::multiplicative-fn (fn [number]
-                                   (m/div (m/sq (m/one- number))))}
+    {::converter-fn              (fn [number]
+                                   (+ a (m/div number (m/one- number))))
+     ::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq (m/one- number))))
+     ::intervals/finite-interval [0.0 1.0]}
 
     (m/inf-? a)
-    {::intervals/finite-interval [0.0 1.0] ::converter-fn (fn [number]
-                                   (- b (m/div (m/one- number) number))) ::multiplicative-fn (fn [number]
-                                   (m/div (m/sq number)))}
+    {::converter-fn              (fn [number]
+                                   (- b (m/div (m/one- number) number)))
+     ::multiplicative-fn         (fn [number]
+                                   (m/div (m/sq number)))
+     ::intervals/finite-interval [0.0 1.0]}
 
     :else
-    {::intervals/finite-interval [a b] ::converter-fn identity ::multiplicative-fn (constantly 1.0)}))
+    {::converter-fn              identity
+     ::multiplicative-fn         (constantly 1.0)
+     ::intervals/finite-interval [a b]}))
 
 (s/def ::multiplicative-fn ::number->number)
 (s/def ::converter-fn ::number->number)
 
 (s/fdef change-of-variable
   :args (s/cat :num-interval ::intervals/num-interval)
-  :ret (s/keys :req [::multiplicative-fn
-                     ::converter-fn
+  :ret (s/keys :req [::converter-fn
+                     ::multiplicative-fn
                      ::intervals/finite-interval]))
 
 (defn- change-of-variable-for-integration
@@ -829,9 +829,12 @@
   Known limitations: Very large finite intervals may lose precision due to floating-point limits.
   For such cases, increase `::points` or `::iter-interval`."
   ([number->tensor [a b]] (integration number->tensor [a b] {}))
-  ([number->tensor [a b] {::keys [accu iter-interval parallel? points singularities] :as opts :or {accu          m/dbl-close
-                                  iter-interval [10 1000]
-                                  parallel?     false}}]
+  ([number->tensor [a b]
+    {::keys [accu iter-interval parallel? points singularities]
+     :as    opts
+     :or    {accu          m/dbl-close
+             iter-interval [10 1000]
+             parallel?     false}}]
    (if (seq singularities)
      ;; Split at singularities and sum sub-integrals
      (let [opts-without-sing (dissoc opts ::singularities)
@@ -1404,7 +1407,8 @@
      (if (> dims 100)
        {::anomalies/category ::anomalies/incorrect
         ::anomalies/fn       (var quasi-monte-carlo-integration)
-        ::anomalies/message  (str "Halton sequences only support up to 100 dimensions. Dims: " dims)}
+        ::anomalies/message  (str "Halton sequences only support up to 100 dimensions. Dims: "
+                               dims)}
        (let [intervals-vec (vec num-intervals)
              volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
              transform-point (fn [u]
@@ -1455,7 +1459,8 @@
               [[target-sum]])
             (mapcat (fn [i]
                       (let [remaining (- target-sum i)]
-                        (when (>= remaining (dec d))        ; need at least 1 per remaining dimension
+                        ;; need at least 1 per remaining dimension
+                        (when (>= remaining (dec d))
                           (map #(cons i %) (generate-for-sum (dec d) remaining)))))
               (range 1 (inc (- target-sum (dec d)))))))]
     (mapcat #(generate-for-sum dimension %) (range min-sum (inc max-sum)))))
@@ -1660,3 +1665,77 @@
           :opts ::oscillatory-opts)
   :ret (s/or :anomaly ::anomalies/anomaly
          :tensor ::tensor/tensor))
+
+;;;GAUSS-HERMITE QUADRATURE
+;; Physicists' convention: weight function exp(-x^2)
+;; Approximates integral f(x) exp(-x^2) dx over (-inf, +inf)
+;; Nodes and weights from Golub-Welsch algorithm
+;; Only positive nodes stored; symmetric expansion at runtime
+(s/def ::gh-points #{10 20 30})
+
+(def ^:const ^:private gh10-positive-nodes
+  [0.3429013272237044 1.036610829789514 1.7566836492998816
+   2.532731674232788 3.4361591188377383])
+
+(def ^:const ^:private gh10-positive-weights
+  [0.6108626337353258 0.24013861108231474 0.03387439445548117
+   0.0013436457467812357 7.640432855232658E-6])
+
+(def ^:const ^:private gh20-positive-nodes
+  [0.24534070830090132 0.7374737285453938 1.2340762153953235
+   1.738537712116586 2.254974002089275 2.7888060584281305
+   3.347854567383215 3.944764040115624 4.603682449550745
+   5.387480890011236])
+
+(def ^:const ^:private gh20-positive-weights
+  [0.4622436696006089 0.2866755053628344 0.10901720602002353
+   0.024810520887463636 0.0032437733422378615 2.2833863601635508E-4
+   7.802556478532104E-6 1.0860693707692791E-7 4.3993409922731484E-10
+   2.229393645534111E-13])
+
+(def ^:const ^:private gh30-positive-nodes
+  [0.20112857654887134 0.6039210586255521 1.0083382710467232
+   1.4155278001981872 1.8267411436036882 2.2433914677615054
+   2.667132124535616 3.0999705295864395 3.544443873155349
+   4.003908603861228 4.4830553570925185 4.988918968589944
+   5.533147151567492 6.138279220123934 6.863345293529893])
+
+(def ^:const ^:private gh30-positive-weights
+  [0.38639488954181295 0.2801309308392135 0.14673584754088992
+   0.05514417687023435 0.014703829704826695 0.002737922473067647
+   3.4831012431868567E-4 2.9387252289230223E-5 1.579094887324687E-6
+   5.108522450775984E-8 9.178580424378507E-10 8.106186297462963E-12
+   2.8786070805487415E-14 2.8103336027508986E-17 2.9082547001311902E-21])
+
+(def ^:private gh-data
+  {10 [gh10-positive-nodes gh10-positive-weights]
+   20 [gh20-positive-nodes gh20-positive-weights]
+   30 [gh30-positive-nodes gh30-positive-weights]})
+
+(defn- expand-symmetric-nodes-weights
+  "Expands positive-only nodes and weights to full symmetric set."
+  [positive-nodes positive-weights]
+  (let [full-nodes (into (mapv - (rseq positive-nodes)) positive-nodes)
+        full-weights (into (vec (rseq positive-weights)) positive-weights)]
+    [full-nodes full-weights]))
+
+(defn gauss-hermite-integration
+  "Computes the integral of `f(x) * exp(-x^2)` over `(-inf, +inf)` using Gauss-Hermite quadrature.
+
+  The quadrature approximates: `integral_{-inf}^{inf} f(x) exp(-x^2) dx ≈ sum_i w_i f(x_i)`
+
+  This is exact for polynomials up to degree `2n - 1` where `n` is the number of quadrature points.
+
+  Parameters:
+  - `f`: Function from number to number
+  - `opts` (optional): Map with `::gh-points` key, one of `#{10 20 30}`. Default `30`."
+  ([f] (gauss-hermite-integration f {::gh-points 30}))
+  ([f {::keys [gh-points] :or {gh-points 30}}]
+   (let [[pos-nodes pos-weights] (gh-data gh-points)
+         [nodes weights] (expand-symmetric-nodes-weights pos-nodes pos-weights)]
+     (reduce + 0.0 (map (fn [x w] (* w (double (f x)))) nodes weights)))))
+
+(s/fdef gauss-hermite-integration
+  :args (s/cat :f ::number->number
+          :opts (s/? (s/keys :opt [::gh-points])))
+  :ret ::m/number)

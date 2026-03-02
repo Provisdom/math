@@ -422,6 +422,40 @@
   :args (s/cat :p ::m/prob)
   :ret ::m/pos)
 
+(defn log-logistic
+  "Computes the log of the logistic function: log(1/(1 + e^(-`x`))) = -log(1 + e^(-`x`)).
+
+  Numerically stable computation using `log1p`. Useful in log-likelihood computations for logistic
+  regression and neural networks. Also known as log-sigmoid.
+
+  Examples:
+    (log-logistic 0.0) => -0.6931471805599453
+    (log-logistic 100.0) => 0.0
+    (log-logistic -100.0) => -100.0"
+  [x]
+  (- (m/log-inc (m/exp (- x)))))
+
+(s/fdef log-logistic
+  :args (s/cat :x ::m/num)
+  :ret ::m/non+)
+
+(defn softplus
+  "Computes the softplus function: log(1 + e^`x`).
+
+  A smooth approximation of the ReLU function. The inverse of the [[logit]] function applied to
+  probabilities expressed as log-odds.
+
+  Examples:
+    (softplus 0.0) => 0.6931471805599453
+    (softplus -100.0) => 0.0
+    (softplus 100.0) => 100.0"
+  [x]
+  (m/log-inc (m/exp x)))
+
+(s/fdef softplus
+  :args (s/cat :x ::m/num)
+  :ret ::m/non-)
+
 ;;;GAMMA FUNCTIONS
 (defn- lanczos2
   [x]
