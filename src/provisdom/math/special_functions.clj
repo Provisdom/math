@@ -467,8 +467,7 @@
 
 (defn- inv-gamma1-pm1
   [x]
-  (if (or (< x -0.5) (> x 1.5))
-    nil
+  (when-not (or (< x -0.5) (> x 1.5))
     (let [t (if (<= x 0.5) x (dec x))]
       (if (neg? t)
         (let [a (+ 6.116095104481416E-9 (* t 6.247308301164655E-9))
@@ -1603,10 +1602,9 @@
   Y_n(x) → -∞ rapidly when n >> x."
   [n x]
   (let [abs-n (m/abs n)]
-    (cond
+    (if
       ;; For extremely large orders (can't fit in long), Y_n(x) → -∞
       (> abs-n Long/MAX_VALUE) m/inf-
-      :else
       (let [n (long abs-n)]
         (cond
           (zero? n) (bessel-y0-small x)
@@ -1672,7 +1670,7 @@
       (and (m/inf? gamma-val) (m/inf? prefactor))
       (let [log-prefactor (* order (m/log x-half))
             log-gamma-val (log-gamma (inc order))]
-        (cond
+        (if
           ;; Both log values overflow - determine which dominates
           ;; log-gamma ~ v*log(v), log-prefactor ~ v*log(x/2)
           ;; If log(v) > log(x/2), gamma dominates → 0
@@ -1680,7 +1678,6 @@
           (and (m/inf? log-prefactor) (m/inf? log-gamma-val))
           (if (> (m/log order) (m/log x-half)) 0.0 m/inf+)
           ;; Normal log form calculation
-          :else
           (let [log-result (- log-prefactor log-gamma-val)]
             (cond
               (< log-result -700.0) 0.0

@@ -424,8 +424,7 @@
           (transform [ts binomial-coeffs n]
             (when (seq ts)
               (let [ts-vec (vec (take (inc n) ts))
-                    term (if (< (count ts-vec) (inc n))
-                           nil
+                    term (when-not (< (count ts-vec) (inc n))
                            (/ (reduce + (map-indexed
                                           (fn [k ak]
                                             (* (double (nth binomial-coeffs k 0))

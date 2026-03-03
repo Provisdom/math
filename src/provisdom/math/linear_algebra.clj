@@ -1055,14 +1055,12 @@
   "Creates a correlation matrix from a square matrix by squaring and normalizing."
   [square-m]
   (let [n (mx/rows square-m)]
-    (if (zero? n)
-      nil
+    (when-not (zero? n)
       (when-let [corr (covariance-matrix->correlation-matrix
                         (pos-definite-matrix-finite-by-squaring square-m))]
         (loop [i 0
                current corr]
-          (if (>= i 100)
-            nil
+          (when-not (>= i 100)
             (if (correlation-matrix? current m/sgl-close)
               current
               (let [scale (m/one- (* 0.01 i))
@@ -1080,8 +1078,7 @@
 (defn rnd-pos-definite-matrix-finite!
   "Generates a random positive definite matrix of given size."
   [size]
-  (if (zero? size)
-    nil
+  (when-not (zero? size)
     (loop [i 0]
       (when (< i 100)
         (let [eigenvalues (vec (take size (random/rnd-lazy!)))
@@ -1627,8 +1624,7 @@
     (when (> n 1)
       ;; Find the last non-negligible subdiagonal from bottom
       (loop [end (dec n)]
-        (if (< end 1)
-          nil                                               ; All converged
+        (when-not (< end 1)                                  ; All converged
           (let [sub-diag (m/abs (get-in A [(dec end) end] 0.0))
                 diag-sum (+ (m/abs (get-in A [(dec end) (dec end)] 0.0))
                            (m/abs (get-in A [end end] 0.0)))]
@@ -1778,12 +1774,11 @@
                (mapv (fn [i]
                        (let [sigma (get singular-values i)
                              v-i (mx/get-column V i)]
-                         (if (> sigma rank-tolerance)
+                         (when (> sigma rank-tolerance)
                            (let [Av (mapv (fn [row]
                                             (reduce + (map * (get m row) v-i)))
                                       (range nr))]
-                             (mapv #(/ % sigma) Av))
-                           nil)))
+                             (mapv #(/ % sigma) Av)))))
                  (range nc))
                valid-U-columns (filterv some? U-columns)
                U (if (= (count valid-U-columns) nr)
