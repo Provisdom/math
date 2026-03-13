@@ -344,6 +344,26 @@
   :args (s/cat :x ::m/num)
   :ret ::m/prob)
 
+(defn log-cdf-standard-normal
+  "Computes the log of the standard normal CDF: `log(Phi(x))`.
+
+  Uses `erfc` for numerical stability in the left tail where `Phi(x)` is tiny:
+  `log(Phi(x)) = log(erfc(-x/sqrt(2))/2) = log(erfc(-x/sqrt(2))) - ln(2)`.
+
+  Examples:
+    (log-cdf-standard-normal 0.0) => -0.6931... (= -ln(2))
+    (log-cdf-standard-normal -8.0) => -35.01...
+    (log-cdf-standard-normal -9.19) => -45.39..."
+  [x]
+  (cond (m/inf+? x) 0.0
+    (m/inf-? x) m/inf-
+    (zero? x) (- m/log-two)
+    :else (- (m/log (erfc (* (- x) m/inv-sqrt-two))) m/log-two)))
+
+(s/fdef log-cdf-standard-normal
+  :args (s/cat :x ::m/num)
+  :ret ::m/non+)
+
 (def ^{:doc "See [[inv-cdf-standard-normal]]"} probit inv-cdf-standard-normal)
 
 (def ^{:doc "See [[cdf-standard-normal]]"} inv-probit cdf-standard-normal)

@@ -127,6 +127,28 @@
     (t/is= 0.15729920705028516 (special-fns/cdf-standard-normal -1.0056199694085204))
     (t/is= 0.997020533343667 (special-fns/cdf-standard-normal 2.750032615602772))))
 
+(t/deftest log-cdf-standard-normal-test
+  (t/with-instrument `special-fns/log-cdf-standard-normal
+    (t/is-spec-check special-fns/log-cdf-standard-normal))
+  (t/with-instrument :all
+    (t/is= m/inf- (special-fns/log-cdf-standard-normal m/inf-))
+    (t/is= 0.0 (special-fns/log-cdf-standard-normal m/inf+))
+    ;;SciPy -0.69315
+    (t/is= -0.6931471805599453 (special-fns/log-cdf-standard-normal 0.0))
+    ;;SciPy -0.17275
+    (t/is= -0.1727537790234499 (special-fns/log-cdf-standard-normal 1.0))
+    ;;SciPy -1.84102
+    (t/is= -1.8410216450092634 (special-fns/log-cdf-standard-normal -1.0))
+    ;; deep left tail — no underflow
+    ;;SciPy -35.01344
+    (t/is= -35.01343715991455 (special-fns/log-cdf-standard-normal -8.0))
+    ;;SciPy -203.91716
+    (t/is= -203.91715537109724 (special-fns/log-cdf-standard-normal -20.0))
+    ;;SciPy -689.03059
+    (t/is= -689.0305855768904 (special-fns/log-cdf-standard-normal -37.0))
+    ;; round-trip with cdf-standard-normal
+    (t/is= -1.849605509933248 (special-fns/log-cdf-standard-normal -1.0056199694085204))))
+
 (t/deftest logistic-test
   (t/with-instrument `special-fns/logistic
     (t/is-spec-check special-fns/logistic))
