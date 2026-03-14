@@ -136,13 +136,11 @@
     (erf 1.0) => 0.842700792949715
     (erf -1.0) => -0.842700792949715"
   [x]
-  (cond
-    (zero? x) 0.0
+  (cond (zero? x) 0.0
     ;; For |x| > 6, erf(x) differs from +/-1 by less than 2e-17 (within double precision)
     (> x 6.0) 1.0
     (< x -6.0) -1.0
-    :else (* (m/sgn x)
-            (regularized-gamma-p 0.5 (m/sq x)))))
+    :else (* (m/sgn x) (regularized-gamma-p 0.5 (m/sq x)))))
 
 (s/fdef erf
   :args (s/cat :x ::m/num)
@@ -221,8 +219,7 @@
     (erfc 5.0) => 1.5374597944280349e-12
     (erfc 10.0) => 2.0884875837625447e-45"
   [x]
-  (cond
-    (zero? x) 1.0
+  (cond (zero? x) 1.0
     (m/inf+? x) 0.0
     (m/inf-? x) 2.0
     (neg? x) (- 2.0 (erfc (- x)))
@@ -259,24 +256,16 @@
     (zero? x) 0.0
     :else
     (let [w (- (m/log (* (m/one- x) (inc x))))]
-      (cond
-        (m/inf+? w)
-        m/inf+
-
-        (< w 6.25)
-        (let [w (- w 3.125)
-              p (coeffs-sum w inv-erf-coeffs1)]
-          (* p x))
-
-        (< w 16.0)
-        (let [w (- (m/sqrt w) 3.25)
-              p (coeffs-sum w inv-erf-coeffs2)]
-          (* p x))
-
-        :else
-        (let [w (- (m/sqrt w) 5.0)
-              p (coeffs-sum w inv-erf-coeffs3)]
-          (* p x))))))
+      (cond (m/inf+? w) m/inf+
+        (< w 6.25) (let [w (- w 3.125)
+                         p (coeffs-sum w inv-erf-coeffs1)]
+                     (* p x))
+        (< w 16.0) (let [w (- (m/sqrt w) 3.25)
+                         p (coeffs-sum w inv-erf-coeffs2)]
+                     (* p x))
+        :else (let [w (- (m/sqrt w) 5.0)
+                    p (coeffs-sum w inv-erf-coeffs3)]
+                (* p x))))))
 
 (s/fdef inv-erf
   :args (s/cat :x ::m/corr)
@@ -524,32 +513,31 @@
   [a]
   (cond (>= a 141.8) (m/exp (log-gamma a))
     (<= a -141.8) 0.0
-    :else
-    (let [abs-x (m/abs a)]
-      (if (<= abs-x 20.0)
-        (if (>= a 1.0)
-          (let [[prod t] (loop [t a
-                                prod 1.0]
-                           (if (> t 2.5)
-                             (recur (dec t) (* (dec t) prod))
-                             [prod t]))]
-            (m/div prod (inc (inv-gamma1-pm1 (dec t)))))
-          (let [[prod t] (loop [t a
-                                prod a]
-                           (if (< t 0.5)
-                             (recur (inc t) (* (inc t) prod))
-                             [prod t]))]
-            (m/div (* prod (inc (inv-gamma1-pm1 t))))))
-        (let [prod (+ 5.2421875 abs-x)
-              t (* 2.5066282746310007
-                  (/ abs-x)
-                  (m/pow prod (+ 0.5 abs-x))
-                  (m/exp (- prod))
-                  (lanczos2 abs-x))]
-          (if (pos? a)
-            t
-            (/ (- m/PI)
-              (* a t (m/sin (* (- m/PI) a))))))))))
+    :else (let [abs-x (m/abs a)]
+            (if (<= abs-x 20.0)
+              (if (>= a 1.0)
+                (let [[prod t] (loop [t a
+                                      prod 1.0]
+                                 (if (> t 2.5)
+                                   (recur (dec t) (* (dec t) prod))
+                                   [prod t]))]
+                  (m/div prod (inc (inv-gamma1-pm1 (dec t)))))
+                (let [[prod t] (loop [t a
+                                      prod a]
+                                 (if (< t 0.5)
+                                   (recur (inc t) (* (inc t) prod))
+                                   [prod t]))]
+                  (m/div (* prod (inc (inv-gamma1-pm1 t))))))
+              (let [prod (+ 5.2421875 abs-x)
+                    t (* 2.5066282746310007
+                        (/ abs-x)
+                        (m/pow prod (+ 0.5 abs-x))
+                        (m/exp (- prod))
+                        (lanczos2 abs-x))]
+                (if (pos? a)
+                  t
+                  (/ (- m/PI)
+                    (* a t (m/sin (* m/PI a))))))))))
 
 
 (s/fdef gamma
@@ -640,38 +628,30 @@
   (cond
     ;; Edge case: x = 0 -> P = 0
     (zero? x) 0.0
-
     ;; Edge case: x = inf -> P = 1
     (m/inf+? x) 1.0
-
     ;; For x >= a+1, use continued fraction via Q for better convergence
     (>= x (inc (double a))) (m/one- (regularized-gamma-q a x))
-
     ;; For x < a+1, use series expansion
-    :else
-    (let [an (/ 1.0 (double a))
-          [n sum] (loop [n 0.0
-                         an an
-                         sum an]
-                    (if (and (not (m/inf+? sum))
-                          (> (m/abs (/ an sum)) 1e-14)
-                          (< n m/max-int))
-                      (let [an (* an (double x) (/ (+ (double a) (inc n))))]
-                        (recur (inc n) an (+ an sum)))
-                      [n sum]))]
-      (cond
-        ;; Max iterations exceeded
-        (>= n m/max-int) m/nan
-
-        ;; Sum overflow -> return 1.0 for P
-        (m/inf+? sum) 1.0
-
-        :else
-        (min 1.0
-          (* sum
-            (m/exp (+ (* (double a) (m/log (double x)))
-                     (- (double x))
-                     (- (log-gamma a))))))))))
+    :else (let [an (/ 1.0 (double a))
+                [n sum] (loop [n 0.0
+                               an an
+                               sum an]
+                          (if (and (not (m/inf+? sum))
+                                (> (m/abs (/ an sum)) 1e-14)
+                                (< n m/max-int))
+                            (let [an (* an (double x) (/ (+ (double a) (inc n))))]
+                              (recur (inc n) an (+ an sum)))
+                            [n sum]))]
+            (cond
+              ;; Max iterations exceeded
+              (>= n m/max-int) m/nan
+              ;; Sum overflow -> return 1.0 for P
+              (m/inf+? sum) 1.0
+              :else (min 1.0
+                      (* sum (m/exp (+ (* (double a) (m/log (double x)))
+                                      (- (double x))
+                                      (- (log-gamma a))))))))))
 
 (s/fdef regularized-gamma-p
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -700,38 +680,32 @@
   (cond
     ;; Edge case: x = 0 -> Q = 1
     (zero? x) 1.0
-
     ;; Edge case: x = inf -> Q = 0
     (m/inf+? x) 0.0
-
     ;; For x < a+1, use series via P for better convergence
     (< x (inc (double a))) (m/one- (regularized-gamma-p a x))
-
     ;; For x >= a+1, use Lentz's continued fraction algorithm
-    :else
-    (let [a (double a)
-          x (double x)
-          ;; Continued fraction for Q: uses a_n and b_n terms
-          ;; a_n = (2n + 1 - a + x), b_n = n(a - n)
-          a-term-series (map
-                          (fn [n]
-                            (+ (* 2.0 n) (- a) 1.0 x))
-                          (range))
-          b-term-series (map
-                          (fn [n]
-                            (* n (- a (double n))))
-                          (drop 1 (range)))
-          ;; multiplicative-generalized-continued-fraction uses SMALL=1e-50 internally
-          gcf (series/multiplicative-generalized-continued-fraction
-                a-term-series b-term-series)
-          sum (series/multiplicative-sum-convergent-series gcf)]
-      (if (anomalies/anomaly? sum)
-        m/nan
-        (min 1.0
-          (/ (m/exp (+ (* a (m/log x))
-                      (- x)
-                      (- (log-gamma a))))
-            sum))))))
+    :else (let [a (double a)
+                x (double x)
+                ;; Continued fraction for Q: uses a_n and b_n terms
+                ;; a_n = (2n + 1 - a + x), b_n = n(a - n)
+                a-term-series (map (fn [n]
+                                     (+ (* 2.0 n) (- a) 1.0 x))
+                                (range))
+                b-term-series (map (fn [n]
+                                     (* n (- a (double n))))
+                                (drop 1 (range)))
+                ;; multiplicative-generalized-continued-fraction uses SMALL=1e-50 internally
+                gcf (series/multiplicative-generalized-continued-fraction a-term-series
+                      b-term-series)
+                sum (series/multiplicative-sum-convergent-series gcf)]
+            (if (anomalies/anomaly? sum)
+              m/nan
+              (min 1.0
+                (/ (m/exp (+ (* a (m/log x))
+                            (- x)
+                            (- (log-gamma a))))
+                  sum))))))
 
 (s/fdef regularized-gamma-q
   :args (s/cat :a ::m/pos :x ::m/non-)
@@ -750,69 +724,67 @@
     (inv-regularized-gamma-p 1.0 0.5) => 0.6931471805599453
     (inv-regularized-gamma-p 2.0 0.5) => 1.6783469900166608"
   [a cumulative-prob]
-  (cond
-    (zero? cumulative-prob) 0.0
+  (cond (zero? cumulative-prob) 0.0
     (m/one? cumulative-prob) m/inf+
-    :else
-    (let [a (double a)
-          p (double cumulative-prob)
-          ln-gamma-a (log-gamma a)
-          ;; Wilson-Hilferty normal approximation for a >= 1
-          wh-guess (when (>= a 1.0)
-                     (let [z (inv-cdf-standard-normal p)
-                           w (/ (* 9.0 a))
-                           cube-base (+ 1.0 (- w) (* z (m/sqrt w)))]
-                       (when (m/pos? cube-base)
-                         (let [g (* a (m/cube cube-base))]
-                           (when (m/finite+? g) g)))))
-          ;; Power approximation for small a or as fallback
-          power-guess (let [lg (/ (+ (m/log p) (log-gamma (inc a))) a)]
-                        (when (> lg (- 700.0))
-                          (m/exp lg)))
-          x0 (max m/tiny-dbl (double (or wh-guess power-guess m/tiny-dbl)))]
-      ;; For very large a (>1e6), Wilson-Hilferty is accurate to O(1/a) relative error
-      ;; and regularized-gamma-p is too slow for iterative refinement
-      (if (and wh-guess (> a 1e6))
-        x0
-        (let [;; Initial bracket around guess
-              lo (* 0.01 x0)
-              hi (max (* 100.0 x0) 1.0)]
-          ;; Halley's method with bisection safeguard
-          (loop [x (double x0)
-                 lo (double lo)
-                 hi (double hi)
-                 i 0]
-            (if (>= i 60)
-              x
-              (let [f (- (regularized-gamma-p a x) p)]
-                (if (<= (m/abs f) 1e-14)
-                  x
-                  ;; Update bracket
-                  (let [[lo hi] (if (neg? f) [x hi] [lo x])
-                        ;; f'(x) in log-space for stability
-                        log-fprime (- (* (dec a) (m/log x)) x ln-gamma-a)
-                        fprime (m/exp log-fprime)]
-                    (if (zero? fprime)
-                      ;; Zero derivative: bisect
-                      (let [mid (* 0.5 (+ lo hi))]
-                        (recur mid lo hi (inc i)))
-                      ;; Halley step: f''(x)/f'(x) = (a-1)/x - 1
-                      (let [newton-delta (/ f fprime)
-                            ratio (/ (* f (- (/ (dec a) x) 1.0))
-                                    (* 2.0 fprime))
-                            denom (- 1.0 ratio)
-                            delta (if (and (m/finite? ratio) (m/pos? denom))
-                                    (/ newton-delta denom)
-                                    newton-delta)
-                            x-new (- x delta)
-                            ;; If Halley step escapes bracket, bisect instead
-                            x-new (if (or (m/nan? x-new)
-                                        (<= x-new lo) (>= x-new hi))
-                                    (* 0.5 (+ lo hi))
-                                    x-new)]
-                        (if (<= (m/abs (- x-new x)) (* 1e-13 x))
-                          x-new
-                          (recur x-new lo hi (inc i)))))))))))))))
+    :else (let [a (double a)
+                p (double cumulative-prob)
+                ln-gamma-a (log-gamma a)
+                ;; Wilson-Hilferty normal approximation for a >= 1
+                wh-guess (when (>= a 1.0)
+                           (let [z (inv-cdf-standard-normal p)
+                                 w (/ (* 9.0 a))
+                                 cube-base (+ 1.0 (- w) (* z (m/sqrt w)))]
+                             (when (m/pos? cube-base)
+                               (let [g (* a (m/cube cube-base))]
+                                 (when (m/finite+? g) g)))))
+                ;; Power approximation for small a or as fallback
+                power-guess (let [lg (/ (+ (m/log p) (log-gamma (inc a))) a)]
+                              (when (> lg (- 700.0))
+                                (m/exp lg)))
+                x0 (max m/tiny-dbl (double (or wh-guess power-guess m/tiny-dbl)))]
+            ;; For very large a (>1e6), Wilson-Hilferty is accurate to O(1/a) relative error
+            ;; and regularized-gamma-p is too slow for iterative refinement
+            (if (and wh-guess (> a 1e6))
+              x0
+              (let [;; Initial bracket around guess
+                    lo (* 0.01 x0)
+                    hi (max (* 100.0 x0) 1.0)]
+                ;; Halley's method with bisection safeguard
+                (loop [x (double x0)
+                       lo (double lo)
+                       hi (double hi)
+                       i 0]
+                  (if (>= i 60)
+                    x
+                    (let [f (- (regularized-gamma-p a x) p)]
+                      (if (<= (m/abs f) 1e-14)
+                        x
+                        ;; Update bracket
+                        (let [[lo hi] (if (neg? f) [x hi] [lo x])
+                              ;; f'(x) in log-space for stability
+                              log-fprime (- (* (dec a) (m/log x)) x ln-gamma-a)
+                              fprime (m/exp log-fprime)]
+                          (if (zero? fprime)
+                            ;; Zero derivative: bisect
+                            (let [mid (* 0.5 (+ lo hi))]
+                              (recur mid lo hi (inc i)))
+                            ;; Halley step: f''(x)/f'(x) = (a-1)/x - 1
+                            (let [newton-delta (/ f fprime)
+                                  ratio (/ (* f (- (/ (dec a) x) 1.0))
+                                          (* 2.0 fprime))
+                                  denom (- 1.0 ratio)
+                                  delta (if (and (m/finite? ratio) (m/pos? denom))
+                                          (/ newton-delta denom)
+                                          newton-delta)
+                                  x-new (- x delta)
+                                  ;; If Halley step escapes bracket, bisect instead
+                                  x-new (if (or (m/nan? x-new)
+                                              (<= x-new lo) (>= x-new hi))
+                                          (* 0.5 (+ lo hi))
+                                          x-new)]
+                              (if (<= (m/abs (- x-new x)) (* 1e-13 x))
+                                x-new
+                                (recur x-new lo hi (inc i)))))))))))))))
 
 (s/fdef inv-regularized-gamma-p
   :args (s/cat :a ::m/pos :cumulative-prob ::m/prob)
@@ -898,48 +870,37 @@
   (let [a (double a)]
     (cond
       ;; Handle poles at non-positive integers
-      (m/roughly-round-non+? a m/sgl-close)
-      m/inf-
-
+      (m/roughly-round-non+? a m/sgl-close) m/inf-
       ;; Handle special values
       (m/nan? a) m/nan
       (m/inf+? a) m/inf+
       (m/inf-? a) m/nan
-
       ;; For large negative x, use reflection formula for efficiency:
       ;; psi(1-x) = psi(x) + pi*cot(pi*x)
       ;; So psi(x) = psi(1-x) - pi*cot(pi*x) for x < 0
-      (< a -49.0)
-      (let [one-minus-a (- 1.0 a)
-            psi-1-a (log-gamma-derivative one-minus-a)
-            pi-a (* m/PI a)]
-        (- psi-1-a (* m/PI (/ (m/cos pi-a) (m/sin pi-a)))))
-
-      :else
-      (loop [x a
-             tot 0.0]
-        (cond
-          ;; Very small positive x: psi(x) ~ -gamma - 1/x
-          (and (pos? x) (<= x digamma-s-limit))
-          (- tot m/euler-mascheroni-constant (/ x))
-
-          ;; Large x: use asymptotic expansion
-          ;; psi(x) ~ ln(x) - 1/(2x) - 1/(12x^2) + 1/(120x^4) - 1/(252x^6) + ...
-          (>= x digamma-c-limit)
-          (let [inv-x (/ x)
-                inv2-x (* inv-x inv-x)]
-            (+ tot
-              (m/log x)
-              (* -0.5 inv-x)
-              (* (- inv2-x)
-                (+ (/ 12.0)                                 ;; B_2/2 = 1/12
-                  (* inv2-x
-                    (- (/ 120.0)                            ;; -B_4/4 = 1/120
-                      (/ inv2-x 252.0)))))))               ;; B_6/6 = 1/252
-
-          ;; Use recurrence: psi(x) = psi(x+1) - 1/x
-          :else
-          (recur (inc x) (- tot (/ x))))))))
+      (< a -49.0) (let [one-minus-a (- 1.0 a)
+                        psi-1-a (log-gamma-derivative one-minus-a)
+                        pi-a (* m/PI a)]
+                    (- psi-1-a (* m/PI (/ (m/cos pi-a) (m/sin pi-a)))))
+      :else (loop [x a
+                   tot 0.0]
+              (cond
+                ;; Very small positive x: psi(x) ~ -gamma - 1/x
+                (and (pos? x) (<= x digamma-s-limit)) (- tot m/euler-mascheroni-constant (/ x))
+                ;; Large x: use asymptotic expansion
+                ;; psi(x) ~ ln(x) - 1/(2x) - 1/(12x^2) + 1/(120x^4) - 1/(252x^6) + ...
+                (>= x digamma-c-limit) (let [inv-x (/ x)
+                                             inv2-x (* inv-x inv-x)]
+                                         (+ tot
+                                           (m/log x)
+                                           (* -0.5 inv-x)
+                                           (* (- inv2-x)
+                                             (- (/ 12.0)    ;; B_2/2 = 1/12
+                                               (* inv2-x
+                                                 (- (/ 120.0) ;; -B_4/4 = 1/120
+                                                   (/ inv2-x 252.0))))))) ;; B_6/6 = 1/252
+                ;; Use recurrence: psi(x) = psi(x+1) - 1/x
+                :else (recur (inc x) (- tot (/ x))))))))
 
 (s/fdef log-gamma-derivative
   :args (s/cat :a (s/and ::m/num #(> % -3e8)))
@@ -993,56 +954,46 @@
   (let [a (double a)]
     (cond
       ;; Handle poles at non-positive integers
-      (m/roughly-round-non+? a m/sgl-close)
-      m/inf+
-
+      (m/roughly-round-non+? a m/sgl-close) m/inf+
       ;; Handle special values
       (m/nan? a) m/nan
-      (m/inf+? a) 0.0                                        ;; psi'(inf) = 0
+      (m/inf+? a) 0.0                                       ;; psi'(inf) = 0
       (m/inf-? a) m/nan
-
       ;; For large negative x, use reflection formula for efficiency:
       ;; d/dx[psi(x)] = d/dx[psi(1-x) - pi*cot(pi*x)]
       ;; psi'(x) = -psi'(1-x) + pi^2/sin^2(pi*x)
-      (< a -49.0)
-      (let [one-minus-a (- 1.0 a)
-            psi1-1-a (trigamma one-minus-a)
-            sin-pi-a (m/sin (* m/PI a))
-            pi-sq-csc-sq (/ m/pi-squared (* sin-pi-a sin-pi-a))]
-        (- pi-sq-csc-sq psi1-1-a))
+      (< a -49.0) (let [one-minus-a (- 1.0 a)
+                        psi1-1-a (trigamma one-minus-a)
+                        sin-pi-a (m/sin (* m/PI a))
+                        pi-sq-csc-sq (/ m/pi-squared (* sin-pi-a sin-pi-a))]
+                    (- pi-sq-csc-sq psi1-1-a))
+      :else (loop [x a
+                   tot 0.0]
+              (let [x-sq (* x x)]
+                (cond
+                  ;; Very small positive x: psi'(x) ~ 1/x^2
+                  ;; Handle underflow: if x^2 underflows to 0, return infinity
+                  (and (pos? x) (<= x trigamma-s-limit)) (if (zero? x-sq)
+                                                           m/inf+ ;; x so small that x^2 underflows
+                                                           (+ tot (/ x-sq)))
+                  ;; Large x: use asymptotic expansion
+                  ;; psi'(x) ~ 1/x + 1/(2x^2) + 1/(6x^3) - 1/(30x^5) + 1/(42x^7) - ...
+                  (>= x trigamma-c-limit) (let [inv-x (/ x)
+                                                inv2-x (* inv-x inv-x)]
+                                            (+ tot
+                                              inv-x
+                                              (/ inv2-x 2.0)
+                                              (* inv2-x inv-x
+                                                (- (/ 6.0)  ;; B_2 = 1/6
+                                                  (* inv2-x
+                                                    (+ (/ 30.0) ;; B_4 = -1/30 -> +1/30
+                                                      (- (/ inv2-x 42.0)))))))) ;; B_6 = 1/42
 
-      :else
-      (loop [x a
-             tot 0.0]
-        (let [x-sq (* x x)]
-          (cond
-            ;; Very small positive x: psi'(x) ~ 1/x^2
-            ;; Handle underflow: if x^2 underflows to 0, return infinity
-            (and (pos? x) (<= x trigamma-s-limit))
-            (if (zero? x-sq)
-              m/inf+                                         ;; x is so small that x^2 underflows
-              (+ tot (/ x-sq)))
-
-            ;; Large x: use asymptotic expansion
-            ;; psi'(x) ~ 1/x + 1/(2x^2) + 1/(6x^3) - 1/(30x^5) + 1/(42x^7) - ...
-            (>= x trigamma-c-limit)
-            (let [inv-x (/ x)
-                  inv2-x (* inv-x inv-x)]
-              (+ tot
-                inv-x
-                (/ inv2-x 2.0)
-                (* inv2-x inv-x
-                  (- (/ 6.0)                                ;; B_2 = 1/6
-                    (* inv2-x
-                      (+ (/ 30.0)                           ;; B_4 = -1/30 -> +1/30
-                        (- (/ inv2-x 42.0))))))))          ;; B_6 = 1/42
-
-            ;; Use recurrence: psi'(x) = psi'(x+1) + 1/x^2
-            ;; Handle underflow: if x^2 underflows to 0, return infinity
-            :else
-            (if (zero? x-sq)
-              m/inf+                                         ;; x is so small that x^2 underflows
-              (recur (inc x) (+ tot (/ x-sq))))))))))
+                  ;; Use recurrence: psi'(x) = psi'(x+1) + 1/x^2
+                  ;; Handle underflow: if x^2 underflows to 0, return infinity
+                  :else (if (zero? x-sq)
+                          m/inf+                            ;; x is so small that x^2 underflows
+                          (recur (inc x) (+ tot (/ x-sq))))))))))
 
 (s/fdef trigamma
   :args (s/cat :a ::m/num)
@@ -1299,8 +1250,7 @@
       (m/one? c) 1.0
 
       (and (> c (/ (inc x) (+ 2.0 x y)))
-        (<= (m/one- c) (/ (inc y) (+ 2.0 x y))))
-      (m/one- (regularized-beta (m/one- c) y x))
+        (<= (m/one- c) (/ (inc y) (+ 2.0 x y)))) (m/one- (regularized-beta (m/one- c) y x))
 
       :else
       (let [a-series (repeat 1.0)
@@ -1381,7 +1331,7 @@
             ;; Using identity: (2n+1)!! = (2n+1)! / (2^n * n!)
             ;; log|Gamma(-n-0.5)| = 0.5*log(pi) + (2n+1)*log(2) - [log-gamma(2n+2) - n*log(2) - log-gamma(n+1)]
             ;;                   = 0.5*log(pi) + (3n+1)*log(2) + log-gamma(n+1) - log-gamma(2n+2)
-            n (m/abs (m/floor order))  ; order = -n - 0.5 approximately
+            n (m/abs (m/floor order))                       ; order = -n - 0.5 approximately
             log-abs-gamma (+ (* 0.5 (m/log m/PI))
                             (* (inc (* 3.0 n)) (m/log 2.0))
                             (log-gamma (inc n))
@@ -1475,8 +1425,7 @@
     (bessel-j 0 1.0) => 0.7651976865579666
     (bessel-j 1 1.0) => 0.4400505857449335"
   [order x]
-  (cond
-    (m/inf? order) 0.0                                      ;; J_v(x) → 0 as |v| → ∞
+  (cond (m/inf? order) 0.0                                  ;; J_v(x) → 0 as |v| → ∞
     (m/inf? x) 0.0                                          ;; J_ν(∞) = 0 (oscillates to 0)
     (zero? x) (if (zero? order) 1.0 0.0)
     (neg? x) (if (m/roughly-round? order m/sgl-close)
@@ -1487,8 +1436,7 @@
     (let [n (m/round' (- order) :toward-zero)]
       (* (m/pow -1 n) (bessel-j n x)))
     ;; Use asymptotic for large x (x > 4|ν| + 15)
-    (> x (+ (* 4.0 (m/abs order)) 15.0))
-    (bessel-j-asymptotic order x)
+    (> x (+ (* 4.0 (m/abs order)) 15.0)) (bessel-j-asymptotic order x)
     ;; Use power series for small x
     :else (bessel-j-series order x 100)))
 
@@ -1579,36 +1527,33 @@
         x8 (* 8.0 x)
         first-q-term (/ mu x8)
         chi (- x (* order 0.5 m/PI) (* 0.25 m/PI))]
-    (cond
-      (zero? sqrt-factor) 0.0
-      (or (> first-q-term 1.0) (m/inf? mu) (m/inf? (m/sq x8)))
-      (* sqrt-factor (m/sin chi))
-      :else
-      (let [p (loop [k 0
-                     term 1.0
-                     sum 1.0]
-                (if (>= k 10)
-                  sum
-                  (let [factor (/ (* (- mu (m/sq (dec (* 4 k 2))))
-                                    (- mu (m/sq (inc (* 4 k 2)))))
-                                 (* -1.0 (inc (* 2 k)) (+ 2 (* 2 k)) (m/sq x8)))
-                        next-term (* term factor)]
-                    (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
-                      (+ sum (if (m/nan? next-term) 0.0 next-term))
-                      (recur (inc k) next-term (+ sum next-term))))))
-            q (loop [k 0
-                     term (/ (dec mu) x8)
-                     sum (/ (dec mu) x8)]
-                (if (>= k 10)
-                  sum
-                  (let [factor (/ (* (- mu (m/sq (+ 1 (* 4 k 2))))
-                                    (- mu (m/sq (+ 3 (* 4 k 2)))))
-                                 (* -1.0 (+ 2 (* 2 k)) (+ 3 (* 2 k)) (m/sq x8)))
-                        next-term (* term factor)]
-                    (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
-                      (+ sum (if (m/nan? next-term) 0.0 next-term))
-                      (recur (inc k) next-term (+ sum next-term))))))]
-        (* sqrt-factor (+ (* p (m/sin chi)) (* q (m/cos chi))))))))
+    (cond (zero? sqrt-factor) 0.0
+      (or (> first-q-term 1.0) (m/inf? mu) (m/inf? (m/sq x8))) (* sqrt-factor (m/sin chi))
+      :else (let [p (loop [k 0
+                           term 1.0
+                           sum 1.0]
+                      (if (>= k 10)
+                        sum
+                        (let [factor (/ (* (- mu (m/sq (dec (* 4 k 2))))
+                                          (- mu (m/sq (inc (* 4 k 2)))))
+                                       (* -1.0 (inc (* 2 k)) (+ 2 (* 2 k)) (m/sq x8)))
+                              next-term (* term factor)]
+                          (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
+                            (+ sum (if (m/nan? next-term) 0.0 next-term))
+                            (recur (inc k) next-term (+ sum next-term))))))
+                  q (loop [k 0
+                           term (/ (dec mu) x8)
+                           sum (/ (dec mu) x8)]
+                      (if (>= k 10)
+                        sum
+                        (let [factor (/ (* (- mu (m/sq (+ 1 (* 4 k 2))))
+                                          (- mu (m/sq (+ 3 (* 4 k 2)))))
+                                       (* -1.0 (+ 2 (* 2 k)) (+ 3 (* 2 k)) (m/sq x8)))
+                              next-term (* term factor)]
+                          (if (or (m/nan? next-term) (< (m/abs next-term) 1e-16))
+                            (+ sum (if (m/nan? next-term) 0.0 next-term))
+                            (recur (inc k) next-term (+ sum next-term))))))]
+              (* sqrt-factor (+ (* p (m/sin chi)) (* q (m/cos chi))))))))
 
 (def ^:private ^:const max-bessel-recurrence-iterations
   "Maximum iterations for Bessel recurrence before returning -∞.
@@ -1626,8 +1571,7 @@
       ;; For extremely large orders (can't fit in long), Y_n(x) → -∞
       (> abs-n Long/MAX_VALUE) m/inf-
       (let [n (long abs-n)]
-        (cond
-          (zero? n) (bessel-y0-small x)
+        (cond (zero? n) (bessel-y0-small x)
           (m/one? n) (bessel-y1-small x)
           ;; For large x, use asymptotic expansion (avoids O(n) recurrence)
           (> x (+ (* 4.0 n) 15.0)) (bessel-y-asymptotic n x)
@@ -1639,16 +1583,14 @@
           (loop [k 1
                  y-prev (bessel-y0-small x)
                  y-curr (bessel-y1-small x)]
-            (cond
-              (>= k n) y-curr
+            (cond (>= k n) y-curr
               ;; Handle overflow/underflow - any non-finite result indicates divergence
               (not (m/finite? y-curr)) m/inf-
-              :else
-              (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
-                ;; If next step produces NaN from overflow (Inf - Inf), return -Inf
-                (if (m/nan? y-next)
-                  m/inf-
-                  (recur (inc k) y-curr y-next))))))))))
+              :else (let [y-next (- (* (/ (* 2.0 k) x) y-curr) y-prev)]
+                      ;; If next step produces NaN from overflow (Inf - Inf), return -Inf
+                      (if (m/nan? y-next)
+                        m/inf-
+                        (recur (inc k) y-curr y-next))))))))))
 
 (defn bessel-y
   "Computes the Bessel function of the second kind Y_`order`(`x`).
@@ -1664,8 +1606,7 @@
     (bessel-y 0 1.0) => 0.08825696421567691
     (bessel-y 1 1.0) => -0.7812128213002887"
   [order x]
-  (cond
-    (<= x 0.0) m/inf-
+  (cond (<= x 0.0) m/inf-
     (m/inf? order) m/inf-                                   ;; Y_v(x) → -∞ as |v| → ∞
     (m/roughly-round? order m/sgl-close)
     (bessel-y-integer (m/round' order :toward-zero) x)
@@ -1699,8 +1640,7 @@
           (if (> (m/log order) (m/log x-half)) 0.0 m/inf+)
           ;; Normal log form calculation
           (let [log-result (- log-prefactor log-gamma-val)]
-            (cond
-              (< log-result -700.0) 0.0
+            (cond (< log-result -700.0) 0.0
               (> log-result 700.0) m/inf+
               :else (m/exp log-result)))))
       ;; If gamma underflows to 0 and prefactor overflows, use log form
@@ -1713,31 +1653,27 @@
                             (log-gamma (inc n))
                             (- (log-gamma (+ 2.0 (* 2.0 n)))))
             log-result (- log-prefactor log-abs-gamma)]
-        (cond
-          (< log-result -700.0) 0.0
+        (cond (< log-result -700.0) 0.0
           (> log-result 700.0) (if (neg? order) m/inf- m/inf+)
           :else (m/exp log-result)))
       ;; If prefactor overflows to Inf and gamma is finite, result is Inf
-      (and (m/inf? prefactor) (m/finite? gamma-val))
-      (if (neg? gamma-val) m/inf- m/inf+)
+      (and (m/inf? prefactor) (m/finite? gamma-val)) (if (neg? gamma-val) m/inf- m/inf+)
       ;; If prefactor underflows to 0 and gamma is finite, result is 0
       (and (zero? prefactor) (m/finite? gamma-val)) 0.0
       ;; Normal case
-      :else
-      (loop [k 0
-             term (/ 1.0 gamma-val)
-             sum term]
-        (if (or (>= k max-terms)
-              (and (not (zero? sum))
-                (< (m/abs (/ term sum)) 1e-15)))
-          (let [result (* prefactor sum)]
-            (cond
-              (m/nan? result) 0.0
-              (m/inf? result) (if (neg? (* prefactor sum)) m/inf- m/inf+)
-              :else result))
-          (let [next-term (* term x2
-                            (/ 1.0 (* (double (inc k)) (+ order k 1))))]
-            (recur (inc k) next-term (+ sum next-term))))))))
+      :else (loop [k 0
+                   term (/ 1.0 gamma-val)
+                   sum term]
+              (if (or (>= k max-terms)
+                    (and (not (zero? sum))
+                      (< (m/abs (/ term sum)) 1e-15)))
+                (let [result (* prefactor sum)]
+                  (cond (m/nan? result) 0.0
+                    (m/inf? result) (if (neg? (* prefactor sum)) m/inf- m/inf+)
+                    :else result))
+                (let [next-term (* term x2
+                                  (/ 1.0 (* (double (inc k)) (+ order k 1))))]
+                  (recur (inc k) next-term (+ sum next-term))))))))
 
 (defn- bessel-i-asymptotic
   "Asymptotic expansion for I_v(x) for large x.
@@ -1757,27 +1693,26 @@
     (cond
       ;; If prefactor overflows (or is NaN from Inf/Inf), result is Inf
       (or (m/inf? prefactor) (m/nan? prefactor)) m/inf+
-      ;; If series won't converge, return prefactor (dominant term)
+      ;; If the series doesn't converge, return prefactor (dominant term)
       (> first-term-abs 1.0) prefactor
-      :else
-      (* prefactor
-        (loop [k 0
-               term 1.0
-               sum 1.0]
-          (if (>= k 20)
-            sum
-            (let [factor (/ (- mu (m/sq (inc (* 2 k))))
-                           (* -1.0 x8 (inc k)))
-                  next-term (* term factor)]
-              (if (< (m/abs next-term) 1e-16)
-                (+ sum next-term)
-                (recur (inc k) next-term (+ sum next-term))))))))))
+      :else (* prefactor
+              (loop [k 0
+                     term 1.0
+                     sum 1.0]
+                (if (>= k 20)
+                  sum
+                  (let [factor (/ (- mu (m/sq (inc (* 2 k))))
+                                 (* -1.0 x8 (inc k)))
+                        next-term (* term factor)]
+                    (if (< (m/abs next-term) 1e-16)
+                      (+ sum next-term)
+                      (recur (inc k) next-term (+ sum next-term))))))))))
 
 (defn bessel-i
   "Computes the modified Bessel function of the first kind I_`order`(`x`).
 
-  I_v(x) is the solution to the modified Bessel equation that is finite at x=0. Related to J_v
-  by I_v(x) = i^(-v) * J_v(ix).
+  I_v(x) is the solution to the modified Bessel equation that is finite at x=0. Related to J_v by
+  I_v(x) = i^(-v) * J_v(ix).
 
   Parameters:
     `order` - the order v (any real number)
@@ -1788,19 +1723,16 @@
     (bessel-i 0 1.0) => 1.2660658777520082
     (bessel-i 1 1.0) => 0.5651591039924851"
   [order x]
-  (cond
-    (m/inf? order) 0.0                                      ;; I_v(x) → 0 as |v| → ∞
+  (cond (m/inf? order) 0.0                                  ;; I_v(x) → 0 as |v| → ∞
     (m/inf? x) m/inf+                                       ;; I_v(x) → +∞ as x → ∞
     (zero? x) (if (zero? order) 1.0 0.0)
     (neg? x) (if (m/roughly-round? order m/sgl-close)
                (bessel-i order (- x))
                m/nan)
     ;; For negative integer orders: I_{-n}(x) = I_n(x)
-    (and (neg? order) (m/roughly-round? order m/sgl-close))
-    (bessel-i (- order) x)
+    (and (neg? order) (m/roughly-round? order m/sgl-close)) (bessel-i (- order) x)
     ;; Use asymptotic for large x
-    (> x (+ (* 4.0 (m/abs order)) 20.0))
-    (bessel-i-asymptotic order x)
+    (> x (+ (* 4.0 (m/abs order)) 20.0)) (bessel-i-asymptotic order x)
     ;; Use power series
     :else (bessel-i-series order x 100)))
 
@@ -1862,65 +1794,69 @@
 (defn- bessel-k-integer
   "Computes K_n(x) for integer order n using series or asymptotic expansion."
   [n x]
-  (let [n (long (m/abs n))]
-    (cond
-      ;; For large x, use asymptotic for base cases to avoid numerical issues
-      (> x 10.0)
-      (if (zero? n)
-        (bessel-k-asymptotic 0 x)
-        (if (m/one? n)
-          (bessel-k-asymptotic 1 x)
-          ;; Use forward recurrence from asymptotic K_0 and K_1
+  (let [abs-n (m/abs (double n))]
+    (if (> abs-n 1000.0)
+      ;; For very large n, use large-order approximation to avoid O(n) recurrence
+      (bessel-k-large-order abs-n x)
+      (let [n (long abs-n)]
+        (cond
+          ;; For large x, use asymptotic for base cases to avoid numerical issues
+          (> x 10.0)
+          (if (zero? n)
+            (bessel-k-asymptotic 0 x)
+            (if (m/one? n)
+              (bessel-k-asymptotic 1 x)
+              ;; Use forward recurrence from asymptotic K_0 and K_1
+              (loop [k 1
+                     k-prev (bessel-k-asymptotic 0 x)
+                     k-curr (bessel-k-asymptotic 1 x)]
+                (if (>= k n)
+                  k-curr
+                  (let [k-next (+ (* (/ (* 2.0 k) x) k-curr) k-prev)]
+                    (recur (inc k) k-curr k-next))))))
+
+          (zero? n)
+          ;; K_0(x) = -[gamma + ln(x/2)]I_0(x) + sum(k=1 to inf, (x/2)^{2k} * psi(k) / (k!)^2)
+          ;; where psi(k) = H_k = 1 + 1/2 + ... + 1/k
+          (let [ln-x2 (m/log (* 0.5 x))
+                x-half (* 0.5 x)
+                x2 (m/sq x-half)
+                i0 (bessel-i 0 x)
+                series-sum (loop [k 1
+                                  psi-k 1.0
+                                  factorial-sq 1.0
+                                  sum (* psi-k x2)]
+                             (if (> k 30)
+                               sum
+                               (let [next-k (inc k)
+                                     next-psi-k (+ psi-k (/ next-k))
+                                     next-factorial-sq (* factorial-sq next-k next-k)
+                                     next-term (* next-psi-k
+                                                 (m/pow x2 next-k)
+                                                 (/ next-factorial-sq))]
+                                 (if (< (m/abs next-term) 1e-16)
+                                   (+ sum next-term)
+                                   (recur next-k next-psi-k next-factorial-sq
+                                     (+ sum next-term))))))]
+            (+ (* -1.0 (+ m/euler-mascheroni-constant ln-x2) i0) series-sum))
+
+          (m/one? n)
+          ;; K_1(x) via Wronskian: I_0*K_1 + I_1*K_0 = 1/x
+          ;; So K_1 = (1/x - I_1*K_0) / I_0
+          (let [k0 (bessel-k-integer 0 x)
+                i0 (bessel-i 0 x)
+                i1 (bessel-i 1 x)]
+            (/ (- (/ x) (* i1 k0)) i0))
+
+          :else
+          ;; Use forward recurrence: K_{n+1} = (2n/x)K_n + K_{n-1}
           (loop [k 1
-                 k-prev (bessel-k-asymptotic 0 x)
-                 k-curr (bessel-k-asymptotic 1 x)]
+                 k-prev (bessel-k-integer 0 x)
+                 k-curr (bessel-k-integer 1 x)]
             (if (>= k n)
               k-curr
               (let [k-next (+ (* (/ (* 2.0 k) x) k-curr) k-prev)]
-                (recur (inc k) k-curr k-next))))))
-
-      (zero? n)
-      ;; K_0(x) = -[gamma + ln(x/2)]I_0(x) + sum(k=1 to inf, (x/2)^{2k} * psi(k) / (k!)^2)
-      ;; where psi(k) = H_k = 1 + 1/2 + ... + 1/k
-      (let [ln-x2 (m/log (* 0.5 x))
-            x-half (* 0.5 x)
-            x2 (m/sq x-half)
-            i0 (bessel-i 0 x)
-            series-sum (loop [k 1
-                              psi-k 1.0
-                              factorial-sq 1.0
-                              sum (* psi-k x2)]
-                         (if (> k 30)
-                           sum
-                           (let [next-k (inc k)
-                                 next-psi-k (+ psi-k (/ next-k))
-                                 next-factorial-sq (* factorial-sq next-k next-k)
-                                 next-term (* next-psi-k
-                                             (m/pow x2 next-k)
-                                             (/ next-factorial-sq))]
-                             (if (< (m/abs next-term) 1e-16)
-                               (+ sum next-term)
-                               (recur next-k next-psi-k next-factorial-sq
-                                 (+ sum next-term))))))]
-        (+ (* -1.0 (+ m/euler-mascheroni-constant ln-x2) i0) series-sum))
-
-      (m/one? n)
-      ;; K_1(x) via Wronskian: I_0*K_1 + I_1*K_0 = 1/x
-      ;; So K_1 = (1/x - I_1*K_0) / I_0
-      (let [k0 (bessel-k-integer 0 x)
-            i0 (bessel-i 0 x)
-            i1 (bessel-i 1 x)]
-        (/ (- (/ x) (* i1 k0)) i0))
-
-      :else
-      ;; Use forward recurrence: K_{n+1} = (2n/x)K_n + K_{n-1}
-      (loop [k 1
-             k-prev (bessel-k-integer 0 x)
-             k-curr (bessel-k-integer 1 x)]
-        (if (>= k n)
-          k-curr
-          (let [k-next (+ (* (/ (* 2.0 k) x) k-curr) k-prev)]
-            (recur (inc k) k-curr k-next)))))))
+                (recur (inc k) k-curr k-next)))))))))
 
 (defn bessel-k
   "Computes the modified Bessel function of the second kind K_`order`(`x`).
@@ -1937,8 +1873,7 @@
     (bessel-k 1 1.0) => 0.6019072301972346"
   [order x]
   (let [abs-order (m/abs order)]                            ;; K_ν(x) = K_{-ν}(x), so use |ν|
-    (cond
-      (<= x 0.0) m/inf+
+    (cond (<= x 0.0) m/inf+
       ;; Use asymptotic for large x (lower threshold to avoid catastrophic
       ;; cancellation in series when I_ν and I_{-ν} are both large)
       (> x (+ (* 2.0 abs-order) 10.0))
@@ -1968,17 +1903,13 @@
         ;; Overflow detection: return appropriate Inf when series overflows
         (m/nan? sum) m/inf+
         (m/inf? sum) sum
-
         (or (>= n max-terms)
           (and (not (zero? sum))
-            (< (m/abs (/ term sum)) 1e-15)))
-        sum
-
-        :else
-        (let [;; term_{n+1} = term_n * a_n * z / (b_n * (n+1))
-              ;; where a_n = a + n, b_n = b + n
-              next-term (* term (+ a n) z (/ (* (+ b n) (inc n))))]
-          (recur (inc n) next-term (+ sum next-term)))))))
+            (< (m/abs (/ term sum)) 1e-15))) sum
+        :else (let [;; term_{n+1} = term_n * a_n * z / (b_n * (n+1))
+                    ;; where a_n = a + n, b_n = b + n
+                    next-term (* term (+ a n) z (/ (* (+ b n) (inc n))))]
+                (recur (inc n) next-term (+ sum next-term)))))))
 
 (defn hypergeometric-1f1
   "Computes the confluent hypergeometric function 1F1(`a`; `b`; `z`).
@@ -2004,34 +1935,23 @@
     ;; b is non-positive integer: undefined (pole)
     (and (m/roughly-round-non+? b m/sgl-close)
       (not (and (m/roughly-round-non+? a m/sgl-close)
-             (>= a b))))
-    m/nan
-
+             (>= a b)))) m/nan
     ;; a = 0: result is 1
-    (m/roughly? a 0.0 m/sgl-close)
-    1.0
-
+    (m/roughly? a 0.0 m/sgl-close) 1.0
     ;; z = 0: result is 1
-    (zero? z)
-    1.0
-
+    (zero? z) 1.0
     ;; a = b: result is e^z
-    (m/roughly? a b m/sgl-close)
-    (m/exp z)
-
+    (m/roughly? a b m/sgl-close) (m/exp z)
     ;; Large negative z: use Kummer transformation
     ;; M(a,b,z) = e^z * M(b-a,b,-z)
     ;; Handle overflow: when e^z → 0 and M(b-a,b,-z) → ±Inf, the true limit is 0
-    (< z -20.0)
-    (let [exp-z (m/exp z)
-          transformed (hypergeometric-1f1 (- b a) b (- z))]
-      (if (and (zero? exp-z) (m/inf? transformed))
-        0.0
-        (* exp-z transformed)))
-
+    (< z -20.0) (let [exp-z (m/exp z)
+                      transformed (hypergeometric-1f1 (- b a) b (- z))]
+                  (if (and (zero? exp-z) (m/inf? transformed))
+                    0.0
+                    (* exp-z transformed)))
     ;; Standard series
-    :else
-    (hypergeometric-1f1-series a b z 300)))
+    :else (hypergeometric-1f1-series a b z 300)))
 
 (s/fdef hypergeometric-1f1
   :args (s/cat :a ::m/num
@@ -2054,20 +1974,16 @@
         ;; Overflow detection: return appropriate Inf when series overflows
         (m/nan? sum) m/inf+
         (m/inf? sum) sum
-
         (or (>= n max-terms)
           (and (not (zero? sum))
-            (< (m/abs (/ term sum)) 1e-15)))
-        sum
-
-        :else
-        (let [;; term_{n+1} = term_n * (a+n)(b+n) * z / ((c+n)(n+1))
-              next-term (* term
-                          (+ a n)
-                          (+ b n)
-                          z
-                          (/ (* (+ c n) (inc n))))]
-          (recur (inc n) next-term (+ sum next-term)))))))
+            (< (m/abs (/ term sum)) 1e-15))) sum
+        :else (let [;; term_{n+1} = term_n * (a+n)(b+n) * z / ((c+n)(n+1))
+                    next-term (* term
+                                (+ a n)
+                                (+ b n)
+                                z
+                                (/ (* (+ c n) (inc n))))]
+                (recur (inc n) next-term (+ sum next-term)))))))
 
 (defn hypergeometric-2f1
   "Computes the Gaussian hypergeometric function 2F1(`a`, `b`; `c`; `z`).
@@ -2097,35 +2013,19 @@
     ;; unless a or b is also non-positive integer with |a| or |b| < |c|
     (and (m/roughly-round-non+? c m/sgl-close)
       (not (or (and (m/roughly-round-non+? a m/sgl-close) (> a c))
-             (and (m/roughly-round-non+? b m/sgl-close) (> b c)))))
-    m/nan
-
+             (and (m/roughly-round-non+? b m/sgl-close) (> b c))))) m/nan
     ;; z = 0: result is 1
-    (zero? z)
-    1.0
-
+    (zero? z) 1.0
     ;; a = 0 or b = 0: result is 1
-    (or (m/roughly? a 0.0 m/sgl-close)
-      (m/roughly? b 0.0 m/sgl-close))
-    1.0
-
+    (or (m/roughly? a 0.0 m/sgl-close) (m/roughly? b 0.0 m/sgl-close)) 1.0
     ;; a = c or b = c: reduces to 1F0 = (1-z)^(-b) or (1-z)^(-a)
-    (m/roughly? a c m/sgl-close)
-    (m/pow (- 1.0 z) (- b))
-
-    (m/roughly? b c m/sgl-close)
-    (m/pow (- 1.0 z) (- a))
-
+    (m/roughly? a c m/sgl-close) (m/pow (- 1.0 z) (- b))
+    (m/roughly? b c m/sgl-close) (m/pow (- 1.0 z) (- a))
     ;; |z| < 1: direct series
-    (< (m/abs z) 1.0)
-    (hypergeometric-2f1-series a b c z 300)
-
+    (< (m/abs z) 1.0) (hypergeometric-2f1-series a b c z 300)
     ;; z = 1: Gauss summation theorem (when c > a + b)
-    (and (m/roughly? z 1.0 m/sgl-close)
-      (> c (+ a b)))
-    (/ (* (gamma c) (gamma (- c a b)))
-      (* (gamma (- c a)) (gamma (- c b))))
-
+    (and (m/roughly? z 1.0 m/sgl-close) (> c (+ a b))) (/ (* (gamma c) (gamma (- c a b)))
+                                                         (* (gamma (- c a)) (gamma (- c b))))
     ;; z > 1 or z < 0: use linear transformation
     ;; 2F1(a,b;c;z) = (1-z)^(-a) * 2F1(a, c-b; c; z/(z-1))  [Pfaff transformation]
     (or (> z 1.0) (< z 0.0))
@@ -2133,8 +2033,7 @@
       (cond
         ;; When z is extremely large negative, z/(z-1) rounds to 1.0 exactly
         ;; In this case, the prefactor (1-z)^(-a) → 0 dominates, so return 0
-        (>= z-transformed 1.0)
-        0.0
+        (>= z-transformed 1.0) 0.0
 
         (< (m/abs z-transformed) 1.0)
         (let [prefactor (m/pow (- 1.0 z) (- a))
@@ -2154,14 +2053,12 @@
             (and (m/inf? prefactor) (zero? transformed)) 0.0
             :else (* prefactor transformed)))))
 
-    :else
-    m/nan))
+    :else m/nan))
 
 (s/fdef hypergeometric-2f1
   :args (s/cat :a ::m/num
           :b ::m/num
           :c (s/and ::m/num #(not (m/roughly-round-non+? % m/sgl-close)))
-          ;; z < 1 is required; z >= 1 causes stack overflow or divergence
           :z (s/with-gen (s/and ::m/finite #(< % 1.0))
                #(m/finite-gen {:max (m/next-down 1.0)})))
   :ret ::m/num)

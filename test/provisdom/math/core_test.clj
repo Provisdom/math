@@ -732,6 +732,7 @@
     (t/is= m/inf+ (m/exp m/inf+))
     (t/is= 0.0 (m/exp m/inf-))
     (t/is (m/nan? (m/exp m/nan)))
+    ;;SciPy 20.085
     (t/is= 20.085536923187668 (m/exp 3))))
 
 (t/deftest dec-exp-test
@@ -744,6 +745,7 @@
     (t/is= -1.0 (m/dec-exp m/inf-))
     (t/is (m/nan? (m/dec-exp m/nan)))
     ;;useful for small values
+    ;;SciPy 1.0000
     (t/is= 1.0000000000000007E-15 (m/dec-exp 1e-15))))
 
 (t/deftest safe-exp-test
@@ -774,6 +776,7 @@
     (t/is= m/inf+ (m/log m/inf+))
     (t/is (m/nan? (m/log -1)))
     (t/is (m/nan? (m/log m/nan)))
+    ;;SciPy 1.0986
     (t/is-approx= 1.0986122886681098 (m/log 3) :tolerance 1e-15)))
 
 (t/deftest log-inc-test
@@ -787,6 +790,7 @@
     (t/is (m/nan? (m/log-inc -2)))
     (t/is (m/nan? (m/log-inc m/nan)))
     ;;useful for small values
+    ;;SciPy 9.9999
     (t/is= 9.999999999999995E-16 (m/log-inc 1e-15))))
 
 (t/deftest log-sum-exp-test
@@ -802,7 +806,9 @@
     ;; General case: log(exp(1) + exp(2)) = 2 + log(1 + exp(-1))
     (t/is-approx= (+ 2.0 (m/log (inc (m/exp -1.0)))) (m/log-sum-exp [1.0 2.0]))
     ;; Large values (should not overflow)
+    ;;SciPy -1199.9
     (t/is= -1199.9999546011009 (m/log-sum-exp [-1200.0 -1210.0]))
+    ;;SciPy 1210.0
     (t/is= 1210.0000453988991 (m/log-sum-exp [1200.0 1210.0]))
     (t/is= 1210.0 (m/log-sum-exp [-1200.0 1210.0]))
     (t/is-approx= 1000.0 (m/log-sum-exp [1000.0 900.0]) :tolerance 0.001)
@@ -815,12 +821,14 @@
   (t/with-instrument `m/log2
     (t/is-spec-check m/log2))
   (t/with-instrument :all
+    ;;SciPy 1.5849
     (t/is-approx= 1.5849625007211563 (m/log2 3))
     (t/is= m/inf- (m/log2 0))
     (t/is= m/inf+ (m/log2 m/inf+))
     (t/is (m/nan? (m/log2 m/nan)))
     (t/is (m/nan? (m/log2 -3.0)))
     (t/is= 0.0 (m/log2 1.0))
+    ;;SciPy -0.15200
     (t/is= -0.15200309344504997 (m/log2 0.9))))
 
 (t/deftest log10-test
@@ -834,6 +842,7 @@
     (t/is= m/inf+ (m/log10 m/inf+))
     (t/is (m/nan? (m/log10 -1)))
     (t/is (m/nan? (m/log10 m/nan)))
+    ;;SciPy 0.47712
     (t/is= 0.47712125471966244 (m/log10 3))))
 
 (t/deftest logn-test
@@ -846,8 +855,10 @@
     (t/is (m/nan? (m/logn -3.0 3)))
     (t/is (m/nan? (m/logn m/nan 3)))
     (t/is= 0.0 (m/logn 1.0 3))
+    ;;SciPy -0.095903
     (t/is-approx= -0.09590327428938458 (m/logn 0.9 3))
     (t/is= m/inf- (m/logn 0.9 1))
+    ;;SciPy 0.15200
     (t/is= 0.15200309344504997 (m/logn 0.9 0.5))
     (t/is= 0.0 (m/logn 0.9 0))
     (t/is= -0.0 (m/logn 0.9 m/inf+))))
@@ -898,6 +909,7 @@
     (t/is-spec-check m/sqrt))
   (t/with-instrument :all
     (t/is= 3.0 (m/sqrt 9))
+    ;;SciPy 1.4142
     (t/is= 1.4142135623730951 (m/sqrt 2))
     (t/is= 0.0 (m/sqrt 0))
     (t/is= m/inf+ (m/sqrt m/inf+))
@@ -935,13 +947,18 @@
     (t/is-spec-check m/asinh))
   (t/with-instrument :all
     (t/is= 0.0 (m/asinh 0.0))
+    ;;SciPy 0.48121
     (t/is= 0.48121182505960347 (m/asinh 0.5))
-    (t/is= -0.8813735870195428 (m/asinh -1.0))
+    ;;SciPy -0.88137
+    (t/is= -0.8813735870195429 (m/asinh -1.0))
+    ;;SciPy 0.88137
     (t/is= 0.8813735870195429 (m/asinh 1.0))
-    (t/is= -1.4436354751788099 (m/asinh -2.0))
+    ;;SciPy -1.4436
+    (t/is= -1.4436354751788103 (m/asinh -2.0))
+    ;;SciPy 1.4436
     (t/is= 1.4436354751788103 (m/asinh 2.0))
     (t/is= m/inf+ (m/asinh m/inf+))
-    (t/is (m/nan? (m/asinh m/inf-)))
+    (t/is= m/inf- (m/asinh m/inf-))
     (t/is (m/nan? (m/asinh m/nan)))))
 
 (t/deftest cos-test
@@ -962,6 +979,7 @@
   (t/with-instrument :all
     (t/is (m/nan? (m/acosh 0.0)))
     (t/is= 0.0 (m/acosh 1.0))
+    ;;SciPy 1.3169
     (t/is= 1.3169578969248166 (m/acosh 2.0))
     (t/is= m/inf+ (m/acosh m/inf+))
     (t/is (m/nan? (m/acosh m/nan)))))
@@ -987,7 +1005,9 @@
     (t/is-spec-check m/atanh))
   (t/with-instrument :all
     (t/is= 0.0 (m/atanh 0.0))
+    ;;SciPy 0.54930
     (t/is-approx= 0.5493061443340549 (m/atanh 0.5) :tolerance 1e-14)
+    ;;SciPy -0.54930
     (t/is-approx= -0.5493061443340549 (m/atanh -0.5) :tolerance 1e-14)
     (t/is= m/inf- (m/atanh -1.0))
     (t/is= m/inf+ (m/atanh 1.0))
@@ -1424,6 +1444,7 @@
   (t/with-instrument `m/reduce-radians'
     (t/is-spec-check m/reduce-radians'))
   (t/with-instrument :all
+    ;;SciPy 5.2672
     (t/is= 5.267258771281654 (m/reduce-radians' 30.4))
     (t/is (zero? (m/reduce-radians' m/two-pi)))
     (t/is= m/PI (m/reduce-radians' m/PI))
@@ -1437,9 +1458,12 @@
     (t/is-spec-check m/radians->angle'))
   (t/with-instrument :all
     (t/is (zero? (m/radians->angle' 0)))
+    ;;SciPy 194.80
     (t/is= 194.8056503444799 (m/radians->angle' 3.4))
     (t/is (zero? (m/radians->angle' m/two-pi)))
+    ;;SciPy 165.19
     (t/is= 165.1943496555201 (m/radians->angle' -3.4))
+    ;;SciPy 58.310
     (t/is= 58.31007808870436 (m/radians->angle' 45))
     (t/is (m/nan? (m/radians->angle' m/nan)))
     (t/is= m/inf+ (m/radians->angle' m/inf+))
@@ -1450,9 +1474,12 @@
     (t/is-spec-check m/angle->radians'))
   (t/with-instrument :all
     (t/is (zero? (m/angle->radians' 0)))
+    ;;SciPy 0.059341
     (t/is= 0.059341194567807204 (m/angle->radians' 3.4))
     (t/is= 0.002777777777777778 (m/angle->radians' m/inv-two-pi))
+    ;;SciPy 6.2238
     (t/is= 6.223844112611779 (m/angle->radians' -3.4))
+    ;;SciPy 0.78539
     (t/is= 0.7853981633974483 (m/angle->radians' 45))
     (t/is (m/nan? (m/angle->radians' m/nan)))
     (t/is= m/inf+ (m/angle->radians' m/inf+))

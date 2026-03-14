@@ -61,8 +61,10 @@
     (t/is-spec-check la/determinant-from-lu))
   (t/with-instrument :all
     (let [lu (la/lu-decomposition [[4.0 3.0] [6.0 3.0]])]
+      ;;numpy -6.0000
       (t/is-approx= -6.0 (la/determinant-from-lu lu) :tolerance 1e-10))
     (let [lu (la/lu-decomposition [[1.0 2.0] [3.0 4.0]])]
+      ;;numpy -2.0000
       (t/is-approx= -2.0 (la/determinant-from-lu lu) :tolerance 1e-10))))
 
 (t/deftest determinant-test
@@ -71,6 +73,7 @@
   (t/with-instrument :all
     (t/is (m/nan? (la/determinant [[]])))
     (t/is= 4.0 (la/determinant [[4.0]]))
+    ;;numpy -2.0000
     (t/is-approx= -2.0 (la/determinant [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
     (t/is-approx= 0.0 (la/determinant [[1.0 2.0] [2.0 4.0]]) :tolerance 1e-10)
     ;; Large matrix (n > 8) to exercise large LU code path
@@ -91,6 +94,7 @@
     (t/is= 3.0 (la/minor [[1.0 2.0] [3.0 4.0]] 0 1))
     (t/is= 2.0 (la/minor [[1.0 2.0] [3.0 4.0]] 1 0))
     (t/is= 1.0 (la/minor [[1.0 2.0] [3.0 4.0]] 1 1))
+    ;;numpy -3.0000
     (t/is-approx= -3.0
       (la/minor [[1.0 2.0 3.0] [4.0 5.0 6.0] [7.0 8.0 9.0]] 0 0) :tolerance 1e-10)))
 
@@ -110,6 +114,7 @@
   (t/with-instrument :all
     (t/is= nil (la/cofactor-matrix [[]]))
     (t/is= [[1.0]] (la/cofactor-matrix [[5.0]]))
+    ;;Math cofactor(i,j) = (-1)^(i+j) * minor(i,j)
     (t/is-data-approx= [[4.0 -3.0] [-2.0 1.0]]
       (la/cofactor-matrix [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)))
 
@@ -119,6 +124,7 @@
   (t/with-instrument :all
     (t/is= nil (la/adjugate [[]]))
     (t/is= [[1.0]] (la/adjugate [[5.0]]))
+    ;;Math adj = cofactor^T = {{4, -2}, {-3, 1}}
     (t/is-data-approx= [[4.0 -2.0] [-3.0 1.0]]
       (la/adjugate [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
     ;; For invertible matrices: A * adj(A) = det(A) * I
@@ -133,6 +139,7 @@
   (t/with-instrument `la/inverse-from-lu
     (t/is-spec-check la/inverse-from-lu))
   (t/with-instrument :all
+    ;;numpy inv([[4,7],[2,6]]) = {{0.6, -0.7}, {-0.2, 0.4}}
     (let [lu (la/lu-decomposition [[4.0 7.0] [2.0 6.0]])
           inv (la/inverse-from-lu lu)
           expected [[0.6 -0.7] [-0.2 0.4]]]
@@ -173,6 +180,7 @@
     (let [A [[2.0 1.0] [1.0 3.0]]
           b [5.0 7.0]
           x (la/solve A b)]
+      ;;numpy [1.6000, 1.8000]
       (t/is-data-approx= [1.6 1.8] x :tolerance 1e-10))
     ;; Overdetermined system (least squares)
     (let [A [[1.0 1.0] [1.0 2.0] [1.0 3.0]]
@@ -265,6 +273,7 @@
   (t/with-instrument `la/pos-semidefinite-matrix-finite-by-squaring
     (t/is-spec-check la/pos-semidefinite-matrix-finite-by-squaring))
   (t/with-instrument :all
+    ;;numpy A @ A.T = {{5, 11}, {11, 25}}
     (t/is-data-approx= [[5.0 11.0] [11.0 25.0]]
       (la/pos-semidefinite-matrix-finite-by-squaring [[1.0 2.0] [3.0 4.0]]) :tolerance 1e-10)
     ;; Result should be positive semi-definite
@@ -302,6 +311,7 @@
   (t/with-instrument `la/covariance-matrix->correlation-matrix
     (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 50}))
   (t/with-instrument :all
+    ;;numpy corr[0,1] = 2/(2*3) = 0.33333
     (let [cov [[4.0 2.0] [2.0 9.0]]
           result (la/covariance-matrix->correlation-matrix cov)]
       (t/is-data-approx= [[1.0 (/ 2.0 6.0)] [(/ 2.0 6.0) 1.0]] result :tolerance 1e-10))))
@@ -311,6 +321,7 @@
   (t/with-instrument `la/correlation-matrix->covariance-matrix
     (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 150}))
   (t/with-instrument :all
+    ;;numpy cov = corr * outer(sqrt(var), sqrt(var)) = {{4, 3}, {3, 9}}
     (let [corr [[1.0 0.5] [0.5 1.0]]
           variances [4.0 9.0]
           result (la/correlation-matrix->covariance-matrix corr variances)]
@@ -357,6 +368,7 @@
     (let [m [[1.0 0.4 0.2] [0.6 0.3 0.9]]
           result (la/qr-decomposition m)
           {::la/keys [Q R]} result
+          ;;numpy Q[0,0] = -0.85749, R[0,0] = -1.1661, R[1,1] = -0.051449
           expected-Q [[-0.8574929257125441 0.5144957554275266]
                       [-0.5144957554275265 -0.8574929257125442]]
           expected-R [[-1.16619037896906 -0.4973458969132756 -0.6345447650272829]
@@ -387,6 +399,7 @@
           {::la/keys [Q R RRQR-permutation rank]} result
           AP (mx/mx* m RRQR-permutation)
           QR (mx/mx* Q R)
+          ;;numpy Q[0,0] = -0.12403, R[0,0] = -4.0311, R[1,1] = 0.74420
           expected-Q [[-0.12403473458920855 0.9922778767136677]
                       [-0.9922778767136677 -0.12403473458920833]]
           expected-R [[-4.031128874149275 -2.108590488016544] [0.0 0.7442084075352513]]]
@@ -427,7 +440,9 @@
     (let [A [[1.0 1.0] [2.0 1.0] [3.0 1.0]]
           b [1.0 2.0 4.0]
           x (la/least-squares A b)]
+      ;;numpy 1.5000
       (t/is-approx= 1.5 (first x) :tolerance 1e-10)
+      ;;numpy -0.66666
       (t/is-approx= -0.6666666666666666 (second x) :tolerance 1e-10))))
 
 ;;;SCHUR DECOMPOSITION
@@ -517,6 +532,7 @@
           result (la/sv-decomposition m)
           singular-values (::la/singular-values result)]
       (t/is-data-approx= [4.0 3.0] singular-values :tolerance 1e-10))
+    ;;numpy singular_values = [5.4649, 0.36596]
     ;; Non-diagonal square matrix - verify reconstruction
     (let [m [[1.0 2.0] [3.0 4.0]]
           result (la/sv-decomposition m)
@@ -526,6 +542,7 @@
           Vt svd-right
           reconstructed (mx/mx* U (mx/mx* S Vt))]
       (t/is-data-approx= m reconstructed :tolerance 1e-10))
+    ;;numpy singular_values = [9.5255, 0.51430]
     ;; Tall matrix (rows > cols) - verify reconstruction
     ;; This tests the QR sign correction in sv-decomposition
     (let [m [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
@@ -543,8 +560,10 @@
     (t/is-spec-check la/condition-number-from-svd))
   (t/with-instrument :all
     (let [svd (la/sv-decomposition [[1.0 0.0] [0.0 2.0]])]
+      ;;numpy 2.0000
       (t/is-approx= 2.0 (la/condition-number-from-svd svd) :tolerance 1e-10))
     (let [svd (la/sv-decomposition [[3.0 0.0] [0.0 4.0]])]
+      ;;numpy 1.3333
       (t/is-approx= (/ 4.0 3.0) (la/condition-number-from-svd svd) :tolerance 1e-10))))
 
 (t/deftest condition-number-test
@@ -655,9 +674,11 @@
     (t/is-data-approx= [[1.0 2.0] [3.0 4.0]]
       (la/matrix-power [[1.0 2.0] [3.0 4.0]] 1) :tolerance 1e-10)
     ;; Power of 2
+    ;;numpy {{7, 10}, {15, 22}}
     (t/is-data-approx= [[7.0 10.0] [15.0 22.0]]
       (la/matrix-power [[1.0 2.0] [3.0 4.0]] 2) :tolerance 1e-10)
     ;; Power of 3
+    ;;numpy {{37, 54}, {81, 118}}
     (t/is-data-approx= [[37.0 54.0] [81.0 118.0]]
       (la/matrix-power [[1.0 2.0] [3.0 4.0]] 3) :tolerance 1e-10)
     ;; Diagonal matrix power
@@ -680,20 +701,27 @@
     (t/is-data-approx= [[1.0 0.0] [0.0 1.0]] (la/matrix-exp [[0.0 0.0] [0.0 0.0]]) :tolerance 1e-10)
     ;; Identity matrix -> e*I
     (let [result (la/matrix-exp [[1.0 0.0] [0.0 1.0]])]
+      ;;numpy 2.7182
       (t/is-approx= m/E (get-in result [0 0]) :tolerance 1e-6)
       (t/is-approx= 0.0 (get-in result [0 1]) :tolerance 1e-6)
       (t/is-approx= 0.0 (get-in result [1 0]) :tolerance 1e-6)
       (t/is-approx= m/E (get-in result [1 1]) :tolerance 1e-6))
     ;; Diagonal matrix: exp([[a 0][0 b]]) = [[e^a 0][0 e^b]]
     (let [result (la/matrix-exp [[2.0 0.0] [0.0 3.0]])]
+      ;;numpy 7.3890
       (t/is-approx= (m/exp 2.0) (get-in result [0 0]) :tolerance 1e-6)
+      ;;numpy 20.085
       (t/is-approx= (m/exp 3.0) (get-in result [1 1]) :tolerance 1e-6))
     ;; Rotation matrix test: exp([[0 -t][t 0]]) = [[cos(t) -sin(t)][sin(t) cos(t)]]
     (let [t 0.5
           result (la/matrix-exp [[0.0 (- t)] [t 0.0]])]
+      ;;numpy 0.87758
       (t/is-approx= (m/cos t) (get-in result [0 0]) :tolerance 1e-4)
+      ;;numpy -0.47942
       (t/is-approx= (- (m/sin t)) (get-in result [0 1]) :tolerance 1e-4)
+      ;;numpy 0.47942
       (t/is-approx= (m/sin t) (get-in result [1 0]) :tolerance 1e-4)
+      ;;numpy 0.87758
       (t/is-approx= (m/cos t) (get-in result [1 1]) :tolerance 1e-4))))
 
 ;;;PRINCIPAL COMPONENT ANALYSIS
@@ -722,7 +750,9 @@
       (t/is-approx= 0.0 (second pca-explained-variance-ratio) :tolerance 1e-10)
       ;; First PC should be along [1/sqrt(2), 1/sqrt(2)] or [-1/sqrt(2), -1/sqrt(2)]
       (let [pc1 (first pca-principal-components)]
+        ;;numpy 0.70710
         (t/is-approx= (m/abs (first pc1)) (/ 1.0 (m/sqrt 2.0)) :tolerance 1e-10)
+        ;;numpy 0.70710
         (t/is-approx= (m/abs (second pc1)) (/ 1.0 (m/sqrt 2.0)) :tolerance 1e-10)))
     ;; 3x2 matrix with known covariance
     ;; Data centered on [0,0]: [-1, -2], [0, 0], [1, 2]
@@ -733,6 +763,7 @@
           result (la/pca data)
           {::la/keys [pca-eigenvalues pca-mean]} result]
       (t/is-data-approx= [0.0 0.0] pca-mean :tolerance 1e-10)
+      ;;numpy 5.0000
       (t/is-approx= 5.0 (first pca-eigenvalues) :tolerance 1e-10)
       (t/is-approx= 0.0 (second pca-eigenvalues) :tolerance 1e-10))
     ;; Uncorrelated data - identity covariance

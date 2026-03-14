@@ -38,7 +38,9 @@
     (t/is-spec-check integrals/integration {:num-tests 10}))
   ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;;ordinary
+  ;;Math 69.333
   (t/is= 69.33333333333331 (integrals/integration m/sq [2.0 6.0]))
+  ;;Math 3.3333e+299
   (t/is= 3.333333333333334E299 (integrals/integration m/sq [m/tiny-dbl 1e100]))
   (t/is= 2.886579864025407E-15 (integrals/integration m/cos [m/PI (* 5 m/PI)]))
   (t/is= -1.000000000000004 (integrals/integration m/cos [m/PI (* 5.5 m/PI)]))
@@ -49,23 +51,28 @@
     (integrals/integration m/cos [m/PI m/inf+]))
   (t/is= 0.2 (integrals/integration #(m/pow % -2.0) [5.0 m/inf+]))
   (t/is= 0.19999999999999996 (integrals/integration #(m/pow % -2.0) [m/inf- -5.0]))
+  ;;Math 1.7724
   (t/is= 1.7724538509055163 (integrals/integration #(m/exp (- (m/sq %))) [m/inf- m/inf+]))
   ;;vector
+  ;;Math 16.000, 69.333
   (t/is= [15.999999999999998 69.33333333333333]
     (integrals/integration
       #(vector % (m/sq %))
       [2.0 6.0]))
   ;; with change of var
+  ;;Math 1.7724, 1.8128
   (t/is= [1.7724538509055163 1.8128049541109543]
     (integrals/integration
       #(vector (m/exp (- (m/sq %))) (m/exp (- (m/pow % 4))))
       [m/inf- m/inf+]))
   ;;matrix
+  ;;Math 16.000, 69.333, 24.000, 20.000
   (t/is= [[15.999999999999998 69.33333333333334] [24.0 19.999999999999996]]
     (integrals/integration
       #(vector [% (m/sq %)] [(+ 2.0 %) 5.0])
       [2.0 6.0]))
   ;; with change of var
+  ;;Math 6.4000e-5, 0.0026666
   (t/is= [[6.400000000000001E-5 0.0026666666666666666] [0.2 0.2]]
     (integrals/integration
       #(vector [(m/pow % -6) (m/pow % -4)] [(m/pow % -2.0) (m/pow % -2.0)])
@@ -86,6 +93,7 @@
     (integrals/integration (fn [x] (m/pow x 3)) [0.0 1.0])
     :tolerance 1e-10)
   ;; ∫₀² (x² + 2x + 1) dx = [x³/3 + x² + x]₀² = 8/3 + 4 + 2 = 26/3 ≈ 8.667
+  ;;Math 8.6666
   (t/is-approx= (/ 26.0 3)
     (integrals/integration (fn [x] (+ (* x x) (* 2 x) 1)) [0.0 2.0])
     :tolerance 1e-10)
@@ -97,20 +105,24 @@
     :tolerance 0.1)
   ;; transcendental functions
   ;; ∫₀^π sin²(x) dx = π/2
+  ;;Math 1.5707
   (t/is-approx= (/ m/PI 2.0)
     (integrals/integration (fn [x] (m/sq (m/sin x))) [0.0 m/PI])
     :tolerance 1e-10)
   ;; ∫₀¹ e^(-x) dx = 1 - 1/e ≈ 0.6321
+  ;;Math 0.63212
   (t/is-approx= (- 1 (/ m/E))
     (integrals/integration (fn [x] (m/exp (- x))) [0.0 1.0])
     :tolerance 1e-10)
   ;; very small intervals
   ;; ∫₀^(1e-8) x² dx = (1e-8)³/3 = 3.33e-25
+  ;;Math 3.3333e-25
   (t/is-approx= 3.333333333333e-25
     (integrals/integration m/sq [0.0 1e-8])
     :tolerance 1e-27)
   ;; ∫₀^(1e-6) sin(x) dx ≈ (1e-6)²/2 = 5e-13 (since sin(x) ≈ x for small x)
   ;; Actually, ∫sin(x)dx = -cos(x), so ∫₀^a = 1 - cos(a) ≈ a²/2 for small a
+  ;;Math 4.9999e-13
   (t/is-approx= 5e-13
     (integrals/integration m/sin [0.0 1e-6])
     :tolerance 1e-15))
@@ -159,6 +171,7 @@
               b (or b 0.0)]
           (m/pow (* (double a) b) -2.0)))
       [[5.0 m/inf+] [1.0 2.0]]))
+  ;;Math 0.016666
   (t/is= 0.01666666666666667
     (integrals/rectangular-integration
       (fn [[a b]]
@@ -175,6 +188,7 @@
           [a (* (double a) b)]))
       [[2.0 6.0] [1.0 3.0]]))
   ;; with change of var
+  ;;SciPy 0.24705
   (t/is= [0.24705031697079533 0.24705031697079533]
     (integrals/rectangular-integration
       (fn [[a b]]
@@ -192,6 +206,7 @@
           [[a (* (double a) b)] [(+ 2.0 b) 5.0]]))
       [[2.0 6.0] [1.0 3.0]]))
   ;; with change of var
+  ;;Math 0.066666
   (t/is= [[0.06666666666666667 0.06666666666666667]
           [0.06666666666666667 0.06666666666666667]]
     (integrals/rectangular-integration
@@ -234,6 +249,7 @@
       [2.0 6.0]
       (fn [_outer]
         [1.0 3.0])))
+  ;;SciPy 0.24705
   (t/is= [0.24705031697079533 0.24705031697079533]
     (integrals/non-rectangular-2D-integration
       (fn [outer inner]
@@ -249,6 +265,7 @@
       [2.0 6.0]
       (fn [_outer]
         [1.0 3.0])))
+  ;;Math 0.066666
   (t/is-data-approx= [[0.06666666666666667 0.06666666666666667]
                       [0.06666666666666667 0.06666666666666667]]
     (integrals/non-rectangular-2D-integration
@@ -265,10 +282,12 @@
     (t/is-spec-check integrals/integration-with-error {:num-tests 20}))
   ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; Basic test - integral of x^2 from 0 to 1 = 1/3
+  ;;Math 0.33333
   (let [result (integrals/integration-with-error m/sq [0.0 1.0])]
     (t/is-approx= (::integrals/value result) 0.3333333333333333)
     (t/is (< (::integrals/error-estimate result) 1e-10)))
   ;; Infinite interval
+  ;;Math 1.7724
   (let [result (integrals/integration-with-error
                  #(m/exp (- (m/sq %)))
                  [m/inf- m/inf+])]
@@ -284,6 +303,7 @@
     (t/is-spec-check integrals/tanh-sinh-integration))
   ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; Basic polynomial (should work too)
+  ;;Math 0.33333
   (t/is-approx= 0.333333
     (integrals/tanh-sinh-integration m/sq [0.0 1.0])
     :tolerance 0.001)
@@ -315,6 +335,7 @@
     (t/is-spec-check integrals/clenshaw-curtis-integration {:num-tests 3}))
   ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; Basic polynomial
+  ;;Math 0.33333
   (t/is-approx= 0.333333
     (integrals/clenshaw-curtis-integration m/sq [0.0 1.0])
     :tolerance 0.0001)
@@ -327,6 +348,7 @@
     (integrals/clenshaw-curtis-integration m/cos [0.0 (/ m/PI 2)])
     :tolerance 0.0001)
   ;; With options
+  ;;Math 0.33333
   (t/is-approx= 0.333333
     (integrals/clenshaw-curtis-integration m/sq [0.0 1.0] {::integrals/cc-points 33})
     :tolerance 0.0001)
@@ -377,6 +399,7 @@
                  {::integrals/samples 50000})]
     (t/is-approx= 2.5 (::integrals/value result) :tolerance 0.05))
   ;; Test skip option (skip initial points)
+  ;;Math 0.33333
   (let [result (integrals/quasi-monte-carlo-integration
                  (fn [[x]] (m/sq x))
                  [[0.0 1.0]]
@@ -426,6 +449,7 @@
       {::integrals/omega 10.0 ::integrals/oscillation-type :sin})
     :tolerance 0.01)
   ;; ∫₀^π x·sin(10x) dx = -π/10 ≈ -0.314 (integration by parts)
+  ;;Math -0.31415
   (t/is-approx= (- (/ m/PI 10))
     (integrals/oscillatory-integration
       identity
@@ -470,21 +494,26 @@
     (t/is-spec-check integrals/gauss-hermite-integration))
   ;;no instrumentation; Orchestra fspec validation fails with fn args
   ;; f(x)=1: integral exp(-x^2) dx = sqrt(pi)
+  ;;Math 1.7724
   (t/is= 1.7724538509055157
     (integrals/gauss-hermite-integration (constantly 1.0)))
   ;; f(x)=x^2: integral x^2 exp(-x^2) dx = sqrt(pi)/2
+  ;;Math 0.88622
   (t/is= 0.8862269254527579
     (integrals/gauss-hermite-integration (fn [x] (* x x))))
   ;; f(x)=x^4: integral x^4 exp(-x^2) dx = 3*sqrt(pi)/4
+  ;;Math 1.3293
   (t/is= 1.329340388179136
     (integrals/gauss-hermite-integration (fn [x] (m/pow x 4))))
   ;; Test with 10 points
+  ;;Math 1.7724
   (t/is-approx= 1.7724538509055159
     (integrals/gauss-hermite-integration
       (constantly 1.0)
       {::integrals/gh-points 10})
     :tolerance 1e-12)
   ;; Test with 20 points
+  ;;Math 1.7724
   (t/is-approx= 1.7724538509055159
     (integrals/gauss-hermite-integration
       (constantly 1.0)

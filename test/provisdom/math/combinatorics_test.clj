@@ -13,14 +13,21 @@
     (t/is-spec-check combo/factorial))
   (t/with-instrument :all
     (t/is= 1.0 (combo/factorial 0))
+    ;;SciPy 0.95135
     (t/is= 0.9513507698668731 (combo/factorial 0.1))
+    ;;SciPy 0.88622
     (t/is= 0.886226925452758 (combo/factorial 0.5))
+    ;;SciPy 0.96176
     (t/is= 0.9617658319073874 (combo/factorial 0.9))
     (t/is= 1.0 (combo/factorial 1))
+    ;;SciPy 1.3293
     (t/is= 1.329340388179137 (combo/factorial 1.5))
     (t/is= 2.0 (combo/factorial 2.0))
+    ;;Math 5.1090E19
     (t/is= 5.109094217170945E19 (combo/factorial 21))
+    ;;Math 1.1240E21
     (t/is= 1.1240007277776072E21 (combo/factorial 22))
+    ;;Math 2.5852E22
     (t/is= 2.585201673888498E22 (combo/factorial 23))
     (t/is= 4.714723635992578E284 (combo/factorial 160))))   ;;Math 4.7147236359920616E284
 
@@ -35,13 +42,20 @@
     (t/is-spec-check combo/log-factorial))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-factorial 0))
+    ;;SciPy -0.049872
     (t/is= -0.04987244125983972 (combo/log-factorial 0.1))
+    ;;SciPy -0.12078
     (t/is= -0.1207822376352452 (combo/log-factorial 0.5))
+    ;;SciPy -0.038984
     (t/is= -0.03898427592308332 (combo/log-factorial 0.9))
     (t/is= 0.0 (combo/log-factorial 1))
+    ;;SciPy 0.28468
     (t/is= 0.2846828704729192 (combo/log-factorial 1.5))
+    ;;SciPy 0.69314
     (t/is= 0.6931471805599453 (combo/log-factorial 2.0))
+    ;;SciPy 51.606
     (t/is= 51.60667556776438 (combo/log-factorial 23))
+    ;;SciPy 655.48
     (t/is= 655.4848567108892 (combo/log-factorial 160))))
 
 (t/deftest subfactorial-test
@@ -55,9 +69,13 @@
     (t/is= 0 (combo/subfactorial 1))
     (t/is= 0 (combo/subfactorial 1.5))
     (t/is= 1 (combo/subfactorial 2.0))
+    ;;Math 8.9501E17
     (t/is= 895014631192902121 (combo/subfactorial 20))
+    ;;Math 1.8795E19
     (t/is= 18795307255050944540N (combo/subfactorial 21))
+    ;;Math 4.1349E20
     (t/is= 4.134967596111206E20 (combo/subfactorial 22))
+    ;;Math 9.5104E21
     (t/is= 9.510425471055779E21 (combo/subfactorial 23))))
 
 (t/deftest double-factorial-test
@@ -114,6 +132,7 @@
     (t/is= 2.0 (combo/choose-k-from-n 1 2))
     (t/is= 4.0 (combo/choose-k-from-n 1 4))
     (t/is= 10.0 (combo/choose-k-from-n 2 5))
+    ;;SciPy 1.2689E24
     (t/is= 1.268976952064044E24 (combo/choose-k-from-n 12 545))))
 
 (t/deftest choose-k-from-n'-test
@@ -130,9 +149,13 @@
     (t/is= 0.0 (combo/log-choose-k-from-n 0 1))
     (t/is= 0.0 (combo/log-choose-k-from-n 0 0))
     (t/is= 0.0 (combo/log-choose-k-from-n 1 1))
+    ;;SciPy 0.33647
     (t/is= 0.33647223662121284 (combo/log-choose-k-from-n 1 1.4))
+    ;;SciPy 1.3862
     (t/is= 1.3862943611198908 (combo/log-choose-k-from-n 1 4))
+    ;;SciPy 2.3025
     (t/is= 2.3025850929940455 (combo/log-choose-k-from-n 2 5))
+    ;;SciPy 55.500
     (t/is= 55.50025325814249 (combo/log-choose-k-from-n 12 545))))
 
 (t/deftest multinomial-coefficient-test
@@ -149,6 +172,7 @@
     (t/is-spec-check combo/log-multinomial-coefficient))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-multinomial-coefficient [3]))
+    ;;SciPy 4.0943
     (t/is-approx= 4.0943445622221 (combo/log-multinomial-coefficient [2 3 1]) :tolerance 1e-10)))
 
 (t/deftest stirling-number-of-the-second-kind-test
@@ -160,6 +184,7 @@
     (t/is= 1.0 (combo/stirling-number-of-the-second-kind 1 1))
     (t/is= 1.0 (combo/stirling-number-of-the-second-kind 1 4))
     (t/is= 15.0 (combo/stirling-number-of-the-second-kind 2 5))
+    ;;Math 1.4318E207
     (t/is= 1.4318980615233435E207 (combo/stirling-number-of-the-second-kind 12 200))))
 
 (t/deftest stirling-number-of-the-second-kind'-test
@@ -174,6 +199,7 @@
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 0 0))
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 5 5))
+    ;;Math 2.7080
     (t/is-approx= 2.708050201102210
       (combo/log-stirling-number-of-the-second-kind 2 5) :tolerance 1e-10))) ;; ln(15)
 
@@ -203,8 +229,11 @@
     (t/is= 1 (combo/bell-number 1))
     (t/is= 2 (combo/bell-number 2))
     (t/is= 52 (combo/bell-number 5))
+    ;;Math 4.9631E19
     (t/is= 49631246523618756274N (combo/bell-number 26))
+    ;;Math 5.4571E20
     (t/is= 5.4571704793605997E20 (combo/bell-number 27))
+    ;;Math 6.1605E21
     (t/is= 6.160539404599935E21 (combo/bell-number 28))))
 
 (t/deftest catalan-number-test
@@ -215,8 +244,11 @@
     (t/is= 1.0 (combo/catalan-number 1))
     (t/is= 2.0 (combo/catalan-number 2))
     (t/is= 5.0 (combo/catalan-number 3))
+    ;;Math 14.000
     (t/is-approx= 14.0 (combo/catalan-number 4))
+    ;;Math 42.000
     (t/is-approx= 42.0 (combo/catalan-number 5))
+    ;;Math 16796
     (t/is-approx= 16796.0 (combo/catalan-number 10))))
 
 (t/deftest catalan-number'-test
@@ -233,8 +265,11 @@
     (t/is= 1.0 (combo/binomial-probability 0 0 0.4))
     (t/is= 0.4 (combo/binomial-probability 1 1 0.4))
     (t/is= 0.48 (combo/binomial-probability 1 2 0.4))
+    ;;SciPy 0.34560
     (t/is= 0.34559999999999996 (combo/binomial-probability 1 4 0.4))
+    ;;SciPy 0.34559
     (t/is= 0.3456 (combo/binomial-probability 2 5 0.4))
+    ;;SciPy 1.2100E-99
     (t/is= 1.2100131348406543E-99 (combo/binomial-probability 12 545 0.4))))
 
 (t/deftest log-binomial-probability-test
@@ -242,10 +277,15 @@
     (t/is-spec-check combo/log-binomial-probability))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-binomial-probability 0 0 0.4))
+    ;;SciPy -0.91629
     (t/is= -0.916290731874155 (combo/log-binomial-probability 1 1 0.4))
+    ;;SciPy -0.78414
     (t/is= -0.7841487447593384 (combo/log-binomial-probability 1 1.4 0.4))
+    ;;SciPy -1.0624
     (t/is= -1.0624732420522363 (combo/log-binomial-probability 1 4 0.4))
+    ;;SciPy -1.0624
     (t/is= -1.0624732420522367 (combo/log-binomial-probability 2 5 0.4))
+    ;;SciPy -227.76
     (t/is= -227.7652929916204 (combo/log-binomial-probability 12 545.0 0.4))))
 
 ;;;COUNTING
@@ -290,6 +330,7 @@
     (t/is= 5 (combo/count-integer-partitions 4))
     (t/is= 7 (combo/count-integer-partitions 5))
     (t/is= 42 (combo/count-integer-partitions 10))
+    ;;Math 1.9056E8
     (t/is= 190569292 (combo/count-integer-partitions 100))))
 
 ;;;UNORDERED COMBINATIONS

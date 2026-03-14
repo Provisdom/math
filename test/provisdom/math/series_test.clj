@@ -73,11 +73,17 @@
     (t/is= 11.120000000000001
       (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? false}))
     (t/is= 11.0 (series/sum-convergent-series [1 3 7]))
+    ;;Math 0.0000
     (t/is-approx= 0.0 (series/sum-convergent-series (sin-series m/PI)) :tolerance 1e-14)
+    ;;Math -1.0000
     (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 1.5 m/PI))) :tolerance 1e-12)
+    ;;Math 0.0000
     (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 2 m/PI))) :tolerance 1e-12)
+    ;;Math 1.0000
     (t/is-approx= 1.0 (series/sum-convergent-series (sin-series (* 2.5 m/PI))) :tolerance 1e-12)
+    ;;Math 0.0000
     (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 3.0 m/PI))) :tolerance 1e-12)
+    ;;Math -1.0000
     (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 3.5 m/PI))) :tolerance 1e-12)
     (t/is= 0.9999999999999877
       (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))
@@ -292,6 +298,7 @@
     (let [terms (map #(m/pow 0.5 %) (range))
           result (series/sum-with-diagnostics terms)]
       (t/is (::series/converged? result))
+      ;;Math 2.0000
       (t/is (m/roughly? 2.0 (::series/sum result) 1e-10))
       (t/is (pos? (::series/iterations result))))
     ;; Finite sequence

@@ -27,16 +27,27 @@
     (t/is= 1.0 ((poly/chebyshev-polynomial-fn 12) 1.0))
     (t/is= 1.0 ((poly/chebyshev-polynomial-fn 13) 1.0))
     (t/is= 2.0 ((poly/chebyshev-polynomial-fn 1) 2.0))
+    ;;SciPy 17.000
     (t/is= 17.0 ((poly/chebyshev-polynomial-fn 2) 3.0))
+    ;;SciPy 244.00
     (t/is= 244.0 ((poly/chebyshev-polynomial-fn 3) 4.0))
+    ;;SciPy 4801.0
     (t/is= 4801.0 ((poly/chebyshev-polynomial-fn 4) 5.0))
+    ;;SciPy 1.2012e+5
     (t/is= 120126.0 ((poly/chebyshev-polynomial-fn 5) 6.0))
+    ;;SciPy 3.6504e+6
     (t/is= 3650401.0 ((poly/chebyshev-polynomial-fn 6) 7.0))
+    ;;SciPy 1.3057e+8
     (t/is= 1.30576328E8 ((poly/chebyshev-polynomial-fn 7) 8.0))
+    ;;SciPy 5.3749e+9
     (t/is= 5.374978561E9 ((poly/chebyshev-polynomial-fn 8) 9.0))
+    ;;SciPy 2.5028e+11
     (t/is= 2.5028308009E11 ((poly/chebyshev-polynomial-fn 9) 10.0))
+    ;;SciPy 1.3007e+13
     (t/is= 1.3007560326001E13 ((poly/chebyshev-polynomial-fn 10) 11.0))
+    ;;SciPy 7.4641e+14
     (t/is= 7.46411226303612E14 ((poly/chebyshev-polynomial-fn 11) 12.0))
+    ;;SciPy 4.6873e+16
     (t/is= 4.687309681236E16 ((poly/chebyshev-polynomial-fn 12) 13.0))
     (t/is= 1.0 ((poly/chebyshev-polynomial-fn 0 {::poly/second-kind? true}) 1.0))
     (t/is= 2.0 ((poly/chebyshev-polynomial-fn 1 {::poly/second-kind? true}) 1.0))
@@ -53,21 +64,36 @@
     (t/is= 13.0 ((poly/chebyshev-polynomial-fn 12 {::poly/second-kind? true}) 1.0))
     (t/is= 14.0 ((poly/chebyshev-polynomial-fn 13 {::poly/second-kind? true}) 1.0))
     (t/is= 4.0 ((poly/chebyshev-polynomial-fn 1 {::poly/second-kind? true}) 2.0))
+    ;;SciPy 35.000
     (t/is= 35.0 ((poly/chebyshev-polynomial-fn 2 {::poly/second-kind? true}) 3.0))
+    ;;SciPy 496.00
     (t/is= 496.0 ((poly/chebyshev-polynomial-fn 3 {::poly/second-kind? true}) 4.0))
+    ;;SciPy 9701.0
     (t/is= 9701.0 ((poly/chebyshev-polynomial-fn 4 {::poly/second-kind? true}) 5.0))
+    ;;SciPy 2.4195e+5
     (t/is= 241956.0 ((poly/chebyshev-polynomial-fn 5 {::poly/second-kind? true}) 6.0))
+    ;;SciPy 7.3386e+6
     (t/is= 7338631.0 ((poly/chebyshev-polynomial-fn 6 {::poly/second-kind? true}) 7.0))
+    ;;SciPy 2.6218e+8
     (t/is= 2.62184896E8 ((poly/chebyshev-polynomial-fn 7 {::poly/second-kind? true}) 8.0))
+    ;;SciPy 1.0783e+10
     (t/is= 1.0783446409E10 ((poly/chebyshev-polynomial-fn 8 {::poly/second-kind? true}) 9.0))
+    ;;SciPy 5.0182e+11
     (t/is= 5.018270401E11 ((poly/chebyshev-polynomial-fn 9 {::poly/second-kind? true}) 10.0))
+    ;;SciPy 2.6069e+13
     (t/is= 2.6069206375211E13 ((poly/chebyshev-polynomial-fn 10 {::poly/second-kind? true}) 11.0))
+    ;;SciPy 1.4954e+15
     (t/is= 1.4954277353148E15 ((poly/chebyshev-polynomial-fn 11 {::poly/second-kind? true}) 12.0))
+    ;;SciPy 9.3885e+16
     (t/is= 9.3885489910449904E16
       ((poly/chebyshev-polynomial-fn 12 {::poly/second-kind? true}) 13.0))
+    ;;SciPy 41.768
     (t/is= 41.76799999999999 ((poly/chebyshev-polynomial-fn 3) 2.3))
+    ;;SciPy -0.73074
     (t/is= -0.7307444539392003 ((poly/chebyshev-polynomial-fn 13) 0.3))
+    ;;SciPy 88.136
     (t/is= 88.13599999999997 ((poly/chebyshev-polynomial-fn 3 {::poly/second-kind? true}) 2.3))
+    ;;SciPy -0.94542
     (t/is= -0.9454282973183997 ((poly/chebyshev-polynomial-fn 13 {::poly/second-kind? true}) 0.3))))
 
 (t/deftest chebyshev-derivative-fn-test
@@ -78,30 +104,44 @@
     (t/is= 0.0 ((poly/chebyshev-derivative-fn 0 1) 1.0))
     (t/is= 1.0 ((poly/chebyshev-derivative-fn 1 1) 1.0))
     (t/is= 0.0 ((poly/chebyshev-derivative-fn 1 2) 1.0))
+    ;;Math 4.0000
     (t/is= 4.0 ((poly/chebyshev-derivative-fn 2 1) 1.0))
+    ;;Math 4.0000
     (t/is= 4.0 ((poly/chebyshev-derivative-fn 2 2) 1.0))
+    ;;Math 9.0000
     (t/is= 9.0 ((poly/chebyshev-derivative-fn 3 1) 1.0))
+    ;;Math 24.000
     (t/is= 24.0 ((poly/chebyshev-derivative-fn 3 2) 1.0))
+    ;;Math 24.000
     (t/is= 23.99999998070612 ((poly/chebyshev-derivative-fn 3 3) 1.0))
     (t/is= 2.0 ((poly/chebyshev-derivative-fn 1 1 {::poly/second-kind? true}) 1.0))
     (t/is= 2.220446049250313E-9 ((poly/chebyshev-derivative-fn 1 2 {::poly/second-kind? true}) 1.0))
+    ;;Math 8.0000
     (t/is= 8.0 ((poly/chebyshev-derivative-fn 2 1 {::poly/second-kind? true}) 1.0))
+    ;;Math 8.0000
     (t/is= 8.00000000911183 ((poly/chebyshev-derivative-fn 2 2 {::poly/second-kind? true}) 1.0))
+    ;;Math 20.000
     (t/is= 20.0 ((poly/chebyshev-derivative-fn 3 1 {::poly/second-kind? true}) 1.0))
+    ;;Math 48.000
     (t/is= 48.00000002358473 ((poly/chebyshev-derivative-fn 3 2 {::poly/second-kind? true}) 1.0))
+    ;;Math 48.000
     (t/is= 47.99999995697135 ((poly/chebyshev-derivative-fn 3 3 {::poly/second-kind? true}) 1.0))))
 
 (t/deftest chebyshev-poly-factors-to-regular-poly-factors-test
   (t/with-instrument `poly/chebyshev-poly-factors-to-regular-poly-factors
     (t/is-spec-check poly/chebyshev-poly-factors-to-regular-poly-factors))
   (t/with-instrument :all
+    ;;Math [3.0000, 5.0000]
     (t/is= [3.0 4.999999999810711] (poly/chebyshev-poly-factors-to-regular-poly-factors [3.0 5.0]))
+    ;;Math [3.0000, 10.000]
     (t/is= [3.0 10.000000000065512]
       (poly/chebyshev-poly-factors-to-regular-poly-factors
         [3.0 5.0]
         {::poly/second-kind? true}))
+    ;;Math [-1.0000, -13.000, 16.000, 144.00]
     (t/is= [-1.0 -13.00000000020729 15.999999999349868 143.99999999969992]
       (poly/chebyshev-poly-factors-to-regular-poly-factors [3.0 5.0 4.0 6.0]))
+    ;;Math [-1.0000, -14.000, 32.000, 288.00]
     (t/is= [-1.0 -13.999999999902979 31.99999999980996 287.99999999939985]
       (poly/chebyshev-poly-factors-to-regular-poly-factors
         [3.0 5.0 4.0 6.0]
@@ -193,6 +233,7 @@
     ;; c₀T₀ + c₁T₁ at x=0.5: 1*1 + 2*0.5 = 2
     (t/is= 2.0 (poly/clenshaw-eval [1 2] 0.5))
     ;; T₂(0.5) = 2(0.5)² - 1 = -0.5, so [1 2 3] => 1 + 2*0.5 + 3*(-0.5) = 0.5
+    ;;Math 0.50000
     (t/is= 0.5 (poly/clenshaw-eval [1 2 3] 0.5))
     ;; At x=1, T_n(1) = 1 for all n, so sum of coefficients
     (t/is= 6.0 (poly/clenshaw-eval [1 2 3] 1.0))
@@ -267,7 +308,9 @@
   (t/is-approx= 0.0 (first (poly/chebyshev-nodes 1)) :tolerance 1e-10)
   ;; n=2 should give cos(π/4) and cos(3π/4)
   (let [nodes (poly/chebyshev-nodes 2)]
+    ;;Math 0.70710
     (t/is-approx= 0.7071067811865476 (first nodes) :tolerance 1e-10)
+    ;;Math -0.70710
     (t/is-approx= -0.7071067811865476 (second nodes) :tolerance 1e-10)))
 
 (t/deftest chebyshev-extrema-test
@@ -286,8 +329,10 @@
     ;; x² = (T₂ + T₀)/2, so [1 0 1] (1+x²) => [1.5 0 0.5]
     (let [result (poly/regular-poly-factors-to-chebyshev-poly-factors [1 0 1])]
       (t/is= 3 (count result))
+      ;;Math 1.5000
       (t/is-approx= 1.5 (nth result 0) :tolerance 1e-10)
       (t/is-approx= 0.0 (nth result 1) :tolerance 1e-10)
+      ;;Math 0.50000
       (t/is-approx= 0.5 (nth result 2) :tolerance 1e-10))
     ;; constant: 5 = 5*T₀
     (t/is-approx= 5.0
@@ -307,6 +352,7 @@
     ;; P₁(x) = x
     (t/is= 0.5 ((poly/legendre-polynomial-fn 1) 0.5))
     ;; P₂(x) = (3x² - 1)/2, at x=0.5: (3*0.25 - 1)/2 = -0.125
+    ;;SciPy -0.12500
     (t/is= -0.125 ((poly/legendre-polynomial-fn 2) 0.5))
     ;; P_n(1) = 1 for all n
     (t/is= 1.0 ((poly/legendre-polynomial-fn 5) 1.0))
@@ -321,8 +367,10 @@
     ;; Physicist's: H₀(x) = 1
     (t/is= 1.0 ((poly/hermite-polynomial-fn 0) 2.0))
     ;; Physicist's: H₁(x) = 2x
+    ;;SciPy 4.0000
     (t/is= 4.0 ((poly/hermite-polynomial-fn 1) 2.0))
     ;; Physicist's: H₂(x) = 4x² - 2, at x=1: 4 - 2 = 2
+    ;;SciPy 2.0000
     (t/is= 2.0 ((poly/hermite-polynomial-fn 2) 1.0))
     ;; Probabilist's: He₀(x) = 1
     (t/is= 1.0 ((poly/hermite-polynomial-fn 0 {::poly/physicist? false}) 2.0))
@@ -340,6 +388,7 @@
     ;; L₁(x) = 1 - x
     (t/is= -1.0 ((poly/laguerre-polynomial-fn 1) 2.0))
     ;; L₂(x) = (x² - 4x + 2)/2, at x=1: (1 - 4 + 2)/2 = -0.5
+    ;;SciPy -0.50000
     (t/is= -0.5 ((poly/laguerre-polynomial-fn 2) 1.0))
     ;; L_n(0) = 1 for all n
     (t/is= 1.0 ((poly/laguerre-polynomial-fn 5) 0.0))))
@@ -354,9 +403,11 @@
       (t/is= 0.0 (f 0.0))
       (t/is= 1.0 (f 1.0))
       (t/is= 4.0 (f 2.0))
+      ;;Math 2.2500
       (t/is= 2.25 (f 1.5))) ; 1.5² = 2.25
     ;; Points on y = 1 + x²: (0,1), (1,2), (2,5)
     (let [f (poly/lagrange-interpolation-fn [[0 1] [1 2] [2 5]])]
+      ;;Math 3.2500
       (t/is= 3.25 (f 1.5))))) ; 1 + 1.5² = 3.25
 
 (t/deftest lagrange-interpolation-coefficients-test

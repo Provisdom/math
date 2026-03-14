@@ -1126,7 +1126,10 @@
 (defn asinh
   "Returns inverse hyperbolic sine of `number`."
   [number]
-  (-> (double number) sq inc sqrt (+ number) log))
+  (let [x (double number)]
+    (if (neg? x)
+      (- (asinh (- x)))
+      (-> x sq inc sqrt (+ x) log))))
 
 (s/fdef asinh
   :args (s/cat :number ::number)
