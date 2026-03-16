@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;5 seconds
+;;13 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -209,7 +209,7 @@
 
 (t/deftest log-multinomial-coefficient-test
   (t/with-instrument `combo/log-multinomial-coefficient
-    (t/is-spec-check combo/log-multinomial-coefficient))
+    (t/is-spec-check combo/log-multinomial-coefficient {:num-tests 130}))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-multinomial-coefficient [3]))
     ;;SciPy 4.0943
@@ -345,7 +345,7 @@
 
 (t/deftest log-binomial-probability-test
   (t/with-instrument `combo/log-binomial-probability
-    (t/is-spec-check combo/log-binomial-probability))
+    (t/is-spec-check combo/log-binomial-probability {:num-tests 400}))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-binomial-probability 0 0 0.4))
     ;;SciPy -0.91629
