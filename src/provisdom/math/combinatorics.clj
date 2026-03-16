@@ -274,23 +274,35 @@
 
 (defn log-choose-k-from-n
   "Computes the natural logarithm of the binomial coefficient.
-  
-  Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). More numerically stable than computing the binomial
-  coefficient directly for large values.
-  
+
+  Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). When min(k, n-k) is a small integer, uses direct summation
+  log C(n,k) = Σ log((n-k'+i)/i) to avoid catastrophic cancellation in log-factorial differences for
+  large n. Falls back to log-factorial subtraction for large or noninteger k.
+
   Constraints: n ≥ k ≥ 0
-  
+
   Examples:
     (log-choose-k-from-n 2 5)   ;=> 2.3025850929940455 (ln(10))
     (log-choose-k-from-n 50 100) ;=> 66.7838... (ln of very large number)
     (log-choose-k-from-n 0 5)   ;=> 0.0 (ln(1))"
   [k n]
-  (let [lfn (log-factorial n)]
-    (if (m/inf+? lfn)
-      m/inf+
-      (- lfn
-        (log-factorial k)
-        (log-factorial (- n k))))))
+  (let [k' (min k (- n k))]
+    (if (and (m/long-able? k') (<= k' 100000))
+      (let [k-long (long k')]
+        (if (zero? k-long)
+          0.0
+          (let [n-minus-k' (- n k')]
+            (loop [i (long 1)
+                   acc 0.0]
+              (if (> i k-long)
+                acc
+                (recur (inc i) (+ acc (m/log (/ (double (+ n-minus-k' i)) (double i))))))))))
+      (let [lfn (log-factorial n)]
+        (if (m/inf+? lfn)
+          m/inf+
+          (- lfn
+            (log-factorial k)
+            (log-factorial (- n k))))))))
 
 (s/fdef log-choose-k-from-n
   :args (s/and (s/cat :k ::m/non- :n ::m/non-)
@@ -322,14 +334,24 @@
 (defn log-multinomial-coefficient
   "Computes the natural logarithm of the multinomial coefficient.
 
-  More numerically stable than computing the coefficient directly for large values.
+  Decomposes into a product of binomial coefficients to leverage the direct summation in
+  [[log-choose-k-from-n]], avoiding catastrophic cancellation for large values.
 
   Examples:
     (log-multinomial-coefficient [2 3 1])  ;=> 4.0943... (ln(60))
     (log-multinomial-coefficient [50 50])  ;=> 66.7838... (ln(C(100,50)))"
   [ks]
-  (let [n (reduce + 0.0 ks)]
-    (- (log-factorial n) (reduce + 0.0 (map log-factorial ks)))))
+  (let [ks (seq ks)]
+    (if (or (nil? ks) (nil? (next ks)))
+      0.0
+      (loop [remaining (rest ks)
+             n (first ks)
+             acc 0.0]
+        (if-not (seq remaining)
+          acc
+          (let [k (first remaining)
+                n+k (+ n k)]
+            (recur (rest remaining) n+k (+ acc (log-choose-k-from-n k n+k)))))))))
 
 (s/fdef log-multinomial-coefficient
   :args (s/cat :ks (s/coll-of ::m/non-))
@@ -365,33 +387,192 @@
           n-no-less-than-k?)
   :ret ::m/number)
 
+(defn- log-add-exp
+  "Computes log(exp(a) + exp(b)) in a numerically stable way."
+  ^double [^double a ^double b]
+  (cond (= a m/inf-) b
+    (= b m/inf-) a
+    (> a b) (+ a (m/log-inc (m/exp (- b a))))
+    :else (+ b (m/log-inc (m/exp (- a b))))))
+
+(defn- log-sum-exp
+  "Computes log(Σ exp(a_i)) over a double-array of length cnt."
+  ^double [^doubles arr ^long cnt]
+  (if (== cnt 1)
+    (aget arr 0)
+    (let [mx (loop [i (long 0)
+                    v m/inf-]
+               (if (>= i cnt) v
+                 (recur (inc i) (max v (aget arr i)))))
+          s (loop [i (long 0)
+                   acc 0.0]
+              (if (>= i cnt) acc
+                (recur (inc i) (+ acc (m/exp (- (aget arr i) mx))))))]
+      (+ mx (m/log s)))))
+
+(defn- log-stirling-polynomial
+  "Computes log S(n, n-d) using the polynomial expansion in log-space.
+
+  Uses S(n,n-d) = Σ_{j=d+1}^{2d} B(d,j) × C(n,j) where B coefficients satisfy
+  B(d,j) = (j-1) × B(d-1,j-2) + (j-d) × B(d-1,j-1). All B values are positive, so log-sum-exp has no
+  cancellation. Exact up to floating-point precision."
+  ^double [^long d ^long n]
+  (cond (zero? d) 0.0
+    (== d 1) (log-choose-k-from-n 2 n)
+    :else (let [final-log-b
+                (loop [r (long 2)
+                       prev (double-array 1 0.0)]
+                  (if (> r d)
+                    prev
+                    (let [prev-sz (long (dec r))
+                          sz (long r)
+                          curr (double-array sz)]
+                      (dotimes [i sz]
+                        (let [j (+ r 1 i)
+                              j2-idx (long (- j 2 r))
+                              has-j2 (and (>= j2-idx 0) (< j2-idx prev-sz))
+                              j1-idx (long (- j 1 r))
+                              has-j1 (and (>= j1-idx 0) (< j1-idx prev-sz))
+                              t1 (if has-j2
+                                   (+ (m/log (double (dec j)))
+                                     (aget prev j2-idx))
+                                   m/inf-)
+                              t2 (if has-j1
+                                   (+ (m/log (double (- j r)))
+                                     (aget prev j1-idx))
+                                   m/inf-)]
+                          (aset curr i (log-add-exp t1 t2))))
+                      (recur (inc r) curr))))
+                max-j (min (* 2 d) n)
+                min-j (+ d 1)
+                num-terms (long (max 0 (- max-j min-j -1)))]
+            (if (zero? num-terms)
+              m/inf-
+              (let [terms (double-array num-terms)]
+                (dotimes [i num-terms]
+                  (aset terms i
+                    (+ (aget final-log-b i)
+                      (log-choose-k-from-n (+ d 1 i) n))))
+                (log-sum-exp terms num-terms))))))
+
+(defn- log-stirling-ie
+  "Computes log S(n, k) via inclusion-exclusion in log-space.
+
+  S(n,k) = (1/k!) × Σ_{j=0}^{k} (-1)^j × C(k,j) × (k-j)^n. Separates positive and negative terms and
+  uses log-sum-exp. Accurate when n >> k × log(k), which is guaranteed when this function is called
+  (k ≤ 170, d > 2000)."
+  ^double [^long k ^long n]
+  (let [half-k (inc (quot k 2))
+        pos-arr (double-array half-k)
+        neg-arr (double-array half-k)
+        [np nn]
+        (loop [j (long 0)
+               pi (long 0)
+               ni (long 0)]
+          (if (>= j k)
+            [pi ni]
+            (let [log-binom (log-choose-k-from-n j k)
+                  log-power (* (double n) (m/log (double (- k j))))
+                  log-mag (+ log-binom log-power)]
+              (if (even? j)
+                (do (aset pos-arr pi log-mag) (recur (inc j) (inc pi) ni))
+                (do (aset neg-arr ni log-mag) (recur (inc j) pi (inc ni)))))))
+        np (long np)
+        nn (long nn)
+        log-pos (log-sum-exp pos-arr np)
+        log-neg (if (zero? nn) m/inf- (log-sum-exp neg-arr nn))]
+    (if (= log-neg m/inf-)
+      (- log-pos (log-factorial k))
+      (let [diff (- log-neg log-pos)]
+        (if (>= diff 0)
+          m/inf-
+          (- (+ log-pos (m/log-inc (- (m/exp diff))))
+            (log-factorial k)))))))
+
+(defn- log-stirling-saddle-point
+  "Computes log S(n, k) via saddle-point approximation.
+
+  Finds z₀ satisfying k × z × e^z / (e^z - 1) = n + 1 using Newton's method, then applies the
+  saddle-point formula. Typically accurate to 4+ significant figures. Used when both k and n-k
+  exceed the thresholds for exact methods."
+  ^double [^long k ^long n]
+  (let [kd (double k)
+        nd (double n)
+        target (inc nd)
+        r (/ target kd)
+        z0 (cond (> r 500.0) r
+             (> r 3.0) (m/log r)
+             :else (max 0.001 (m/sqrt (* 2.0 (- r 1.0)))))
+        z (loop [z (double z0)
+                 iter (long 0)]
+            (if (>= iter 100) z
+              (if (> z 500.0)
+                (let [dz (/ (- (* kd z) target) kd)
+                      zn (- z dz)]
+                  (if (< (m/abs dz) (* 1e-13 (m/abs z)))
+                    zn
+                    (recur zn (inc iter))))
+                (let [emz (m/exp (- z))
+                      denom (- 1.0 emz)
+                      h (/ (* kd z) denom)
+                      hp (/ (* kd (- 1.0 (* (+ 1.0 z) emz)))
+                           (* denom denom))
+                      dz (/ (- h target) hp)
+                      zn (max 1e-15 (- z dz))]
+                  (if (< (m/abs dz) (* 1e-13 (max 1.0 (m/abs z))))
+                    zn
+                    (recur zn (inc iter)))))))
+        large-z? (> z 500.0)
+        gz (if large-z?
+             (- (* kd z) (* target (m/log z)))
+             (- (* kd (m/log (- (m/exp z) 1.0)))
+               (* target (m/log z))))
+        gzz (if large-z?
+              (/ target (* z z))
+              (let [ez (m/exp z)
+                    em1 (- ez 1.0)]
+                (+ (- (/ (* kd ez) (* em1 em1)))
+                  (/ target (* z z)))))]
+    (- (+ (log-factorial nd) gz)
+      (log-factorial kd)
+      (* 0.5 (m/log (* 2.0 m/PI gzz))))))
+
+(def ^:private ^:const max-poly-d
+  "Maximum d = n-k for the exact polynomial formula."
+  2000)
+
 (defn log-stirling-number-of-the-second-kind
   "Computes the natural logarithm of the Stirling number of the second kind.
 
-  More numerically stable for large values where the direct computation would overflow (k > 170).
+  Uses a multi-tier algorithm for accuracy and speed across all input ranges:
+  - Direct computation for k ≤ 170 with moderate n
+  - Exact polynomial expansion for small n-k (≤ 2000)
+  - Inclusion-exclusion in log-space for small k with large n
+  - Saddle-point approximation for large k and large n-k
 
   Examples:
-    (log-stirling-number-of-the-second-kind 3 5)  ;=> 3.2188... (ln(25))
-    (log-stirling-number-of-the-second-kind 100 200) ;=> handles large values"
+    (log-stirling-number-of-the-second-kind 3 5)    ;=> 3.2188... (ln(25))
+    (log-stirling-number-of-the-second-kind 200 400) ;=> 1220.5..."
   [k n]
-  (cond
-    (zero? k) (if (zero? n) 0.0 m/inf-)
-    (== k n) 0.0
-    (> k n) m/inf-
-    (<= k 170)
-    ;; For smaller values, compute directly and take log
-    (let [result (stirling-number-of-the-second-kind k n)]
-      (if (or (m/nan? result) (<= result 0))
-        m/inf-
-        (m/log result)))
-    :else
-    ;; For very large k, use log-space approximation
-    ;; This is approximate but avoids overflow
-    (let [;; Use Temme's asymptotic approximation for large k
-          ;; S(k,n) ~ k^n / k! for n >> k
-          ;; log(S(k,n)) ~ n*log(k) - log(k!)
-          approx (- (* n (m/log k)) (log-factorial k))]
-      approx)))
+  (let [k (long k)
+        n (long n)]
+    (cond (zero? k) (if (zero? n) 0.0 m/inf-)
+      (== k n) 0.0
+      (> k n) m/inf-
+      (== k 1) 0.0
+      :else (let [d (- n k)]
+              (cond
+                ;; Tier 1: direct computation for small k and moderate n
+                (and (<= k 170) (<= d 500)) (let [result (stirling-number-of-the-second-kind k n)]
+                                              (if (or (m/nan? result) (<= result 0))
+                                                m/inf-
+                                                (m/log result)))
+                ;; Tier 2: exact polynomial expansion for small d = n-k
+                (<= d max-poly-d) (log-stirling-polynomial d n)
+                ;; Tier 3: inclusion-exclusion for small k, large n
+                (<= k 170) (log-stirling-ie k n)
+                ;; Tier 4: saddle-point approximation
+                :else (log-stirling-saddle-point k n))))))
 
 (s/fdef log-stirling-number-of-the-second-kind
   :args (s/and (s/cat :k ::m/long-non- :n ::m/long-non-)
@@ -520,7 +701,8 @@
   
   Formula: P(X=k) = C(n,k) × p^k × (1-p)^(n-k)
   
-  For large `trials` (>1000), consider using [[log-binomial-probability]] to avoid numerical overflow.
+  For large `trials` (>1000), consider using [[log-binomial-probability]] to avoid numerical
+  overflow.
   
   Examples:
     (binomial-probability 2 5 0.3)  ;=> 0.30869 (2 successes in 5 trials)

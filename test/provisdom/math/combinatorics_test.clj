@@ -1,6 +1,7 @@
 (ns provisdom.math.combinatorics-test
   (:require
     [provisdom.math.combinatorics :as combo]
+    [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
 ;;5 seconds
@@ -103,23 +104,39 @@
   (t/with-instrument `combo/rising-factorial
     (t/is-spec-check combo/rising-factorial))
   (t/with-instrument :all
+    ;;mpmath 1.0
     (t/is= 1.0 (combo/rising-factorial 5 0))
+    ;;mpmath 5.0
     (t/is= 5.0 (combo/rising-factorial 5 1))
+    ;;mpmath 30.0
     (t/is= 30.0 (combo/rising-factorial 5 2))               ;; 5 × 6
+    ;;mpmath 360.0
     (t/is= 360.0 (combo/rising-factorial 3 4))              ;; 3 × 4 × 5 × 6
+    ;;mpmath 120.0
     (t/is= 120.0 (combo/rising-factorial 1 5))              ;; same as 5!
-    (t/is= 1.875 (combo/rising-factorial 0.5 3))))          ;; 0.5 × 1.5 × 2.5
+    ;;mpmath 1.875
+    (t/is= 1.875 (combo/rising-factorial 0.5 3))            ;; 0.5 × 1.5 × 2.5
+    ;;mpmath 176310.36293506622
+    (t/is= 176310.36293506622 (combo/rising-factorial 0.25 10))))
 
 (t/deftest falling-factorial-test
   (t/with-instrument `combo/falling-factorial
     (t/is-spec-check combo/falling-factorial))
   (t/with-instrument :all
+    ;;mpmath 1.0
     (t/is= 1.0 (combo/falling-factorial 5 0))
+    ;;mpmath 5.0
     (t/is= 5.0 (combo/falling-factorial 5 1))
+    ;;mpmath 20.0
     (t/is= 20.0 (combo/falling-factorial 5 2))              ;; 5 × 4
+    ;;mpmath 60.0
     (t/is= 60.0 (combo/falling-factorial 5 3))              ;; 5 × 4 × 3
+    ;;mpmath 120.0
     (t/is= 120.0 (combo/falling-factorial 5 5))             ;; same as 5!
-    (t/is= 8.75 (combo/falling-factorial 3.5 2))))          ;; 3.5 × 2.5
+    ;;mpmath 8.75
+    (t/is= 8.75 (combo/falling-factorial 3.5 2))            ;; 3.5 × 2.5
+    ;;mpmath 41333.90625
+    (t/is= 41333.90625 (combo/falling-factorial 10.5 5))))
 
 ;;;CHOOSING
 (t/deftest choose-k-from-n-test
@@ -151,12 +168,35 @@
     (t/is= 0.0 (combo/log-choose-k-from-n 1 1))
     ;;SciPy 0.33647
     (t/is= 0.33647223662121284 (combo/log-choose-k-from-n 1 1.4))
-    ;;SciPy 1.3862
-    (t/is= 1.3862943611198908 (combo/log-choose-k-from-n 1 4))
-    ;;SciPy 2.3025
-    (t/is= 2.3025850929940455 (combo/log-choose-k-from-n 2 5))
-    ;;SciPy 55.500
-    (t/is= 55.50025325814249 (combo/log-choose-k-from-n 12 545))))
+    ;;mpmath 1.3862943611198906
+    (t/is= 1.3862943611198906 (combo/log-choose-k-from-n 1 4))
+    ;;mpmath 2.3025850929940459
+    (t/is= 2.302585092994046 (combo/log-choose-k-from-n 2 5))
+    ;;mpmath 55.500253258142337
+    (t/is= 55.50025325814234 (combo/log-choose-k-from-n 12 545))
+    ;; cross-check: log of choose-k-from-n (product formula)
+    (t/is= (m/log (combo/choose-k-from-n 5 100000)) (combo/log-choose-k-from-n 5 100000))
+    (t/is= (m/log (combo/choose-k-from-n 10 10000)) (combo/log-choose-k-from-n 10 10000))
+    ;; large n — direct summation avoids catastrophic cancellation
+    ;; log C(n, 1) = log(n)
+    (t/is= (m/log 1000000000000000) (combo/log-choose-k-from-n 1 1000000000000000))
+    (t/is= (m/log 1000000000000000000) (combo/log-choose-k-from-n 1 1000000000000000000))
+    ;; log C(n, 2) = log(n) + log(n-1) - log(2), n = 10^15 (exact doubles)
+    (let [n 1000000000000000]
+      (t/is= (- (+ (m/log n) (m/log (dec n))) (m/log 2))
+        (combo/log-choose-k-from-n 2 n)))
+    ;; log C(n, 5) via independent sum of logs, n = 10^15
+    (let [n 1000000000000000]
+      (t/is-approx= (- (+ (m/log n) (m/log (- n 1)) (m/log (- n 2))
+                         (m/log (- n 3)) (m/log (- n 4)))
+                      (m/log 120.0))
+        (combo/log-choose-k-from-n 5 n)
+        :tolerance 1e-10))
+    ;; n = 10^18 — old log-factorial approach returned 0.0 (total precision loss)
+    ;;mpmath 202.44516662668207
+    (t/is= 202.44516662668207 (combo/log-choose-k-from-n 5 1000000000000000000))
+    ;;mpmath 399.36090416585273
+    (t/is= 399.36090416585273 (combo/log-choose-k-from-n 10 1000000000000000000))))
 
 (t/deftest multinomial-coefficient-test
   (t/with-instrument `combo/multinomial-coefficient
@@ -179,12 +219,19 @@
   (t/with-instrument `combo/stirling-number-of-the-second-kind
     (t/is-spec-check combo/stirling-number-of-the-second-kind))
   (t/with-instrument :all
+    ;;mpmath 0
     (t/is= 0.0 (combo/stirling-number-of-the-second-kind 0 1))
+    ;;mpmath 1
     (t/is= 1.0 (combo/stirling-number-of-the-second-kind 0 0))
+    ;;mpmath 1
     (t/is= 1.0 (combo/stirling-number-of-the-second-kind 1 1))
+    ;;mpmath 1
     (t/is= 1.0 (combo/stirling-number-of-the-second-kind 1 4))
+    ;;mpmath 15
     (t/is= 15.0 (combo/stirling-number-of-the-second-kind 2 5))
-    ;;Math 1.4318E207
+    ;;mpmath 42525
+    (t/is= 42525.0 (combo/stirling-number-of-the-second-kind 5 10))
+    ;;mpmath 1.4318980615233434E207
     (t/is= 1.4318980615233435E207 (combo/stirling-number-of-the-second-kind 12 200))))
 
 (t/deftest stirling-number-of-the-second-kind'-test
@@ -198,21 +245,45 @@
     (t/is-spec-check combo/log-stirling-number-of-the-second-kind))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 0 0))
+    (t/is= m/inf- (combo/log-stirling-number-of-the-second-kind 0 5))
     (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 5 5))
-    ;;Math 2.7080
-    (t/is-approx= 2.708050201102210
-      (combo/log-stirling-number-of-the-second-kind 2 5) :tolerance 1e-10))) ;; ln(15)
+    (t/is= 0.0 (combo/log-stirling-number-of-the-second-kind 1 100))
+    ;;mpmath 2.7080502011022101
+    (t/is= 2.70805020110221 (combo/log-stirling-number-of-the-second-kind 2 5))
+    ;;mpmath 3.2188758248682007
+    (t/is= 3.2188758248682006 (combo/log-stirling-number-of-the-second-kind 3 5))
+    ;; k > 170 — polynomial formula (exact, matches mpmath to all digits)
+    ;;mpmath 1016.3446424254222
+    (t/is= 1016.3446424254222 (combo/log-stirling-number-of-the-second-kind 171 342))
+    ;;mpmath 1220.5075051108709
+    (t/is= 1220.5075051108709 (combo/log-stirling-number-of-the-second-kind 200 400))
+    ;;mpmath 749.7847782829931
+    (t/is= 749.7847782829931 (combo/log-stirling-number-of-the-second-kind 180 300))
+    ;; k ≤ 170 with large n — IE in log-space avoids overflow
+    (t/is= 16089.591632598222 (combo/log-stirling-number-of-the-second-kind 5 10000))))
 
 (t/deftest stirling-number-of-the-first-kind-test
   (t/with-instrument `combo/stirling-number-of-the-first-kind
     (t/is-spec-check combo/stirling-number-of-the-first-kind))
   (t/with-instrument :all
+    ;;mpmath 1
     (t/is= 1.0 (combo/stirling-number-of-the-first-kind 0 0))
+    ;;mpmath 0
     (t/is= 0.0 (combo/stirling-number-of-the-first-kind 0 3))
+    ;;mpmath 1
     (t/is= 1.0 (combo/stirling-number-of-the-first-kind 4 4))
+    ;;mpmath 6
     (t/is= 6.0 (combo/stirling-number-of-the-first-kind 1 4)) ;; (4-1)! = 6
+    ;;mpmath 11
     (t/is= 11.0 (combo/stirling-number-of-the-first-kind 2 4))
-    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 3 4))))
+    ;;mpmath 6
+    (t/is= 6.0 (combo/stirling-number-of-the-first-kind 3 4))
+    ;;mpmath 362880
+    (t/is= 362880.0 (combo/stirling-number-of-the-first-kind 1 10))
+    ;;mpmath 1026576
+    (t/is= 1026576.0 (combo/stirling-number-of-the-first-kind 2 10))
+    ;;mpmath 269325
+    (t/is= 269325.0 (combo/stirling-number-of-the-first-kind 5 10))))
 
 (t/deftest stirling-number-of-the-first-kind'-test
   (t/with-instrument `combo/stirling-number-of-the-first-kind'
@@ -282,11 +353,11 @@
     ;;SciPy -0.78414
     (t/is= -0.7841487447593384 (combo/log-binomial-probability 1 1.4 0.4))
     ;;SciPy -1.0624
-    (t/is= -1.0624732420522363 (combo/log-binomial-probability 1 4 0.4))
+    (t/is= -1.0624732420522367 (combo/log-binomial-probability 1 4 0.4))
     ;;SciPy -1.0624
-    (t/is= -1.0624732420522367 (combo/log-binomial-probability 2 5 0.4))
+    (t/is= -1.0624732420522363 (combo/log-binomial-probability 2 5 0.4))
     ;;SciPy -227.76
-    (t/is= -227.7652929916204 (combo/log-binomial-probability 12 545.0 0.4))))
+    (t/is= -227.76529299162056 (combo/log-binomial-probability 12 545.0 0.4))))
 
 ;;;COUNTING
 (t/deftest count-combinations-test
