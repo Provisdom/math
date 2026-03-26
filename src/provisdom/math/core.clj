@@ -944,6 +944,18 @@
   :args (s/cat :number ::number)
   :ret ::number)
 
+(defn dec-exp-over-x
+  "Returns `(e^x - 1) / x`. Uses Taylor series near zero for numerical stability."
+  [x]
+  (let [x (double x)]
+    (if (<= (Math/abs x) 1e-8)
+      (+ 1.0 (* x (+ 0.5 (* x (+ (/ 6.0) (/ x 24.0))))))
+      (/ (Math/expm1 x) x))))
+
+(s/fdef dec-exp-over-x
+  :args (s/cat :x ::num)
+  :ret ::number)
+
 (defn safe-exp
   "Computes `exp(x)` with protection against overflow/underflow.
 
@@ -957,8 +969,7 @@
     (safe-exp 1000)  ;=> ##Inf
     (safe-exp 1.0)   ;=> 2.718..."
   [x]
-  (cond
-    (< x -700.0) 0.0
+  (cond (< x -700.0) 0.0
     (> x 700.0) inf+
     :else (exp x)))
 
@@ -982,6 +993,18 @@
 
 (s/fdef log-inc
   :args (s/cat :number ::number)
+  :ret ::number)
+
+(defn log-inc-over-x
+  "Returns `log(1 + x) / x`. Uses Taylor series near zero for numerical stability."
+  [x]
+  (let [x (double x)]
+    (if (<= (Math/abs x) 1e-8)
+      (- 1.0 (* x (- 0.5 (* x (- (/ 3.0) (* 0.25 x))))))
+      (/ (Math/log1p x) x))))
+
+(s/fdef log-inc-over-x
+  :args (s/cat :x ::num)
   :ret ::number)
 
 (defn log-sum-exp

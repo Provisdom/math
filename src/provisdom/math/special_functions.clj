@@ -11,6 +11,7 @@
   - Log-sum-exp for numerical stability
   - Bessel functions (J_v, Y_v, I_v, K_v for real orders)
   - Hypergeometric functions (confluent 1F1, Gaussian 2F1)
+  - Generalized harmonic numbers (with Euler-Maclaurin approximation for large n)
 
   Uses high-precision algorithms with series expansions, continued fractions, and asymptotic
   expansions as appropriate for different parameter ranges."
@@ -2062,3 +2063,224 @@
           :z (s/with-gen (s/and ::m/finite #(< % 1.0))
                #(m/finite-gen {:max (m/next-down 1.0)})))
   :ret ::m/num)
+
+;;;GENERALIZED HARMONIC NUMBERS
+(def ^:private em-prefix-size
+  "Number of terms to sum exactly before switching to Euler-Maclaurin tail."
+  200)
+
+(def ^:private em-threshold
+  "For n <= this value, use exact summation. Above, use hybrid."
+  1000)
+
+(def ^:private bernoulli-correction-coefficients
+  "Bernoulli correction coefficients -B_{2j}/(2j)! for j=1..6."
+  [-8.333333333333333E-2                                    ;; j=1: -1/12
+   1.388888888888889E-3                                     ;; j=2: 1/720
+   -3.306878306878307E-5                                    ;; j=3: -1/30240
+   8.267195767195767E-7                                     ;; j=4: 1/1209600
+   -2.0876756987868098E-8                                   ;; j=5: -5/239500800
+   5.284190138687493E-10])                                  ;; j=6: 691/1307674368000
+
+(defn- euler-maclaurin-tail
+  "Approximates `Σ_{k=a}^{b} (k+q)^{-s}` using the Euler-Maclaurin formula with 6 Bernoulli
+  correction terms. Requires a >= 50 for numerical accuracy."
+  [a b s q]
+  (let [a (double a)
+        b (double b)
+        s (double s)
+        q (double q)
+        aq (+ a q)
+        bq (+ b q)
+        ;; Integral term: ∫_a^b (x+q)^{-s} dx
+        integral (if (m/one? s)
+                   (- (m/log bq) (m/log aq))
+                   (/ (- (m/pow bq (m/one- s)) (m/pow aq (m/one- s)))
+                     (m/one- s)))
+        ;; Trapezoidal correction: (f(a) + f(b))/2
+        trap (/ (+ (m/pow aq (- s)) (m/pow bq (- s))) 2.0)]
+    ;; Add 6 Bernoulli correction terms
+    (loop [j 0
+           rising-s s
+           correction 0.0]
+      (if (>= j 6)
+        (+ integral trap correction)
+        (let [exp-idx (+ s 1.0 (* 2.0 j))
+              rising (if (zero? j)
+                       s
+                       (* rising-s (+ s (* 2.0 j) -1.0) (+ s (* 2.0 j) -2.0)))
+              term (* (nth bernoulli-correction-coefficients j) rising
+                     (- (m/pow bq (- exp-idx))
+                       (m/pow aq (- exp-idx))))]
+          (recur (inc j) rising (+ correction term)))))))
+
+(defn- euler-maclaurin-log-tail
+  "Approximates `dT/ds` for `T = Σ_{k=a}^{b} (k+q)^{-s}` using the Euler-Maclaurin derivative.
+  Since `dT/ds = -Σ log(k+q)·(k+q)^{-s}`, caller negates to get the log-weighted sum."
+  [a b s q]
+  (let [a (double a)
+        b (double b)
+        s (double s)
+        q (double q)
+        aq (+ a q)
+        bq (+ b q)
+        log-aq (m/log aq)
+        log-bq (m/log bq)
+        ;; d/ds [integral] = d/ds [((b+q)^{1-s} - (a+q)^{1-s})/(1-s)]
+        d-integral (if (m/one? s)
+                     (- (/ (m/sq log-aq) 2.0) (/ (m/sq log-bq) 2.0))
+                     (let [oms (m/one- s)
+                           oms2 (m/sq oms)]
+                       (- (/ (* (m/pow bq oms) (m/one- (* oms log-bq))) oms2)
+                         (/ (* (m/pow aq oms) (m/one- (* oms log-aq))) oms2))))
+        ;; d/ds [((a+q)^{-s} + (b+q)^{-s})/2]
+        d-trap (/ (- (+ (* log-aq (m/pow aq (- s))) (* log-bq (m/pow bq (- s))))) 2.0)]
+    ;; Bernoulli corrections derivative
+    (loop [j 0
+           rising-s s
+           d-correction 0.0]
+      (if (>= j 6)
+        (+ d-integral d-trap d-correction)
+        (let [order (inc (* 2 j))
+              exp-idx (+ s 1.0 (* 2.0 j))
+              rising (if (zero? j)
+                       s
+                       (* rising-s (+ s (* 2.0 j) -1.0) (+ s (* 2.0 j) -2.0)))
+              ;; Product-rule derivative: dR/ds = Σ_j Π_{i≠j} (s+i), avoids 1/(s+i) division
+              d-rising (reduce (fn [tot j-idx]
+                                 (+ tot (reduce (fn [p i]
+                                                  (if (== i j-idx)
+                                                    p
+                                                    (* p (+ s (double i)))))
+                                          1.0
+                                          (range order))))
+                         0.0
+                         (range order))
+              pow-bq (m/pow bq (- exp-idx))
+              pow-aq (m/pow aq (- exp-idx))
+              power-diff (- pow-bq pow-aq)
+              d-power-diff (+ (* (- log-bq) pow-bq) (* log-aq pow-aq))
+              coeff (nth bernoulli-correction-coefficients j)
+              d-term (* coeff (+ (* d-rising power-diff) (* rising d-power-diff)))]
+          (recur (inc j) rising (+ d-correction d-term)))))))
+
+(defn generalized-harmonic-number
+  "Computes the generalized harmonic number `H_{n,s,q} = Σ_{k=1}^{n} (k+q)^{-s}`.
+
+  When `q` = 0, this is the standard generalized harmonic number `H_{n,s}`.
+  Related to the Hurwitz zeta function: `ζ(s,q) = lim_{n→∞} H_{n,s,q}`.
+
+  For n ≤ 1000: exact O(n) summation.
+  For n > 1000: sums first 200 terms exactly, approximates the tail via Euler-Maclaurin."
+  ([n s] (generalized-harmonic-number n s 0.0))
+  ([n s q]
+   (let [n (long n)
+         s (double s)
+         q (double q)]
+     (cond (<= n 0) 0.0
+       ;; Inf exponent: only k where (k+q)=1 contributes (i.e. k=1, q=0)
+       ;; For s >= 1074 or Inf, only k=1 contributes (all k>=2 terms underflow)
+       (or (m/inf+? s) (>= s 1074.0)) (let [base (+ 1.0 q)]
+                                        (if (== base 1.0)
+                                          1.0
+                                          (m/pow base (- s))))
+       ;; -Inf exponent: (k+q)^Inf = Inf for k+q > 1, NaN for k+q = 1 (JVM bug)
+       (m/inf-? s) (if (and (== n 1) (== (+ 1.0 q) 1.0))
+                     1.0
+                     m/inf+)
+       (<= n em-threshold) (loop [k 1
+                                  tot 0.0]
+                             (if (> k n)
+                               tot
+                               (recur (inc k) (+ tot (m/pow (+ (double k) q) (- s))))))
+       ;; q >> n: EM has catastrophic cancellation. Exact prefix + uniform tail.
+       (> q (* (double n) 1e12))
+       (let [prefix (loop [k 1
+                           tot 0.0]
+                      (if (> k em-prefix-size)
+                        tot
+                        (recur (inc k) (+ tot (m/pow (+ (double k) q) (- s))))))
+             tail-count (- n em-prefix-size)
+             tail-rep (m/pow (+ (double (inc em-prefix-size)) q) (- s))]
+         (+ prefix (* (double tail-count) tail-rep)))
+       :else (let [prefix (loop [k 1
+                                 tot 0.0]
+                            (if (> k em-prefix-size)
+                              tot
+                              (recur (inc k) (+ tot (m/pow (+ (double k) q) (- s))))))
+                   tail (euler-maclaurin-tail (inc em-prefix-size) n s q)
+                   result (+ prefix tail)]
+               ;; NaN from EM overflow (negative s: Inf - Inf). True sum is positive → Inf.
+               (if (m/nan? result) m/inf+ result))))))
+
+(s/fdef generalized-harmonic-number
+  :args (s/with-gen
+          (s/or :two (s/cat :n ::m/long+
+                       :s ::m/num)
+            :three (s/cat :n ::m/long+
+                     :s ::m/num
+                     :q ::m/finite-non-))
+          #(gen/one-of [(gen/tuple (s/gen ::m/long+) (s/gen ::m/num))
+                        (gen/tuple (s/gen ::m/long+) (s/gen ::m/num)
+                          (s/gen ::m/finite-non-))]))
+  :ret ::m/non-)
+
+(defn generalized-harmonic-log-sum
+  "Computes `Σ_{k=1}^{n} log(k+q) · (k+q)^{-s}`.
+
+  This is the log-weighted sum of the generalized harmonic series, equal to `-∂H_{n,s,q}/∂s`
+  (negative derivative of the harmonic number with respect to `s`).
+
+  For n ≤ 1000: exact O(n) summation.
+  For n > 1000: sums first 200 terms exactly, approximates via Euler-Maclaurin derivative."
+  ([n s] (generalized-harmonic-log-sum n s 0.0))
+  ([n s q]
+   (let [n (long n)
+         s (double s)
+         q (double q)]
+     (cond (<= n 0) 0.0
+       (or (m/inf+? s) (>= s 1074.0)) 0.0
+       ;; -Inf exponent: log(k+q)·(k+q)^Inf = Inf for k+q > 1, 0·NaN for k+q = 1
+       (m/inf-? s) (if (and (== n 1) (== (+ 1.0 q) 1.0))
+                     0.0
+                     m/inf+)
+       (<= n em-threshold) (loop [k 1
+                                  tot 0.0]
+                             (if (> k n)
+                               tot
+                               (let [kq (+ (double k) q)]
+                                 (recur (inc k) (+ tot (* (m/log kq) (m/pow kq (- s))))))))
+       ;; q >> n: EM has catastrophic cancellation. Exact prefix + uniform tail.
+       (> q (* (double n) 1e12))
+       (let [prefix (loop [k 1
+                           tot 0.0]
+                      (if (> k em-prefix-size)
+                        tot
+                        (let [kq (+ (double k) q)]
+                          (recur (inc k) (+ tot (* (m/log kq) (m/pow kq (- s))))))))
+             tail-count (- n em-prefix-size)
+             tail-kq (+ (double (inc em-prefix-size)) q)
+             tail-rep (* (m/log tail-kq) (m/pow tail-kq (- s)))]
+         (+ prefix (* (double tail-count) tail-rep)))
+       :else (let [prefix (loop [k 1
+                                 tot 0.0]
+                            (if (> k em-prefix-size)
+                              tot
+                              (let [kq (+ (double k) q)]
+                                (recur (inc k) (+ tot (* (m/log kq) (m/pow kq (- s))))))))
+                   tail (- (euler-maclaurin-log-tail (inc em-prefix-size) n s q))
+                   result (+ prefix tail)]
+               ;; NaN from EM overflow (negative s: Inf - Inf). True sum is positive → Inf.
+               (if (m/nan? result) m/inf+ result))))))
+
+(s/fdef generalized-harmonic-log-sum
+  :args (s/with-gen
+          (s/or :two (s/cat :n ::m/long+
+                       :s ::m/num)
+            :three (s/cat :n ::m/long+
+                     :s ::m/num
+                     :q ::m/finite-non-))
+          #(gen/one-of [(gen/tuple (s/gen ::m/long+) (s/gen ::m/num))
+                        (gen/tuple (s/gen ::m/long+) (s/gen ::m/num)
+                          (s/gen ::m/finite-non-))]))
+  :ret ::m/non-)

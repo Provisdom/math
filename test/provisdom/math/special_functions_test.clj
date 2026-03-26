@@ -817,3 +817,38 @@
     (t/is-approx= 0.8109302162163282 (special-fns/hypergeometric-2f1 1 1 2 -0.5) :tolerance 1e-14)
     ;;SciPy 0.69315
     (t/is-approx= 0.6931471805599445 (special-fns/hypergeometric-2f1 1 1 2 -1.0) :tolerance 1e-14)))
+
+;;;GENERALIZED HARMONIC NUMBERS
+(t/deftest generalized-harmonic-number-test
+  (t/with-instrument `special-fns/generalized-harmonic-number
+    (t/is-spec-check special-fns/generalized-harmonic-number))
+  (t/with-instrument :all
+    ;; H_{1,s} = 1 for all s
+    (t/is= 1.0 (special-fns/generalized-harmonic-number 1 2.0))
+    ;; H_{10,1} (harmonic number)
+    ;;Math 2.92897
+    (t/is= 2.9289682539682538 (special-fns/generalized-harmonic-number 10 1.0))
+    ;; H_{10,2}
+    ;;Math 1.54977
+    (t/is= 1.5497677311665408 (special-fns/generalized-harmonic-number 10 2.0))
+    ;; Large n via Euler-Maclaurin — should match π²/6 closely
+    ;;Math 1.64493
+    (t/is-approx= 1.6449340668482264 (special-fns/generalized-harmonic-number 10000000 2.0)
+      :tolerance 1e-7)
+    ;; With shift q=1: H_{10,1,1} = Σ_{k=1}^{10} (k+1)^{-1}
+    ;;Math 2.01988
+    (t/is= 2.019877344877345 (special-fns/generalized-harmonic-number 10 1.0 1.0))
+    ;; Large exponent: only k=1 contributes
+    (t/is= 1.0 (special-fns/generalized-harmonic-number 10 m/inf+))))
+
+(t/deftest generalized-harmonic-log-sum-test
+  (t/with-instrument `special-fns/generalized-harmonic-log-sum
+    (t/is-spec-check special-fns/generalized-harmonic-log-sum))
+  (t/with-instrument :all
+    ;; H_{1,s}: single term k=1, log(1)=0
+    (t/is= 0.0 (special-fns/generalized-harmonic-log-sum 1 2.0))
+    ;; Σ_{k=1}^{10} log(k)·k^{-2}
+    (t/is-approx= 0.6185026440390786 (special-fns/generalized-harmonic-log-sum 10 2.0)
+      :tolerance 1e-12)
+    ;; Large exponent returns 0 (only k=1 contributes, log(1)=0)
+    (t/is= 0.0 (special-fns/generalized-harmonic-log-sum 10 m/inf+))))

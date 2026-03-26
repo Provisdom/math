@@ -748,6 +748,20 @@
     ;;SciPy 1.0000
     (t/is= 1.0000000000000007E-15 (m/dec-exp 1e-15))))
 
+(t/deftest dec-exp-over-x-test
+  (t/with-instrument `m/dec-exp-over-x
+    (t/is-spec-check m/dec-exp-over-x))
+  (t/with-instrument :all
+    ;; lim_{x→0} (e^x - 1)/x = 1
+    (t/is= 1.0 (m/dec-exp-over-x 0.0))
+    ;; (e^1 - 1)/1 = e - 1
+    (t/is= (dec m/E) (m/dec-exp-over-x 1.0))
+    ;; Small value: Taylor series used
+    (t/is= 1.0000000000000004 (m/dec-exp-over-x 1e-15))
+    ;; Negative input
+    ;;SciPy 0.63212
+    (t/is-approx= 0.6321205588285577 (m/dec-exp-over-x -1.0) :tolerance 1e-15)))
+
 (t/deftest safe-exp-test
   (t/with-instrument `m/safe-exp
     (t/is-spec-check m/safe-exp))
@@ -792,6 +806,20 @@
     ;;useful for small values
     ;;SciPy 9.9999
     (t/is= 9.999999999999995E-16 (m/log-inc 1e-15))))
+
+(t/deftest log-inc-over-x-test
+  (t/with-instrument `m/log-inc-over-x
+    (t/is-spec-check m/log-inc-over-x))
+  (t/with-instrument :all
+    ;; lim_{x→0} log(1+x)/x = 1
+    (t/is= 1.0 (m/log-inc-over-x 0.0))
+    ;; log(2)/1 = ln(2)
+    (t/is= 0.6931471805599453 (m/log-inc-over-x 1.0))
+    ;; Small value: Taylor series used
+    (t/is= 0.9999999999999994 (m/log-inc-over-x 1e-15))
+    ;; Negative input (valid for x > -1)
+    ;;SciPy 1.38629
+    (t/is-approx= 1.3862943611198906 (m/log-inc-over-x -0.5) :tolerance 1e-15)))
 
 (t/deftest log-sum-exp-test
   (t/with-instrument `m/log-sum-exp
