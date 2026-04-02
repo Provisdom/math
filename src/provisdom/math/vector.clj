@@ -90,10 +90,10 @@
        :min-count ~min-count)
      #(if ~d?
         (gen/vector-distinct (s/gen ~pred)
-          {:max-elements (if ~max-count
+          {:min-elements ~min-count
+           :max-elements (if ~max-count
                            (max ~max-count ~min-count)
-                           (+ ~min-count mdl))
-           :min-elements ~min-count})
+                           (+ ~min-count mdl))})
         (gen/vector (s/gen ~pred)
           ~min-count
           (if ~max-count
@@ -120,10 +120,10 @@
                     m/max-int)
        :min-count ~min-count)
      #(if ~d? (gen/vector-distinct (s/gen ::m/finite)
-                {:max-elements (if ~max-count
+                {:min-elements ~min-count
+                 :max-elements (if ~max-count
                                  (max ~max-count ~min-count)
-                                 (+ ~min-count mdl))
-                 :min-elements ~min-count})
+                                 (+ ~min-count mdl))})
         (gen/vector (s/gen (m/finite-spec {:min ~m1 :max ~m2}))
           ~min-count
           (if ~max-count
