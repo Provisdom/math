@@ -158,6 +158,24 @@
       :into [])
     #(gen/vector (s/gen ::m/prob) 0 mdl)))
 
+(defn probs-gen
+  "Returns a generator for a probability simplex vector of dimension `n` (strictly positive
+  components summing to 1.0).
+
+  Scales weights by the max before summing to avoid overflow when components are near
+  `m/max-double`, then normalizes by the Kahan sum. Falls back to the uniform simplex point
+  `[1/n ... 1/n]` when the max is zero or non-finite."
+  [n]
+  (gen/fmap
+    (fn [weights]
+      (let [mx (apply max weights)]
+        (if (or (zero? mx) (not (m/finite? mx)))
+          (vec (repeat n (/ 1.0 n)))
+          (let [scaled (mapv (fn [x] (/ x mx)) weights)
+                total (kahan-sum scaled)]
+            (mapv (fn [x] (/ x total)) scaled)))))
+    (gen/vector (s/gen ::m/finite+) n)))
+
 (s/def ::vector-probs
   (s/with-gen
     (s/and (s/coll-of ::m/prob
@@ -165,13 +183,7 @@
              :into []
              :min-count 1)
       #(probs? % 1e-8))
-    (fn []
-      (gen/fmap
-        (fn [weights]
-          (let [total (kahan-sum weights)
-                probs (mapv #(/ % total) weights)]
-            probs))
-        (gen/vector (s/gen ::m/finite+) 1 mdl)))))
+    #(gen/bind (gen/choose 1 mdl) probs-gen)))
 
 (s/def ::vector-open-probs
   (s/with-gen
@@ -180,13 +192,7 @@
              :into []
              :min-count 2)
       #(open-probs? % 1e-8))
-    (fn []
-      (gen/fmap
-        (fn [weights]
-          (let [total (kahan-sum weights)
-                probs (mapv #(/ % total) weights)]
-            probs))
-        (gen/vector (s/gen ::m/finite+) 2 mdl)))))
+    #(gen/bind (gen/choose 2 mdl) probs-gen)))
 
 (s/def ::sparse-vector
   (s/with-gen
