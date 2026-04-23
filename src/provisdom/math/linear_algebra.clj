@@ -95,20 +95,23 @@
 ;; entries; with unbounded finite values (up to ±1.7e308), extreme test.check size
 ;; scaling produces entries that overflow when squared. 1e50 is still enormous for
 ;; any real-world matrix while avoiding generator-induced overflow. --ME
+(defn pos-def-matrix-finite-gen
+  "Returns a test.check generator for a `dim`x`dim` positive-definite matrix with finite entries.
+  Construction is m·mᵀ + 0.1·I; matrix entries are bounded at ±1e50 to avoid overflow when squared."
+  [dim]
+  (gen/fmap (fn [m]
+              (tensor/add (mx/mx* m (mx/transpose m))
+                (mx/diagonal-matrix dim (constantly 0.1))))
+    (gen/vector (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) dim) dim)))
+
 (s/def ::pos-definite-matrix-finite
   (s/with-gen
     #(pos-definite-matrix-finite? %)
-    #(gen/fmap (fn [m]
-                 (let [mt (mx/transpose m)]
-                   (tensor/add (mx/mx* m mt)
-                     (mx/diagonal-matrix (mx/rows m) (constantly 0.1)))))
-       (gen/bind (gen/choose 0 9)
-         (fn [n]
-           (if (zero? n)
-             (gen/return [[]])
-             (gen/vector
-               (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) n)
-               n)))))))
+    #(gen/bind (gen/choose 0 9)
+       (fn [n]
+         (if (zero? n)
+           (gen/return [[]])
+           (pos-def-matrix-finite-gen n))))))
 
 ;; Generator bounds entry values to ±1e50. See ::pos-definite-matrix-finite for rationale. --ME
 (s/def ::pos-semidefinite-matrix-finite
