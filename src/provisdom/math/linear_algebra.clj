@@ -104,6 +104,20 @@
                 (mx/diagonal-matrix dim (constantly 0.1))))
     (gen/vector (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) dim) dim)))
 
+(defn pos-def-matrix-finite-invertible-gen
+  "Returns a test.check generator for a `dim`x`dim` positive-definite matrix well-conditioned enough
+  to invert without losing positive-definiteness to roundoff.
+
+  Construction is m·mᵀ + I with entries bounded at ±1e3, giving condition number ~1e9 — comfortably
+  below the ε_machine·tolerance threshold where the computed inverse stops satisfying
+  `pos-definite-matrix-finite?`. Use this when downstream code immediately calls `inverse` on the
+  generated matrix; otherwise prefer the looser `pos-def-matrix-finite-gen`."
+  [dim]
+  (gen/fmap (fn [m]
+              (tensor/add (mx/mx* m (mx/transpose m))
+                (mx/diagonal-matrix dim (constantly 1.0))))
+    (gen/vector (gen/vector (m/finite-gen {:min -1e3 :max 1e3}) dim) dim)))
+
 (s/def ::pos-definite-matrix-finite
   (s/with-gen
     #(pos-definite-matrix-finite? %)

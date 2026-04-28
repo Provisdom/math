@@ -633,20 +633,24 @@
     (m/inf+? x) 1.0
     ;; For x >= a+1, use continued fraction via Q for better convergence
     (>= x (inc (double a))) (m/one- (regularized-gamma-q a x))
-    ;; For x < a+1, use series expansion
-    :else (let [an (/ 1.0 (double a))
+    ;; For x < a+1, use series expansion. The series converges in O(x) terms for typical inputs;
+    ;; we cap iterations at 10000 — values past that indicate non-convergence (extreme a, x), and
+    ;; returning NaN lets callers (e.g. inv-cdf) detect divergence and return an anomaly instead
+    ;; of running for billions of iterations under spec-check generators.
+    :else (let [max-iter 10000
+                an (/ 1.0 (double a))
                 [n sum] (loop [n 0.0
                                an an
                                sum an]
                           (if (and (not (m/inf+? sum))
                                 (> (m/abs (/ an sum)) 1e-14)
-                                (< n m/max-int))
+                                (< n max-iter))
                             (let [an (* an (double x) (/ (+ (double a) (inc n))))]
                               (recur (inc n) an (+ an sum)))
                             [n sum]))]
             (cond
-              ;; Max iterations exceeded
-              (>= n m/max-int) m/nan
+              ;; Max iterations exceeded — non-convergence
+              (>= n max-iter) m/nan
               ;; Sum overflow -> return 1.0 for P
               (m/inf+? sum) 1.0
               :else (min 1.0
