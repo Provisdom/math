@@ -118,6 +118,29 @@
                 (mx/diagonal-matrix dim (constantly 1.0))))
     (gen/vector (gen/vector (m/finite-gen {:min -1e3 :max 1e3}) dim) dim)))
 
+(defn pos-def-matrix-finite-tightly-bounded-gen
+  "Returns a test.check generator for a `dim`x`dim` positive-definite matrix with diagonal entries
+  bounded around single-digit magnitude.
+
+  Construction is L·Lᵀ with L lower-triangular: diagonal in [0.5, 2.0], off-diagonal in [-0.5, 0.5].
+  Resulting covariance has diagonal entries bounded by ~5. Use this when downstream code
+  exponentiates the entries (e.g., multivariate lognormal where exp(variance) must stay finite);
+  otherwise prefer `pos-def-matrix-finite-invertible-gen`."
+  [dim]
+  (let [diag-gen (m/finite+-gen {:min 0.5 :max 2.0})
+        off-gen (m/finite-gen {:min -0.5 :max 0.5})]
+    (gen/fmap
+      (fn [[diag off-diag]]
+        (let [L (vec (for [i (range dim)]
+                       (vec (for [j (range dim)]
+                              (cond (= i j) (nth diag i)
+                                (> i j) (get-in off-diag [i j])
+                                :else 0.0)))))]
+          (mx/mx* L (mx/transpose L))))
+      (gen/tuple
+        (gen/vector diag-gen dim)
+        (gen/vector (gen/vector off-gen dim) dim)))))
+
 (s/def ::pos-definite-matrix-finite
   (s/with-gen
     #(pos-definite-matrix-finite? %)
