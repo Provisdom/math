@@ -46,6 +46,8 @@
 (s/def ::U ::mx/upper-triangular-matrix)
 (s/def ::cholesky-L ::mx/lower-triangular-matrix)
 (s/def ::cholesky-LT ::mx/upper-triangular-matrix)
+(s/def ::cholesky-log-det ::m/number)
+(s/def ::cholesky-inverse ::mx/square-matrix)
 (s/def ::rectangular-root ::mx/matrix)
 (s/def ::Q ::mx/matrix)
 (s/def ::RRQR-permutation ::mx/square-matrix)
@@ -638,27 +640,117 @@
   :ret (s/nilable ::mx/matrix))
 
 ;;;FORWARD/BACK SUBSTITUTION
-(defn- forward-substitution
-  "Solves Lx = b where L is lower triangular with 1s on diagonal.
-  Uses loop/recur with double-array for O(n^2) performance."
-  [L b]
-  (let [n (long (count b))
-        ^doubles result (double-array n)]
-    (loop [i (long 0)]
-      (when (< i n)
-        (let [L-row (get L i)
-              sum (loop [j (long 0)
-                         acc 0.0]
-                    (if (< j i)
-                      (recur (inc j) (+ acc (* (double (get L-row j)) (aget result j))))
-                      acc))]
-          (aset result i (- (double (get b i)) sum))
-          (recur (inc i)))))
-    (vec result)))
+(defn forward-substitution
+  "Solves L · x = b for a lower triangular `L`.
 
-(defn- back-substitution
-  "Solves Ux = b where U is upper triangular.
-  Uses loop/recur with double-array for O(n^2) performance."
+  Two arities:
+  - `[L b]` — vector RHS. `b` is a length-n vector; returns a length-n vector `x`.
+  - `[L B unit-diag?]` — matrix RHS. `B` is an n×m matrix; returns the n×m solution matrix `X`.
+    Pass `unit-diag?` `true` to interpret `L`'s diagonal as 1s (LU's `::L`); pass `false` to use the
+    literal diagonal (Cholesky's `::cholesky-L`).
+
+  The vector arity assumes unit diagonal — that's the form needed by LU back-substitution. The
+  matrix arity is general; explicit because Cholesky's L has non-unit diagonals.
+
+  O(n²) per RHS column; uses double-arrays for tight inner loops."
+  ([L b]
+   (let [n (long (count b))
+         ^doubles result (double-array n)]
+     (loop [i (long 0)]
+       (when (< i n)
+         (let [L-row (get L i)
+               sum (loop [j (long 0)
+                          acc 0.0]
+                     (if (< j i)
+                       (recur (inc j) (+ acc (* (double (get L-row j)) (aget result j))))
+                       acc))]
+           (aset result i (- (double (get b i)) sum))
+           (recur (inc i)))))
+     (vec result)))
+  ([L B unit-diag?]
+   (let [n (long (count L))
+         m (long (count (first B)))]
+     (loop [i (long 0)
+            X (transient [])]
+       (if (>= i n)
+         (persistent! X)
+         (let [L-row (get L i)
+               L-ii (double (get L-row i))
+               row (vec
+                     (for [c (range m)]
+                       (let [sum (loop [k (long 0)
+                                        acc 0.0]
+                                   (if (< k i)
+                                     (recur (inc k)
+                                       (+ acc (* (double (get L-row k))
+                                                (double (get-in X [k c])))))
+                                     acc))
+                             v (- (double (get-in B [i c])) sum)]
+                         (if unit-diag? v (/ v L-ii)))))]
+           (recur (inc i) (conj! X row))))))))
+
+(defn- gen-fwd-sub-vec-args
+  "Generates `[L b]` with matched non-empty dimensions and unit diagonal."
+  []
+  (gen/bind (gen/choose 1 4)
+    (fn [n]
+      (gen/fmap
+        (fn [[entries b]]
+          (let [L (vec (for [i (range n)]
+                         (vec (for [j (range n)]
+                                (cond (= i j) 1.0
+                                  (< j i) (double (get entries (+ (* i n) j) 0.0))
+                                  :else 0.0)))))]
+            [L b]))
+        (gen/tuple
+          (gen/vector (s/gen ::m/finite) (* n n))
+          (gen/vector (s/gen ::m/finite) n))))))
+
+(defn- gen-fwd-sub-mx-args
+  "Generates `[L B unit-diag?]` with matched non-empty dimensions; L's diagonal is positive so
+  non-unit-diag form is also stable."
+  []
+  (gen/bind (gen/tuple (gen/choose 1 4) (gen/choose 1 3) (gen/elements [true false]))
+    (fn [[n m unit?]]
+      (gen/fmap
+        (fn [[entries B]]
+          (let [L (vec (for [i (range n)]
+                         (vec (for [j (range n)]
+                                (cond (= i j) (if unit? 1.0 1.0)
+                                  (< j i) (double (get entries (+ (* i n) j) 0.0))
+                                  :else 0.0)))))]
+            [L B unit?]))
+        (gen/tuple
+          (gen/vector (s/gen ::m/finite) (* n n))
+          (gen/vector (gen/vector (s/gen ::m/finite) m) n))))))
+
+(s/fdef forward-substitution
+  :args (s/with-gen
+          (s/or :vec (s/and (s/cat :L ::mx/lower-triangular-matrix
+                              :b ::vector/vector)
+                       (fn [{:keys [L b]}]
+                         (and (pos? (count L))
+                           (= (count L) (count b)))))
+            :mx (s/and (s/cat :L ::mx/lower-triangular-matrix
+                         :B ::mx/matrix
+                         :unit-diag? boolean?)
+                  (fn [{:keys [L B]}]
+                    (and (pos? (count L))
+                      (pos? (count (first B)))
+                      (= (count L) (count B))))))
+          #(gen/one-of [(gen/fmap (fn [[L b]] [L b]) (gen-fwd-sub-vec-args))
+                        (gen/fmap (fn [[L B u?]] [L B u?]) (gen-fwd-sub-mx-args))]))
+  :ret (s/or :vec ::vector/vector :mx ::mx/matrix))
+
+(defn back-substitution
+  "Solves U · x = b for an upper triangular `U` and vector `b`.
+
+  Returns the solution `x`. If any diagonal entry of `U` is (numerically) zero, the corresponding
+  `x` entry is `##NaN`.
+
+  O(n²); uses a double-array for the inner loop.
+
+  See also: [[forward-substitution]], [[solve]]"
   [U b]
   (let [n (long (count b))
         ^doubles result (double-array n)]
@@ -677,6 +769,27 @@
           (aset result i xi)
           (recur (dec i)))))
     (vec result)))
+
+(s/fdef back-substitution
+  :args (s/with-gen
+          (s/and (s/cat :U ::mx/upper-triangular-matrix
+                   :b ::vector/vector)
+            (fn [{:keys [U b]}]
+              (and (pos? (count U)) (= (count U) (count b)))))
+          #(gen/bind (gen/choose 1 4)
+             (fn [n]
+               (gen/fmap
+                 (fn [[entries b]]
+                   (let [U (vec (for [i (range n)]
+                                  (vec (for [j (range n)]
+                                         (cond (= i j) 1.0
+                                           (> j i) (double (get entries (+ (* i n) j) 0.0))
+                                           :else 0.0)))))]
+                     [U b]))
+                 (gen/tuple
+                   (gen/vector (s/gen ::m/finite) (* n n))
+                   (gen/vector (s/gen ::m/finite) n))))))
+  :ret ::vector/vector)
 
 ;;;INVERSE
 (defn inverse-from-lu
@@ -778,13 +891,11 @@
   (let [nr (mx/rows A)
         nc (mx/columns A)
         nb (count b)]
-    (cond
-      (not= nr nb)
+    (cond (not= nr nb)
       {::anom/category ::anom/incorrect
        ::anom/message  (str "Vector length " nb " does not match matrix rows " nr)}
 
-      (mx/empty-matrix? A)
-      []
+      (mx/empty-matrix? A) []
 
       (< nr nc)
       {::anom/category ::anom/no-solve
@@ -823,15 +934,18 @@
   Returns a map with keys:
     `::cholesky-L` - lower triangular matrix L
     `::cholesky-LT` - upper triangular matrix L^T (transpose of L)
+    `::cholesky-log-det` - log|A| = 2 · Σ log Lᵢᵢ (numerically stable PD log-determinant)
 
   Returns `nil` if the matrix is not positive-definite.
 
   Examples:
     (cholesky-decomposition [[4 2] [2 2]])
     ;=> {::cholesky-L [[2.0 0.0] [1.0 1.0]]
-    ;    ::cholesky-LT [[2.0 1.0] [0.0 1.0]]}
+    ;    ::cholesky-LT [[2.0 1.0] [0.0 1.0]]
+    ;    ::cholesky-log-det 1.3862943611198906}
 
-  See also: [[pos-definite-matrix-finite?]], [[lu-decomposition]]"
+  See also: [[pos-definite-matrix-finite?]], [[cholesky-log-det]], [[cholesky-inverse]],
+  [[lu-decomposition]]"
   [symmetric-pos-def-m]
   (when (and (mx/symmetric-matrix? symmetric-pos-def-m)
           (not (mx/empty-matrix? symmetric-pos-def-m)))
@@ -865,18 +979,112 @@
             (mx/constant-matrix n n 0.0)
             (range n))]
       (when result
-        {::cholesky-L  result
-         ::cholesky-LT (mx/transpose result)}))))
+        (let [n (count result)
+              log-det (* 2.0 (reduce (fn [acc i]
+                                       (+ acc (m/log (double (get-in result [i i])))))
+                               0.0
+                               (range n)))]
+          {::cholesky-L       result
+           ::cholesky-LT      (mx/transpose result)
+           ::cholesky-log-det log-det})))))
 
 (s/fdef cholesky-decomposition
   :args (s/cat :symmetric-pos-def-m ::mx/symmetric-matrix)
-  :ret (s/nilable (s/keys :req [::cholesky-L ::cholesky-LT])))
+  :ret (s/nilable (s/keys :req [::cholesky-L ::cholesky-LT ::cholesky-log-det])))
+
+(defn cholesky-log-det
+  "Returns log|A| for an SPD matrix A given its Cholesky factor L (where A = L · L^T).
+
+  Uses the diagonal-product identity: |A| = ∏ Lᵢᵢ², so log|A| = 2 · Σ log Lᵢᵢ.
+
+  This is the numerically stable way to compute the log-determinant of a positive-definite matrix —
+  taking `(m/log determinant)` from `lu-decomposition` overflows for moderate-dim PD matrices, and
+  Cholesky preserves symmetry exactly.
+
+  Accepts either:
+  - the L matrix directly, or
+  - the map returned by [[cholesky-decomposition]] (reads `::cholesky-L`).
+
+  Returns `##-Inf` if any diagonal entry is zero (a degenerate Cholesky); the caller should
+  typically check for `nil` from [[cholesky-decomposition]] first.
+
+  See also: [[cholesky-decomposition]], [[determinant]]"
+  [L-or-result]
+  (let [L (if (map? L-or-result) (::cholesky-L L-or-result) L-or-result)
+        n (long (count L))]
+    (loop [i (long 0)
+           acc 0.0]
+      (if (>= i n)
+        (* 2.0 acc)
+        (recur (inc i) (+ acc (m/log (double (get-in L [i i])))))))))
+
+(defn- gen-cholesky-L
+  "Generates a valid Cholesky factor L: lower triangular with positive diagonal entries."
+  []
+  (gen/bind (gen/choose 1 4)
+    (fn [n]
+      (gen/fmap
+        (fn [[diag below]]
+          (vec (for [i (range n)]
+                 (vec (for [j (range n)]
+                        (cond (= i j) (double (nth diag i))
+                          (< j i) (double (get below (+ (* i n) j) 0.0))
+                          :else 0.0))))))
+        (gen/tuple
+          (gen/vector (s/gen (s/and ::m/finite+ #(>= % 0.1))) n)
+          (gen/vector (s/gen ::m/finite) (* n n)))))))
+
+(s/fdef cholesky-log-det
+  :args (s/with-gen
+          (s/cat :L-or-result (s/or :L ::cholesky-L
+                                :result (s/keys :req [::cholesky-L])))
+          #(gen/fmap (fn [L] [L]) (gen-cholesky-L)))
+  :ret ::m/number)
+
+(defn cholesky-inverse
+  "Returns A⁻¹ for an SPD matrix A given its Cholesky factor L (where A = L · L^T).
+
+  Computes the inverse via two triangular solves on `L · L^T · X = I` — forward-solve `L · Y = I`
+  for Y, then back-solve `L^T · X = Y` for X. Faster (one O(n³) Cholesky vs LU's 2n³/3 plus
+  inversion) and numerically more stable than [[inverse]] for SPD inputs because it preserves
+  symmetry exactly.
+
+  For a general (possibly non-symmetric) matrix, use [[inverse]]. This function assumes the caller
+  has already obtained a valid Cholesky factor — pass `nil` from [[cholesky-decomposition]] is a
+  usage error.
+
+  Accepts either the L matrix or the map returned by [[cholesky-decomposition]].
+
+  Result is symmetrized via averaging (X + X^T)/2 to remove rounding-level asymmetry.
+
+  See also: [[cholesky-decomposition]], [[cholesky-log-det]], [[inverse]]"
+  [L-or-result]
+  (let [L (if (map? L-or-result) (::cholesky-L L-or-result) L-or-result)
+        n (count L)
+        I (mx/identity-matrix n)
+        ;; L · Y = I  →  forward-solve once over the full identity RHS (n×n batch).
+        Y (forward-substitution L I false)
+        ;; L^T · X = Y  →  back-solve column-by-column.
+        LT (mx/transpose L)
+        X-cols (mapv (fn [c] (back-substitution LT (mapv #(get % c) Y)))
+                 (range n))
+        X (vec (for [r (range n)]
+                 (vec (for [c (range n)]
+                        (get-in X-cols [c r])))))]
+    (mx/symmetric-matrix-by-averaging X)))
+
+(s/fdef cholesky-inverse
+  :args (s/with-gen
+          (s/cat :L-or-result (s/or :L ::cholesky-L
+                                :result (s/keys :req [::cholesky-L])))
+          #(gen/fmap (fn [L] [L]) (gen-cholesky-L)))
+  :ret ::mx/square-matrix)
 
 (defn rectangular-cholesky-decomposition
   "Computes the rectangular Cholesky decomposition of a positive semi-definite matrix.
 
-  For a symmetric positive semi-definite matrix A, finds a rectangular matrix B
-  (n rows, r columns where r = rank) such that A ≈ B × B^T within tolerance.
+  For a symmetric positive semi-definite matrix A, finds a rectangular matrix B (n rows, r columns
+  where r = rank) such that A ≈ B × B^T within tolerance.
 
   This is useful for:
   - Generating correlated random vectors from a covariance matrix that is only
@@ -1664,7 +1872,7 @@
     (when (> n 1)
       ;; Find the last non-negligible subdiagonal from bottom
       (loop [end (dec n)]
-        (when-not (< end 1)                                  ; All converged
+        (when-not (< end 1)                                 ; All converged
           (let [sub-diag (m/abs (get-in A [(dec end) end] 0.0))
                 diag-sum (+ (m/abs (get-in A [(dec end) (dec end)] 0.0))
                            (m/abs (get-in A [end end] 0.0)))]

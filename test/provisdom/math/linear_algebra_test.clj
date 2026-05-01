@@ -170,6 +170,39 @@
         (t/is-data-approx= identity-n product :tolerance 1e-8)))))
 
 ;;;SOLVE LINEAR SYSTEM
+(t/deftest forward-substitution-test
+  (t/with-instrument `la/forward-substitution
+    (t/is-spec-check la/forward-substitution))
+  (t/with-instrument :all
+    ;; Vector arity assumes unit diagonal (LU's L convention).
+    ;; L = [[1 0] [2 1]], b = [4 6] → x = [4, 6 - 2*4] = [4, -2]
+    (t/is= [4.0 -2.0] (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [4.0 6.0]))
+    ;; Matrix arity, unit-diag? = true: same convention as vector
+    (t/is= [[4.0 1.0] [-2.0 -1.0]]
+      (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [[4.0 1.0] [6.0 1.0]] true))
+    ;; Matrix arity, unit-diag? = false: literal diagonal (Cholesky convention)
+    ;; L = [[2 0] [1 1]], B = I → X = L^-1
+    (t/is-data-approx=
+      [[0.5 0.0] [-0.5 1.0]]
+      (la/forward-substitution [[2.0 0.0] [1.0 1.0]] [[1.0 0.0] [0.0 1.0]] false) :tolerance 1e-12)
+    ;; Round-trip: L · X = B
+    (let [L [[2.0 0.0 0.0] [1.0 3.0 0.0] [0.5 1.0 4.0]]
+          B [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
+          X (la/forward-substitution L B false)]
+      (t/is-data-approx= B (mx/mx* L X) :tolerance 1e-12))))
+
+(t/deftest back-substitution-test
+  (t/with-instrument `la/back-substitution
+    (t/is-spec-check la/back-substitution))
+  (t/with-instrument :all
+    ;; U = [[2 1] [0 1]], b = [3 1] → x1 = 1, x0 = (3 - 1*1)/2 = 1
+    (t/is= [1.0 1.0] (la/back-substitution [[2.0 1.0] [0.0 1.0]] [3.0 1.0]))
+    ;; Round-trip: U · x = b
+    (let [U [[2.0 1.0 0.5] [0.0 3.0 1.0] [0.0 0.0 4.0]]
+          b [3.5 5.0 8.0]
+          x (la/back-substitution U b)]
+      (t/is-data-approx= b (mapv #(first %) (mx/mx* U (mx/column-matrix x))) :tolerance 1e-12))))
+
 (t/deftest solve-test
   (t/with-instrument `la/solve
     (t/is-spec-check la/solve))
@@ -208,11 +241,15 @@
   (t/with-instrument :all
     (t/is= nil (la/cholesky-decomposition [[]]))
     ;;Math CholeskyDecomposition[{{4}}] = {{2}}
-    (t/is= {::la/cholesky-L [[2.0]] ::la/cholesky-LT [[2.0]]}
+    (t/is= {::la/cholesky-L       [[2.0]]
+            ::la/cholesky-LT      [[2.0]]
+            ::la/cholesky-log-det (m/log 4.0)}
       (la/cholesky-decomposition [[4.0]]))
     ;;Math CholeskyDecomposition[{{1, 0.5}, {0.5, 3}}] -> L22 = Sqrt[11/4] = 1.6583123951776998
-    (t/is-data-approx= {::la/cholesky-L  [[1.0 0.0] [0.5 1.6583123951777]]
-                        ::la/cholesky-LT [[1.0 0.5] [0.0 1.6583123951777]]}
+    ;; log|A| = log(2.75) since |[[1,0.5],[0.5,3]]| = 3 - 0.25 = 2.75
+    (t/is-data-approx= {::la/cholesky-L       [[1.0 0.0] [0.5 1.6583123951777]]
+                        ::la/cholesky-LT      [[1.0 0.5] [0.0 1.6583123951777]]
+                        ::la/cholesky-log-det (m/log 2.75)}
       (la/cholesky-decomposition [[1.0 0.5] [0.5 3.0]]) :tolerance 1e-10)
     ;; Reconstruction test
     (let [m [[4.0 2.0] [2.0 5.0]]
@@ -220,6 +257,37 @@
           L (::la/cholesky-L result)
           reconstructed (mx/mx* L (mx/transpose L))]
       (t/is-data-approx= m reconstructed :tolerance 1e-10))))
+
+(t/deftest cholesky-log-det-test
+  (t/with-instrument `la/cholesky-log-det
+    (t/is-spec-check la/cholesky-log-det))
+  (t/with-instrument :all
+    ;; A = [[4]], L = [[2]], log|A| = log 4 = 2 log 2
+    (t/is-approx= (* 2.0 (m/log 2.0)) (la/cholesky-log-det [[2.0]]) :tolerance 1e-12)
+    ;; A = [[4 2] [2 2]], L = [[2 0] [1 1]], log|A| = log 4 = 2 log 2
+    (t/is-approx= (* 2.0 (m/log 2.0)) (la/cholesky-log-det [[2.0 0.0] [1.0 1.0]]) :tolerance 1e-12)
+    ;; Accepts the cholesky-decomposition return map directly
+    (let [chol (la/cholesky-decomposition [[4.0 2.0] [2.0 5.0]])]
+      ;; |A| = 4*5 - 2*2 = 16, log 16 = 4 log 2
+      (t/is-approx= (* 4.0 (m/log 2.0)) (la/cholesky-log-det chol) :tolerance 1e-12))))
+
+(t/deftest cholesky-inverse-test
+  (t/with-instrument `la/cholesky-inverse
+    (t/is-spec-check la/cholesky-inverse))
+  (t/with-instrument :all
+    ;; A = [[4 2] [2 2]], A^-1 = (1/det)·[[2 -2] [-2 4]] = (1/4)·[[2 -2] [-2 4]]
+    ;;   = [[0.5 -0.5] [-0.5 1.0]]
+    (let [chol (la/cholesky-decomposition [[4.0 2.0] [2.0 2.0]])]
+      (t/is-data-approx= [[0.5 -0.5] [-0.5 1.0]] (la/cholesky-inverse chol) :tolerance 1e-12))
+    ;; Round-trip: A · A^-1 = I for a random PD matrix
+    (let [A [[4.0 2.0 1.0] [2.0 5.0 0.5] [1.0 0.5 3.0]]
+          A-inv (la/cholesky-inverse (la/cholesky-decomposition A))]
+      (t/is-data-approx= (mx/identity-matrix 3) (mx/mx* A A-inv) :tolerance 1e-12))
+    ;; Result agrees with LU-based inverse on well-conditioned PD inputs
+    (let [A [[4.0 2.0] [2.0 5.0]]
+          chol-inv (la/cholesky-inverse (la/cholesky-decomposition A))
+          lu-inv (la/inverse A)]
+      (t/is-data-approx= lu-inv chol-inv :tolerance 1e-12))))
 
 (t/deftest rectangular-cholesky-decomposition-test
   (t/with-instrument `la/rectangular-cholesky-decomposition
