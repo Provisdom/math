@@ -542,6 +542,46 @@
 (s/def ::long-non+
   (s/spec long-non+? :gen #(s/gen (s/int-in min-long 1))))
 
+;;; Long generators — analogues of `finite*-gen`. These wrappers exist so the lint script
+;;; `bin/check-bounded-long-gen` can flag bounded usages: bounding a value-typed long parameter
+;;; hides edge-case bugs the same way `m/finite+-gen {:max 100}` does. Use `gen/large-integer*` /
+;;; `gen/choose` directly when you need a bounded *dimension* (collection size, iteration count).
+(defn long-gen
+  "Generator for any long. Options:
+    :min - minimum value (default min-long)
+    :max - maximum value (default max-long)"
+  ([] (long-gen {}))
+  ([{m1 :max, m2 :min, :or {m1 max-long, m2 min-long}}]
+   (gen/large-integer* {:min m2 :max m1})))
+
+(defn long+-gen
+  "Generator for positive longs. Options:
+    :max - maximum value (default max-long)"
+  ([] (long+-gen {}))
+  ([{m1 :max, :or {m1 max-long}}]
+   (gen/large-integer* {:min 1 :max m1})))
+
+(defn long--gen
+  "Generator for negative longs. Options:
+    :min - minimum value (default min-long)"
+  ([] (long--gen {}))
+  ([{m2 :min, :or {m2 min-long}}]
+   (gen/large-integer* {:min m2 :max -1})))
+
+(defn long-non--gen
+  "Generator for non-negative longs. Options:
+    :max - maximum value (default max-long)"
+  ([] (long-non--gen {}))
+  ([{m1 :max, :or {m1 max-long}}]
+   (gen/large-integer* {:min 0 :max m1})))
+
+(defn long-non+-gen
+  "Generator for non-positive longs. Options:
+    :min - minimum value (default min-long)"
+  ([] (long-non+-gen {}))
+  ([{m2 :min, :or {m2 min-long}}]
+   (gen/large-integer* {:min m2 :max 0})))
+
 (defn int?
   "Returns `true` if `x` is an integer that is within the int range."
   [x]
