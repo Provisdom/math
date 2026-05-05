@@ -22,7 +22,7 @@
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
-(declare kahan-sum open-probs? probs?)
+(declare kahan-sum open-probs? probs? probs+?)
 
 (def mdl 6)                                                 ;max-dim-length for generators
 
@@ -194,6 +194,17 @@
       #(open-probs? % 1e-8))
     #(gen/bind (gen/choose 2 mdl) probs-gen)))
 
+(s/def ::vector-probs+
+  (s/with-gen
+    (s/and (s/coll-of ::m/prob+
+             :kind clojure.core/vector?
+             :into []
+             :min-count 1)
+      #(probs+? % 1e-8))
+    #(gen/one-of
+       [(gen/return [1.0])
+        (gen/bind (gen/choose 2 mdl) probs-gen)])))
+
 (s/def ::sparse-vector
   (s/with-gen
     (s/coll-of (s/tuple ::m/int-non- ::m/number))
@@ -325,10 +336,10 @@
 
 (defn open-probs?
   "Returns true if `x` is a valid open probability distribution vector.
-  
+
   Like probs? but requires all elements to be in (0, 1), excluding boundary values 0 and 1. Uses
   tolerance `sum-accu`.
-  
+
   Examples:
     (open-probs? [0.3 0.7] 1e-8) => true
     (open-probs? [0.0 1.0] 1e-8) => false (contains boundary values)"
@@ -337,6 +348,28 @@
     (m/roughly? 1.0 (kahan-sum x) sum-accu)))
 
 (s/fdef open-probs?
+  :args (s/cat :x any?
+          :sum-accu ::m/accu)
+  :ret boolean?)
+
+(defn probs+?
+  "Returns true if `x` is a probability distribution vector with no zero entries.
+
+  Every entry must be a `m/prob+?` value — strictly positive, possibly 1.0 — and
+  the vector must sum to 1.0 within `sum-accu`. Equivalent to `open-probs?` plus
+  the singleton case `[1.0]` (a degenerate one-outcome distribution).
+
+  Examples:
+    (probs+? [0.3 0.7] 1e-8) => true
+    (probs+? [1.0] 1e-8) => true (degenerate singleton allowed)
+    (probs+? [0.0 1.0] 1e-8) => false (contains zero entry)
+    (probs+? [0.3 0.7 0.0] 1e-8) => false"
+  [x sum-accu]
+  (and (vector? x)
+    (every? m/prob+? x)
+    (m/roughly? 1.0 (kahan-sum x) sum-accu)))
+
+(s/fdef probs+?
   :args (s/cat :x any?
           :sum-accu ::m/accu)
   :ret boolean?)

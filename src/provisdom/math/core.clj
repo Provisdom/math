@@ -752,6 +752,19 @@
   (s/spec #(or (nan? %) (open-prob? %))
     :gen #(gen/double* {:min tiny-dbl :max (next-down 1.0)})))
 
+(defn prob+?
+  "Returns `true` if `x` is in (0, 1] — a strictly positive probability, including 1."
+  [x]
+  (and (pos? x) (<= x 1)))
+
+(s/def ::prob+
+  (s/spec prob+?
+    :gen #(gen/double* {:min tiny-dbl :max 1.0 :NaN? false})))
+
+(s/def ::nan-or-prob+
+  (s/spec #(or (nan? %) (prob+? %))
+    :gen #(gen/double* {:min tiny-dbl :max 1.0})))
+
 (defn corr?
   "Returns `true` if `x` is between -1 and 1, inclusive."
   [x]
