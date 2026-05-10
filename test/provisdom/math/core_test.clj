@@ -1310,6 +1310,88 @@
     (t/is-not (m/roughly-corr? m/inf+ 0.4))
     (t/is-not (m/roughly-corr? m/nan 0.01))))
 
+;;;CLAMP
+(t/deftest clamp-test
+  (t/with-instrument `m/clamp
+    (t/is-spec-check m/clamp))
+  (t/with-instrument :all
+    (t/is= 5 (m/clamp 5 0 10))
+    (t/is= 10 (m/clamp 15 0 10))
+    (t/is= 0 (m/clamp -3 0 10))
+    (t/is= 0 (m/clamp 0 0 10))
+    (t/is= 10 (m/clamp 10 0 10))
+    (t/is (m/nan? (m/clamp m/nan 0.0 1.0)))
+    (t/is= 1.0 (m/clamp 1.0001 0.0 1.0 1e-3))
+    (t/is= 0.0 (m/clamp -0.0001 0.0 1.0 1e-3))
+    (t/is= 0.5 (m/clamp 0.5 0.0 1.0 1e-3))
+    (t/is= nil (m/clamp 1.5 0.0 1.0 1e-3))
+    (t/is= nil (m/clamp -0.5 0.0 1.0 1e-3))
+    (t/is= nil (m/clamp m/nan 0.0 1.0 1e-3))))
+
+(t/deftest clamp-prob-test
+  (t/with-instrument `m/clamp-prob
+    (t/is-spec-check m/clamp-prob))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-prob 0.5))
+    (t/is= 1.0 (m/clamp-prob 1.5))
+    (t/is= 0.0 (m/clamp-prob -0.5))
+    (t/is= 1.0 (m/clamp-prob 1.0001 1e-3))
+    (t/is= nil (m/clamp-prob 1.5 1e-3))
+    (t/is= nil (m/clamp-prob m/nan 1e-3))))
+
+(t/deftest clamp-open-prob-test
+  (t/with-instrument `m/clamp-open-prob
+    (t/is-spec-check m/clamp-open-prob))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-open-prob 0.5))
+    (t/is= (m/next-up 0.0) (m/clamp-open-prob 0.0))
+    (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.0))
+    (t/is= (m/next-up 0.0) (m/clamp-open-prob -0.5))
+    (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.5))
+    (t/is= (m/next-up 0.0) (m/clamp-open-prob -0.0001 1e-3))
+    (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.0001 1e-3))
+    (t/is= nil (m/clamp-open-prob -0.5 1e-3))
+    (t/is= nil (m/clamp-open-prob m/nan 1e-3))))
+
+(t/deftest clamp-prob+-test
+  (t/with-instrument `m/clamp-prob+
+    (t/is-spec-check m/clamp-prob+))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-prob+ 0.5))
+    (t/is= 1.0 (m/clamp-prob+ 1.0))
+    (t/is= 1.0 (m/clamp-prob+ 1.5))
+    (t/is= (m/next-up 0.0) (m/clamp-prob+ 0.0))
+    (t/is= (m/next-up 0.0) (m/clamp-prob+ -0.5))
+    (t/is= (m/next-up 0.0) (m/clamp-prob+ -0.0001 1e-3))
+    (t/is= 1.0 (m/clamp-prob+ 1.0001 1e-3))
+    (t/is= nil (m/clamp-prob+ 1.5 1e-3))
+    (t/is= nil (m/clamp-prob+ m/nan 1e-3))))
+
+(t/deftest clamp-corr-test
+  (t/with-instrument `m/clamp-corr
+    (t/is-spec-check m/clamp-corr))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-corr 0.5))
+    (t/is= 1.0 (m/clamp-corr 1.5))
+    (t/is= -1.0 (m/clamp-corr -1.5))
+    (t/is= 1.0 (m/clamp-corr 1.0001 1e-3))
+    (t/is= -1.0 (m/clamp-corr -1.0001 1e-3))
+    (t/is= nil (m/clamp-corr 1.5 1e-3))
+    (t/is= nil (m/clamp-corr m/nan 1e-3))))
+
+(t/deftest clamp-open-corr-test
+  (t/with-instrument `m/clamp-open-corr
+    (t/is-spec-check m/clamp-open-corr))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/clamp-open-corr 0.0))
+    (t/is= (m/next-up -1.0) (m/clamp-open-corr -1.0))
+    (t/is= (m/next-down 1.0) (m/clamp-open-corr 1.0))
+    (t/is= (m/next-up -1.0) (m/clamp-open-corr -1.5))
+    (t/is= (m/next-down 1.0) (m/clamp-open-corr 1.5))
+    (t/is= (m/next-up -1.0) (m/clamp-open-corr -1.0001 1e-3))
+    (t/is= nil (m/clamp-open-corr 1.5 1e-3))
+    (t/is= nil (m/clamp-open-corr m/nan 1e-3))))
+
 ;;;QUOTIENTS
 (t/deftest quot'-test
   (t/with-instrument `m/quot'

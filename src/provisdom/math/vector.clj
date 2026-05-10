@@ -1,8 +1,8 @@
 (ns provisdom.math.vector
   "Vector operations and linear algebra primitives.
 
-  Vectors are 1D tensors (Clojure vectors of numbers) with specialized
-  operations for numerical computation and probability distributions.
+  Vectors are 1D tensors (Clojure vectors of numbers) with specialized operations for numerical
+  computation and probability distributions.
 
   Core functionality:
   - Type predicates and validation (vector?, probs?, open-probs?)
@@ -18,7 +18,6 @@
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
-    [provisdom.math.intervals :as intervals]
     [provisdom.math.random :as random]
     [provisdom.math.tensor :as tensor]))
 
@@ -868,7 +867,7 @@
   (let [dot (dot-product v1 v2)
         n1 (tensor/norm v1)
         n2 (tensor/norm v2)
-        cos-theta (intervals/bound-by-interval [-1.0 1.0] (m/div dot (* n1 n2)))]
+        cos-theta (m/clamp-corr (m/div dot (* n1 n2)))]
     (m/acos cos-theta)))
 
 (s/fdef angle-between

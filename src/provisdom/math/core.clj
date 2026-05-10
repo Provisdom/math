@@ -1564,6 +1564,108 @@
   :args (s/cat :number ::number :accu ::accu)
   :ret boolean?)
 
+;;;CLAMP
+(defn clamp
+  "Constrains `number` to lie within `[lower, upper]`.
+
+  Without `accu`, returns the closest value to `number` in the closed interval. NaN passes through.
+  With `accu`, returns `nil` if `number` is NaN or lies further than `accu` outside the interval —
+  a safety check that ensures only floating-point rounding errors are clamped, not larger errors.
+
+  Examples:
+    (clamp 5 0 10)              ;=> 5
+    (clamp 15 0 10)             ;=> 10
+    (clamp 1.0001 0.0 1.0 1e-3) ;=> 1.0
+    (clamp 1.5 0.0 1.0 1e-3)    ;=> nil"
+  ([number lower upper]
+   (max lower (min upper number)))
+  ([number lower upper accu]
+   (if (or (nan? number)
+         (< number (- lower (double accu)))
+         (> number (+ upper (double accu))))
+     nil
+     (max lower (min upper number)))))
+
+(s/fdef clamp
+  :args (s/and (s/cat :number ::number
+                 :lower ::finite
+                 :upper ::finite
+                 :accu (s/? ::accu))
+          #(<= (:lower %) (:upper %)))
+  :ret (s/nilable ::number))
+
+(defn clamp-prob
+  "Constrains `number` to a probability in [0, 1]. With `accu`, returns `nil` if `number` is NaN or
+  further than `accu` outside [0, 1]."
+  ([number] (clamp number 0.0 1.0))
+  ([number accu] (clamp number 0.0 1.0 accu)))
+
+(s/fdef clamp-prob
+  :args (s/cat :number ::number :accu (s/? ::accu))
+  :ret (s/nilable ::number))
+
+(defn clamp-open-prob
+  "Constrains `number` to an open probability in (0, 1). Values at or beyond the boundary are
+  snapped to [[next-up]] 0.0 or [[next-down]] 1.0. With `accu`, returns `nil` if `number` is NaN or
+  further than `accu` outside [0, 1]."
+  ([number]
+   (cond (<= number 0.0) (next-up 0.0)
+     (>= number 1.0) (next-down 1.0)
+     :else number))
+  ([number accu]
+   (when-some [v (clamp number 0.0 1.0 accu)]
+     (cond (<= v 0.0) (next-up 0.0)
+       (>= v 1.0) (next-down 1.0)
+       :else v))))
+
+(s/fdef clamp-open-prob
+  :args (s/cat :number ::number :accu (s/? ::accu))
+  :ret (s/nilable ::number))
+
+(defn clamp-prob+
+  "Constrains `number` to a strictly-positive probability in (0, 1]. Values at or below 0 are
+  snapped to [[next-up]] 0.0. With `accu`, returns `nil` if `number` is NaN or further than `accu`
+  outside [0, 1]."
+  ([number]
+   (cond (<= number 0.0) (next-up 0.0)
+     (>= number 1.0) 1.0
+     :else number))
+  ([number accu]
+   (when-some [v (clamp number 0.0 1.0 accu)]
+     (if (<= v 0.0) (next-up 0.0) v))))
+
+(s/fdef clamp-prob+
+  :args (s/cat :number ::number :accu (s/? ::accu))
+  :ret (s/nilable ::number))
+
+(defn clamp-corr
+  "Constrains `number` to a correlation in [-1, 1]. With `accu`, returns `nil` if `number` is NaN
+  or further than `accu` outside [-1, 1]."
+  ([number] (clamp number -1.0 1.0))
+  ([number accu] (clamp number -1.0 1.0 accu)))
+
+(s/fdef clamp-corr
+  :args (s/cat :number ::number :accu (s/? ::accu))
+  :ret (s/nilable ::number))
+
+(defn clamp-open-corr
+  "Constrains `number` to an open correlation in (-1, 1). Values at or beyond the boundary are
+  snapped to [[next-up]] -1.0 or [[next-down]] 1.0. With `accu`, returns `nil` if `number` is NaN or
+  further than `accu` outside [-1, 1]."
+  ([number]
+   (cond (<= number -1.0) (next-up -1.0)
+     (>= number 1.0) (next-down 1.0)
+     :else number))
+  ([number accu]
+   (when-some [v (clamp number -1.0 1.0 accu)]
+     (cond (<= v -1.0) (next-up -1.0)
+       (>= v 1.0) (next-down 1.0)
+       :else v))))
+
+(s/fdef clamp-open-corr
+  :args (s/cat :number ::number :accu (s/? ::accu))
+  :ret (s/nilable ::number))
+
 ;;;QUOTIENTS
 (defn- quotient-invalid?
   "Returns true if numerator/divisor pair is invalid for quotient operations."
@@ -1582,8 +1684,7 @@
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
         d
-        (maybe-long-range
-          (quot numerator divisor))))))
+        (maybe-long-range (quot numerator divisor))))))
 
 (s/fdef quot'
   :args (s/cat :numerator ::number :divisor ::number)
@@ -1599,8 +1700,7 @@
     (let [d (div numerator divisor)]
       (if (or (inf? d) (nan? d))
         nan
-        (maybe-long-able
-          (mod numerator divisor))))))
+        (maybe-long-able (mod numerator divisor))))))
 
 (s/fdef mod'
   :args (s/cat :numerator ::number :divisor ::number)
@@ -1664,8 +1764,8 @@
 
 (defn lcm'
   "Returns the Least Common Multiple of two longs. Handles negative numbers by taking absolute
-  values. Returns a non-negative result. `lcm(0, n) = lcm(n, 0) = 0`. Returns a double if the
-  result overflows long range, otherwise a long."
+  values. Returns a non-negative result. `lcm(0, n) = lcm(n, 0) = 0`. Returns a double if the result
+  overflows long range, otherwise a long."
   [long1 long2]
   (let [a (abs' long1)
         b (abs' long2)]
