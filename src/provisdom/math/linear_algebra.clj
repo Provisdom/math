@@ -1018,8 +1018,11 @@
         (* 2.0 acc)
         (recur (inc i) (+ acc (m/log (double (get-in L [i i])))))))))
 
-(defn- gen-cholesky-L
-  "Generates a valid Cholesky factor L: lower triangular with positive diagonal entries."
+(defn gen-cholesky-L
+  "Returns a test.check generator for a valid Cholesky factor L (lower triangular, positive
+  diagonal). Dimensions are capped at 1–4; the diagonal is floored at 0.1 to keep L well-conditioned
+  (near-zero diagonals correspond to numerically singular matrices and produce uninformative results
+  in downstream Cholesky-based computations)."
   []
   (gen/bind (gen/choose 1 4)
     (fn [n]
