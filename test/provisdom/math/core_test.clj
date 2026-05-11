@@ -1320,13 +1320,64 @@
     (t/is= 0 (m/clamp -3 0 10))
     (t/is= 0 (m/clamp 0 0 10))
     (t/is= 10 (m/clamp 10 0 10))
-    (t/is (m/nan? (m/clamp m/nan 0.0 1.0)))
+    (t/is= nil (m/clamp m/nan 0.0 1.0))
     (t/is= 1.0 (m/clamp 1.0001 0.0 1.0 1e-3))
     (t/is= 0.0 (m/clamp -0.0001 0.0 1.0 1e-3))
     (t/is= 0.5 (m/clamp 0.5 0.0 1.0 1e-3))
     (t/is= nil (m/clamp 1.5 0.0 1.0 1e-3))
     (t/is= nil (m/clamp -0.5 0.0 1.0 1e-3))
     (t/is= nil (m/clamp m/nan 0.0 1.0 1e-3))))
+
+(t/deftest clamp-long'-test
+  (t/with-instrument `m/clamp-long'
+    (t/is-spec-check m/clamp-long'))
+  (t/with-instrument :all
+    (t/is= 5 (m/clamp-long' 5.7))
+    (t/is= 0 (m/clamp-long' 0))
+    (t/is= -3 (m/clamp-long' -3.2))
+    (t/is= m/max-long (m/clamp-long' m/inf+))
+    (t/is= m/min-long (m/clamp-long' m/inf-))
+    (t/is= m/max-long (m/clamp-long' 1e100))
+    (t/is= m/min-long (m/clamp-long' -1e100))
+    (t/is= m/max-long (m/clamp-long' (double m/max-long)))
+    (t/is= nil (m/clamp-long' m/nan))))
+
+(t/deftest clamp-finite-test
+  (t/with-instrument `m/clamp-finite
+    (t/is-spec-check m/clamp-finite))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-finite 0.5))
+    (t/is= 0 (m/clamp-finite 0))
+    (t/is= -3.0 (m/clamp-finite -3.0))
+    (t/is= m/max-dbl (m/clamp-finite m/inf+))
+    (t/is= m/min-dbl (m/clamp-finite m/inf-))
+    (t/is= nil (m/clamp-finite m/nan))))
+
+(t/deftest clamp-finite+-test
+  (t/with-instrument `m/clamp-finite+
+    (t/is-spec-check m/clamp-finite+))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-finite+ 0.5))
+    (t/is= (m/next-up 0.0) (m/clamp-finite+ 0.0))
+    (t/is= (m/next-up 0.0) (m/clamp-finite+ 0))
+    (t/is= (m/next-up 0.0) (m/clamp-finite+ -3.0))
+    (t/is= (m/next-up 0.0) (m/clamp-finite+ m/inf-))
+    (t/is= m/max-dbl (m/clamp-finite+ m/inf+))
+    (t/is= m/max-dbl (m/clamp-finite+ m/max-dbl))
+    (t/is= nil (m/clamp-finite+ m/nan))))
+
+(t/deftest clamp-finite-non--test
+  (t/with-instrument `m/clamp-finite-non-
+    (t/is-spec-check m/clamp-finite-non-))
+  (t/with-instrument :all
+    (t/is= 0.5 (m/clamp-finite-non- 0.5))
+    (t/is= 0.0 (m/clamp-finite-non- 0.0))
+    (t/is= 0 (m/clamp-finite-non- 0))
+    (t/is= 0.0 (m/clamp-finite-non- -3.0))
+    (t/is= 0.0 (m/clamp-finite-non- m/inf-))
+    (t/is= m/max-dbl (m/clamp-finite-non- m/inf+))
+    (t/is= m/max-dbl (m/clamp-finite-non- m/max-dbl))
+    (t/is= nil (m/clamp-finite-non- m/nan))))
 
 (t/deftest clamp-prob-test
   (t/with-instrument `m/clamp-prob
@@ -1335,6 +1386,7 @@
     (t/is= 0.5 (m/clamp-prob 0.5))
     (t/is= 1.0 (m/clamp-prob 1.5))
     (t/is= 0.0 (m/clamp-prob -0.5))
+    (t/is= nil (m/clamp-prob m/nan))
     (t/is= 1.0 (m/clamp-prob 1.0001 1e-3))
     (t/is= nil (m/clamp-prob 1.5 1e-3))
     (t/is= nil (m/clamp-prob m/nan 1e-3))))
@@ -1348,6 +1400,7 @@
     (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.0))
     (t/is= (m/next-up 0.0) (m/clamp-open-prob -0.5))
     (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.5))
+    (t/is= nil (m/clamp-open-prob m/nan))
     (t/is= (m/next-up 0.0) (m/clamp-open-prob -0.0001 1e-3))
     (t/is= (m/next-down 1.0) (m/clamp-open-prob 1.0001 1e-3))
     (t/is= nil (m/clamp-open-prob -0.5 1e-3))
@@ -1362,6 +1415,7 @@
     (t/is= 1.0 (m/clamp-prob+ 1.5))
     (t/is= (m/next-up 0.0) (m/clamp-prob+ 0.0))
     (t/is= (m/next-up 0.0) (m/clamp-prob+ -0.5))
+    (t/is= nil (m/clamp-prob+ m/nan))
     (t/is= (m/next-up 0.0) (m/clamp-prob+ -0.0001 1e-3))
     (t/is= 1.0 (m/clamp-prob+ 1.0001 1e-3))
     (t/is= nil (m/clamp-prob+ 1.5 1e-3))
@@ -1374,6 +1428,7 @@
     (t/is= 0.5 (m/clamp-corr 0.5))
     (t/is= 1.0 (m/clamp-corr 1.5))
     (t/is= -1.0 (m/clamp-corr -1.5))
+    (t/is= nil (m/clamp-corr m/nan))
     (t/is= 1.0 (m/clamp-corr 1.0001 1e-3))
     (t/is= -1.0 (m/clamp-corr -1.0001 1e-3))
     (t/is= nil (m/clamp-corr 1.5 1e-3))
@@ -1388,6 +1443,7 @@
     (t/is= (m/next-down 1.0) (m/clamp-open-corr 1.0))
     (t/is= (m/next-up -1.0) (m/clamp-open-corr -1.5))
     (t/is= (m/next-down 1.0) (m/clamp-open-corr 1.5))
+    (t/is= nil (m/clamp-open-corr m/nan))
     (t/is= (m/next-up -1.0) (m/clamp-open-corr -1.0001 1e-3))
     (t/is= nil (m/clamp-open-corr 1.5 1e-3))
     (t/is= nil (m/clamp-open-corr m/nan 1e-3))))

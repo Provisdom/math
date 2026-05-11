@@ -1566,24 +1566,25 @@
 
 ;;;CLAMP
 (defn clamp
-  "Constrains `number` to lie within `[lower, upper]`.
+  "Constrains `number` to lie within `[lower, upper]`. Returns `nil` if `number` is NaN.
 
-  Without `accu`, returns the closest value to `number` in the closed interval. NaN passes through.
-  With `accu`, returns `nil` if `number` is NaN or lies further than `accu` outside the interval —
+  Without `accu`, returns the closest value to `number` in the closed interval.
+  With `accu`, also returns `nil` if `number` lies further than `accu` outside the interval —
   a safety check that ensures only floating-point rounding errors are clamped, not larger errors.
 
   Examples:
     (clamp 5 0 10)              ;=> 5
     (clamp 15 0 10)             ;=> 10
+    (clamp ##NaN 0.0 1.0)       ;=> nil
     (clamp 1.0001 0.0 1.0 1e-3) ;=> 1.0
     (clamp 1.5 0.0 1.0 1e-3)    ;=> nil"
   ([number lower upper]
-   (max lower (min upper number)))
+   (when-not (nan? number)
+     (max lower (min upper number))))
   ([number lower upper accu]
-   (if (or (nan? number)
-         (< number (- lower (double accu)))
-         (> number (+ upper (double accu))))
-     nil
+   (when-not (or (nan? number)
+               (< number (- lower (double accu)))
+               (> number (+ upper (double accu))))
      (max lower (min upper number)))))
 
 (s/fdef clamp
@@ -1594,9 +1595,68 @@
           #(<= (:lower %) (:upper %)))
   :ret (s/nilable ::number))
 
+(defn clamp-long'
+  "Constrains `number` to the long range `[min-long, max-long]` and returns it as a `long`.
+  Returns `nil` if `number` is NaN. Useful for safely converting a possibly-infinite or
+  out-of-long-range double to a long without overflow.
+
+  Examples:
+    (clamp-long' 5.7)       ;=> 5
+    (clamp-long' ##Inf)     ;=> 9223372036854775807
+    (clamp-long' ##-Inf)    ;=> -9223372036854775808
+    (clamp-long' ##NaN)     ;=> nil"
+  [number]
+  (cond (nan? number) nil
+    (>= number max-long) max-long
+    (<= number min-long) min-long
+    :else (long number)))
+
+(s/fdef clamp-long'
+  :args (s/cat :number ::number)
+  :ret (s/nilable ::long))
+
+(defn clamp-finite
+  "Constrains `number` to a finite double: `##Inf` becomes [[max-dbl]] and `##-Inf` becomes
+  [[min-dbl]]. Returns `nil` if `number` is NaN."
+  [number]
+  (cond (nan? number) nil
+    (inf+? number) max-dbl
+    (inf-? number) min-dbl
+    :else number))
+
+(s/fdef clamp-finite
+  :args (s/cat :number ::number)
+  :ret (s/nilable ::finite))
+
+(defn clamp-finite+
+  "Constrains `number` to a positive finite value in `(0, max-dbl]`. Values `≤ 0` are snapped to
+  [[next-up]] `0.0`, `##Inf` becomes [[max-dbl]]. Returns `nil` if `number` is NaN."
+  [number]
+  (cond (nan? number) nil
+    (inf+? number) max-dbl
+    (<= number 0) (next-up 0.0)
+    :else number))
+
+(s/fdef clamp-finite+
+  :args (s/cat :number ::number)
+  :ret (s/nilable ::finite+))
+
+(defn clamp-finite-non-
+  "Constrains `number` to a non-negative finite value in `[0, max-dbl]`. Negatives are snapped to
+  `0.0`, `##Inf` becomes [[max-dbl]]. Returns `nil` if `number` is NaN."
+  [number]
+  (cond (nan? number) nil
+    (inf+? number) max-dbl
+    (neg? number) 0.0
+    :else number))
+
+(s/fdef clamp-finite-non-
+  :args (s/cat :number ::number)
+  :ret (s/nilable ::finite-non-))
+
 (defn clamp-prob
-  "Constrains `number` to a probability in [0, 1]. With `accu`, returns `nil` if `number` is NaN or
-  further than `accu` outside [0, 1]."
+  "Constrains `number` to a probability in [0, 1]. Returns `nil` if `number` is NaN. With `accu`,
+  also returns `nil` if `number` is further than `accu` outside [0, 1]."
   ([number] (clamp number 0.0 1.0))
   ([number accu] (clamp number 0.0 1.0 accu)))
 
@@ -1606,10 +1666,11 @@
 
 (defn clamp-open-prob
   "Constrains `number` to an open probability in (0, 1). Values at or beyond the boundary are
-  snapped to [[next-up]] 0.0 or [[next-down]] 1.0. With `accu`, returns `nil` if `number` is NaN or
-  further than `accu` outside [0, 1]."
+  snapped to [[next-up]] 0.0 or [[next-down]] 1.0. Returns `nil` if `number` is NaN. With `accu`,
+  also returns `nil` if `number` is further than `accu` outside [0, 1]."
   ([number]
-   (cond (<= number 0.0) (next-up 0.0)
+   (cond (nan? number) nil
+     (<= number 0.0) (next-up 0.0)
      (>= number 1.0) (next-down 1.0)
      :else number))
   ([number accu]
@@ -1624,10 +1685,11 @@
 
 (defn clamp-prob+
   "Constrains `number` to a strictly-positive probability in (0, 1]. Values at or below 0 are
-  snapped to [[next-up]] 0.0. With `accu`, returns `nil` if `number` is NaN or further than `accu`
-  outside [0, 1]."
+  snapped to [[next-up]] 0.0. Returns `nil` if `number` is NaN. With `accu`, also returns `nil` if
+  `number` is further than `accu` outside [0, 1]."
   ([number]
-   (cond (<= number 0.0) (next-up 0.0)
+   (cond (nan? number) nil
+     (<= number 0.0) (next-up 0.0)
      (>= number 1.0) 1.0
      :else number))
   ([number accu]
@@ -1639,8 +1701,8 @@
   :ret (s/nilable ::number))
 
 (defn clamp-corr
-  "Constrains `number` to a correlation in [-1, 1]. With `accu`, returns `nil` if `number` is NaN
-  or further than `accu` outside [-1, 1]."
+  "Constrains `number` to a correlation in [-1, 1]. Returns `nil` if `number` is NaN. With `accu`,
+  also returns `nil` if `number` is further than `accu` outside [-1, 1]."
   ([number] (clamp number -1.0 1.0))
   ([number accu] (clamp number -1.0 1.0 accu)))
 
@@ -1650,10 +1712,11 @@
 
 (defn clamp-open-corr
   "Constrains `number` to an open correlation in (-1, 1). Values at or beyond the boundary are
-  snapped to [[next-up]] -1.0 or [[next-down]] 1.0. With `accu`, returns `nil` if `number` is NaN or
-  further than `accu` outside [-1, 1]."
+  snapped to [[next-up]] -1.0 or [[next-down]] 1.0. Returns `nil` if `number` is NaN. With `accu`,
+  also returns `nil` if `number` is further than `accu` outside [-1, 1]."
   ([number]
-   (cond (<= number -1.0) (next-up -1.0)
+   (cond (nan? number) nil
+     (<= number -1.0) (next-up -1.0)
      (>= number 1.0) (next-down 1.0)
      :else number))
   ([number accu]
