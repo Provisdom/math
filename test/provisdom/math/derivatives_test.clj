@@ -4,10 +4,11 @@
     [provisdom.math.derivatives :as deriv]
     [provisdom.test.core :as t]))
 
-;;73 seconds
+;;42 seconds
 
 (set! *warn-on-reflection* true)
 
+;;;NUMERICAL DERIVATIVES
 (defn der-f
   [number]
   (+ (m/exp number)
@@ -24,7 +25,7 @@
     ;;first derivative: 131624.413159103
     (t/is= 131624.41317399498 ((deriv/derivative-fn der-f) 5.0))
     (t/is= 131624.41315653265 ((deriv/derivative-fn der-f {::deriv/h 1e-5}) 5.0))
-    (t/is-approx= 131624.413 ((deriv/derivative-fn der-f {::deriv/h 1e-7}) 5.0) :tolerance 0.01)
+    (t/is= 131624.41340682562 ((deriv/derivative-fn der-f {::deriv/h 1e-7}) 5.0)) ;131624.413159103
     (t/is= 131624.4131885469 ((deriv/derivative-fn der-f {::deriv/accuracy 8}) 5.0))
     (t/is= 131624.41315944307 ((deriv/derivative-fn der-f {::deriv/type :forward}) 5.0))
     (t/is= 131624.4131885469 ((deriv/derivative-fn der-f {::deriv/type :backward}) 5.0))
@@ -84,22 +85,21 @@
                                    ::deriv/derivative 4})
        5.0))
     ;;fifth deriv: 25348.41315903
-    (t/is-approx= 25348.41 ((deriv/derivative-fn der-f {::deriv/derivative 5}) 5.0) :tolerance 0.1)
-    (t/is-approx= 25348.54
+    (t/is= 25348.41462038457 ((deriv/derivative-fn der-f {::deriv/derivative 5}) 5.0))
+    (t/is= 25348.537368699905
       ((deriv/derivative-fn der-f {::deriv/derivative 5
                                    ::deriv/h          1e-8})
-       5.0)
-      :tolerance 0.1)
+       5.0))
     (t/is= 25348.660635063425
       ((deriv/derivative-fn der-f {::deriv/derivative 5
                                    ::deriv/h          1e-6})
        5.0))
     ;;sixth deriv: 5188.4131591
-    (t/is-approx= 5188.45 ((deriv/derivative-fn der-f {::deriv/derivative 6}) 5.0) :tolerance 0.1)
+    (t/is= 5188.451371035215 ((deriv/derivative-fn der-f {::deriv/derivative 6}) 5.0))
     ;;seventh deriv: 148.413159103
-    (t/is-approx= 148.41 ((deriv/derivative-fn der-f {::deriv/derivative 7}) 5.0) :tolerance 0.1)
+    (t/is= 148.4122348483652 ((deriv/derivative-fn der-f {::deriv/derivative 7}) 5.0))
     ;;eighth deriv: 148.413159103
-    (t/is-approx= 148.38 ((deriv/derivative-fn der-f {::deriv/derivative 8}) 5.0) :tolerance 0.1)
+    (t/is= 148.37917386236595 ((deriv/derivative-fn der-f {::deriv/derivative 8}) 5.0))
     ;;example issues requiring 'h'
     (t/is= 2.0E8 ((deriv/derivative-fn m/sq) 1e8))          ;good
     (t/is= 1.92E9 ((deriv/derivative-fn m/sq) 1e9))         ;bad
@@ -192,17 +192,17 @@
     ;; f(x,y,z) = xyz, grad = [yz, xz, xy]
     (let [[gx gy gz] ((deriv/gradient-fn product-3d) [1.0 2.0 3.0])]
       ;;Math 6.00000
-      (t/is-approx= 6.0 gx :tolerance 1e-5)
+      (t/is-approx= 6.0 gx :tolerance 1e-8)
       ;;Math 3.00000
-      (t/is-approx= 3.0 gy :tolerance 1e-5)
+      (t/is-approx= 3.0 gy :tolerance 1e-8)
       ;;Math 2.00000
-      (t/is-approx= 2.0 gz :tolerance 1e-5))
+      (t/is-approx= 2.0 gz :tolerance 1e-8))
     ;; Test with forward differences
     (let [[gx gy] ((deriv/gradient-fn sum-of-squares-2d {::deriv/type :forward}) [3.0 4.0])]
       ;;Math 6.00000
-      (t/is-approx= 6.0 gx :tolerance 1e-5)
+      (t/is-approx= 6.0 gx :tolerance 1e-7)
       ;;Math 8.00000
-      (t/is-approx= 8.0 gy :tolerance 1e-5))
+      (t/is-approx= 8.0 gy :tolerance 1e-7))
     ;; Test with higher accuracy
     (let [[gx gy] ((deriv/gradient-fn sum-of-squares-2d {::deriv/accuracy 4}) [3.0 4.0])]
       ;;Math 6.00000
@@ -227,13 +227,13 @@
     ;; F(x,y) = [x^2, y^2], Jacobian = [[2x, 0], [0, 2y]]
     (let [[[j00 j01] [j10 j11]] ((deriv/jacobian-fn squares-2d-v) [2.0 3.0])]
       ;;Math 4.00000
-      (t/is-approx= 4.0 j00 :tolerance 1e-5)
+      (t/is-approx= 4.0 j00 :tolerance 1e-8)
       ;;Math 0.00000
-      (t/is-approx= 0.0 j01 :tolerance 1e-5)
+      (t/is-approx= 0.0 j01 :tolerance 1e-8)
       ;;Math 0.00000
-      (t/is-approx= 0.0 j10 :tolerance 1e-5)
+      (t/is-approx= 0.0 j10 :tolerance 1e-8)
       ;;Math 6.00000
-      (t/is-approx= 6.0 j11 :tolerance 1e-5))
+      (t/is-approx= 6.0 j11 :tolerance 1e-8))
     ;; F(x,y) = [x+y, x*y], Jacobian = [[1, 1], [y, x]]
     (let [[[j00 j01] [j10 j11]] ((deriv/jacobian-fn sum-product-2d-v) [2.0 3.0])]
       ;;Math 1.00000
@@ -248,34 +248,34 @@
     ;; [[y, x, 0], [0, z, y], [z, 0, x]] = [[2, 1, 0], [0, 3, 2], [3, 0, 1]]
     (let [jac ((deriv/jacobian-fn products-3d-v) [1.0 2.0 3.0])]
       ;;Math 2.00000
-      (t/is-approx= 2.0 (get-in jac [0 0]) :tolerance 1e-5)
+      (t/is-approx= 2.0 (get-in jac [0 0]) :tolerance 1e-8)
       ;;Math 1.00000
-      (t/is-approx= 1.0 (get-in jac [0 1]) :tolerance 1e-5)
+      (t/is-approx= 1.0 (get-in jac [0 1]) :tolerance 1e-8)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in jac [0 2]) :tolerance 1e-5)
+      (t/is-approx= 0.0 (get-in jac [0 2]) :tolerance 1e-8)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in jac [1 0]) :tolerance 1e-5)
+      (t/is-approx= 0.0 (get-in jac [1 0]) :tolerance 1e-8)
       ;;Math 3.00000
-      (t/is-approx= 3.0 (get-in jac [1 1]) :tolerance 1e-5)
+      (t/is-approx= 3.0 (get-in jac [1 1]) :tolerance 1e-8)
       ;;Math 2.00000
-      (t/is-approx= 2.0 (get-in jac [1 2]) :tolerance 1e-5)
+      (t/is-approx= 2.0 (get-in jac [1 2]) :tolerance 1e-8)
       ;;Math 3.00000
-      (t/is-approx= 3.0 (get-in jac [2 0]) :tolerance 1e-5)
+      (t/is-approx= 3.0 (get-in jac [2 0]) :tolerance 1e-8)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in jac [2 1]) :tolerance 1e-5)
+      (t/is-approx= 0.0 (get-in jac [2 1]) :tolerance 1e-8)
       ;;Math 1.00000
-      (t/is-approx= 1.0 (get-in jac [2 2]) :tolerance 1e-5))
+      (t/is-approx= 1.0 (get-in jac [2 2]) :tolerance 1e-8))
     ;; Test with forward differences
     (let [[[j00 j01] [j10 j11]] ((deriv/jacobian-fn squares-2d-v {::deriv/type :forward})
                                  [2.0 3.0])]
       ;;Math 4.00000
-      (t/is-approx= 4.0 j00 :tolerance 1e-4)
+      (t/is-approx= 4.0 j00 :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 j01 :tolerance 1e-4)
+      (t/is-approx= 0.0 j01 :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 j10 :tolerance 1e-4)
+      (t/is-approx= 0.0 j10 :tolerance 1e-7)
       ;;Math 6.00000
-      (t/is-approx= 6.0 j11 :tolerance 1e-4))))
+      (t/is-approx= 6.0 j11 :tolerance 1e-7))))
 
 (t/deftest hessian-fn-test
   (t/with-instrument `deriv/hessian-fn
@@ -297,65 +297,64 @@
     ;; f(x,y) = x^2 + y^2, Hessian = [[2, 0], [0, 2]]
     (let [[[h00 h01] [h10 h11]] ((deriv/hessian-fn sum-of-squares-2d) [3.0 4.0])]
       ;;Math 2.00000
-      (t/is-approx= 2.0 h00 :tolerance 1e-5)
+      (t/is-approx= 2.0 h00)
       ;;Math 0.00000
-      (t/is-approx= 0.0 h01 :tolerance 1e-5)
+      (t/is-approx= 0.0 h01)
       ;;Math 0.00000
-      (t/is-approx= 0.0 h10 :tolerance 1e-5)
+      (t/is-approx= 0.0 h10)
       ;;Math 2.00000
-      (t/is-approx= 2.0 h11 :tolerance 1e-5))
+      (t/is-approx= 2.0 h11))
     ;; f(x,y) = x*y, Hessian = [[0, 1], [1, 0]]
     (let [[[h00 h01] [h10 h11]] ((deriv/hessian-fn product-2d) [2.0 3.0])]
       ;;Math 0.00000
-      (t/is-approx= 0.0 h00 :tolerance 1e-5)
+      (t/is-approx= 0.0 h00)
       ;;Math 1.00000
-      (t/is-approx= 1.0 h01 :tolerance 1e-5)
+      (t/is-approx= 1.0 h01)
       ;;Math 1.00000
-      (t/is-approx= 1.0 h10 :tolerance 1e-5)
+      (t/is-approx= 1.0 h10)
       ;;Math 0.00000
-      (t/is-approx= 0.0 h11 :tolerance 1e-5))
+      (t/is-approx= 0.0 h11))
     ;; f(x,y,z) = x^2 + 2*y^2 + 3*z^2, Hessian = diag(2, 4, 6)
     (let [hess ((deriv/hessian-fn weighted-sum-of-squares-3d) [1.0 2.0 3.0])]
       ;;Math 2.00000
-      (t/is-approx= 2.0 (get-in hess [0 0]) :tolerance 1e-4)
+      (t/is-approx= 2.0 (get-in hess [0 0]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [0 1]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [0 1]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [0 2]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [0 2]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [1 0]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [1 0]) :tolerance 1e-7)
       ;;Math 4.00000
-      (t/is-approx= 4.0 (get-in hess [1 1]) :tolerance 1e-4)
+      (t/is-approx= 4.0 (get-in hess [1 1]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [1 2]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [1 2]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [2 0]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [2 0]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [2 1]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [2 1]) :tolerance 1e-7)
       ;;Math 6.00000
-      (t/is-approx= 6.0 (get-in hess [2 2]) :tolerance 1e-4))
+      (t/is-approx= 6.0 (get-in hess [2 2]) :tolerance 1e-7))
     ;; f(x,y,z) = x*y*z, Hessian = [[0, z, y], [z, 0, x], [y, x, 0]]
     (let [hess ((deriv/hessian-fn product-3d) [1.0 2.0 3.0])]
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [0 0]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [0 0]) :tolerance 1e-7)
       ;;Math 3.00000
-      (t/is-approx= 3.0 (get-in hess [0 1]) :tolerance 1e-4)
+      (t/is-approx= 3.0 (get-in hess [0 1]) :tolerance 1e-7)
       ;;Math 2.00000
-      (t/is-approx= 2.0 (get-in hess [0 2]) :tolerance 1e-4)
+      (t/is-approx= 2.0 (get-in hess [0 2]) :tolerance 1e-7)
       ;;Math 3.00000
-      (t/is-approx= 3.0 (get-in hess [1 0]) :tolerance 1e-4)
+      (t/is-approx= 3.0 (get-in hess [1 0]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [1 1]) :tolerance 1e-4)
+      (t/is-approx= 0.0 (get-in hess [1 1]) :tolerance 1e-7)
       ;;Math 1.00000
-      (t/is-approx= 1.0 (get-in hess [1 2]) :tolerance 1e-4)
+      (t/is-approx= 1.0 (get-in hess [1 2]) :tolerance 1e-7)
       ;;Math 2.00000
-      (t/is-approx= 2.0 (get-in hess [2 0]) :tolerance 1e-4)
+      (t/is-approx= 2.0 (get-in hess [2 0]) :tolerance 1e-7)
       ;;Math 1.00000
-      (t/is-approx= 1.0 (get-in hess [2 1]) :tolerance 1e-4)
+      (t/is-approx= 1.0 (get-in hess [2 1]) :tolerance 1e-7)
       ;;Math 0.00000
-      (t/is-approx= 0.0 (get-in hess [2 2]) :tolerance 1e-4))))
+      (t/is-approx= 0.0 (get-in hess [2 2]) :tolerance 1e-7))))
 
-;;;PARTIAL DERIVATIVE TESTS
 (defn fxy
   [x y]
   (+ (* (double x) x)
@@ -409,8 +408,7 @@
     ;; Second derivative: sin''(0) = -sin(0) = 0
     ;;Math 0.00000
     (t/is-approx= 0.0
-      ((deriv/richardson-derivative-fn m/sin {::deriv/derivative 2}) 0.0)
-      :tolerance 1e-8)
+      ((deriv/richardson-derivative-fn m/sin {::deriv/derivative 2}) 0.0) :tolerance 1e-8)
     ;; Richardson with more levels should be accurate
     (let [true-deriv (m/cos 1.0)
           richardson-6 ((deriv/richardson-derivative-fn m/sin {::deriv/richardson-levels 6}) 1.0)]
@@ -429,8 +427,7 @@
     (t/is-approx= 10.0 ((deriv/adaptive-derivative-fn m/sq) 5.0) :tolerance 1e-7)
     ;; With custom tolerance - note that tighter rel-tol gives better result
     (t/is-approx= (m/cos 2.0)
-      ((deriv/adaptive-derivative-fn m/sin {::deriv/rel-tol 1e-12}) 2.0)
-      :tolerance 1e-7)))
+      ((deriv/adaptive-derivative-fn m/sin {::deriv/rel-tol 1e-12}) 2.0) :tolerance 1e-7)))
 
 (t/deftest derivative-with-error-fn-test
   (t/with-instrument `deriv/derivative-with-error-fn
@@ -440,9 +437,8 @@
       ;; Value should be close to -1
       ;;Math -1.0000
       (t/is-approx= -1.0 (::deriv/value result) :tolerance 1e-7)
-      ;; Error bound should be small and non-negative
-      (t/is (m/non-? (::deriv/error-bound result)))
-      (t/is (< (::deriv/error-bound result) 1e-6)))
+      ;; Error bound: exact value from REPL (iterative algorithm, ~10x observed)
+      (t/is-approx= 1.6579333461663737E-9 (::deriv/error-bound result) :tolerance 1e-8))
     ;; Test with x^2
     (let [result ((deriv/derivative-with-error-fn m/sq) 3.0)]
       ;;Math 6.00000
@@ -452,7 +448,7 @@
 (t/deftest directional-derivative-fn-test
   (t/with-instrument `deriv/directional-derivative-fn
     (t/is-spec-check deriv/directional-derivative-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  ;;no instrumentation; Orchestra fspec validation fails with fn args -- ME
   ;; f(x,y) = x^2 + y^2, grad = [2x, 2y]
   ;; Direction [1,0] at (3,4) -> 2*3 = 6
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
@@ -467,33 +463,33 @@
   ;; Direction [1,1] (normalized) at (3,4) -> (6+8)/sqrt(2) = 14/sqrt(2)
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         df-diag (deriv/directional-derivative-fn f [1.0 1.0])]
-    (t/is-approx= (/ 14.0 m/sqrt-two) (df-diag [3.0 4.0]) :tolerance 1e-5))
+    (t/is-approx= (/ 14.0 m/sqrt-two) (df-diag [3.0 4.0]) :tolerance 1e-8))
   ;; Zero direction should return NaN
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         df-zero (deriv/directional-derivative-fn f [0.0 0.0])]
-    (t/is (m/nan? (df-zero [3.0 4.0])))))
+    (t/is-approx= m/nan (df-zero [3.0 4.0]) :nan-equal? true)))
 
 (t/deftest laplacian-fn-test
   (t/with-instrument `deriv/laplacian-fn
     (t/is-spec-check deriv/laplacian-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  ;;no instrumentation; Orchestra fspec validation fails with fn args -- ME
   ;; f(x,y) = x^2 + y^2, Laplacian = 2 + 2 = 4
   (let [f (fn [[x y]] (+ (m/sq x) (m/sq y)))
         lap (deriv/laplacian-fn f)]
     ;;Math 4.00000
-    (t/is-approx= 4.0 (lap [1.0 2.0]) :tolerance 1e-5)
+    (t/is-approx= 4.0 (lap [1.0 2.0]))
     ;;Math 4.00000
-    (t/is-approx= 4.0 (lap [5.0 -3.0]) :tolerance 1e-5))
+    (t/is-approx= 4.0 (lap [5.0 -3.0])))
   ;; f(x,y,z) = x^2 + 2y^2 + 3z^2, Laplacian = 2 + 4 + 6 = 12
   (let [f (fn [[x y z]] (+ (m/sq x) (* 2 (m/sq y)) (* 3 (m/sq z))))
         lap (deriv/laplacian-fn f)]
     ;;Math 12.0000
-    (t/is-approx= 12.0 (lap [1.0 1.0 1.0]) :tolerance 1e-5)))
+    (t/is-approx= 12.0 (lap [1.0 1.0 1.0]))))
 
 (t/deftest divergence-fn-test
   (t/with-instrument `deriv/divergence-fn
     (t/is-spec-check deriv/divergence-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  ;;no instrumentation; Orchestra fspec validation fails with fn args -- ME
   ;; F(x,y) = [x, y], div = 1 + 1 = 2
   (let [F (fn [[x y]] [x y])
         divF (deriv/divergence-fn F)]
@@ -503,17 +499,17 @@
   (let [F (fn [[x y]] [(* x y) (m/sq y)])
         divF (deriv/divergence-fn F)]
     ;;Math 9.00000
-    (t/is-approx= 9.0 (divF [2.0 3.0]))) ;; 3*3 = 9
+    (t/is-approx= 9.0 (divF [2.0 3.0])))                    ;; 3*3 = 9
   ;; F(x,y,z) = [x^2, y^2, z^2], div = 2x + 2y + 2z
   (let [F (fn [[x y z]] [(m/sq x) (m/sq y) (m/sq z)])
         divF (deriv/divergence-fn F)]
     ;;Math 12.0000
-    (t/is-approx= 12.0 (divF [1.0 2.0 3.0])))) ;; 2+4+6 = 12
+    (t/is-approx= 12.0 (divF [1.0 2.0 3.0]))))              ;; 2+4+6 = 12
 
 (t/deftest curl-fn-test
   (t/with-instrument `deriv/curl-fn
     (t/is-spec-check deriv/curl-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  ;;no instrumentation; Orchestra fspec validation fails with fn args -- ME
   ;; F(x,y,z) = [y, -x, 0], curl = [0, 0, -1-1] = [0, 0, -2]
   (let [F (fn [[x y _z]] [y (- x) 0.0])
         curlF (deriv/curl-fn F)
@@ -529,118 +525,91 @@
         curlF (deriv/curl-fn F)
         result (curlF [1.0 2.0 3.0])]
     ;;Math 0.00000
-    (t/is-approx= 0.0 (nth result 0) :tolerance 1e-5)
+    (t/is-approx= 0.0 (nth result 0) :tolerance 1e-8)
     ;;Math 0.00000
-    (t/is-approx= 0.0 (nth result 1) :tolerance 1e-5)
+    (t/is-approx= 0.0 (nth result 1) :tolerance 1e-8)
     ;;Math 0.00000
-    (t/is-approx= 0.0 (nth result 2) :tolerance 1e-5))
+    (t/is-approx= 0.0 (nth result 2) :tolerance 1e-8))
   ;; Non-3D input should return NaN
   (let [F (fn [v] v)
         curlF (deriv/curl-fn F)
         result (curlF [1.0 2.0])]
-    (t/is (every? m/nan? result))))
+    (t/is-data-approx= [m/nan m/nan m/nan] result :nan-equal? true)))
 
 ;;;HIGHER-ORDER MIXED PARTIALS
 (t/deftest mixed-partial-fn-test
   (t/with-instrument `deriv/mixed-partial-fn
-    ;;:num-tests 5; nested derivative calculations are very slow
-    (t/is-spec-check `deriv/mixed-partial-fn {:num-tests 5}))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
+    (t/is-spec-check deriv/mixed-partial-fn))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args -- ME
   ;; f(x,y) = x^2 * y^3
   ;; df/dx = 2xy^3, d^2f/dx^2 = 2y^3
   ;; d^3f/(dx^2 dy) = 6y^2
   ;; At (1, 2): 6 * 4 = 24
   (let [f (fn [[x y]] (* (m/sq x) (m/cube y)))
         d3f (deriv/mixed-partial-fn f [2 1])]
-    ;;Math 24.000
-    (t/is-approx= 24.0 (d3f [1.0 2.0]) :tolerance 0.5))
+    ;;Math 24.000 (actual REPL error ~1.4e-8 — iterative, ~10x for tolerance)
+    (t/is-approx= 24.0 (d3f [1.0 2.0])))
   ;; Just first derivative in x: df/dx = 2xy^3 at (1,2) = 2*1*8 = 16
   (let [f (fn [[x y]] (* (m/sq x) (m/cube y)))
         df-dx (deriv/mixed-partial-fn f [1 0])]
     ;;Math 16.000
-    (t/is-approx= 16.0 (df-dx [1.0 2.0]) :tolerance 1e-5))
+    (t/is-approx= 16.0 (df-dx [1.0 2.0])))
   ;; Just first derivative in y: df/dy = 3x^2*y^2 at (1,2) = 3*1*4 = 12
   (let [f (fn [[x y]] (* (m/sq x) (m/cube y)))
         df-dy (deriv/mixed-partial-fn f [0 1])]
     ;;Math 12.000
-    (t/is-approx= 12.0 (df-dy [1.0 2.0]) :tolerance 1e-5)))
+    (t/is-approx= 12.0 (df-dy [1.0 2.0]))))
 
 ;;;SPARSE JACOBIANS AND HESSIANS
 (t/deftest sparse-jacobian-fn-test
   (t/with-instrument `deriv/sparse-jacobian-fn
     (t/is-spec-check deriv/sparse-jacobian-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
-  ;; F(x,y) = [x^2, y^2], diagonal Jacobian entries: [2x, 2y]
-  (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{[0 0] [1 1]})
-        result (sJ [3.0 4.0])]
-    ;; Result should be [[0 0 6.0] [1 1 8.0]]
-    (t/is (= 2 (count result)))
-    (let [entry00 (first (filter #(= [0 0] (vec (take 2 %))) result))
-          entry11 (first (filter #(= [1 1] (vec (take 2 %))) result))]
-      ;;Math 6.00000
-      (t/is-approx= 6.0 (nth entry00 2))
-      ;;Math 8.00000
-      (t/is-approx= 8.0 (nth entry11 2))))
-  ;; Test off-diagonal entry: F(x,y) = [x+y, x*y], dF0/dy = 1
-  (let [sJ (deriv/sparse-jacobian-fn sum-product-2d-v #{[0 1]})
-        result (sJ [2.0 3.0])
-        entry01 (first result)]
-    ;;Math 1.00000
-    (t/is-approx= 1.0 (nth entry01 2)))
-  ;; Test 3D function with sparse pattern
-  ;; F(x,y,z) = [x*y, y*z, x*z]
-  ;; dF0/dx=y, dF1/dz=y, dF2/dx=z
-  (let [sJ (deriv/sparse-jacobian-fn products-3d-v #{[0 0] [1 2] [2 0]})
-        result (sJ [1.0 2.0 3.0])]
-    (t/is (= 3 (count result)))
-    (let [entry-map (into {} (map (fn [[r c v]] [[r c] v]) result))]
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (get entry-map [0 0]))  ;; dF0/dx = y = 2
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (get entry-map [1 2]))  ;; dF1/dz = y = 2
-      ;;Math 3.00000
-      (t/is-approx= 3.0 (get entry-map [2 0])))) ;; dF2/dx = z = 3
-  ;; Empty sparsity pattern
-  (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{})
-        result (sJ [3.0 4.0])]
-    (t/is= [] result)))
+  (t/with-instrument :all
+    (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{[0 0] [1 1]})
+          result (sJ [3.0 4.0])]
+      ;; Result is sorted by sparsity-pattern: [[0 0 6.0] [1 1 8.0]]
+      ;;Math 6.00000, 8.00000
+      (t/is-data-approx= [[0 0 6.0] [1 1 8.0]] result))
+    ;; Test off-diagonal entry: F(x,y) = [x+y, x*y], dF0/dy = 1
+    (let [sJ (deriv/sparse-jacobian-fn sum-product-2d-v #{[0 1]})
+          result (sJ [2.0 3.0])
+          entry01 (first result)]
+      ;;Math 1.00000
+      (t/is-approx= 1.0 (nth entry01 2)))
+    ;; Test 3D function with sparse pattern
+    ;; F(x,y,z) = [x*y, y*z, x*z]
+    ;; dF0/dx=y=2, dF1/dz=y=2, dF2/dx=z=3
+    ;; Sorted by sparsity-pattern: [[0 0 2.0] [1 2 2.0] [2 0 3.0]]
+    (let [sJ (deriv/sparse-jacobian-fn products-3d-v #{[0 0] [1 2] [2 0]})
+          result (sJ [1.0 2.0 3.0])]
+      (t/is-data-approx= [[0 0 2.0] [1 2 2.0] [2 0 3.0]] result))
+    ;; Empty sparsity pattern
+    (let [sJ (deriv/sparse-jacobian-fn squares-2d-v #{})
+          result (sJ [3.0 4.0])]
+      (t/is= [] result))))
 
 (t/deftest sparse-hessian-fn-test
   (t/with-instrument `deriv/sparse-hessian-fn
     (t/is-spec-check deriv/sparse-hessian-fn))
-  ;;no instrumentation; Orchestra fspec validation fails with fn args
-  ;; f(x,y) = x^2 + y^2, Hessian diagonal = [2, 2]
-  (let [sH (deriv/sparse-hessian-fn sum-of-squares-2d #{[0 0] [1 1]})
-        result (sH [3.0 4.0])]
-    (t/is (= 2 (count result)))
-    (let [entry00 (first (filter #(= [0 0] (vec (take 2 %))) result))
-          entry11 (first (filter #(= [1 1] (vec (take 2 %))) result))]
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (nth entry00 2) :tolerance 1e-5)
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (nth entry11 2) :tolerance 1e-5)))
-  ;; f(x,y) = xy, Hessian off-diagonal = 1
-  (let [sH (deriv/sparse-hessian-fn product-2d #{[0 1]})
-        result (sH [2.0 3.0])
-        ;; d^2f/(dx dy) = 1
-        entry01 (first result)]
-    ;;Math 1.00000
-    (t/is-approx= 1.0 (nth entry01 2) :tolerance 1e-5))
-  ;; f(x,y,z) = x^2 + y^2 + z^2 + xy, Hessian diag=[2,2,2], off-diag [0,1]=1
-  (let [sH (deriv/sparse-hessian-fn sum-of-squares-with-product-3d #{[0 0] [1 1] [2 2] [0 1]})
-        result (sH [1.0 2.0 3.0])]
-    ;; Should have 4 entries (diagonals plus one off-diagonal, symmetric handled)
-    (t/is (= 4 (count result)))
-    (let [entry-map (into {} (map (fn [[r c v]] [[r c] v]) result))]
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (get entry-map [0 0]) :tolerance 1e-5)
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (get entry-map [1 1]) :tolerance 1e-5)
-      ;;Math 2.00000
-      (t/is-approx= 2.0 (get entry-map [2 2]) :tolerance 1e-5)
+  (t/with-instrument :all
+    ;; f(x,y) = x^2 + y^2, Hessian diagonal = [2, 2]
+    ;; Sorted by sparsity-pattern: [[0 0 2.0] [1 1 2.0]]
+    (let [sH (deriv/sparse-hessian-fn sum-of-squares-2d #{[0 0] [1 1]})
+          result (sH [3.0 4.0])]
+      (t/is-data-approx= [[0 0 2.0] [1 1 2.0]] result))
+    ;; f(x,y) = xy, Hessian off-diagonal = 1
+    (let [sH (deriv/sparse-hessian-fn product-2d #{[0 1]})
+          result (sH [2.0 3.0])
+          ;; d^2f/(dx dy) = 1
+          entry01 (first result)]
       ;;Math 1.00000
-      (t/is-approx= 1.0 (get entry-map [0 1]) :tolerance 1e-5)))
-  ;; Empty sparsity pattern
-  (let [sH (deriv/sparse-hessian-fn sum-of-squares-2d #{})
-        result (sH [3.0 4.0])]
-    (t/is= [] result)))
+      (t/is-approx= 1.0 (nth entry01 2)))
+    ;; f(x,y,z) = x^2 + y^2 + z^2 + xy, Hessian diag=[2,2,2], off-diag [0,1]=1
+    ;; Sorted/deduped: [[0 0 2.0] [0 1 1.0] [1 1 2.0] [2 2 2.0]]
+    (let [sH (deriv/sparse-hessian-fn sum-of-squares-with-product-3d #{[0 0] [1 1] [2 2] [0 1]})
+          result (sH [1.0 2.0 3.0])]
+      (t/is-data-approx= [[0 0 2.0] [0 1 1.0] [1 1 2.0] [2 2 2.0]] result))
+    ;; Empty sparsity pattern
+    (let [sH (deriv/sparse-hessian-fn sum-of-squares-2d #{})
+          result (sH [3.0 4.0])]
+      (t/is= [] result))))

@@ -7,9 +7,15 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anom]))
 
-;;38 seconds
+;;30 seconds
 
 (set! *warn-on-reflection* true)
+
+;;;SPECS
+;; The src ;;;SPECS section defines s/def's and generator helpers (pos-def-matrix-finite-gen,
+;; pos-def-matrix-finite-invertible-gen, pos-def-matrix-finite-tightly-bounded-gen, gen-cholesky-L).
+;; Those helpers return test.check generators with no s/fdef, so there are no spec-check deftests
+;; in this section; the generators are exercised indirectly via the specs they back.
 
 ;;;LU DECOMPOSITION
 (t/deftest lu-decomposition-test
@@ -52,8 +58,8 @@
         (let [product (mx/mx* m inverse)
               identity-n (mx/identity-matrix n)]
           (t/is-data-approx= identity-n product :tolerance 1e-8))
-        ;; Verify determinant is positive (since positive definite)
-        (t/is (m/pos? determinant))))))
+        ;; Seeded value (random/bind-seed 42 + rnd-pos-definite-matrix-finite! 10)
+        (t/is-approx= 3.6119324535582886E-4 determinant :tolerance 1e-12)))))
 
 ;;;DETERMINANT
 (t/deftest determinant-from-lu-test
@@ -81,8 +87,8 @@
       (let [n 10
             m (la/rnd-pos-definite-matrix-finite! n)
             det (la/determinant m)]
-        ;; Determinant of positive definite matrix is positive
-        (t/is (m/pos? det))))))
+        ;; Seeded value (random/bind-seed 42 + rnd-pos-definite-matrix-finite! 10)
+        (t/is-approx= 3.6119324535582886E-4 det :tolerance 1e-12)))))
 
 ;;;MINORS AND COFACTORS
 (t/deftest minor-test
@@ -134,6 +140,39 @@
           product (mx/mx* A adj)]
       (t/is-data-approx= [[det 0.0] [0.0 det]] product :tolerance 1e-10))))
 
+;;;FORWARD/BACK SUBSTITUTION
+(t/deftest forward-substitution-test
+  (t/with-instrument `la/forward-substitution
+    (t/is-spec-check la/forward-substitution))
+  (t/with-instrument :all
+    ;; Vector arity assumes unit diagonal (LU's L convention).
+    ;; L = [[1 0] [2 1]], b = [4 6] → x = [4, 6 - 2*4] = [4, -2]
+    (t/is= [4.0 -2.0] (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [4.0 6.0]))
+    ;; Matrix arity, unit-diag? = true: same convention as vector
+    (t/is= [[4.0 1.0] [-2.0 -1.0]]
+      (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [[4.0 1.0] [6.0 1.0]] true))
+    ;; Matrix arity, unit-diag? = false: literal diagonal (Cholesky convention)
+    ;; L = [[2 0] [1 1]], B = I → X = L^-1
+    (t/is-data-approx= [[0.5 0.0] [-0.5 1.0]]
+      (la/forward-substitution [[2.0 0.0] [1.0 1.0]] [[1.0 0.0] [0.0 1.0]] false) :tolerance 1e-12)
+    ;; Round-trip: L · X = B
+    (let [L [[2.0 0.0 0.0] [1.0 3.0 0.0] [0.5 1.0 4.0]]
+          B [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
+          X (la/forward-substitution L B false)]
+      (t/is-data-approx= B (mx/mx* L X) :tolerance 1e-12))))
+
+(t/deftest back-substitution-test
+  (t/with-instrument `la/back-substitution
+    (t/is-spec-check la/back-substitution))
+  (t/with-instrument :all
+    ;; U = [[2 1] [0 1]], b = [3 1] → x1 = 1, x0 = (3 - 1*1)/2 = 1
+    (t/is= [1.0 1.0] (la/back-substitution [[2.0 1.0] [0.0 1.0]] [3.0 1.0]))
+    ;; Round-trip: U · x = b
+    (let [U [[2.0 1.0 0.5] [0.0 3.0 1.0] [0.0 0.0 4.0]]
+          b [3.5 5.0 8.0]
+          x (la/back-substitution U b)]
+      (t/is-data-approx= b (mapv #(first %) (mx/mx* U (mx/column-matrix x))) :tolerance 1e-12))))
+
 ;;;INVERSE
 (t/deftest inverse-from-lu-test
   (t/with-instrument `la/inverse-from-lu
@@ -170,39 +209,6 @@
         (t/is-data-approx= identity-n product :tolerance 1e-8)))))
 
 ;;;SOLVE LINEAR SYSTEM
-(t/deftest forward-substitution-test
-  (t/with-instrument `la/forward-substitution
-    (t/is-spec-check la/forward-substitution))
-  (t/with-instrument :all
-    ;; Vector arity assumes unit diagonal (LU's L convention).
-    ;; L = [[1 0] [2 1]], b = [4 6] → x = [4, 6 - 2*4] = [4, -2]
-    (t/is= [4.0 -2.0] (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [4.0 6.0]))
-    ;; Matrix arity, unit-diag? = true: same convention as vector
-    (t/is= [[4.0 1.0] [-2.0 -1.0]]
-      (la/forward-substitution [[1.0 0.0] [2.0 1.0]] [[4.0 1.0] [6.0 1.0]] true))
-    ;; Matrix arity, unit-diag? = false: literal diagonal (Cholesky convention)
-    ;; L = [[2 0] [1 1]], B = I → X = L^-1
-    (t/is-data-approx=
-      [[0.5 0.0] [-0.5 1.0]]
-      (la/forward-substitution [[2.0 0.0] [1.0 1.0]] [[1.0 0.0] [0.0 1.0]] false) :tolerance 1e-12)
-    ;; Round-trip: L · X = B
-    (let [L [[2.0 0.0 0.0] [1.0 3.0 0.0] [0.5 1.0 4.0]]
-          B [[1.0 2.0] [3.0 4.0] [5.0 6.0]]
-          X (la/forward-substitution L B false)]
-      (t/is-data-approx= B (mx/mx* L X) :tolerance 1e-12))))
-
-(t/deftest back-substitution-test
-  (t/with-instrument `la/back-substitution
-    (t/is-spec-check la/back-substitution))
-  (t/with-instrument :all
-    ;; U = [[2 1] [0 1]], b = [3 1] → x1 = 1, x0 = (3 - 1*1)/2 = 1
-    (t/is= [1.0 1.0] (la/back-substitution [[2.0 1.0] [0.0 1.0]] [3.0 1.0]))
-    ;; Round-trip: U · x = b
-    (let [U [[2.0 1.0 0.5] [0.0 3.0 1.0] [0.0 0.0 4.0]]
-          b [3.5 5.0 8.0]
-          x (la/back-substitution U b)]
-      (t/is-data-approx= b (mapv #(first %) (mx/mx* U (mx/column-matrix x))) :tolerance 1e-12))))
-
 (t/deftest solve-test
   (t/with-instrument `la/solve
     (t/is-spec-check la/solve))
@@ -220,10 +226,10 @@
           b [1.0 2.0 3.0]
           x (la/solve A b)]
       (t/is= 2 (count x))
-      ;; Verify Ax is close to b (least squares sense)
+      ;; b is on the line Ax (collinear data), so the least-squares residual is zero.
       (let [Ax (mapv (fn [row] (reduce + (map * row x))) A)
             residual (reduce + (map #(m/sq (- %1 %2)) Ax b))]
-        (t/is (< residual 0.5))))
+        (t/is-approx= 0.0 residual :tolerance 1e-25)))
     ;; Large square system (n > 8) to exercise large LU code path
     (random/bind-seed 42
       (let [n 10
@@ -291,8 +297,7 @@
 
 (t/deftest rectangular-cholesky-decomposition-test
   (t/with-instrument `la/rectangular-cholesky-decomposition
-    ;;:num-tests 50; matrix decomposition with variable dimensions
-    (t/is-spec-check la/rectangular-cholesky-decomposition {:num-tests 50}))
+    (t/is-spec-check la/rectangular-cholesky-decomposition))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (t/is= nil (la/rectangular-cholesky-decomposition [[]] 1e-4))
@@ -303,13 +308,18 @@
           reconstructed (mx/mx* rectangular-root (mx/transpose rectangular-root))]
       (t/is= 2 rank)
       (t/is-data-approx= m reconstructed :tolerance 1e-10))
-    ;; Rank-deficient 3x3 matrix (rank 2)
+    ;; Rank-deficient 3x3 matrix (rank 2): with delta=1e-4 the 1e-6 eigenvalue
+    ;; is dropped, so m[2][2] reconstructs to ~0 (not 1e-6). Pin the exact
+    ;; reconstructed values rather than asserting full-rank reconstruction.
     (let [m [[1.0 0.5 1e-9] [0.5 3.0 1e-9] [1e-9 1e-9 1e-6]]
           result (la/rectangular-cholesky-decomposition m 1e-4)
           {::la/keys [rectangular-root rank]} result
           reconstructed (mx/mx* rectangular-root (mx/transpose rectangular-root))]
       (t/is= 2 rank)
-      (t/is-data-approx= m reconstructed :tolerance 1e-6))
+      (t/is-data-approx= [[0.9999999999999997 0.49999999999999967 1.0000009090918673E-9]
+                          [0.49999999999999967 2.9999999999999996 1.0000001818180808E-9]
+                          [1.0000009090918673E-9 1.0000001818180808E-9 1.090910809919915E-18]]
+        reconstructed :tolerance 1e-15))
     ;; Rank 1 matrix
     (let [m [[0.08061440651728713 0.048368643910372044]
              [0.048368643910372044 0.029021186346223526]]
@@ -375,9 +385,8 @@
     (t/is-not (la/correlation-matrix? [[2.0 0.5] [0.5 1.0]] 1e-10))))
 
 (t/deftest covariance-matrix->correlation-matrix-test
-  ;;:num-tests 50 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/covariance-matrix->correlation-matrix
-    (t/is-spec-check la/covariance-matrix->correlation-matrix {:num-tests 50}))
+    (t/is-spec-check la/covariance-matrix->correlation-matrix))
   (t/with-instrument :all
     ;;numpy corr[0,1] = 2/(2*3) = 0.33333
     (let [cov [[4.0 2.0] [2.0 9.0]]
@@ -385,9 +394,8 @@
       (t/is-data-approx= [[1.0 (/ 2.0 6.0)] [(/ 2.0 6.0) 1.0]] result :tolerance 1e-10))))
 
 (t/deftest correlation-matrix->covariance-matrix-test
-  ;;:num-tests 150 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/correlation-matrix->covariance-matrix
-    (t/is-spec-check la/correlation-matrix->covariance-matrix {:num-tests 150}))
+    (t/is-spec-check la/correlation-matrix->covariance-matrix))
   (t/with-instrument :all
     ;;numpy cov = corr * outer(sqrt(var), sqrt(var)) = {{4, 3}, {3, 9}}
     (let [corr [[1.0 0.5] [0.5 1.0]]
@@ -396,14 +404,15 @@
       (t/is-data-approx= [[4.0 3.0] [3.0 9.0]] result :tolerance 1e-10))))
 
 (t/deftest correlation-matrix-by-squaring-test
-  ;;:num-tests 300 because need large matrices to test larger matrices on dual-code paths --ME
   (t/with-instrument `la/correlation-matrix-by-squaring
-    (t/is-spec-check la/correlation-matrix-by-squaring {:num-tests 300}))
+    (t/is-spec-check la/correlation-matrix-by-squaring))
   (t/with-instrument :all
     (t/is= nil (la/correlation-matrix-by-squaring [[]]))
     (let [result (la/correlation-matrix-by-squaring [[1.0 0.5] [0.3 1.0]])]
-      (t/is (some? result))
-      (t/is (la/correlation-matrix? result 1e-6)))))
+      (t/is (la/correlation-matrix? result 1e-6))
+      (t/is-data-approx= [[1.0 0.6853646989461376]
+                          [0.6853646989461376 1.0]]
+        result :tolerance 1e-12))))
 
 (t/deftest rnd-pos-definite-matrix-finite!-test
   (t/with-instrument `la/rnd-pos-definite-matrix-finite!
@@ -412,8 +421,10 @@
     (t/is= nil (la/rnd-pos-definite-matrix-finite! 0))
     (random/bind-seed 3
       (let [result (la/rnd-pos-definite-matrix-finite! 2)]
-        (t/is (some? result))
-        (t/is (la/pos-definite-matrix-finite? result))))))
+        (t/is (la/pos-definite-matrix-finite? result))
+        (t/is-data-approx= [[0.9187874715735458 0.0793880569931038]
+                            [0.0793880569931038 0.6895616293791346]]
+          result :tolerance 1e-12)))))
 
 (t/deftest rnd-correlation-matrix!-test
   (t/with-instrument `la/rnd-correlation-matrix!
@@ -422,8 +433,11 @@
     (t/is= nil (la/rnd-correlation-matrix! 0))
     (random/bind-seed 3
       (let [result (la/rnd-correlation-matrix! 2)]
-        (when result
-          (t/is (la/correlation-matrix? result 1e-6)))))))
+        (t/is (some? result))
+        (t/is (la/correlation-matrix? result 1e-6))
+        (t/is-data-approx= [[1.0 0.09973810142568083]
+                            [0.09973810142568083 1.0]]
+          result :tolerance 1e-12)))))
 
 ;;;QR DECOMPOSITION
 (t/deftest qr-decomposition-test
@@ -516,8 +530,8 @@
 ;;;SCHUR DECOMPOSITION
 (t/deftest schur-decomposition-test
   (t/with-instrument `la/schur-decomposition
-    ;;:num-tests 20; matrix decomposition with variable dimensions
-    (t/is-spec-check la/schur-decomposition {:num-tests 20}))
+    ;;matrix decomposition with variable dimensions -- ME
+    (t/is-spec-check la/schur-decomposition {:num-tests 400}))
   (t/with-instrument :all
     (t/is= nil (la/schur-decomposition [[]]))
     ;; 1x1 case
@@ -540,15 +554,16 @@
       ;; T should be upper triangular for real eigenvalues
       (t/is-approx= 0.0 (get-in schur-T [1 0]) :tolerance 1e-10))
     ;; 2x2 with complex eigenvalues (rotation matrix)
-    ;; [[0, -1], [1, 0]] has eigenvalues i and -i
+    ;; [[0, -1], [1, 0]] has eigenvalues i and -i; input is already real Schur form.
     (let [m [[0.0 -1.0] [1.0 0.0]]
           result (la/schur-decomposition m)
           {::la/keys [schur-Q schur-T]} result
           ;; Verify reconstruction
           reconstructed (mx/mx* schur-Q (mx/mx* schur-T (mx/transpose schur-Q)))]
       (t/is-data-approx= m reconstructed :tolerance 1e-10)
-      ;; T should have a 2x2 block (non-zero subdiagonal) for complex eigenvalues
-      (t/is (> (m/abs (get-in schur-T [1 0])) 0.1)))
+      ;; T retains the 2x2 block (T[1 0] = 1.0) for the complex eigenvalues; Q is identity.
+      (t/is-data-approx= [[1.0 0.0] [0.0 1.0]] schur-Q :tolerance 1e-10)
+      (t/is-data-approx= [[0.0 -1.0] [1.0 0.0]] schur-T :tolerance 1e-10))
     ;; 3x3 symmetric matrix
     (let [m [[2.0 1.0 0.0] [1.0 3.0 1.0] [0.0 1.0 2.0]]
           result (la/schur-decomposition m)
@@ -561,8 +576,7 @@
 ;;;EIGENDECOMPOSITION
 (t/deftest eigen-decomposition-test
   (t/with-instrument `la/eigen-decomposition
-    ;;:num-tests 20; matrix decomposition with variable dimensions
-    (t/is-spec-check la/eigen-decomposition {:num-tests 20}))
+    (t/is-spec-check la/eigen-decomposition))
   (t/with-instrument :all
     (t/is= nil (la/eigen-decomposition [[]]))
     ;; Diagonal matrix
@@ -574,9 +588,8 @@
     (let [m [[2.0 1.0] [1.0 2.0]]
           result (la/eigen-decomposition m)
           {::la/keys [eigenvalues eigenvectors]} result]
-      ;; Eigenvalues should be 3 and 1
-      (t/is (some #(m/roughly? % 3.0 1e-10) eigenvalues))
-      (t/is (some #(m/roughly? % 1.0 1e-10) eigenvalues))
+      ;; Eigenvalues are 3 and 1 (closed-form: λ = 2 ± 1).
+      (t/is-data-approx= [3.0 1.0] eigenvalues :tolerance 1e-12)
       ;; Reconstruction: V * D * V^T = A
       (let [D (::la/eigenvalues-matrix result)
             V eigenvectors
@@ -591,8 +604,7 @@
 ;;;SVD (SINGULAR VALUE DECOMPOSITION)
 (t/deftest sv-decomposition-test
   (t/with-instrument `la/sv-decomposition
-    ;;:num-tests 30; matrix decomposition with variable dimensions
-    (t/is-spec-check la/sv-decomposition {:num-tests 30}))
+    (t/is-spec-check la/sv-decomposition))
   (t/with-instrument :all
     (t/is= nil (la/sv-decomposition [[]]))
     ;; Diagonal matrix
@@ -636,22 +648,21 @@
 
 (t/deftest condition-number-test
   (t/with-instrument `la/condition-number
-    ;;:num-tests 30; requires SVD with variable matrix dimensions
-    (t/is-spec-check la/condition-number {:num-tests 30}))
+    (t/is-spec-check la/condition-number))
   (t/with-instrument :all
     (t/is (m/nan? (la/condition-number [[]])))
     (t/is-approx= 1.0 (la/condition-number [[2.0]]) :tolerance 1e-10)
     (t/is-approx= 1.0 (la/condition-number [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
     (t/is-approx= 2.0 (la/condition-number [[1.0 0.0] [0.0 2.0]]) :tolerance 1e-10)
     (t/is-approx= 4.0 (la/condition-number [[1.0 0.0] [0.0 4.0]]) :tolerance 1e-10)
-    ;; Singular matrices have very high condition numbers
-    (t/is (> (la/condition-number [[1.0 2.0] [2.0 4.0]]) 1e6))))
+    ;; Singular matrix [[1 2][2 4]] — true condition number is ∞ (rank-deficient).
+    ;; The implicit-shift tridiagonal QR correctly identifies the zero singular value.
+    (t/is (m/inf+? (la/condition-number [[1.0 2.0] [2.0 4.0]])))))
 
 ;;;MATRIX RANK
 (t/deftest matrix-rank-test
   (t/with-instrument `la/matrix-rank
-    ;;:num-tests 40; requires SVD with variable matrix dimensions
-    (t/is-spec-check la/matrix-rank {:num-tests 40}))
+    (t/is-spec-check la/matrix-rank))
   (t/with-instrument :all
     (t/is= 0 (la/matrix-rank [[]]))
     (t/is= 1 (la/matrix-rank [[1.0]]))
@@ -688,8 +699,7 @@
 
 (t/deftest norm-spectral-test
   (t/with-instrument `la/norm-spectral
-    ;;:num-tests 30; requires SVD with variable matrix dimensions
-    (t/is-spec-check la/norm-spectral {:num-tests 30}))
+    (t/is-spec-check la/norm-spectral))
   (t/with-instrument :all
     (t/is= 0.0 (la/norm-spectral [[]]))
     (t/is-approx= 1.0 (la/norm-spectral [[1.0 0.0] [0.0 1.0]]) :tolerance 1e-10)
@@ -698,8 +708,7 @@
 ;;;PSEUDOINVERSE
 (t/deftest pseudoinverse-from-svd-test
   (t/with-instrument `la/pseudoinverse-from-svd
-    ;;:num-tests 40; SVD result with variable matrix dimensions
-    (t/is-spec-check la/pseudoinverse-from-svd {:num-tests 40}))
+    (t/is-spec-check la/pseudoinverse-from-svd))
   (t/with-instrument :all
     (let [svd (la/sv-decomposition [[1.0 0.0] [0.0 2.0]] {:rank-tolerance 0.0})
           pinv (la/pseudoinverse-from-svd svd)]
@@ -713,8 +722,7 @@
 
 (t/deftest pseudoinverse-test
   (t/with-instrument `la/pseudoinverse
-    ;;:num-tests 40; requires SVD with variable matrix dimensions
-    (t/is-spec-check la/pseudoinverse {:num-tests 40}))
+    (t/is-spec-check la/pseudoinverse))
   (t/with-instrument :all
     (t/is= nil (la/pseudoinverse [[]]))
     (let [result (la/pseudoinverse [[1.0 0.0] [0.0 2.0]])]
@@ -725,7 +733,8 @@
       (t/is-data-approx= A result :tolerance 1e-10))
     (let [A [[1.0 2.0 3.0]]
           A+ (la/pseudoinverse A)]
-      (t/is (some? A+))
+      ;; A+ = A^T / (A A^T) where A A^T = 14, so A+ = [1 2 3]^T / 14.
+      (t/is-data-approx= [[(/ 1.0 14.0)] [(/ 2.0 14.0)] [(/ 3.0 14.0)]] A+ :tolerance 1e-10)
       (t/is= 3 (mx/rows A+))
       (t/is= 1 (mx/columns A+)))))
 
@@ -755,13 +764,21 @@
     ;; Negative power (inverse)
     (let [A [[2.0 0.0] [0.0 4.0]]
           A-inv (la/matrix-power A -1)]
-      (t/is-data-approx= [[0.5 0.0] [0.0 0.25]] A-inv :tolerance 1e-10))))
+      (t/is-data-approx= [[0.5 0.0] [0.0 0.25]] A-inv :tolerance 1e-10))
+    ;; Large matrix (n > 8) to exercise lu-decomposition-impl-large via inverse
+    (random/bind-seed 42
+      (let [n 10
+            A (la/rnd-pos-definite-matrix-finite! n)
+            A-inv (la/matrix-power A -1)
+            ;; A * A^-1 should be identity
+            product (mx/mx* A A-inv)]
+        (t/is-data-approx= (mx/identity-matrix n) product :tolerance 1e-8)))))
 
 ;;;MATRIX EXPONENTIAL
 (t/deftest matrix-exp-test
   (t/with-instrument `la/matrix-exp
-    ;;:num-tests 50; iterative algorithm with variable matrix dimensions
-    (t/is-spec-check la/matrix-exp {:num-tests 50}))
+    ;;iterative algorithm with variable matrix dimensions -- ME
+    (t/is-spec-check la/matrix-exp {:num-tests 200}))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (t/is= nil (la/matrix-exp [[]]))
@@ -770,33 +787,32 @@
     ;; Identity matrix -> e*I
     (let [result (la/matrix-exp [[1.0 0.0] [0.0 1.0]])]
       ;;numpy 2.7182
-      (t/is-approx= m/E (get-in result [0 0]) :tolerance 1e-6)
-      (t/is-approx= 0.0 (get-in result [0 1]) :tolerance 1e-6)
-      (t/is-approx= 0.0 (get-in result [1 0]) :tolerance 1e-6)
-      (t/is-approx= m/E (get-in result [1 1]) :tolerance 1e-6))
+      (t/is-approx= m/E (get-in result [0 0]) :tolerance 1e-12)
+      (t/is-approx= 0.0 (get-in result [0 1]) :tolerance 1e-12)
+      (t/is-approx= 0.0 (get-in result [1 0]) :tolerance 1e-12)
+      (t/is-approx= m/E (get-in result [1 1]) :tolerance 1e-12))
     ;; Diagonal matrix: exp([[a 0][0 b]]) = [[e^a 0][0 e^b]]
     (let [result (la/matrix-exp [[2.0 0.0] [0.0 3.0]])]
       ;;numpy 7.3890
-      (t/is-approx= (m/exp 2.0) (get-in result [0 0]) :tolerance 1e-6)
+      (t/is-approx= (m/exp 2.0) (get-in result [0 0]) :tolerance 1e-12)
       ;;numpy 20.085
-      (t/is-approx= (m/exp 3.0) (get-in result [1 1]) :tolerance 1e-6))
+      (t/is-approx= (m/exp 3.0) (get-in result [1 1]) :tolerance 1e-12))
     ;; Rotation matrix test: exp([[0 -t][t 0]]) = [[cos(t) -sin(t)][sin(t) cos(t)]]
     (let [t 0.5
           result (la/matrix-exp [[0.0 (- t)] [t 0.0]])]
       ;;numpy 0.87758
-      (t/is-approx= (m/cos t) (get-in result [0 0]) :tolerance 1e-4)
+      (t/is= (m/cos t) (get-in result [0 0]))
       ;;numpy -0.47942
-      (t/is-approx= (- (m/sin t)) (get-in result [0 1]) :tolerance 1e-4)
+      (t/is= (- (m/sin t)) (get-in result [0 1]))
       ;;numpy 0.47942
-      (t/is-approx= (m/sin t) (get-in result [1 0]) :tolerance 1e-4)
+      (t/is= (m/sin t) (get-in result [1 0]))
       ;;numpy 0.87758
-      (t/is-approx= (m/cos t) (get-in result [1 1]) :tolerance 1e-4))))
+      (t/is= (m/cos t) (get-in result [1 1])))))
 
 ;;;PRINCIPAL COMPONENT ANALYSIS
 (t/deftest pca-test
   (t/with-instrument `la/pca
-    ;;:num-tests 30; requires eigendecomposition with variable matrix dimensions
-    (t/is-spec-check la/pca {:num-tests 30}))
+    (t/is-spec-check la/pca))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (t/is= nil (la/pca [[]]))
@@ -809,7 +825,6 @@
           result (la/pca data)
           {::la/keys [_pca-eigenvalues pca-explained-variance-ratio pca-mean
                       pca-principal-components]} result]
-      (t/is (some? result))
       ;; Mean should be [2, 2]
       (t/is-data-approx= [2.0 2.0] pca-mean :tolerance 1e-10)
       ;; First eigenvalue should capture all variance
@@ -848,8 +863,8 @@
 
 (t/deftest pca-transform-test
   (t/with-instrument `la/pca-transform
-    ;;:num-tests 20; PCA with variable matrix dimensions
-    (t/is-spec-check la/pca-transform {:num-tests 20}))
+    ;;:PCA with variable matrix dimensions
+    (t/is-spec-check la/pca-transform))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
@@ -859,20 +874,23 @@
           pca-result (la/pca data)
           ;; Transform original data with all components
           transformed (la/pca-transform data pca-result 2)]
-      (t/is (some? transformed))
       (t/is= 3 (mx/rows transformed))
       (t/is= 2 (mx/columns transformed))
-      ;; Second column should be all zeros (no variance in that direction)
-      (t/is-approx= 0.0 (get-in transformed [0 1]) :tolerance 1e-10)
-      (t/is-approx= 0.0 (get-in transformed [1 1]) :tolerance 1e-10)
-      (t/is-approx= 0.0 (get-in transformed [2 1]) :tolerance 1e-10))
+      ;; Centered data (mean = [2,2]) is [-1,-1], [0,0], [1,1]; projected on PC1 = ±[1,1]/√2
+      ;; gives scores ±√2 (eigenvector sign is implementation-dependent); second column is all
+      ;; zeros (no variance in that direction).
+      (t/is-data-approx= [[(- (m/sqrt 2.0)) 0.0]
+                          [0.0 0.0]
+                          [(m/sqrt 2.0) 0.0]]
+        transformed :tolerance 1e-10))
     ;; Transform with reduced dimensions
     (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
           pca-result (la/pca data)
           transformed-1 (la/pca-transform data pca-result 1)]
-      (t/is (some? transformed-1))
       (t/is= 3 (mx/rows transformed-1))
-      (t/is= 1 (mx/columns transformed-1)))
+      (t/is= 1 (mx/columns transformed-1))
+      (t/is-data-approx= [[(- (m/sqrt 2.0))] [0.0] [(m/sqrt 2.0)]]
+        transformed-1 :tolerance 1e-10))
     ;; Dimension mismatch returns nil
     (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
       (t/is= nil (la/pca-transform [[1.0 2.0 3.0]] pca-result 2)))
@@ -882,8 +900,8 @@
 
 (t/deftest pca-inverse-transform-test
   (t/with-instrument `la/pca-inverse-transform
-    ;;:num-tests 20; PCA with variable matrix dimensions
-    (t/is-spec-check la/pca-inverse-transform {:num-tests 20}))
+    ;;:PCA with variable matrix dimensions
+    (t/is-spec-check la/pca-inverse-transform))
   (t/with-instrument :all
     ;; Empty matrix returns nil
     (let [pca-result (la/pca [[1.0 2.0] [3.0 4.0]])]
@@ -893,14 +911,12 @@
           pca-result (la/pca data)
           transformed (la/pca-transform data pca-result 2)
           reconstructed (la/pca-inverse-transform transformed pca-result)]
-      (t/is (some? reconstructed))
       (t/is-data-approx= data reconstructed :tolerance 1e-10))
     ;; Partial reconstruction with 1 component
     (let [data [[1.0 1.0] [2.0 2.0] [3.0 3.0]]
           pca-result (la/pca data)
           transformed-1 (la/pca-transform data pca-result 1)
           reconstructed (la/pca-inverse-transform transformed-1 pca-result)]
-      (t/is (some? reconstructed))
       ;; Since all variance is in PC1, reconstruction should be exact
       (t/is-data-approx= data reconstructed :tolerance 1e-10))
     ;; Partial reconstruction loses information in other directions
@@ -908,7 +924,6 @@
           pca-result (la/pca data)
           transformed-1 (la/pca-transform data pca-result 1)
           reconstructed (la/pca-inverse-transform transformed-1 pca-result)]
-      (t/is (some? reconstructed))
       ;; Should be 4 samples with 2 features
       (t/is= 4 (mx/rows reconstructed))
       (t/is= 2 (mx/columns reconstructed))

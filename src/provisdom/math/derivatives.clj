@@ -101,9 +101,7 @@
     #(gen/one-of (map gen/return
                    (list + - (fn [x y] (+ x (* 2 y))))))))
 
-(s/def ::h
-  (s/with-gen ::m/finite+
-    #(m/finite+-gen {:max 0.1})))
+(s/def ::h ::m/finite+)
 
 (s/def ::dx ::h)
 (s/def ::multiplier ::h)
@@ -118,7 +116,12 @@
 (s/def ::abs-tol ::m/finite+)
 (s/def ::max-iterations (s/int-in 1 21))
 (s/def ::direction ::vector/vector)
-(s/def ::derivative-orders (s/coll-of ::m/int-non- :kind vector? :min-count 1))
+
+(s/def ::derivative-orders
+  (s/with-gen
+    (s/coll-of ::m/int-non- :kind vector? :min-count 1)
+    #(gen/vector (s/gen (s/int-in 0 5)) 1 3)))
+
 (s/def ::value ::m/number)
 (s/def ::error-bound ::m/finite-non-)
 (s/def ::derivative-result (s/keys :req [::error-bound ::value]))
@@ -296,7 +299,7 @@
     (def f'' (derivative-fn sin {::derivative 2}))  ; second derivative of sin
     (f'' 0.0)  ;=> ~0.0 (-sin(0))"
   ([number->number] (derivative-fn number->number {}))
-  ([number->number {::keys [derivative h type accuracy]
+  ([number->number {::keys [accuracy derivative h type]
                     :or    {derivative 1
                             type       :central}}]
    (let [derivative (int derivative)
@@ -368,10 +371,10 @@
     (def grad-g (gradient-fn (fn [[x y]] (* x y))))
     (grad-g [1.0 2.0])  ;=> [2.0 1.0] (gradient of xy at (1,2))"
   ([v->number] (gradient-fn v->number {}))
-  ([v->number {::keys [h type accuracy]
-               :or    {h        m/sgl-close
-                       type     :central
-                       accuracy 2}}]
+  ([v->number {::keys [accuracy h type]
+               :or    {accuracy 2
+                       h        m/sgl-close
+                       type     :central}}]
    (let [coefficient-fn (condp = type
                           :central get-central-coefficients
                           :forward get-forward-coefficients
@@ -417,10 +420,10 @@
     (jac-f [2.0 3.0])  ;=> [[3.0 2.0]    ; d(xy)/dx, d(xy)/dy
                        ;    [1.0 1.0]]    ; d(x+y)/dx, d(x+y)/dy"
   ([v->v] (jacobian-fn v->v {}))
-  ([v->v {::keys [h type accuracy]
-          :or    {h        m/sgl-close
-                  type     :central
-                  accuracy 2}}]
+  ([v->v {::keys [accuracy h type]
+          :or    {accuracy 2
+                  h        m/sgl-close
+                  type     :central}}]
    (let [coefficient-fn (condp = type
                           :central get-central-coefficients
                           :forward get-forward-coefficients
@@ -503,10 +506,10 @@
     (hess-f [1.0 2.0])  ;=> [[4.0 2.0]    ; d^2f/dx^2, d^2f/dxdy
                         ;    [2.0 12.0]]   ; d^2f/dydx, d^2f/dy^2"
   ([v->number] (hessian-fn v->number {}))
-  ([v->number {::keys [h type accuracy]
-               :or    {h        (* m/sgl-close 0.1)
-                       type     :joint-central
-                       accuracy 2}}]
+  ([v->number {::keys [accuracy h type]
+               :or    {accuracy 2
+                       h        (* m/sgl-close 0.1)
+                       type     :joint-central}}]
    (if-not (= type :joint-central)
      (fn [v]
        (mx/symmetric-matrix-by-averaging
@@ -673,16 +676,16 @@
 (defn richardson-derivative-fn
   "Creates derivative function with Richardson extrapolation for improved accuracy.
 
-  Computes derivatives at h, h/2, h/4, ... and uses Richardson extrapolation to eliminate leading
-  error terms. For central differences with order p error, extrapolation eliminates
-  O(h^p), O(h^(p+2)), etc.
+  Computes derivatives at `h`, `h/2`, `h/4`, ... and uses Richardson extrapolation to eliminate
+  leading error terms. For central differences with order p error, extrapolation eliminates O(h^p),
+  O(h^(p+2)), etc.
 
   Options:
-    ::derivative - Order of derivative (default 1)
-    ::h - Initial step size (default m/sgl-close)
-    ::type - :central (default), :forward, :backward
-    ::accuracy - Base accuracy level (default 2)
-    ::richardson-levels - Number of refinement levels (default 3, max 6)
+    `::derivative` - Order of derivative (default `1`)
+    `::h` - Initial step size (default `m/sgl-close`)
+    `::type` - `:central` (default), `:forward`, `:backward`
+    `::accuracy` - Base accuracy level (default `2`)
+    `::richardson-levels` - Number of refinement levels (default `3`, max `6`)
 
   Returns function computing extrapolated derivative at any point.
 
@@ -693,12 +696,12 @@
     (def f'' (richardson-derivative-fn sin {::derivative 2}))
     (f'' 0.0)  ;=> ~0.0 (-sin(0))"
   ([number->number] (richardson-derivative-fn number->number {}))
-  ([number->number {::keys [derivative h type accuracy richardson-levels]
-                    :or    {derivative        1
+  ([number->number {::keys [accuracy derivative h richardson-levels type]
+                    :or    {accuracy          2
+                            derivative        1
                             h                 m/sgl-close
-                            type              :central
-                            accuracy          2
-                            richardson-levels 3}}]
+                            richardson-levels 3
+                            type              :central}}]
    (let [base-order (if (= type :central) 2 1)]
      (fn [x]
        (let [approxs (map (fn [level]
@@ -727,13 +730,13 @@
   Uses Richardson extrapolation internally to estimate errors and determine optimal stopping point.
 
   Options:
-    ::derivative - Order of derivative (default 1)
-    ::h - Initial step size (default determined by derivative order)
-    ::type - :central (default), :forward, :backward
-    ::accuracy - Base accuracy level (default 2)
-    ::rel-tol - Relative tolerance (default m/dbl-close)
-    ::abs-tol - Absolute tolerance (default m/quad-close)
-    ::max-iterations - Maximum refinement iterations (default 10)
+    `::derivative` - Order of derivative (default `1`)
+    `::h` - Initial step size (default determined by derivative order)
+    `::type` - `:central` (default), `:forward`, `:backward`
+    `::accuracy` - Base accuracy level (default `2`)
+    `::rel-tol` - Relative tolerance (default `m/dbl-close`)
+    `::abs-tol` - Absolute tolerance (default `m/quad-close`)
+    `::max-iterations` - Maximum refinement iterations (default `10`)
 
   Returns function computing adaptively refined derivative.
 
@@ -741,13 +744,13 @@
     (def f' (adaptive-derivative-fn sin))
     (f' m/PI)  ;=> ~-1.0 (cos(PI))"
   ([number->number] (adaptive-derivative-fn number->number {}))
-  ([number->number {::keys [derivative h type accuracy rel-tol abs-tol max-iterations]
-                    :or    {derivative     1
-                            type           :central
+  ([number->number {::keys [abs-tol accuracy derivative h max-iterations rel-tol type]
+                    :or    {abs-tol        m/quad-close
                             accuracy       2
+                            derivative     1
+                            max-iterations 10
                             rel-tol        m/dbl-close
-                            abs-tol        m/quad-close
-                            max-iterations 10}}]
+                            type           :central}}]
    (let [h0 (or h (if (m/one? derivative) m/sgl-close (/ m/sgl-close 10)))]
      (fn [x]
        (loop [h-cur h0
@@ -781,24 +784,24 @@
   error.
 
   Options:
-    ::derivative - Order of derivative (default 1)
-    ::h - Initial step size
-    ::type - Difference scheme (default :central)
-    ::accuracy - Accuracy level (default 2)
-    ::richardson-levels - Refinement levels (default 4)
+    `::derivative` - Order of derivative (default `1`)
+    `::h` - Initial step size
+    `::type` - Difference scheme (default `:central`)
+    `::accuracy` - Accuracy level (default `2`)
+    `::richardson-levels` - Refinement levels (default `4`)
 
-  Returns function computing {::value derivative ::error-bound error-estimate}
+  Returns function computing `{::value derivative ::error-bound error-estimate}`
 
   Examples:
     (def df (derivative-with-error-fn sin))
     (df m/PI)  ;=> {::value -1.0 ::error-bound ~1e-15}"
   ([number->number] (derivative-with-error-fn number->number {}))
-  ([number->number {::keys [derivative h type accuracy richardson-levels]
-                    :or    {derivative        1
+  ([number->number {::keys [accuracy derivative h richardson-levels type]
+                    :or    {accuracy          2
+                            derivative        1
                             h                 m/sgl-close
-                            type              :central
-                            accuracy          2
-                            richardson-levels 4}}]
+                            richardson-levels 4
+                            type              :central}}]
    (let [base-order (if (= type :central) 2 1)]
      (fn [x]
        (let [approxs (mapv (fn [level]
@@ -839,9 +842,9 @@
   The direction is automatically normalized to unit length.
 
   Options:
-    ::h - Step size for gradient computation (default m/sgl-close)
-    ::type - Difference scheme (default :central)
-    ::accuracy - Accuracy level (default 2)
+    `::h` - Step size for gradient computation (default `m/sgl-close`)
+    `::type` - Difference scheme (default `:central`)
+    `::accuracy` - Accuracy level (default `2`)
 
   Returns function that computes directional derivative at any point.
 
@@ -849,10 +852,10 @@
     (def df (directional-derivative-fn (fn [[x y]] (+ (* x x) (* y y))) [1 0]))
     (df [3.0 4.0])  ;=> 6.0 (derivative in x-direction at (3,4))"
   ([v->number direction] (directional-derivative-fn v->number direction {}))
-  ([v->number direction {::keys [h type accuracy]
-                         :or    {h        m/sgl-close
-                                 type     :central
-                                 accuracy 2}}]
+  ([v->number direction {::keys [accuracy h type]
+                         :or    {accuracy 2
+                                 h        m/sgl-close
+                                 type     :central}}]
    (let [dir-norm (tensor/norm direction)]
      (if (m/roughly? dir-norm 0.0 m/sgl-close)
        (constantly m/nan)
@@ -876,9 +879,9 @@
     nabla^2 f = sum_i d^2f/dx_i^2 = trace(Hessian(f))
 
   Options:
-    ::h - Step size (default m/sgl-close * 0.1)
-    ::type - Difference scheme (default :joint-central)
-    ::accuracy - Accuracy level (default 2)
+    `::h` - Step size (default `m/sgl-close * 0.1`)
+    `::type` - Difference scheme (default `:joint-central`)
+    `::accuracy` - Accuracy level (default `2`)
 
   Returns function computing Laplacian at any point.
 
@@ -886,10 +889,10 @@
     (def lap (laplacian-fn (fn [[x y]] (+ (* x x) (* y y)))))
     (lap [1.0 2.0])  ;=> 4.0 (2 + 2)"
   ([v->number] (laplacian-fn v->number {}))
-  ([v->number {::keys [h type accuracy]
-               :or    {h        (* m/sgl-close 0.1)
-                       type     :joint-central
-                       accuracy 2}}]
+  ([v->number {::keys [accuracy h type]
+               :or    {accuracy 2
+                       h        (* m/sgl-close 0.1)
+                       type     :joint-central}}]
    (let [hess-fn' (hessian-fn v->number {::accuracy accuracy ::h h ::type type})]
      (fn [v]
        (mx/trace (hess-fn' v))))))
@@ -908,9 +911,9 @@
     div(F) = sum_i dF_i/dx_i (sum of diagonal of Jacobian)
 
   Options:
-    ::h - Step size (default m/sgl-close)
-    ::type - Difference scheme (default :central)
-    ::accuracy - Accuracy level (default 2)
+    `::h` - Step size (default `m/sgl-close`)
+    `::type` - Difference scheme (default `:central`)
+    `::accuracy` - Accuracy level (default `2`)
 
   Returns function computing divergence at any point.
 
@@ -918,10 +921,10 @@
     (def divF (divergence-fn (fn [[x y]] [(* x y) (+ x (* y y))])))
     (divF [2.0 3.0])  ;=> 9.0 (y + 2y = 3 + 6 = 9)"
   ([v->v] (divergence-fn v->v {}))
-  ([v->v {::keys [h type accuracy]
-          :or    {h        m/sgl-close
-                  type     :central
-                  accuracy 2}}]
+  ([v->v {::keys [accuracy h type]
+          :or    {accuracy 2
+                  h        m/sgl-close
+                  type     :central}}]
    (fn [v]
      (if (empty? v)
        0.0
@@ -951,9 +954,9 @@
   Only works for 3D vector fields. Returns NaN vector for non-3D input.
 
   Options:
-    ::h - Step size (default m/sgl-close)
-    ::type - Difference scheme (default :central)
-    ::accuracy - Accuracy level (default 2)
+    `::h` - Step size (default `m/sgl-close`)
+    `::type` - Difference scheme (default `:central`)
+    `::accuracy` - Accuracy level (default `2`)
 
   Returns function computing curl at any point.
 
@@ -961,10 +964,10 @@
     (def curlF (curl-fn (fn [[x y z]] [(* y z) (* x z) (* x y)])))
     (curlF [1.0 2.0 3.0])  ;=> [-1.0 0.0 1.0]"
   ([v->v] (curl-fn v->v {}))
-  ([v->v {::keys [h type accuracy]
-          :or    {h        m/sgl-close
-                  type     :central
-                  accuracy 2}}]
+  ([v->v {::keys [accuracy h type]
+          :or    {accuracy 2
+                  h        m/sgl-close
+                  type     :central}}]
    (fn [[x y z :as v]]
      (if (not= 3 (count v))
        [m/nan m/nan m/nan]
@@ -988,6 +991,44 @@
          :ret ::vector/vector))
 
 ;;;HIGHER-ORDER MIXED PARTIALS
+(defn- compile-1d-stencil
+  "Returns {:multiplier m :stencil [[offset weight] ...]} for a single 1D finite-difference
+   configuration. Mirrors the math in `derivative-fn`, including the recursive composition for
+   `derivative > 4`, but flattens the composed stencil into one flat list so the caller can
+   precompute a cross-product stencil for mixed partials without rebuilding `derivative-fn`
+   closures on every evaluation."
+  [{::keys [accuracy derivative h type]}]
+  (let [derivative (int derivative)
+        accuracy (int accuracy)
+        h (double h)]
+    (cond (zero? derivative) {:multiplier 1.0 :stencil [[0.0 1.0]]}
+      (> derivative 4) (let [exc (- derivative 4)
+                             x (/ h (/ m/sgl-close 10))
+                             h-outer (* x (m/pow 10 (/ (+ 11 (- exc)) -2)))
+                             h-inner (* x (m/pow 10 (/ (+ 3 exc) -2)))
+                             outer (compile-1d-stencil {::accuracy   accuracy
+                                                        ::derivative 4
+                                                        ::h          h-outer
+                                                        ::type       type})
+                             inner (compile-1d-stencil {::accuracy   accuracy
+                                                        ::derivative exc
+                                                        ::h          h-inner
+                                                        ::type       type})]
+                         {:multiplier (* (double (:multiplier outer)) (double (:multiplier inner)))
+                          :stencil    (vec (for [[o1 w1] (:stencil outer)
+                                                 [o2 w2] (:stencil inner)]
+                                             [(+ (double o1) (double o2))
+                                              (* (double w1) (double w2))]))})
+      :else (let [coefficient-fn (case type
+                                   :central get-central-coefficients
+                                   :forward get-forward-coefficients
+                                   :backward get-backward-coefficients)
+                  multiplier (/ h)
+                  dx (m/pow h (/ derivative))]
+              {:multiplier multiplier
+               :stencil    (mapv (fn [[e1 e2]] [(* dx (double e1)) (double e2)])
+                             (coefficient-fn derivative accuracy))}))))
+
 (defn mixed-partial-fn
   "Creates function computing arbitrary mixed partial derivatives.
 
@@ -995,9 +1036,9 @@
     d^(o1+o2+...+on) f / (dx1^o1 dx2^o2 ... dxn^on)
 
   Options:
-    ::h - Step size (default adjusted for total derivative order)
-    ::type - Difference scheme (default :central)
-    ::accuracy - Accuracy level (default 2)
+    `::h` - Step size (default adjusted for total derivative order)
+    `::type` - Difference scheme (default `:central`)
+    `::accuracy` - Accuracy level (default `2`)
 
   Returns function computing mixed partial at any point.
 
@@ -1007,34 +1048,59 @@
     (d3f [1.0 2.0])  ;=> 24.0 (2 * 3 * y^2 = 2 * 3 * 4 = 24)"
   ([v->number derivative-orders]
    (mixed-partial-fn v->number derivative-orders {}))
-  ([v->number derivative-orders {::keys [h type accuracy]
-                                 :or    {type     :central
-                                         accuracy 2}}]
-   (let [total-order (apply + derivative-orders)
+  ([v->number derivative-orders {::keys [accuracy h type]
+                                 :or    {accuracy 2
+                                         type     :central}}]
+   (let [n-dims (count derivative-orders)
+         total-order (apply + derivative-orders)
          ;; For higher derivatives, use larger h to avoid roundoff errors
          ;; Optimal h ~ eps^(1/(n+1)), so for n=3: h ~ 1e-4
-         h0 (or h (m/pow m/dbl-close (/ 1.0 (inc total-order))))]
+         h0 (or h (m/pow m/dbl-close (/ (inc total-order))))
+         per-dim (first (reduce (fn [[ds h-curr] [idx order]]
+                                  (if (zero? order)
+                                    [ds h-curr]
+                                    (let [{:keys [multiplier stencil]}
+                                          (compile-1d-stencil
+                                            {::accuracy   accuracy
+                                             ::derivative order
+                                             ::h          h-curr
+                                             ::type       type})]
+                                      [(conj ds {:idx        idx
+                                                 :multiplier multiplier
+                                                 :stencil    stencil})
+                                       (* h-curr 0.5)])))
+                          [[] h0]
+                          (map-indexed vector derivative-orders)))
+         total-mult (reduce * 1.0 (map :multiplier per-dim))
+         flat-stencil (reduce (fn [acc {:keys [idx stencil]}]
+                                (vec (for [{:keys [perts w]} acc
+                                           [o w2] stencil]
+                                       {:perts (if (zero? (double o))
+                                                 perts
+                                                 (conj perts [idx (double o)]))
+                                        :w     (* (double w) w2)})))
+                        [{:perts [] :w 1.0}]
+                        per-dim)
+         n-points (count flat-stencil)
+         weights (double-array (map :w flat-stencil))
+         pert-list (object-array (map :perts flat-stencil))]
      (fn [v]
-       (if (not= (count v) (count derivative-orders))
+       (if (not= (count v) n-dims)
          m/nan
-         (loop [current-fn v->number
-                remaining-orders (vec (map-indexed vector derivative-orders))
-                h-current h0]
-           (if (empty? remaining-orders)
-             (current-fn v)
-             (let [[idx order] (first remaining-orders)]
-               (if (zero? order)
-                 (recur current-fn (rest remaining-orders) h-current)
-                 (let [next-fn (fn [v']
-                                 ((derivative-fn
-                                    (fn [xi]
-                                      (current-fn (assoc v' idx xi)))
-                                    {::accuracy   accuracy
-                                     ::derivative order
-                                     ::h          h-current
-                                     ::type       type})
-                                  (nth v' idx)))]
-                   (recur next-fn (rest remaining-orders) (* h-current 0.5))))))))))))
+         (loop [i 0
+                acc 0.0]
+           (if (>= i n-points)
+             (* total-mult acc)
+             (let [perts (aget pert-list i)
+                   v-pert (reduce (fn [vv p]
+                                    (let [idx (nth p 0)
+                                          d (double (nth p 1))]
+                                      (assoc vv idx (+ (double (nth vv idx)) d))))
+                            v
+                            perts)]
+               (recur (inc i)
+                 (+ acc (* (double (v->number v-pert))
+                          (aget weights i))))))))))))
 
 (s/fdef mixed-partial-fn
   :args (s/cat :v->number ::v->number
@@ -1058,30 +1124,29 @@
   extracting entries.
 
   Args:
-    v->v - Vector-valued function
-    sparsity-pattern - Set of [row col] pairs indicating entries to compute
-    opts - Same options as jacobian-fn
+    `v->v` - Vector-valued function
+    `sparsity-pattern` - Set of `[row col]` pairs indicating entries to compute
+    `opts` - Same options as [[jacobian-fn]]
 
-  Returns function computing sparse Jacobian as vector of [row col value].
+  Returns function computing sparse Jacobian as vector of `[row col value]`.
 
   Examples:
     ;; Only compute diagonal entries
     (def sJ (sparse-jacobian-fn f #{[0 0] [1 1] [2 2]}))
     (sJ [1.0 2.0 3.0])  ;=> [[0 0 val1] [1 1 val2] [2 2 val3]]"
   ([v->v sparsity-pattern] (sparse-jacobian-fn v->v sparsity-pattern {}))
-  ([v->v sparsity-pattern {::keys [h type accuracy]
-                           :or    {h        m/sgl-close
-                                   type     :central
-                                   accuracy 2}}]
+  ([v->v sparsity-pattern {::keys [accuracy h type]
+                           :or    {accuracy 2
+                                   h        m/sgl-close
+                                   type     :central}}]
    (fn [v]
-     (vec
-       (for [[row col] (sort sparsity-pattern)]
-         (let [deriv ((derivative-fn
-                        (fn [xi]
-                          (nth (v->v (assoc v col xi)) row))
-                        {::accuracy accuracy ::h h ::type type})
-                      (nth v col))]
-           [row col deriv]))))))
+     (vec (for [[row col] (sort sparsity-pattern)]
+            (let [deriv ((derivative-fn
+                           (fn [xi]
+                             (nth (v->v (assoc v col xi)) row))
+                           {::accuracy accuracy ::h h ::type type})
+                         (nth v col))]
+              [row col deriv]))))))
 
 (s/fdef sparse-jacobian-fn
   :args (s/with-gen
@@ -1105,23 +1170,23 @@
 (defn sparse-hessian-fn
   "Creates Hessian function that only computes specified entries.
 
-  For symmetric Hessians, specifying [i j] automatically includes [j i].
+  For symmetric Hessians, specifying `[i j]` automatically includes `[j i]`.
 
   Args:
-    v->number - Scalar-valued function
-    sparsity-pattern - Set of [row col] pairs indicating entries to compute
-    opts - Same options as hessian-fn
+    `v->number` - Scalar-valued function
+    `sparsity-pattern` - Set of `[row col]` pairs indicating entries to compute
+    `opts` - Same options as [[hessian-fn]]
 
-  Returns function computing sparse Hessian as vector of [row col value].
+  Returns function computing sparse Hessian as vector of `[row col value]`.
 
   Examples:
     ;; Only compute diagonal of Hessian
     (def sH (sparse-hessian-fn f #{[0 0] [1 1]}))
     (sH [1.0 2.0])  ;=> [[0 0 d2f/dx^2] [1 1 d2f/dy^2]]"
   ([v->number sparsity-pattern] (sparse-hessian-fn v->number sparsity-pattern {}))
-  ([v->number sparsity-pattern {::keys [h accuracy]
-                                :or    {h        (* m/sgl-close 0.1)
-                                        accuracy 2}}]
+  ([v->number sparsity-pattern {::keys [accuracy h]
+                                :or    {accuracy 2
+                                        h        (* m/sgl-close 0.1)}}]
    (let [multiplier (/ h)
          dx (m/sqrt h)]
      (fn [v]
@@ -1162,6 +1227,7 @@
                  (gen/fmap set
                    (gen/vector
                      (gen/tuple (gen/choose 0 (dec n)) (gen/choose 0 (dec n)))
-                     0 (min 4 (* n n))))))))
+                     0
+                     (min 4 (* n n))))))))
   ;; Return fn? instead of fspec; returned fn only works for vectors matching sparsity dimensions
   :ret fn?)

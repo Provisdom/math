@@ -5,7 +5,7 @@
     [provisdom.math.tensor :as tensor]
     [provisdom.test.core :as t]))
 
-;;46 seconds
+;;50 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -40,7 +40,7 @@
 
 (t/deftest compute-tensor-test
   (t/with-instrument `tensor/compute-tensor
-    ;; ::shape and ::indices generators limit dimensions to mdl (6)
+    ;; ::shape and ::indices generators limit dimensions to mdl (6)  -- ME
     (t/is-spec-check tensor/compute-tensor {:num-tests 250}))
   (t/with-instrument :all
     (t/is= -2
@@ -88,8 +88,8 @@
 
 (t/deftest rnd-tensor!-test
   (t/with-instrument `tensor/rnd-tensor!
-    ;; ::shape generator limits to mdl (6); rnd-lazy! is slow
-    (t/is-spec-check tensor/rnd-tensor! {:num-tests 20}))
+    ;; ::shape generator limits to mdl (6); rnd-lazy! is slow  -- ME
+    (t/is-spec-check tensor/rnd-tensor! {:num-tests 200}))
   (t/with-instrument :all
     (random/bind-seed 0
       (t/is= 0.0023434341918648904 (tensor/rnd-tensor! [])))
@@ -156,7 +156,8 @@
 
 (t/deftest filter-kv-test
   (t/with-instrument `tensor/filter-kv
-    (t/is-spec-check tensor/filter-kv))
+    ;;a bit slow -- ME
+    (t/is-spec-check tensor/filter-kv {:num-tests 400}))
   (t/with-instrument :all
     (t/is= [[3 4]]
       (tensor/filter-kv (fn [index _tensor]
@@ -213,7 +214,7 @@
   (t/with-instrument `tensor/transpose
     (t/is-spec-check tensor/transpose))
   ;; Use specific instrumentation since :all would instrument compute-tensor's
-  ;; fspec which fails when spec-checking the inner lambda function
+  ;; fspec which fails when spec-checking the inner lambda function -- ME
   (t/with-instrument `tensor/transpose
     ;; Scalars unchanged
     (t/is= 5 (tensor/transpose 5))
@@ -242,7 +243,7 @@
 ;;;TENSOR MANIPULATION
 (t/deftest emap-test
   (t/with-instrument `tensor/emap
-    ;; ::tensor generator limits to 1D-3D; fspec generates simple functions
+    ;; ::tensor generator limits to 1D-3D; fspec generates simple functions -- ME
     (t/is-spec-check tensor/emap {:num-tests 250}))
   (t/with-instrument :all
     (t/is= [[6 6] [6 6]]
@@ -289,7 +290,7 @@
 
 (t/deftest emap-kv-test
   (t/with-instrument `tensor/emap-kv
-    ;; ::tensor generator limits to 1D-3D; fspec generates simple functions
+    ;; ::tensor generator limits to 1D-3D; fspec generates simple functions -- ME
     (t/is-spec-check tensor/emap-kv {:num-tests 250}))
   (t/with-instrument :all
     ;;notice need to check indices for spec

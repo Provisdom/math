@@ -393,14 +393,17 @@
     (format-percent 0.15)                   ;=> \"15%\"
     (format-percent 0.156 {::precision 1})  ;=> \"15.6%\"
     (format-percent 1.5)                    ;=> \"150%\"
-    (format-percent ##NaN)                  ;=> \"NaN\""
+    (format-percent ##NaN)                  ;=> \"NaN\"
+    (format-percent 2.46e306)               ;=> \"Inf\" (scaled value overflows)"
   ([decimal] (format-percent decimal {}))
   ([decimal {::keys [precision] :or {precision 0}}]
-   (cond
-     (m/nan? decimal) "NaN"
+   (cond (m/nan? decimal) "NaN"
      (m/inf+? decimal) "Inf"
      (m/inf-? decimal) "-Inf"
-     :else (str (format-as-float (* 100.0 (double decimal)) precision) "%"))))
+     :else (let [scaled (* 100.0 (double decimal))]
+             (cond (m/inf+? scaled) "Inf"
+               (m/inf-? scaled) "-Inf"
+               :else (str (format-as-float scaled precision) "%"))))))
 
 (s/fdef format-percent
   :args (s/cat :decimal ::m/number
@@ -538,10 +541,10 @@
   "Like [[format-shorthand]] but with customizable shorthand letters.
 
   Options:
-    ::shorthand-letters - Map of letter to multiplier (default shorthand-multipliers)
-    ::max-decimal-places - Limit decimal precision
-    ::max-digits - Limit significant digits
-    ::money? - Add $ prefix
+    `::shorthand-letters` - Map of letter to multiplier (default `shorthand-multipliers`)
+    `::max-decimal-places` - Limit decimal precision
+    `::max-digits` - Limit significant digits
+    `::money?` - Add `$` prefix
 
   Examples:
     (format-shorthand-custom 1500 5 {::shorthand-letters {\"k\" 1000}})

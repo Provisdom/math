@@ -1013,6 +1013,7 @@
   "Computes `exp(x)` with protection against overflow/underflow.
 
   Returns:
+    `##NaN` when `x` is `##NaN`
     `0.0` when `x < -700` (underflow)
     `inf+` when `x > 700` (overflow)
     `exp(x)` otherwise
@@ -1022,13 +1023,14 @@
     (safe-exp 1000)  ;=> ##Inf
     (safe-exp 1.0)   ;=> 2.718..."
   [x]
-  (cond (< x -700.0) 0.0
+  (cond (nan? x) x
+    (< x -700.0) 0.0
     (> x 700.0) inf+
     :else (exp x)))
 
 (s/fdef safe-exp
-  :args (s/cat :x ::num)
-  :ret ::non-)
+  :args (s/cat :x ::number)
+  :ret ::nan-or-non-)
 
 (defn log
   "Returns log `number`."
@@ -1459,7 +1461,7 @@
   Returns `true` if `number1` and `number2` are within `accu` of each other. Handles special cases:
   - NaN arguments -> `false`
   - Infinite tolerance -> `true`
-  - Infinite arguments -> `false` (unless both same infinity)
+  - Infinite arguments -> `false`
 
   Useful for floating-point comparisons where exact equality fails due to rounding errors.
 

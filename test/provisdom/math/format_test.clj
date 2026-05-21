@@ -2,11 +2,10 @@
   (:require
     [provisdom.math.core :as m]
     [provisdom.math.format :as format]
-    [provisdom.math.random :as random]
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anomalies]))
 
-;;2 seconds
+;;4 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -103,7 +102,10 @@
     (t/is= "-2.34231E+11"
       (format/format-number -2.342311111114234E11 12 {::format/max-decimal-places 1}))
     (t/is= "-2.3423E+11" (format/format-number -2.342311111114234E11 12 {::format/max-digits 5}))
-    (t/is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3}))))
+    (t/is= "-0E+0" (format/format-number -2.34231E-7 12 {::format/max-decimal-places 3}))
+    ;; max-length edge cases: max-length of 1 still produces something, large max-length OK
+    (t/is= "1E+5" (format/format-number 123456 1))
+    (t/is= "123456.0" (format/format-number 123456 1000))))
 
 (t/deftest format-number-extended-test
   (t/with-instrument `format/format-number-extended
@@ -128,13 +130,6 @@
     (t/is= "NaN" (format/format-number-extended m/nan 5))
     (t/is= "Inf" (format/format-number-extended m/inf+ 5))
     (t/is= "-Inf" (format/format-number-extended m/inf- 5))))
-
-(t/deftest format-number-max-length-test
-  (t/with-instrument `format/format-number
-    ;; max-length of 1 should still produce something
-    (t/is (string? (format/format-number 123456 1)))
-    ;; Very large max-length shouldn't cause issues
-    (t/is= "123456.0" (format/format-number 123456 1000))))
 
 ;;;PERCENT
 (t/deftest format-percent-test
@@ -171,7 +166,18 @@
     (t/is= "-Inf" (format/format-shorthand m/inf- 3))
     (t/is= "Inf" (format/format-shorthand m/inf+ 3 {::format/money? true}))
     (t/is= "$323M" (format/format-shorthand 323234324 3 {::format/money? true}))
-    (t/is= "-$323M" (format/format-shorthand -323234324 3 {::format/money? true}))))
+    (t/is= "-$323M" (format/format-shorthand -323234324 3 {::format/money? true}))
+    ;; Boundaries: no-suffix/K and K/M
+    (t/is= "999.0" (format/format-shorthand 999 5))
+    (t/is= "1K" (format/format-shorthand 1000 5))
+    (t/is= "999K" (format/format-shorthand 999000 5))
+    (t/is= "1M" (format/format-shorthand 1000000 5))
+    ;; Format side of format/parse roundtrip values
+    (t/is= "1.234K" (format/format-shorthand 1234 10))
+    (t/is= "1.234567M" (format/format-shorthand 1234567 10))
+    (t/is= "1.2345679B" (format/format-shorthand 1234567890 10))
+    (t/is= "1.2345679T" (format/format-shorthand 1234567890123 10))
+    (t/is= "-5.678K" (format/format-shorthand -5678 10))))
 
 (t/deftest parse-shorthand-test
   (t/with-instrument `format/parse-shorthand
@@ -180,7 +186,7 @@
     (t/is= 2.3432343E16 (format/parse-shorthand "23432.343T"))
     (t/is= 2.3432343E13 (format/parse-shorthand "23432.343B"))
     (t/is= 2.3432343E10 (format/parse-shorthand "23432.343M"))
-    (t/is (m/nan? (format/parse-shorthand "NaN")))
+    (t/is-approx= m/nan (format/parse-shorthand "NaN") :nan-equal? true)
     (t/is= m/inf+ (format/parse-shorthand "Inf"))
     (t/is= m/inf- (format/parse-shorthand "-Inf"))
     (t/is= 2.3432343E16 (format/parse-shorthand "$23432.343T"))
@@ -190,44 +196,44 @@
     (t/is= 1.23E-4 (format/parse-shorthand "1.23E-4"))
     (t/is= 12300.0 (format/parse-shorthand "1.23e+4"))
     (t/is= -12300.0 (format/parse-shorthand "-1.23E+4"))
-    (t/is= 12300.0 (format/parse-shorthand "$1.23E+4"))))
-
-(t/deftest parse-shorthand-edge-cases-test
-  (t/with-instrument `format/parse-shorthand
-    ;; Empty string and whitespace return anomalies
-    (t/is (anomalies/anomaly? (format/parse-shorthand "")))
-    (t/is (anomalies/anomaly? (format/parse-shorthand "   ")))
-    ;; Invalid input returns anomalies
-    (t/is (anomalies/anomaly? (format/parse-shorthand "invalid")))
-    (t/is (anomalies/anomaly? (format/parse-shorthand "abc123")))
-    (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
-
-(t/deftest parse-shorthand-security-test
-  (t/with-instrument `format/parse-shorthand
-    ;; These should not execute code, just return anomalies
-    (t/is (anomalies/anomaly? (format/parse-shorthand "#=(+ 1 1)")))
-    (t/is (anomalies/anomaly? (format/parse-shorthand "(println \"test\")")))
-    (t/is (anomalies/anomaly? (format/parse-shorthand ":keyword")))))
-
-(t/deftest format-shorthand-boundary-test
-  (t/with-instrument `format/format-shorthand
-    ;; Test boundary between no suffix and K
-    (t/is= "999.0" (format/format-shorthand 999 5))
-    (t/is= "1K" (format/format-shorthand 1000 5))
-    ;; Test boundary between K and M
-    (t/is= "999K" (format/format-shorthand 999000 5))
-    (t/is= "1M" (format/format-shorthand 1000000 5))))
-
-(t/deftest format-parse-roundtrip-test
-  (t/with-instrument :all
-    ;; Test that parse(unparse(x)) approximately equals x for various values
-    (random/bind-seed 42
-      (doseq [x [1234 1234567 1234567890 1234567890123 -5678]]
-        (let [formatted (format/format-shorthand x 10)
-              parsed (format/parse-shorthand formatted)]
-          (when (number? parsed)
-            (t/is (m/roughly? x parsed (* (m/abs x) 0.01))
-              (str "Roundtrip failed for " x " -> " formatted " -> " parsed))))))))
+    (t/is= 12300.0 (format/parse-shorthand "$1.23E+4"))
+    ;; Empty / blank input returns anomaly with full map
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input ""}
+            ::anomalies/message  "Cannot parse empty or blank string"}
+      (format/parse-shorthand ""))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input "   "}
+            ::anomalies/message  "Cannot parse empty or blank string"}
+      (format/parse-shorthand "   "))
+    ;; Invalid input returns anomaly
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input "invalid"}
+            ::anomalies/message  "Failed to parse number string"}
+      (format/parse-shorthand "invalid"))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input "abc123"}
+            ::anomalies/message  "Failed to parse number string"}
+      (format/parse-shorthand "abc123"))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input ":keyword"}
+            ::anomalies/message  "Failed to parse number string"}
+      (format/parse-shorthand ":keyword"))
+    ;; Security: code-execution payloads return anomalies, not eval results
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input "#=(+ 1 1)"}
+            ::anomalies/message  "Failed to parse number string"}
+      (format/parse-shorthand "#=(+ 1 1)"))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/data     {:input "(println \"test\")"}
+            ::anomalies/message  "Failed to parse number string"}
+      (format/parse-shorthand "(println \"test\")"))
+    ;; Parse side of format/parse roundtrip values
+    (t/is= 1234.0 (format/parse-shorthand "1.234K"))
+    (t/is= 1234567.0 (format/parse-shorthand "1.234567M"))
+    (t/is= 1.2345679E9 (format/parse-shorthand "1.2345679B"))
+    (t/is= 1.2345679E12 (format/parse-shorthand "1.2345679T"))
+    (t/is= -5678.0 (format/parse-shorthand "-5.678K"))))
 
 (t/deftest format-shorthand-custom-test
   (t/with-instrument `format/format-shorthand-custom

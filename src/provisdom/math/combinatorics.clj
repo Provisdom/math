@@ -268,16 +268,24 @@
   (m/maybe-long-able (choose-k-from-n k n)))
 
 (s/fdef choose-k-from-n'
-  :args (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
-          n-no-less-than-k?)
+  :args (s/with-gen
+          (s/and (s/cat :k ::m/int-non- :n ::m/int-non-)
+            n-no-less-than-k?)
+          #(gen/bind
+             (s/gen ::m/int-non-)
+             (fn [k]
+               (gen/fmap
+                 (fn [n] [k n])
+                 (s/gen (s/int-in k m/max-int))))))
   :ret ::m/num)
 
 (defn log-choose-k-from-n
   "Computes the natural logarithm of the binomial coefficient.
 
   Returns ln(C(n,k)) = ln(n!/(k!(n-k)!)). When min(k, n-k) is an integer up to 10 million, uses
-  direct summation log C(n,k) = Σ log((n-k'+i)/i) to avoid catastrophic cancellation in log-factorial
-  differences for large n. Falls back to log-factorial subtraction for larger or noninteger k.
+  direct summation log C(n,k) = Σ log((n-k'+i)/i) to avoid catastrophic cancellation in
+  log-factorial differences for large n. Falls back to log-factorial subtraction for larger or
+  noninteger k.
 
   Constraints: n ≥ k ≥ 0
 
@@ -838,28 +846,80 @@
                   (gen/large-integer* {:min 0 :max 15})))]))
   :ret (s/coll-of (s/coll-of ::m/int-non-)))
 
-(defn count-integer-partitions
-  "Returns the number of integer partitions of n.
+(defn- count-partitions-long
+  "Euler's pentagonal-number recurrence for p(`n`) using long arithmetic. `n` must be ≤ 395.
+  The recurrence's first two terms produce an intermediate sum p(m-1) + p(m-2) that exceeds
+  `m/max-long` once m ≥ 396, even though p(405) itself still fits in a long."
+  ^long [^long n]
+  (let [p (long-array (inc n))]
+    (aset p 0 1)
+    (loop [m 1]
+      (when (<= m n)
+        (let [sum (loop [k 1
+                         sum 0]
+                    (let [g1 (quot (* k (dec (* 3 k))) 2)]
+                      (if (> g1 m)
+                        sum
+                        (let [g2 (quot (* k (inc (* 3 k))) 2)
+                              add? (odd? k)
+                              v1 (aget p (- m g1))
+                              sum (if add? (+ sum v1) (- sum v1))
+                              sum (if (> g2 m)
+                                    sum
+                                    (let [v2 (aget p (- m g2))]
+                                      (if add? (+ sum v2) (- sum v2))))]
+                          (recur (inc k) sum)))))]
+          (aset p m sum)
+          (recur (inc m)))))
+    (aget p n)))
 
-  Uses dynamic programming for efficiency. This is the partition function p(n).
+(defn- count-partitions-big
+  "Euler's pentagonal-number recurrence for p(`n`) using `BigInt` arithmetic. Used as a fallback
+  when [[count-partitions-long]] overflows."
+  [^long n]
+  (let [p (object-array (inc n))]
+    (aset p 0 (bigint 1))
+    (loop [m 1]
+      (when (<= m n)
+        (let [sum (loop [k 1
+                         sum (bigint 0)]
+                    (let [g1 (quot (* k (dec (* 3 k))) 2)]
+                      (if (> g1 m)
+                        sum
+                        (let [g2 (quot (* k (inc (* 3 k))) 2)
+                              add? (odd? k)
+                              v1 (aget p (- m g1))
+                              sum (if add? (+' sum v1) (-' sum v1))
+                              sum (if (> g2 m)
+                                    sum
+                                    (let [v2 (aget p (- m g2))]
+                                      (if add? (+' sum v2) (-' sum v2))))]
+                          (recur (inc k) sum)))))]
+          (aset p m sum)
+          (recur (inc m)))))
+    (aget p n)))
+
+(defn count-integer-partitions
+  "Returns the number of integer partitions of `n` (the partition function p(`n`)).
+
+  Uses Euler's pentagonal-number recurrence in O(n^1.5) time. Returns a `long` for `n` ≤ 395
+  and a `BigInt` beyond that. Negative `n` returns 0.
 
   Examples:
     (count-integer-partitions 5)   ;=> 7
     (count-integer-partitions 10)  ;=> 42
-    (count-integer-partitions 100) ;=> 190569292"
+    (count-integer-partitions 100) ;=> 190569292
+    (count-integer-partitions 500) ;=> 2300165032574323995027N"
   [n]
-  (if (neg? n)
-    0
-    (let [table (long-array (inc n))]
-      (aset table 0 1)
-      (doseq [i (range 1 (inc n))]
-        (doseq [j (range i (inc n))]
-          (aset table j (+ (aget table j) (aget table (- j i))))))
-      (aget table n))))
+  (cond (neg? n) 0
+    (<= n 395) (count-partitions-long n)
+    :else (count-partitions-big n)))
 
 (s/fdef count-integer-partitions
-  :args (s/cat :n ::m/int)
-  :ret ::m/int-non-)
+  :args (s/with-gen
+          (s/cat :n ::m/int)
+          #(gen/fmap vector (m/long-gen {:min -5 :max 500})))
+  :ret #(and (integer? %) (not (neg? %))))
 
 ;;;UNORDERED COMBINATIONS
 ;taken from an old version of clojure.math.combinatorics
@@ -1180,9 +1240,8 @@
     (nth-k-permutation [:a :b :c] 2 3) ;=> (:b :a)"
   [items k idx]
   (let [v-items (vec items)
-        n (count v-items)
-        total-count (falling-factorial n k)]
-    (when (and (<= k n) (>= idx 0) (< idx total-count))
+        n (count v-items)]
+    (when (and (<= k n) (>= idx 0) (< idx (falling-factorial n k)))
       (loop [result []
              remaining (vec (range n))
              remaining-k k

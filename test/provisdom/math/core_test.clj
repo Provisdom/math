@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;6 seconds
+;;8 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -554,6 +554,20 @@
     (t/is-not (m/open-prob? m/nan))
     (t/is-not (m/open-prob? "A"))))
 
+(t/deftest prob+?-test
+  (t/with-instrument `m/prob+?
+    (t/is-spec-check m/prob+?))
+  (t/with-instrument :all
+    (t/is-not (m/prob+? -0.5))
+    (t/is-not (m/prob+? 0))
+    (t/is (m/prob+? 0.5))
+    (t/is (m/prob+? 1))
+    (t/is-not (m/prob+? 1.5))
+    (t/is-not (m/prob+? m/inf+))
+    (t/is-not (m/prob+? m/inf-))
+    (t/is-not (m/prob+? "A"))
+    (t/is-not (m/prob+? m/nan))))
+
 (t/deftest corr?-test
   (t/with-instrument `m/corr?
     (t/is-spec-check m/corr?))
@@ -777,8 +791,8 @@
     (t/is= m/inf+ (m/safe-exp 701.0))
     (t/is= m/inf+ (m/safe-exp 1000.0))
     ;; Edge of threshold
-    (t/is (m/pos? (m/safe-exp -699.0)))
-    (t/is (m/finite? (m/safe-exp 699.0)))))
+    (t/is= 2.680137958338607E-304 (m/safe-exp -699.0))
+    (t/is= 3.7311512151407716E303 (m/safe-exp 699.0))))
 
 (t/deftest log-test
   (t/with-instrument `m/log
@@ -839,7 +853,7 @@
     ;;SciPy 1210.0
     (t/is= 1210.0000453988991 (m/log-sum-exp [1200.0 1210.0]))
     (t/is= 1210.0 (m/log-sum-exp [-1200.0 1210.0]))
-    (t/is-approx= 1000.0 (m/log-sum-exp [1000.0 900.0]) :tolerance 0.001)
+    (t/is= 1000.0 (m/log-sum-exp [1000.0 900.0]))
     ;; All -inf
     (t/is= m/inf- (m/log-sum-exp [m/inf- m/inf-]))
     ;; Contains +inf
@@ -960,15 +974,44 @@
 ;;;TRIGONOMETRY
 (t/deftest sin-test
   (t/with-instrument `m/sin
-    (t/is-spec-check m/sin)))
+    (t/is-spec-check m/sin))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/sin 0.0))
+    (t/is= 1.0 (m/sin (/ m/PI 2)))
+    (t/is= -1.0 (m/sin (- (/ m/PI 2))))
+    ;; sin(pi) ≈ 0 (not exact due to PI being irrational)
+    (t/is= 1.2246467991473532E-16 (m/sin m/PI))
+    (t/is (m/nan? (m/sin m/inf+)))
+    (t/is (m/nan? (m/sin m/inf-)))
+    (t/is (m/nan? (m/sin m/nan)))))
 
 (t/deftest sinh-test
   (t/with-instrument `m/sinh
-    (t/is-spec-check m/sinh)))
+    (t/is-spec-check m/sinh))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/sinh 0.0))
+    ;;SciPy 1.17520
+    (t/is= 1.1752011936438014 (m/sinh 1.0))
+    ;;SciPy -1.17520
+    (t/is= -1.1752011936438014 (m/sinh -1.0))
+    (t/is= m/inf+ (m/sinh m/inf+))
+    (t/is= m/inf- (m/sinh m/inf-))
+    (t/is (m/nan? (m/sinh m/nan)))))
 
 (t/deftest asin-test
   (t/with-instrument `m/asin
-    (t/is-spec-check m/asin)))
+    (t/is-spec-check m/asin))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/asin 0.0))
+    ;; asin(1) = pi/2
+    (t/is= 1.5707963267948966 (m/asin 1.0))
+    ;; asin(-1) = -pi/2
+    (t/is= -1.5707963267948966 (m/asin -1.0))
+    ;; asin(0.5) = pi/6
+    ;;SciPy 0.52360
+    (t/is= 0.5235987755982989 (m/asin 0.5))
+    (t/is (m/nan? (m/asin 2.0)))
+    (t/is (m/nan? (m/asin m/nan)))))
 
 (t/deftest asinh-test
   (t/with-instrument `m/asinh
@@ -991,15 +1034,42 @@
 
 (t/deftest cos-test
   (t/with-instrument `m/cos
-    (t/is-spec-check m/cos)))
+    (t/is-spec-check m/cos))
+  (t/with-instrument :all
+    (t/is= 1.0 (m/cos 0.0))
+    (t/is= -1.0 (m/cos m/PI))
+    ;; cos(pi/2) ≈ 0 (not exact due to PI being irrational)
+    (t/is= 6.123233995736766E-17 (m/cos (/ m/PI 2)))
+    (t/is (m/nan? (m/cos m/inf+)))
+    (t/is (m/nan? (m/cos m/nan)))))
 
 (t/deftest cosh-test
   (t/with-instrument `m/cosh
-    (t/is-spec-check m/cosh)))
+    (t/is-spec-check m/cosh))
+  (t/with-instrument :all
+    (t/is= 1.0 (m/cosh 0.0))
+    ;;SciPy 1.54308
+    (t/is= 1.543080634815244 (m/cosh 1.0))
+    ;; cosh is even
+    (t/is= 1.543080634815244 (m/cosh -1.0))
+    (t/is= m/inf+ (m/cosh m/inf+))
+    (t/is= m/inf+ (m/cosh m/inf-))
+    (t/is (m/nan? (m/cosh m/nan)))))
 
 (t/deftest acos-test
   (t/with-instrument `m/acos
-    (t/is-spec-check m/acos)))
+    (t/is-spec-check m/acos))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/acos 1.0))
+    ;; acos(0) = pi/2
+    (t/is= 1.5707963267948966 (m/acos 0.0))
+    ;; acos(-1) = pi
+    (t/is= 3.141592653589793 (m/acos -1.0))
+    ;; acos(0.5) = pi/3
+    ;;SciPy 1.04720
+    (t/is= 1.0471975511965979 (m/acos 0.5))
+    (t/is (m/nan? (m/acos 2.0)))
+    (t/is (m/nan? (m/acos m/nan)))))
 
 (t/deftest acosh-test
   (t/with-instrument `m/acosh
@@ -1014,19 +1084,52 @@
 
 (t/deftest tan-test
   (t/with-instrument `m/tan
-    (t/is-spec-check m/tan)))
+    (t/is-spec-check m/tan))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/tan 0.0))
+    ;; tan(pi/4) ≈ 1 (last-bit error from PI representation)
+    (t/is= 0.9999999999999999 (m/tan (/ m/PI 4)))
+    ;;SciPy -1.55741
+    (t/is= -1.5574077246549023 (m/tan -1.0))
+    (t/is (m/nan? (m/tan m/nan)))))
 
 (t/deftest tanh-test
   (t/with-instrument `m/tanh
-    (t/is-spec-check m/tanh)))
+    (t/is-spec-check m/tanh))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/tanh 0.0))
+    ;;SciPy 0.76159
+    (t/is= 0.7615941559557649 (m/tanh 1.0))
+    ;;SciPy -0.76159
+    (t/is= -0.7615941559557649 (m/tanh -1.0))
+    (t/is= 1.0 (m/tanh m/inf+))
+    (t/is= -1.0 (m/tanh m/inf-))
+    (t/is (m/nan? (m/tanh m/nan)))))
 
 (t/deftest atan-test
   (t/with-instrument `m/atan
-    (t/is-spec-check m/atan)))
+    (t/is-spec-check m/atan))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/atan 0.0))
+    ;; atan(1) = pi/4
+    (t/is= 0.7853981633974483 (m/atan 1.0))
+    (t/is= -0.7853981633974483 (m/atan -1.0))
+    ;; atan(±inf) = ±pi/2
+    (t/is= 1.5707963267948966 (m/atan m/inf+))
+    (t/is= -1.5707963267948966 (m/atan m/inf-))
+    (t/is (m/nan? (m/atan m/nan)))))
 
 (t/deftest atan2-test
   (t/with-instrument `m/atan2
-    (t/is-spec-check m/atan2)))
+    (t/is-spec-check m/atan2))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/atan2 0.0 1.0))
+    ;; atan2(1,1) = pi/4
+    (t/is= 0.7853981633974483 (m/atan2 1.0 1.0))
+    ;; atan2(1,0) = pi/2
+    (t/is= 1.5707963267948966 (m/atan2 1.0 0.0))
+    (t/is (m/nan? (m/atan2 m/nan 1.0)))
+    (t/is (m/nan? (m/atan2 1.0 m/nan)))))
 
 (t/deftest atanh-test
   (t/with-instrument `m/atanh
@@ -1044,7 +1147,15 @@
 
 (t/deftest hypot-test
   (t/with-instrument `m/hypot
-    (t/is-spec-check m/hypot)))
+    (t/is-spec-check m/hypot))
+  (t/with-instrument :all
+    (t/is= 0.0 (m/hypot 0.0 0.0))
+    ;; 3-4-5 triangle
+    (t/is= 5.0 (m/hypot 3.0 4.0))
+    ;; 5-12-13 triangle
+    (t/is= 13.0 (m/hypot 5.0 12.0))
+    (t/is= m/inf+ (m/hypot m/inf+ 1.0))
+    (t/is (m/nan? (m/hypot 1.0 m/nan)))))
 
 ;;;ROUNDING
 (t/deftest round'-test

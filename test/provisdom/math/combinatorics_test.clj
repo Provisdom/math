@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;13 seconds
+;;20 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -30,7 +30,8 @@
     (t/is= 1.1240007277776072E21 (combo/factorial 22))
     ;;Math 2.5852E22
     (t/is= 2.585201673888498E22 (combo/factorial 23))
-    (t/is= 4.714723635992578E284 (combo/factorial 160))))   ;;Math 4.7147236359920616E284
+    ;;mpmath 4.7147236359920616E284 (JVM exp(lgamma) drifts at ~13th sig fig)
+    (t/is-approx= 4.7147236359920616E284 (combo/factorial 160) :rel-tolerance 1e-12)))
 
 (t/deftest factorial'-test
   (t/with-instrument `combo/factorial'
@@ -154,8 +155,7 @@
 
 (t/deftest choose-k-from-n'-test
   (t/with-instrument `combo/choose-k-from-n'
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/choose-k-from-n' {:num-tests 50}))
+    (t/is-spec-check combo/choose-k-from-n'))
   (t/with-instrument :all
     (t/is= 4 (combo/choose-k-from-n' 1 4))))
 
@@ -174,9 +174,10 @@
     (t/is= 2.302585092994046 (combo/log-choose-k-from-n 2 5))
     ;;mpmath 55.500253258142337
     (t/is= 55.50025325814234 (combo/log-choose-k-from-n 12 545))
-    ;; cross-check: log of choose-k-from-n (product formula)
-    (t/is= (m/log (combo/choose-k-from-n 5 100000)) (combo/log-choose-k-from-n 5 100000))
-    (t/is= (m/log (combo/choose-k-from-n 10 10000)) (combo/log-choose-k-from-n 10 10000))
+    ;;mpmath 52.77703558056906
+    (t/is= 52.77703558056906 (combo/log-choose-k-from-n 5 100000))
+    ;;mpmath 76.99448972101092
+    (t/is= 76.99448972101092 (combo/log-choose-k-from-n 10 10000))
     ;; large n — direct summation avoids catastrophic cancellation
     ;; log C(n, 1) = log(n)
     (t/is= (m/log 1000000000000000) (combo/log-choose-k-from-n 1 1000000000000000))
@@ -209,7 +210,9 @@
 
 (t/deftest log-multinomial-coefficient-test
   (t/with-instrument `combo/log-multinomial-coefficient
-    (t/is-spec-check combo/log-multinomial-coefficient {:num-tests 130}))
+    ;;:num-tests reduced; large k values in ::m/non- collections cause
+    ;;log-choose-k-from-n direct summation to dominate runtime -- ME
+    (t/is-spec-check combo/log-multinomial-coefficient {:num-tests 100}))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-multinomial-coefficient [3]))
     ;;SciPy 4.0943
@@ -345,6 +348,8 @@
 
 (t/deftest log-binomial-probability-test
   (t/with-instrument `combo/log-binomial-probability
+    ;;:num-tests reduced; ::m/long-non- successes and ::m/finite-non- trials
+    ;;drive log-choose-k-from-n direct summation up to 1e7 iterations -- ME
     (t/is-spec-check combo/log-binomial-probability {:num-tests 400}))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-binomial-probability 0 0 0.4))
@@ -379,8 +384,7 @@
 ;;;INTEGER PARTITIONS
 (t/deftest integer-partitions-test
   (t/with-instrument `combo/integer-partitions
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/integer-partitions {:num-tests 30}))
+    (t/is-spec-check combo/integer-partitions))
   (t/with-instrument :all
     (t/is= '(()) (combo/integer-partitions 0))
     (t/is= '((1)) (combo/integer-partitions 1))
@@ -392,9 +396,9 @@
 
 (t/deftest count-integer-partitions-test
   (t/with-instrument `combo/count-integer-partitions
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/count-integer-partitions {:num-tests 30}))
+    (t/is-spec-check combo/count-integer-partitions))
   (t/with-instrument :all
+    (t/is= 0 (combo/count-integer-partitions -1))
     (t/is= 1 (combo/count-integer-partitions 0))
     (t/is= 1 (combo/count-integer-partitions 1))
     (t/is= 3 (combo/count-integer-partitions 3))
@@ -402,7 +406,12 @@
     (t/is= 7 (combo/count-integer-partitions 5))
     (t/is= 42 (combo/count-integer-partitions 10))
     ;;Math 1.9056E8
-    (t/is= 190569292 (combo/count-integer-partitions 100))))
+    (t/is= 190569292 (combo/count-integer-partitions 100))
+    ;;p(405) is the largest value fitting in a long
+    (t/is= 9147679068859117602 (combo/count-integer-partitions 405))
+    ;;p(406) requires BigInt
+    (t/is= 9725512513742021729N (combo/count-integer-partitions 406))
+    (t/is= 2300165032574323995027N (combo/count-integer-partitions 500))))
 
 ;;;UNORDERED COMBINATIONS
 (t/deftest combinations-test
@@ -534,8 +543,7 @@
 
 (t/deftest k-permutations-test
   (t/with-instrument `combo/k-permutations
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/k-permutations {:num-tests 30}))
+    (t/is-spec-check combo/k-permutations))
   (t/with-instrument :all
     (t/is= '([]) (combo/k-permutations [1 2 3] 0))
     (t/is= '([1] [2] [3]) (combo/k-permutations [1 2 3] 1))
@@ -568,8 +576,7 @@
 ;;;DIRECT ACCESS
 (t/deftest nth-combination-test
   (t/with-instrument `combo/nth-combination
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/nth-combination {:num-tests 30}))
+    (t/is-spec-check combo/nth-combination))
   (t/with-instrument :all
     (t/is= '(1 2) (combo/nth-combination [1 2 3 4 5] 2 0))
     (t/is= '(4 5) (combo/nth-combination [1 2 3 4 5] 2 9))
@@ -577,8 +584,7 @@
 
 (t/deftest nth-permutation-test
   (t/with-instrument `combo/nth-permutation
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/nth-permutation {:num-tests 30}))
+    (t/is-spec-check combo/nth-permutation))
   (t/with-instrument :all
     (t/is= '(1 2 3) (combo/nth-permutation [1 2 3] 0))
     (t/is= '(3 2 1) (combo/nth-permutation [1 2 3] 5))
@@ -586,8 +592,7 @@
 
 (t/deftest nth-k-permutation-test
   (t/with-instrument `combo/nth-k-permutation
-    ;;:num-tests reduced; combinatorial explosion with n and k dimensions
-    (t/is-spec-check combo/nth-k-permutation {:num-tests 30}))
+    (t/is-spec-check combo/nth-k-permutation))
   (t/with-instrument :all
     (t/is= '(1 2) (combo/nth-k-permutation [1 2 3 4] 2 0))
     (t/is= '(4 3) (combo/nth-k-permutation [1 2 3 4] 2 11))

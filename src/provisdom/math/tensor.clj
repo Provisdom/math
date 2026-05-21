@@ -122,24 +122,30 @@
 ;;;TENSOR TYPES
 (defn tensor?
   "Returns true if `x` is a valid tensor.
-  
+
   A valid tensor is either:
   - A number (0-dimensional tensor)
   - A vector of numbers (1-dimensional tensor)
   - A nested vector structure where all dimensions have consistent lengths
-  
+
   Examples:
     (tensor? 5) => true
     (tensor? [1 2 3]) => true
     (tensor? [[1 2] [3 4]]) => true
     (tensor? [[1 2] [3]]) => false (inconsistent row lengths)"
   [x]
-  (or (number? x)
-    (and (vector? x) (every? #(number? %) x))
-    (and (vector? x)
-      (every? #(and (vector? %) (= (count %) (count (first x))))
-        x)
-      (every? tensor? x))))
+  (cond (number? x) true
+    (not (vector? x)) false
+    (zero? (count x)) true
+    :else (let [f (first x)]
+            (cond
+              (number? f) (every? number? x)
+              (vector? f) (let [c (count f)]
+                            (every? #(and (vector? %)
+                                       (= c (count %))
+                                       (tensor? %))
+                              x))
+              :else false))))
 
 (s/fdef tensor?
   :args (s/cat :x any?)
@@ -148,10 +154,10 @@
 ;;;TENSOR CONSTRUCTOR
 (defn to-tensor
   "Converts sequential structure `x` to a tensor, or returns nil if invalid.
-  
-  Recursively processes nested sequences and validates the result.
-  Numbers are returned as-is. Non-sequential values return nil.
-  
+
+  Recursively processes nested sequences and validates the result. Numbers are returned as-is.
+  Non-sequential values return nil.
+
   Examples:
     (to-tensor '((1 2) (3 4))) => [[1 2] [3 4]]
     (to-tensor [1 [2]]) => nil (mixed structure)
@@ -199,10 +205,10 @@
 
 (defn compute-tensor
   "Creates a tensor by computing each element using function `indices->number`.
-  
+
   The function receives a vector of indices (coordinates) and should return the value for that
   position. Indices are 0-based. The tensor will have dimensions specified by `shape`.
-  
+
   Examples:
     (compute-tensor [2 3] #(apply + %)) => [[0 1 2] [1 2 3]]
     (compute-tensor [2 2] #(if (= (first %) (second %)) 1 0))
@@ -218,10 +224,10 @@
 
 (defn repeat-tensor
   "Creates a tensor by repeating `seed-tensor` according to `shape`.
-  
+
   With one argument, creates a tensor filled with zeros.
   With two arguments, tiles `seed-tensor` according to the `shape` dimensions.
-  
+
   Examples:
     (repeat-tensor [2 3]) => [[0.0 0.0 0.0] [0.0 0.0 0.0]]
     (repeat-tensor [2] 5) => [5 5]
@@ -243,10 +249,10 @@
 
 (defn fill-tensor
   "Creates a tensor with `shape` using values from sequence `numbers`.
-  
+
   Fills the tensor in row-major order. If `numbers` is too short, remaining elements are filled with
   0.0. If too long, extra values are ignored.
-  
+
   Examples:
     (fill-tensor [2 2] [1 2 3 4]) => [[1 2] [3 4]]
     (fill-tensor [2 3] [1 2]) => [[1 2 0.0] [0.0 0.0 0.0]]"
@@ -258,11 +264,12 @@
         (repeat-tensor shape)
         (let [cn (count numbers)
               rem (- tot cn)
-              tensor (vec (if (neg? rem)
-                            (take tot numbers)
-                            (concat numbers (repeat rem 0.0))))]
-          (reduce (fn [tot sh]
-                    (mapv vec (partition sh tot)))
+              tensor (if (neg? rem)
+                       (vec (take tot numbers))
+                       (into (vec numbers) (repeat rem 0.0)))]
+          (reduce (fn [t sh]
+                    (mapv #(subvec t % (+ % sh))
+                      (range 0 (count t) sh)))
             tensor
             (reverse (rest shape))))))))
 
@@ -273,10 +280,10 @@
 
 (defn rnd-tensor!
   "Creates a tensor with `shape` filled with random numbers.
-  
-  Random values are uniformly distributed doubles between 0 and 1.
-  Uses the current random number generator state.
-  
+
+  Random values are uniformly distributed doubles between 0 and 1. Uses the current random number
+  generator state.
+
   Examples:
     (rnd-tensor! [2 2]) => [[0.123 0.456] [0.789 0.012]] (example values)"
   [shape]
@@ -289,10 +296,10 @@
 ;;;TENSOR INFO
 (defn first-number
   "Returns the first number encountered in `tensor`.
-  
-  Recursively traverses nested structure to find the first numeric element.
-  Returns nil if `tensor` is nil.
-  
+
+  Recursively traverses nested structure to find the first numeric element. Returns nil if `tensor`
+  is nil.
+
   Examples:
     (first-number [[1 2] [3 4]]) => 1
     (first-number 42) => 42
@@ -326,9 +333,9 @@
 
 (defn rank
   "Returns the number of dimensions (rank) of `tensor`.
-  
+
   Scalars have rank 0, vectors have rank 1, matrices have rank 2, etc.
-  
+
   Examples:
     (rank 5) => 0
     (rank [1 2 3]) => 1
@@ -348,9 +355,9 @@
 
 (defn shape
   "Returns the dimensions of `tensor` as a vector.
-  
+
   The shape describes the size of each dimension.
-  
+
   Examples:
     (shape 5) => []
     (shape [1 2 3]) => [3]
@@ -381,14 +388,15 @@
     (every-kv? (fn [idx val] (pos? val)) [[1 2] [3 4]]) => true
     (every-kv? (fn [idx val] (even? val)) [1 2 3]) => false"
   [indices+number->bool tensor]
-  (if (number? tensor)
-    (indices+number->bool [] tensor)
-    (let [result (recursive-compute-tensor
-                   (shape tensor)
-                   (fn [indices]
-                     (indices+number->bool indices (get-in tensor indices)))
-                   [])]
-      (all-true? result))))
+  (letfn [(walk [t indices]
+            (if (number? t)
+              (true? (indices+number->bool indices t))
+              (let [n (count t)]
+                (loop [i 0]
+                  (cond (>= i n) true
+                    (walk (nth t i) (conj indices i)) (recur (inc i))
+                    :else false)))))]
+    (walk tensor [])))
 
 (s/fdef every-kv?
   :args (s/cat :indices+number->bool (s/fspec :args (s/cat :indices ::indices
@@ -399,10 +407,10 @@
 
 (defn filter-kv
   "Filters the top-level elements of a tensor based on a predicate.
-  
+
   The predicate receives (index element) where index is the position of the element in the top-level
   sequence. Returns nil for scalars that don't match.
-  
+
   Examples:
     (filter-kv (fn [i x] (even? i)) [10 20 30 40]) => [10 30]
     (filter-kv (fn [i x] (> x 2)) [1 2 3 4]) => [3 4]"
@@ -558,53 +566,58 @@
                   (take-last (count shape) desired-expanded-shape)
                   shape)))
 
-(defn- recursive-emap
-  "Recursively maps for [[emap]]."
-  [largest-shape f sh tensors]
-  (let [c (count largest-shape)
-        dim (count sh)]
-    (if (= dim c)
-      (apply f (map (fn [tensor]
-                      (get-in tensor sh))
-                 tensors))
-      (mapv #(recursive-emap largest-shape f (conj sh %) tensors)
-        (range (get largest-shape dim))))))
+(defn- emap-walk
+  "Recursively maps `f` over a single tensor without index tracking."
+  [f tensor]
+  (if (number? tensor)
+    (f tensor)
+    (mapv #(emap-walk f %) tensor)))
+
+(defn- emap-zip
+  "Zips `f` element-wise across `tensors` (assumed pre-aligned to the same shape)."
+  [f tensors]
+  (if (number? (first tensors))
+    (apply f tensors)
+    (apply mapv (fn [& subs] (emap-zip f subs)) tensors)))
 
 (defn- emap-core
   [f tensor & more]
-  (let [tensors (concat [tensor] more)
-        shapes (map shape tensors)
-        [largest-shape large-count] (reduce (fn [[sh c] new-sh]
-                                              (let [new-c (count new-sh)]
-                                                (if (> new-c c)
-                                                  [new-sh new-c]
-                                                  [sh c])))
-                                      [(first shapes) (count (first shapes))]
-                                      (rest shapes))
-        new-tensors (when (every? #(expandable-shape? % largest-shape)
-                            shapes)
-                      (map
-                        (fn [tensor shape]
-                          (repeat-tensor
-                            (vec (take (- large-count (count shape))
-                                   largest-shape))
-                            tensor))
-                        tensors
-                        shapes))]
-    (when new-tensors
-      (recursive-emap largest-shape f [] new-tensors))))
+  (let [tensors (cons tensor more)
+        shapes (mapv shape tensors)
+        first-shape (first shapes)]
+    (if (every? #(= first-shape %) (rest shapes))
+      (emap-zip f tensors)
+      (let [[largest-shape large-count]
+            (reduce (fn [[sh c] new-sh]
+                      (let [new-c (count new-sh)]
+                        (if (> new-c c)
+                          [new-sh new-c]
+                          [sh c])))
+              [first-shape (count first-shape)]
+              (rest shapes))
+            new-tensors (when (every? #(expandable-shape? % largest-shape)
+                                shapes)
+                          (mapv (fn [tensor sh]
+                                  (repeat-tensor
+                                    (vec (take (- large-count (count sh))
+                                           largest-shape))
+                                    tensor))
+                            tensors
+                            shapes))]
+        (when new-tensors
+          (emap-zip f new-tensors))))))
 
 (defn emap
   "Applies a function element-wise across one or more tensors.
-  
+
   Tensors with different shapes are broadcast to a common shape if possible.
   Broadcasting follows NumPy-like rules. Returns nil if shapes are incompatible.
-  
+
   Examples:
     (emap inc [1 2 3]) => [2 3 4]
     (emap + [[1 2]] [[10] [20]]) => [[11 12] [21 22]] (broadcasting)
     (emap * [1 2] 3) => [3 6] (scalar broadcast)"
-  ([f tensor] (recursive-emap (shape tensor) f [] [tensor]))
+  ([f tensor] (emap-walk f tensor))
   ([f tensor1 tensor2] (emap-core f tensor1 tensor2))
   ([f tensor1 tensor2 tensor3] (emap-core f tensor1 tensor2 tensor3))
   ([f tensor1 tensor2 tensor3 & more]
@@ -637,54 +650,73 @@
                   :more (s/+ ::tensor)))
   :ret any?)
 
-(defn- recursive-emap-kv
-  "Recursively maps for [[emap-kv]]."
-  [shape f indices tensors]
-  (let [c (count shape)
-        dim (count indices)]
-    (if (= dim c)
-      (apply f indices (map (fn [tensor]
-                              (get-in tensor indices))
-                         tensors))
-      (mapv (fn [index]
-              (recursive-emap-kv shape f (conj indices index) tensors))
-        (range (get shape dim))))))
+(defn- emap-kv-walk
+  "Recursively maps `f` (taking indices and a value) over a single tensor."
+  [f indices tensor]
+  (if (number? tensor)
+    (f indices tensor)
+    (let [n (count tensor)]
+      (loop [i 0
+             acc (transient [])]
+        (if (>= i n)
+          (persistent! acc)
+          (recur (inc i)
+            (conj! acc (emap-kv-walk f (conj indices i) (nth tensor i)))))))))
+
+(defn- emap-kv-zip
+  "Zips `f` (taking indices and values) across `tensors` (assumed pre-aligned)."
+  [f indices tensors]
+  (if (number? (first tensors))
+    (apply f indices tensors)
+    (let [n (count (first tensors))]
+      (loop [i 0
+             acc (transient [])]
+        (if (>= i n)
+          (persistent! acc)
+          (recur (inc i)
+            (conj! acc
+              (emap-kv-zip f
+                (conj indices i)
+                (mapv #(nth % i) tensors)))))))))
 
 (defn- emap-kv-core
   [f tensor & more]
-  (let [tensors (concat [tensor] more)
-        shapes (map shape tensors)
-        [largest-shape large-count] (reduce (fn [[sh c] new-sh]
-                                              (let [new-c (count new-sh)]
-                                                (if (> new-c c)
-                                                  [new-sh new-c]
-                                                  [sh c])))
-                                      [(first shapes) (count (first shapes))]
-                                      (rest shapes))
-        new-tensors (when (every? (fn [shape]
-                                    (expandable-shape? shape largest-shape))
-                            shapes)
-                      (map
-                        (fn [tensor sh]
-                          (repeat-tensor
-                            (vec (take (- large-count (count sh))
-                                   largest-shape))
-                            tensor))
-                        tensors
-                        shapes))]
-    (when new-tensors
-      (recursive-emap-kv largest-shape f [] new-tensors))))
+  (let [tensors (cons tensor more)
+        shapes (mapv shape tensors)
+        first-shape (first shapes)]
+    (if (every? #(= first-shape %) (rest shapes))
+      (emap-kv-zip f [] tensors)
+      (let [[largest-shape large-count]
+            (reduce (fn [[sh c] new-sh]
+                      (let [new-c (count new-sh)]
+                        (if (> new-c c)
+                          [new-sh new-c]
+                          [sh c])))
+              [first-shape (count first-shape)]
+              (rest shapes))
+            new-tensors (when (every? #(expandable-shape? % largest-shape)
+                                shapes)
+                          (mapv
+                            (fn [tensor sh]
+                              (repeat-tensor
+                                (vec (take (- large-count (count sh))
+                                       largest-shape))
+                                tensor))
+                            tensors
+                            shapes))]
+        (when new-tensors
+          (emap-kv-zip f [] new-tensors))))))
 
 (defn emap-kv
   "Applies a function element-wise with coordinate information.
-  
+
   Like emap, but the function also receives the indices (coordinates) of each element as its first
   argument.
-  
+
   Examples:
     (emap-kv (fn [idx val] (+ (apply + idx) val)) [[1 2] [3 4]])
     => [[1 3] [4 6]] (adds row+col indices to each value)"
-  ([f tensor] (recursive-emap-kv (shape tensor) f [] [tensor]))
+  ([f tensor] (emap-kv-walk f [] tensor))
   ([f tensor1 tensor2] (emap-kv-core f tensor1 tensor2))
   ([f tensor1 tensor2 tensor3] (emap-kv-core f tensor1 tensor2 tensor3))
   ([f tensor1 tensor2 tensor3 & more]
@@ -723,10 +755,10 @@
 
 (defn partition-recursively
   "Recursively partitions a 1D tensor into nested chunks of size n.
-  
+
   Creates a roughly cubic tensor by repeatedly partitioning into groups of n elements. May leave
   some elements unused if they don't fit evenly.
-  
+
   Examples:
     (partition-recursively 2 [1 2 3 4]) => [[1 2] [3 4]]
     (partition-recursively 3 (range 27)) => 3x3x3 nested structure"
@@ -768,10 +800,10 @@
 
 (defn add
   "Performs element-wise addition of tensors.
-  
+
   Supports broadcasting for tensors of different shapes.
   With no arguments, returns 0.0. With one argument, returns the tensor unchanged.
-  
+
   Examples:
     (add) => 0.0
     (add [1 2] [3 4]) => [4 6]
@@ -784,8 +816,7 @@
      tensor1
      tensor2))
   ([tensor1 tensor2 & more]
-   (when-let [tensor3 (add tensor1 tensor2)]
-     (apply emap + tensor3 more))))
+   (apply emap (fn [& xs] (reduce + 0.0 xs)) tensor1 tensor2 more)))
 
 (s/fdef add
   :args (s/or :zero (s/cat)
@@ -812,8 +843,9 @@
      tensor1
      tensor2))
   ([tensor1 tensor2 & more]
-   (when-let [tensor3 (subtract tensor1 tensor2)]
-     (apply emap - tensor3 more))))
+   (apply emap
+     (fn [& xs] (reduce - (double (first xs)) (rest xs)))
+     tensor1 tensor2 more)))
 
 (s/fdef subtract
   :args (s/or :one (s/cat :tensor ::tensor)
@@ -824,10 +856,10 @@
 
 (defn multiply
   "Performs element-wise multiplication of tensors.
-  
+
   Supports broadcasting for tensors of different shapes.
   With no arguments, returns 1.0. With one argument, returns the tensor unchanged.
-  
+
   Examples:
     (multiply) => 1.0
     (multiply [2 3] [4 5]) => [8 15]
@@ -840,8 +872,7 @@
      tensor1
      tensor2))
   ([tensor1 tensor2 & more]
-   (when-let [tensor3 (multiply tensor1 tensor2)]
-     (apply emap * tensor3 more))))
+   (apply emap (fn [& xs] (reduce * 1.0 xs)) tensor1 tensor2 more)))
 
 (s/fdef multiply
   :args (s/or :zero (s/cat)
@@ -863,12 +894,7 @@
     (divide [[12]] [3 4]) => [[4.0 3.0]] (broadcasting)"
   ([tensor] (emap m/div tensor))
   ([tensor & more]
-   (reduce (fn [tot e]
-             (if-let [new-tot (emap m/div tot e)]
-               new-tot
-               (reduced nil)))
-     tensor
-     more)))
+   (apply emap (fn [& xs] (reduce m/div xs)) tensor more)))
 
 (s/fdef divide
   :args (s/or :one (s/cat :tensor ::tensor)
@@ -973,10 +999,10 @@
 
 (defn normalize1
   "Normalizes `tensor` to unit L1 norm.
-  
+
   Divides each element by the L1 norm of `tensor`, resulting in a tensor where the sum of absolute
   values equals 1.
-  
+
   Examples:
     (normalize1 [3 6]) => [0.333... 0.666...]"
   [tensor]
@@ -989,10 +1015,10 @@
 
 (defn normalize
   "Normalizes `tensor` to unit L2 norm.
-  
+
   Divides each element by the L2 norm of `tensor`, resulting in a tensor with Euclidean length of 1.
   Also available as normalize2.
-  
+
   Examples:
     (normalize [3 4]) => [0.6 0.8]"
   [tensor]
@@ -1007,9 +1033,9 @@
 
 (defn normalize-p
   "Normalizes `tensor` to unit Lp norm using exponent `p`.
-  
+
   Divides each element by the Lp norm of `tensor`, resulting in a tensor with Lp norm equal to 1.
-  
+
   Examples:
     (normalize-p [2 4 6] 1) => [0.167... 0.333... 0.5] (L1 normalized)"
   [tensor p]
@@ -1041,16 +1067,29 @@
 
 (defn inner-product
   "Computes the inner product (generalized dot product) of `tensor1` and `tensor2`.
-  
+
   Multiplies corresponding elements and sums all results. For vectors, this is the standard dot
   product. Both tensors must have the same shape.
-  
+
   Examples:
     (inner-product [1 2 3] [4 5 6]) => 32 (1*4 + 2*5 + 3*6)
     (inner-product [[1 2]] [[3] [4]]) => [[11]] (matrix-like operation)"
   [tensor1 tensor2]
-  (if (number? tensor1)
-    (* (double tensor1) tensor2)
+  (cond (number? tensor1) (* (double tensor1) tensor2)
+    (and (vector? tensor1) (vector? tensor2)
+      (let [f1 (first tensor1)
+            f2 (first tensor2)]
+        (and (or (nil? f1) (number? f1))
+          (or (nil? f2) (number? f2)))))
+    (let [n (min (count tensor1) (count tensor2))]
+      (loop [i 0
+             acc 0.0]
+        (if (>= i n)
+          acc
+          (recur (inc i)
+            (+ acc (* (double (nth tensor1 i))
+                     (double (nth tensor2 i))))))))
+    :else
     (let [mul (mapv (fn [a b]
                       (multiply a b))
                 tensor1
@@ -1097,10 +1136,10 @@
 
 (defn roughly-distinct
   "Removes approximately duplicate elements from `tensor` within tolerance `accu`.
-  
+
   Keeps only the first occurrence of elements that are approximately equal (within the specified
   tolerance). Works on top-level elements.
-  
+
   Examples:
     (roughly-distinct [1.0 1.001 2.0 1.002] 0.01) => [1.0 2.0]
     (roughly-distinct [[1 2] [1.001 2.001] [3 4]] 0.01) => [[1 2] [3 4]]"

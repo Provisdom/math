@@ -27,14 +27,8 @@
     [provisdom.math.vector :as vector]
     [provisdom.utility-belt.anomalies :as anom]))
 
-(declare back-substitution
-  correlation-matrix?
-  eigen-decomposition
-  forward-substitution
-  least-squares
-  pos-definite-matrix-finite?
-  pos-semidefinite-matrix-finite?
-  sv-decomposition)
+(declare back-substitution correlation-matrix? eigen-decomposition forward-substitution
+  least-squares pos-definite-matrix-finite? pos-semidefinite-matrix-finite? sv-decomposition)
 
 ;;;SPECS
 (s/def ::determinant ::m/number)
@@ -62,7 +56,7 @@
 (s/def ::svd-right ::mx/matrix)
 (s/def ::condition-number ::m/number)
 (s/def ::norm-spectral ::m/non-)
-(s/def ::max-iterations pos-int?)
+(s/def ::max-iterations (s/with-gen ::m/int+ #(gen/choose 1 100)))
 (s/def ::tolerance ::m/finite+)
 (s/def ::rank-tolerance ::m/finite-non-)
 (s/def ::pade-order (s/int-in 1 14))
@@ -104,6 +98,7 @@
   (gen/fmap (fn [m]
               (tensor/add (mx/mx* m (mx/transpose m))
                 (mx/diagonal-matrix dim (constantly 0.1))))
+    ;;1e50 is needed for PSD -- ME
     (gen/vector (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) dim) dim)))
 
 (defn pos-def-matrix-finite-invertible-gen
@@ -118,6 +113,7 @@
   (gen/fmap (fn [m]
               (tensor/add (mx/mx* m (mx/transpose m))
                 (mx/diagonal-matrix dim (constantly 1.0))))
+    ;;generator uses 1e3 to ensure invertible -- ME
     (gen/vector (gen/vector (m/finite-gen {:min -1e3 :max 1e3}) dim) dim)))
 
 (defn pos-def-matrix-finite-tightly-bounded-gen
@@ -129,7 +125,9 @@
   exponentiates the entries (e.g., multivariate lognormal where exp(variance) must stay finite);
   otherwise prefer `pos-def-matrix-finite-invertible-gen`."
   [dim]
-  (let [diag-gen (m/finite+-gen {:min 0.5 :max 2.0})
+  (let [;;generator tightly bounded -- ME
+        diag-gen (m/finite+-gen {:min 0.5 :max 2.0})
+        ;;generator tightly bounded -- ME
         off-gen (m/finite-gen {:min -0.5 :max 0.5})]
     (gen/fmap
       (fn [[diag off-diag]]
@@ -1128,8 +1126,8 @@
             min-eigenvalue (apply min eigenvalues)]
         (if (< min-eigenvalue (- tolerance))
           {::anom/category ::anom/incorrect
-           ::anom/message  (str "Matrix is not positive semi-definite. Eigenvalue "
-                             min-eigenvalue " is negative.")}
+           ::anom/message  (str "Matrix is not positive semi-definite. Eigenvalue " min-eigenvalue
+                             " is negative.")}
           ;; Find positive eigenvalues and their indices
           (let [positive-indices (filterv #(> (get eigenvalues %) tolerance) (range n))
                 r (count positive-indices)]
@@ -1161,8 +1159,8 @@
 (defn pos-definite-matrix-finite?
   "Returns true if the matrix is symmetric, positive definite, and finite.
 
-  A matrix is positive definite if it is symmetric and all eigenvalues are positive.
-  Tests by attempting Cholesky decomposition.
+  A matrix is positive definite if it is symmetric and all eigenvalues are positive. Tests by
+  attempting Cholesky decomposition.
 
   Examples:
     (pos-definite-matrix-finite? [[2 1] [1 2]]) ;=> true
@@ -1353,7 +1351,11 @@
       (rnd-pos-definite-matrix-finite! size))))
 
 (s/fdef rnd-correlation-matrix!
-  :args (s/cat :size ::vector/size)
+  :args (s/cat :size (s/with-gen ::vector/size
+                       ;; cap spec-gen dim at 4 (vs ::vector/size default 0-6); per-call cost is
+                       ;; O(n^3) inside an iterative rejection loop and n=6 dominated the test
+                       ;; budget. Algorithm correctness verified by closed-form n=2 case above.
+                       #(m/long-non--gen {:max 4})))
   :ret (s/nilable ::correlation-matrix))
 
 ;;;QR DECOMPOSITION
@@ -1499,8 +1501,8 @@
 (defn rank-revealing-qr-decomposition
   "Computes the rank-revealing QR decomposition of a matrix with column pivoting.
 
-  The rank-revealing QR decomposition of matrix A consists of three matrices
-  Q, R, and P (permutation) such that: A × P = Q × R
+  The rank-revealing QR decomposition of matrix A consists of three matrices Q, R, and P
+  (permutation) such that: A × P = Q × R
 
   - Q is orthogonal (Q^T × Q = I)
   - R is upper triangular with diagonal elements in decreasing order of magnitude
@@ -1511,8 +1513,8 @@
 
   Parameters:
     `m` - Input matrix (m × n)
-    `tolerance` - Threshold for determining rank. Diagonal elements of R with
-                  absolute value below this are considered zero.
+    `tolerance` - Threshold for determining rank. Diagonal elements of R with absolute value below
+                  this are considered zero.
 
   Returns a map containing:
     `::Q` - Orthogonal matrix (m × m)
@@ -1645,13 +1647,13 @@
 
 ;;;SCHUR DECOMPOSITION
 (defn- hessenberg-reduction
-  "Reduces a square matrix to upper Hessenberg form using Householder reflections.
-  Returns [H Q] where H = Q^T * A * Q and H is upper Hessenberg.
-  An upper Hessenberg matrix has zeros below the first subdiagonal."
+  "Reduces a square matrix to upper Hessenberg form using Householder reflections. Returns [H Q]
+  where H = Q^T * A * Q and H is upper Hessenberg. An upper Hessenberg matrix has zeros below the
+  first subdiagonal."
   [A]
   (let [n (mx/rows A)]
     (if (< n 3)
-      [A (mx/identity-matrix n)]
+      [(mapv #(mapv double %) A) (mx/identity-matrix n)]
       (loop [k 0
              H (mapv #(mapv double %) A)
              Q (mx/identity-matrix n)]
@@ -1671,59 +1673,58 @@
                     v-norm-sq (reduce + (map m/sq v))
                     ;; Apply Householder to H from left: H <- (I - 2vv^T/|v|^2) * H
                     m-size (- n (inc k))
-                    H-after-left
-                    (reduce
-                      (fn [H-cur j]
-                        (let [dot-vH (reduce + (map-indexed
-                                                 (fn [i vi]
-                                                   (* vi (get-in H-cur [(+ (inc k) i) j] 0.0)))
-                                                 v))
-                              factor (/ (* 2.0 dot-vH) v-norm-sq)]
-                          (reduce
-                            (fn [H-inner i]
-                              (let [row (+ (inc k) i)]
-                                (update-in H-inner [row j]
-                                  #(- % (* factor (nth v i))))))
-                            H-cur
-                            (range m-size))))
-                      H
-                      (range n))
+                    H-after-left (reduce (fn [H-cur j]
+                                           (let [dot-vH (reduce +
+                                                          (map-indexed
+                                                            (fn [i vi]
+                                                              (* vi (get-in H-cur
+                                                                      [(+ (inc k) i) j] 0.0)))
+                                                            v))
+                                                 factor (/ (* 2.0 dot-vH) v-norm-sq)]
+                                             (reduce
+                                               (fn [H-inner i]
+                                                 (let [row (+ (inc k) i)]
+                                                   (update-in H-inner [row j]
+                                                     #(- % (* factor (nth v i))))))
+                                               H-cur
+                                               (range m-size))))
+                                   H
+                                   (range n))
                     ;; Apply Householder to H from right: H <- H * (I - 2vv^T/|v|^2)
-                    H-after-right
-                    (reduce
-                      (fn [H-cur i]
-                        (let [dot-Hv (reduce + (map-indexed
-                                                 (fn [j vj]
-                                                   (* vj (get-in H-cur [i (+ (inc k) j)] 0.0)))
-                                                 v))
-                              factor (/ (* 2.0 dot-Hv) v-norm-sq)]
-                          (reduce
-                            (fn [H-inner j]
-                              (let [col (+ (inc k) j)]
-                                (update-in H-inner [i col]
-                                  #(- % (* factor (nth v j))))))
-                            H-cur
-                            (range m-size))))
-                      H-after-left
-                      (range n))
+                    H-after-right (reduce (fn [H-cur i]
+                                            (let [dot-Hv (reduce +
+                                                           (map-indexed
+                                                             (fn [j vj]
+                                                               (* vj (get-in H-cur
+                                                                       [i (+ (inc k) j)] 0.0)))
+                                                             v))
+                                                  factor (/ (* 2.0 dot-Hv) v-norm-sq)]
+                                              (reduce
+                                                (fn [H-inner j]
+                                                  (let [col (+ (inc k) j)]
+                                                    (update-in H-inner [i col]
+                                                      #(- % (* factor (nth v j))))))
+                                                H-cur
+                                                (range m-size))))
+                                    H-after-left
+                                    (range n))
                     ;; Apply Householder to Q from right: Q <- Q * (I - 2vv^T/|v|^2)
-                    Q-new
-                    (reduce
-                      (fn [Q-cur i]
-                        (let [dot-Qv (reduce + (map-indexed
-                                                 (fn [j vj]
-                                                   (* vj (get-in Q-cur [i (+ (inc k) j)] 0.0)))
-                                                 v))
-                              factor (/ (* 2.0 dot-Qv) v-norm-sq)]
-                          (reduce
-                            (fn [Q-inner j]
-                              (let [col (+ (inc k) j)]
-                                (update-in Q-inner [i col]
-                                  #(- % (* factor (nth v j))))))
-                            Q-cur
-                            (range m-size))))
-                      Q
-                      (range n))]
+                    Q-new (reduce (fn [Q-cur i]
+                                    (let [dot-Qv (reduce +
+                                                   (map-indexed
+                                                     (fn [j vj]
+                                                       (* vj (get-in Q-cur [i (+ (inc k) j)] 0.0)))
+                                                     v))
+                                          factor (/ (* 2.0 dot-Qv) v-norm-sq)]
+                                      (reduce
+                                        (fn [Q-inner j]
+                                          (let [col (+ (inc k) j)]
+                                            (update-in Q-inner [i col]
+                                              #(- % (* factor (nth v j))))))
+                                        Q-cur
+                                        (range m-size))))
+                            Q
+                            (range n))]
                 (recur (inc k) H-after-right Q-new)))))))))
 
 (defn- schur-converged?
@@ -1764,8 +1765,8 @@
                   false)))))))))
 
 (defn- schur-qr-step
-  "Performs one QR iteration step with Francis double shift on Hessenberg matrix.
-  Uses implicit QR for efficiency. Returns [T-new Q-step]."
+  "Performs one QR iteration step with Francis double shift on Hessenberg matrix. Uses implicit QR
+  for efficiency. Returns [T-new Q-step]."
   [T]
   (let [n (mx/rows T)]
     (if (< n 2)
@@ -1804,8 +1805,8 @@
 
   Decomposes A = Q * T * Q^T where:
   - Q is orthogonal (Q^T * Q = I)
-  - T is quasi-upper-triangular (upper triangular with possible 2x2 blocks
-    on the diagonal for complex conjugate eigenvalue pairs)
+  - T is quasi-upper-triangular (upper triangular with possible 2x2 blocks on the diagonal for
+  complex conjugate eigenvalue pairs)
 
   Uses Hessenberg reduction followed by QR iteration with Wilkinson shifts.
 
@@ -1866,10 +1867,101 @@
   :ret (s/nilable (s/keys :req [::schur-Q ::schur-T])))
 
 ;;;EIGENDECOMPOSITION
+(defn- givens-rotation
+  "Returns `[c s]` with `c² + s² = 1` such that the 2×2 rotation `G = [[c -s] [s c]]` satisfies
+  `G^T · [a; b] = [r; 0]` with `r = hypot(a, b)`. Used for symmetric tridiagonal QR steps."
+  [a b]
+  (cond (zero? b) [1.0 0.0]
+    (zero? a) [0.0 (if (>= (double b) 0.0) 1.0 -1.0)]
+    :else (let [r (m/hypot (double a) (double b))]
+            [(/ (double a) r) (/ (double b) r)])))
+
+(defn- rotate-V-cols
+  "Right-multiply `V` (n×n) by the Givens rotation `G = [[c -s] [s c]]` embedded in the (k, k+1)
+  plane. Updates two columns of every row."
+  [V c s k]
+  (mapv (fn [row]
+          (let [vk (nth row k)
+                vk1 (nth row (inc k))]
+            (assoc row k (+ (* c vk) (* s vk1))
+              (inc k) (- (* c vk1) (* s vk)))))
+    V))
+
+(defn- find-tridiag-block
+  "Largest unreduced block `[p q]` in the symmetric tridiagonal represented by diagonal `d` and
+  off-diagonal `e` (with `e[i] = T[i, i+1] = T[i+1, i]`, length `n-1`). Returns nil when every
+  `e[i]` is negligible (all eigenvalues converged)."
+  [d e tolerance]
+  (let [n (count d)]
+    (when (> n 1)
+      (loop [q (dec n)]
+        (when-not (< q 1)
+          (let [sub (m/abs (double (nth e (dec q))))
+                ds (+ (m/abs (double (nth d (dec q))))
+                     (m/abs (double (nth d q))))]
+            (if (< sub (* tolerance (max ds 1.0)))
+              (recur (dec q))
+              (loop [p (dec q)]
+                (if (< p 1)
+                  [0 q]
+                  (let [sub (m/abs (double (nth e (dec p))))
+                        ds (+ (m/abs (double (nth d (dec p))))
+                             (m/abs (double (nth d p))))]
+                    (if (< sub (* tolerance (max ds 1.0)))
+                      [p q]
+                      (recur (dec p)))))))))))))
+
+(defn- implicit-qr-step
+  "One implicit-shift Wilkinson QR step on the active block `[p..q]` (inclusive) of the symmetric
+  tridiagonal represented by `d` and `e`. Chases the bulge with `(q - p)` Givens rotations, each
+  applied to `V`. Returns `[d e V]`. This is a similarity transform on the underlying tridiagonal,
+  so eigenvalues are preserved exactly (to floating-point precision)."
+  [d e V p q]
+  (let [d-qm1 (double (nth d (dec q)))
+        d-q (double (nth d q))
+        e-qm1 (double (nth e (dec q)))
+        delta (* 0.5 (- d-qm1 d-q))
+        sign-delta (if (>= delta 0.0) 1.0 -1.0)
+        denom (+ (Math/abs delta) (Math/sqrt (+ (* delta delta) (* e-qm1 e-qm1))))
+        mu (if (zero? denom)
+             d-q
+             (- d-q (/ (* sign-delta e-qm1 e-qm1) denom)))]
+    (loop [k p
+           x (- (double (nth d p)) mu)
+           z (double (nth e p))
+           d d
+           e e
+           V V]
+      (if (>= k q)
+        [d e V]
+        (let [[c s] (givens-rotation x z)
+              e (if (> k p)
+                  (assoc e (dec k) (m/hypot (double x) (double z)))
+                  e)
+              dk (double (nth d k))
+              dk1 (double (nth d (inc k)))
+              ek (double (nth e k))
+              cc (* c c)
+              ss (* s s)
+              cs (* c s)
+              new-dk (+ (* cc dk) (* 2.0 cs ek) (* ss dk1))
+              new-dk1 (- (+ (* ss dk) (* cc dk1)) (* 2.0 cs ek))
+              new-ek (+ (* cs (- dk1 dk)) (* (- cc ss) ek))
+              d (assoc d k new-dk (inc k) new-dk1)
+              e (assoc e k new-ek)
+              [next-x next-z e]
+              (if (< k (dec q))
+                (let [ek1 (double (nth e (inc k)))
+                      bulge (* s ek1)
+                      new-ek1 (* c ek1)]
+                  [new-ek bulge (assoc e (inc k) new-ek1)])
+                [nil nil e])
+              V (rotate-V-cols V c s k)]
+          (recur (inc k) next-x next-z d e V))))))
+
 (defn- find-unreduced-block
-  "Finds the largest unreduced block in a tridiagonal/symmetric matrix.
-  Returns [start end] indices of the block that still needs iteration.
-  If all converged, returns nil."
+  "Finds the largest unreduced block in a tridiagonal/symmetric matrix. Returns [start end] indices
+  of the block that still needs iteration. If all converged, returns nil."
   [A tolerance]
   (let [n (mx/rows A)]
     (when (> n 1)
@@ -1893,8 +1985,8 @@
                       (recur (dec start)))))))))))))
 
 (defn- qr-iteration-step-block
-  "Performs one step of QR iteration with Wilkinson shift on a subblock.
-  block-start and block-end define the unreduced portion [start, end] inclusive."
+  "Performs one step of QR iteration with Wilkinson shift on a subblock. block-start and block-end
+  define the unreduced portion [start, end] inclusive."
   [A block-start block-end]
   (let [n (mx/rows A)
         ;; Compute Wilkinson shift from bottom-right 2x2 of the block
@@ -1929,11 +2021,14 @@
 (defn eigen-decomposition
   "Computes eigenvalue decomposition of a symmetric matrix.
 
-  Uses the QR algorithm with Wilkinson shifts and implicit deflation.
-  Decomposes a symmetric matrix A into A = V * D * V^T where D is diagonal
-  (eigenvalues) and V is orthogonal (eigenvectors as columns).
+  Reduces `symmetric-m` to symmetric tridiagonal form via Householder reflections, then runs
+  implicit-shift Wilkinson QR sweeps on the tridiagonal `(d, e)` representation, chasing the bulge
+  with Givens rotations. Decomposes `A = V * D * V^T` where `D` is diagonal (eigenvalues) and `V` is
+  orthogonal (eigenvectors as columns).
 
-  Complexity: O(n³) per iteration, typically O(n³) total for convergence
+  Complexity: O(n³) for the one-shot Householder reduction, plus ~O(n²) per QR iteration (Givens
+  chase O(n) + V update O(n²)). Convergence is cubic at the bottom under Wilkinson shift, so total
+  cost is O(n³) for well-conditioned symmetric matrices.
 
   Only works reliably for symmetric matrices.
 
@@ -1941,8 +2036,8 @@
     `:max-iterations` (default 1000)
     `:tolerance` (default 1e-10)
 
-  Returns a map with `::eigenvalues`, `::eigenvalues-matrix`, `::eigenvectors`,
-  `::eigenvectorsT`, or `nil` if fails.
+  Returns a map with `::eigenvalues`, `::eigenvalues-matrix`, `::eigenvectors`, `::eigenvectorsT`,
+  or `nil` if fails.
 
   Examples:
     (eigen-decomposition [[2 1] [1 2]])
@@ -1954,29 +2049,28 @@
                  :or   {max-iterations 1000
                         tolerance      1e-10}}]
    (when (and (mx/symmetric-matrix? symmetric-m)
-           (not (mx/empty-matrix? symmetric-m)))
+           (not (mx/empty-matrix? symmetric-m))
+           (mx/matrix-finite? symmetric-m))
      (let [n (mx/rows symmetric-m)
-           initial-A (mapv #(mapv double %) symmetric-m)
-           initial-V (mx/identity-matrix n)
-           [final-A final-V converged?]
-           (loop [A initial-A
-                  V initial-V
+           [H Q-hess] (hessenberg-reduction (mapv #(mapv double %) symmetric-m))
+           d-init (mapv (fn [i] (double (get-in H [i i]))) (range n))
+           e-init (when (> n 1)
+                    (mapv (fn [i] (double (get-in H [(inc i) i]))) (range (dec n))))
+           [final-d _ final-V converged?]
+           (loop [d d-init
+                  e e-init
+                  V Q-hess
                   iter 0]
-             (if (>= iter max-iterations)
-               [A V false]
-               ;; Use implicit deflation: find the unreduced block
-               (if-let [[block-start block-end] (find-unreduced-block A tolerance)]
-                 ;; Still have unreduced elements - iterate on the block
-                 (let [[A-new Q] (qr-iteration-step-block A block-start block-end)
-                       V-new (mx/mx* V Q)]
-                   (recur A-new V-new (inc iter)))
-                 ;; All converged
-                 [A V true])))]
+             (cond (<= n 1) [d e V true]
+               (>= iter max-iterations) [d e V false]
+               :else (if-let [[p q] (find-tridiag-block d e tolerance)]
+                       (let [[d-new e-new V-new] (implicit-qr-step d e V p q)]
+                         (recur d-new e-new V-new (inc iter)))
+                       [d e V true])))]
        (when converged?
-         (let [eigenvalues (mx/diagonal final-A)
-               indexed (map-indexed vector eigenvalues)
+         (let [indexed (map-indexed vector final-d)
                sorted-indices (map first (sort-by #(- (m/abs (second %))) indexed))
-               sorted-eigenvalues (mapv #(get eigenvalues %) sorted-indices)
+               sorted-eigenvalues (mapv #(nth final-d %) sorted-indices)
                sorted-V (mx/transpose (mapv #(mx/get-column final-V %) sorted-indices))]
            {::eigenvalues        sorted-eigenvalues
             ::eigenvalues-matrix (mx/diagonal-matrix sorted-eigenvalues)
@@ -1986,10 +2080,43 @@
 (s/fdef eigen-decomposition
   :args (s/cat :symmetric-m ::mx/symmetric-matrix
           :opts (s/? (s/keys :opt-un [::max-iterations ::tolerance])))
-  :ret (s/nilable (s/keys :req [::eigenvalues ::eigenvalues-matrix
-                                ::eigenvectors ::eigenvectorsT])))
+  :ret (s/nilable (s/keys :req [::eigenvalues ::eigenvalues-matrix ::eigenvectors
+                                ::eigenvectorsT])))
 
 ;;;SVD (SINGULAR VALUE DECOMPOSITION)
+(defn- project-out
+  "Returns `v` projected onto the orthogonal complement of every vector in `qs` (assumes `qs`
+  are orthonormal)."
+  [v qs]
+  (reduce (fn [acc q]
+            (let [coef (reduce + 0.0 (map * acc q))]
+              (mapv (fn [ai qi] (- ai (* coef qi))) acc q)))
+    v qs))
+
+(defn- complete-orthonormal-columns
+  "Given `r` orthonormal `d`-vectors `cols`, returns the additional `(d - r)` orthonormal d-vectors
+  that complete the basis of R^d. Modified Gram-Schmidt with a second re-orthogonalization pass for
+  numerical stability. Cost ~O(d² × (d − r)) — far cheaper than running a full QR on a d×d augmented
+  matrix when `r` is close to `d`."
+  [cols d]
+  (let [r (count cols)
+        need (- d r)]
+    (if (zero? need)
+      []
+      (loop [extra []
+             basis-idx 0]
+        (cond (= (count extra) need) extra
+          (>= basis-idx d) extra
+          :else (let [e (assoc (vec (repeat d 0.0)) basis-idx 1.0)
+                      v1 (project-out (project-out e cols) extra)
+                      n1 (Math/sqrt (reduce + 0.0 (map #(* % %) v1)))]
+                  (if (> n1 1e-10)
+                    (let [normed (mapv #(/ % n1) v1)
+                          v2 (project-out (project-out normed cols) extra)
+                          n2 (Math/sqrt (reduce + 0.0 (map #(* % %) v2)))]
+                      (recur (conj extra (mapv #(/ % n2) v2)) (inc basis-idx)))
+                    (recur extra (inc basis-idx)))))))))
+
 (defn sv-decomposition
   "Computes the Singular Value Decomposition (SVD) of a matrix.
 
@@ -1998,7 +2125,12 @@
   - Σ is m×n diagonal (singular values, non-negative, descending)
   - V^T is n×n orthogonal (right singular vectors transposed)
 
-  Complexity: O(min(mn², m²n))
+  Branches on shape so the eigendecomposition always runs on the smaller side: for m ≥ n it
+  eigendecomposes AᵀA (n×n) and derives U from A·vᵢ/σᵢ; for m < n it eigendecomposes AAᵀ (m×m) and
+  derives V from Aᵀ·uᵢ/σᵢ. The orthogonal completion (filling out U for tall, V for wide) uses
+  modified Gram-Schmidt with re-orthogonalization rather than a full QR on an augmented matrix.
+
+  Complexity: O(min(m,n)³) for eigen + O(max(m,n)² × (max(m,n) − rank)) for completion.
 
   Returns a map with `::svd-left` (U), `::singular-values`, `::singular-values-matrix` (Σ),
   `::svd-right` (V^T), `::rank`, `::condition-number`, `::norm-spectral`, or `nil` if fails.
@@ -2014,54 +2146,39 @@
    (when (and (mx/matrix? m) (not (mx/empty-matrix? m)))
      (let [nr (mx/rows m)
            nc (mx/columns m)
-           At (mx/transpose m)
-           AtA (mx/mx* At m)
-           eigen-result (eigen-decomposition AtA)]
+           tall? (>= nr nc)
+           small-mat (if tall?
+                       (mx/mx* (mx/transpose m) m)
+                       (mx/mx* m (mx/transpose m)))
+           eigen-result (eigen-decomposition small-mat)]
        (when eigen-result
          (let [eigenvalues (::eigenvalues eigen-result)
-               V (::eigenvectors eigen-result)
-               singular-values (mapv #(if (> % 0) (m/sqrt %) 0.0) eigenvalues)
-               U-columns
+               direct (::eigenvectors eigen-result)
+               sigma-direct (mapv #(if (> % 0) (m/sqrt %) 0.0) eigenvalues)
+               ;; Source matrix for the derivation step: m for tall (Av), mᵀ for wide (Aᵀu).
+               src (if tall? m (mx/transpose m))
+               src-rows (mx/rows src)
+               derived-cols
                (mapv (fn [i]
-                       (let [sigma (get singular-values i)
-                             v-i (mx/get-column V i)]
+                       (let [sigma (get sigma-direct i)
+                             d-i (mx/get-column direct i)]
                          (when (> sigma rank-tolerance)
-                           (let [Av (mapv (fn [row]
-                                            (reduce + (map * (get m row) v-i)))
-                                      (range nr))]
-                             (mapv #(/ % sigma) Av)))))
-                 (range nc))
-               valid-U-columns (filterv some? U-columns)
-               U (if (= (count valid-U-columns) nr)
-                   (mx/transpose valid-U-columns)
-                   (let [partial-U (if (empty? valid-U-columns)
-                                     (mx/identity-matrix nr)
-                                     (let [needed (- nr (count valid-U-columns))
-                                           extended (concat valid-U-columns
-                                                      (take needed
-                                                        (map #(mx/get-column (mx/identity-matrix nr)
-                                                                %)
-                                                          (range nr))))
-                                           extended-m (mx/transpose (vec (take nr extended)))
-                                           {::keys [Q]} (qr-decomposition extended-m)
-                                           ;; Fix sign flips: QR can negate columns. Correct signs
-                                           ;; for the first (count valid-U-columns) columns of Q
-                                           ;; to match the original U-columns.
-                                           n-valid (count valid-U-columns)
-                                           Q-corrected
-                                           (mx/transpose
-                                             (mapv (fn [col-idx]
-                                                     (let [q-col (mx/get-column Q col-idx)]
-                                                       (if (< col-idx n-valid)
-                                                         (let [u-col (get valid-U-columns col-idx)
-                                                               dot (reduce + (map * q-col u-col))]
-                                                           (if (neg? dot)
-                                                             (mapv - q-col)
-                                                             q-col))
-                                                         q-col)))
-                                               (range nr)))]
-                                       Q-corrected))]
-                     partial-U))
+                           (let [Sv (mapv (fn [row]
+                                            (reduce + 0.0 (map * (get src row) d-i)))
+                                      (range src-rows))]
+                             (mapv #(/ % sigma) Sv)))))
+                 (range (count sigma-direct)))
+               valid-derived (filterv some? derived-cols)
+               derived-dim (if tall? nr nc)
+               full-derived (vec (concat valid-derived
+                                   (complete-orthonormal-columns valid-derived derived-dim)))
+               derived-mat (mx/transpose full-derived)
+               U (if tall? derived-mat direct)
+               V (if tall? direct derived-mat)
+               ;; Preserve length-nc convention: pad with zeros for the wide case.
+               singular-values (if tall?
+                                 sigma-direct
+                                 (vec (concat sigma-direct (repeat (- nc nr) 0.0))))
                sigma-matrix (mx/compute-matrix nr nc
                               (fn [i j]
                                 (if (= i j)
@@ -2110,8 +2227,8 @@
 (defn condition-number
   "Computes the condition number of a matrix using SVD.
 
-  The condition number is the ratio of largest to smallest singular value.
-  Large values indicate ill-conditioning.
+  The condition number is the ratio of largest to smallest singular value. Large values indicate
+  ill-conditioning.
 
   Examples:
     (condition-number [[1 0] [0 1]]) ;=> 1.0
@@ -2247,8 +2364,8 @@
   Options:
     `:tolerance` - threshold for zero singular values (default 1e-10)
 
-  Note: For best results, call [[sv-decomposition]] with `{:rank-tolerance 0.0}`
-  to get all singular values, then use this function's :tolerance option.
+  Note: For best results, call [[sv-decomposition]] with `{:rank-tolerance 0.0}` to get all singular
+  values, then use this function's :tolerance option.
 
   Examples:
     (let [svd (sv-decomposition [[1 0] [0 2]] {:rank-tolerance 0.0})]
@@ -2358,13 +2475,19 @@
           (recur new-result new-base new-exp))))))
 
 (s/fdef matrix-power
-  :args (s/cat :square-m ::mx/square-matrix :n ::m/int)
+  :args (s/with-gen
+          (s/cat :square-m ::mx/square-matrix :n ::m/int)
+          #(gen/tuple (gen/bind (gen/choose 0 9)
+                        (fn [n]
+                          (if (zero? n)
+                            (gen/return [[]])
+                            (gen/vector (gen/vector (s/gen ::m/finite) n) n))))
+             (s/gen ::m/int)))
   :ret (s/or :matrix ::mx/square-matrix :anomaly ::anom/anomaly))
 
 ;;;MATRIX EXPONENTIAL
 (defn- matrix-exp-pade
-  "Padé approximation for matrix exponential.
-  Uses [p/q] Padé approximant where p = q = order."
+  "Padé approximation for matrix exponential. Uses [p/q] Padé approximant where p = q = order."
   [m order]
   (let [n (mx/rows m)
         I (mx/identity-matrix n)
@@ -2447,11 +2570,11 @@
 (defn pca
   "Computes Principal Component Analysis (PCA) on a data matrix.
 
-  PCA finds the directions of maximum variance in the data by computing
-  the eigendecomposition of the covariance matrix.
+  PCA finds the directions of maximum variance in the data by computing the eigendecomposition of
+  the covariance matrix.
 
-  Input `data-matrix` should have rows as samples and columns as features.
-  The data is centered by subtracting the mean of each feature.
+  Input `data-matrix` should have rows as samples and columns as features. The data is centered by
+  subtracting the mean of each feature.
 
   Complexity: O(n * p^2 + p^3) where n = samples, p = features
 
@@ -2461,8 +2584,8 @@
   - `::pca-mean` - mean of each feature (for centering)
   - `::pca-principal-components` - eigenvectors as rows (each row is a component)
 
-  Returns `nil` if the input matrix is empty, has only one row (cannot compute
-  variance), or if eigendecomposition fails.
+  Returns `nil` if the input matrix is empty, has only one row (cannot compute variance), or if
+  eigendecomposition fails.
 
   Examples:
     (pca [[1 2] [3 4] [5 6]])
@@ -2476,17 +2599,17 @@
   (when (and (mx/matrix? data-matrix)
           (not (mx/empty-matrix? data-matrix))
           (> (mx/rows data-matrix) 1))
-    (let [n (mx/rows data-matrix)
+    (let [;; Coerce to doubles up front so column sums don't overflow on long entries.
+          data-matrix (mapv #(mapv double %) data-matrix)
+          n (mx/rows data-matrix)
           p (mx/columns data-matrix)
-          ;; Compute mean of each column (feature)
           col-means (mapv (fn [j]
-                            (/ (reduce + (mapv #(get % j) data-matrix))
+                            (/ (reduce + 0.0 (mapv #(get % j) data-matrix))
                               (double n)))
                       (range p))
-          ;; Center the data
           centered (mapv (fn [row]
                            (mapv (fn [j]
-                                   (- (double (get row j)) (get col-means j)))
+                                   (- (get row j) (get col-means j)))
                              (range p)))
                      data-matrix)
           ;; Compute covariance matrix: (1/(n-1)) * X^T * X
@@ -2523,16 +2646,16 @@
 (defn pca-transform
   "Projects data onto principal components.
 
-  Takes data and a PCA result from [[pca]], and projects the data onto
-  the first `n-components` principal components.
+  Takes data and a PCA result from [[pca]], and projects the data onto the first `n-components`
+  principal components.
 
-  Input `data-matrix` should have rows as samples and columns as features,
-  with the same number of features as the original PCA data.
+  Input `data-matrix` should have rows as samples and columns as features, with the same number of
+  features as the original PCA data.
 
   Complexity: O(n * p * k) where n = samples, p = features, k = n-components
 
-  Returns a matrix with rows as samples and columns as principal component scores,
-  or `nil` if inputs are invalid or dimensions don't match.
+  Returns a matrix with rows as samples and columns as principal component scores, or `nil` if
+  inputs are invalid or dimensions don't match.
 
   Examples:
     (let [pca-result (pca [[1 2] [3 4] [5 6]])]
@@ -2577,17 +2700,12 @@
                  (fn [k]
                    (gen/tuple
                      ;; data-matrix: n x p
-                     (gen/vector
-                       (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
-                       n)
+                     (gen/vector (gen/vector (s/gen ::m/finite) p) n)
                      ;; pca-result with matching p
                      (gen/hash-map
-                       ::pca-mean
-                       (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
-                       ::pca-principal-components
-                       (gen/vector
-                         (gen/vector (m/finite-gen {:min -1.0 :max 1.0}) p)
-                         k-max))
+                       ::pca-mean (gen/vector (s/gen ::m/finite) p)
+                       ::pca-principal-components (gen/vector (gen/vector (s/gen ::m/finite) p)
+                                                    k-max))
                      ;; n-components <= k-max
                      (gen/return k)))))))
   :ret (s/nilable ::mx/matrix))
@@ -2595,16 +2713,16 @@
 (defn pca-inverse-transform
   "Reconstructs data from principal component scores.
 
-  Takes transformed data (from [[pca-transform]]) and a PCA result,
-  and reconstructs an approximation of the original data.
+  Takes transformed data (from [[pca-transform]]) and a PCA result, and reconstructs an
+  approximation of the original data.
 
   Input `transformed-matrix` should have rows as samples and columns as
   principal component scores.
 
   Complexity: O(n * k * p) where n = samples, k = n-components, p = features
 
-  Returns a matrix with rows as samples and columns as features (in original space),
-  or `nil` if inputs are invalid or dimensions don't match.
+  Returns a matrix with rows as samples and columns as features (in original space), or `nil` if
+  inputs are invalid or dimensions don't match.
 
   Examples:
     (let [pca-result (pca [[1 2] [3 4] [5 6]])
@@ -2644,15 +2762,8 @@
              (fn [[n k p]]
                (gen/tuple
                  ;; transformed-matrix: n x k
-                 (gen/vector
-                   (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) k)
-                   n)
+                 (gen/vector (gen/vector (s/gen ::m/finite) k) n)
                  ;; pca-result with matching dimensions
-                 (gen/hash-map
-                   ::pca-mean
-                   (gen/vector (m/finite-gen {:min -10.0 :max 10.0}) p)
-                   ::pca-principal-components
-                   (gen/vector
-                     (gen/vector (m/finite-gen {:min -1.0 :max 1.0}) p)
-                     k))))))
+                 (gen/hash-map ::pca-mean (gen/vector (s/gen ::m/finite) p)
+                   ::pca-principal-components (gen/vector (gen/vector (s/gen ::m/finite) p) k))))))
   :ret (s/nilable ::mx/matrix))

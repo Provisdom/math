@@ -321,6 +321,29 @@
       (intervals/intersection [(intervals/bounds -3.0 -1.0 true true)
                                (intervals/bounds -3.0 1.0 false false)]))))
 
+(t/deftest encompassing-bounds-test
+  (t/with-instrument `intervals/encompassing-bounds
+    (t/is-spec-check intervals/encompassing-bounds))
+  (t/with-instrument :all
+    (t/is= {::intervals/lower       -2.0
+            ::intervals/open-lower? true
+            ::intervals/open-upper? false
+            ::intervals/upper       1.0}
+      (intervals/encompassing-bounds [(intervals/bounds -1.0 1.0)
+                                      (intervals/bounds -2.0 0.0 true true)]))
+    (t/is= {::intervals/lower       -3.0
+            ::intervals/open-lower? true
+            ::intervals/open-upper? false
+            ::intervals/upper       3.0}
+      (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
+                                      (intervals/bounds 1.0 3.0)]))
+    (t/is= {::intervals/lower       -3.0
+            ::intervals/open-lower? false
+            ::intervals/open-upper? false
+            ::intervals/upper       1.0}
+      (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
+                                      (intervals/bounds -3.0 1.0 false false)]))))
+
 (t/deftest union-test
   (t/with-instrument `intervals/union
     (t/is-spec-check intervals/union))
@@ -363,27 +386,3 @@
       (intervals/union [(intervals/bounds 0.0 3.0)
                         (intervals/bounds 2.0 5.0)
                         (intervals/bounds 4.0 8.0)]))))
-
-(t/deftest encompassing-bounds-test
-  (t/with-instrument `intervals/encompassing-bounds
-    (t/is-spec-check intervals/encompassing-bounds))
-  (t/with-instrument :all
-    (t/is= {::intervals/lower       -2.0
-            ::intervals/open-lower? true
-            ::intervals/open-upper? false
-            ::intervals/upper       1.0}
-      (intervals/encompassing-bounds [(intervals/bounds -1.0 1.0)
-                                      (intervals/bounds -2.0 0.0 true true)]))
-    (t/is= {::intervals/lower       -3.0
-            ::intervals/open-lower? true
-            ::intervals/open-upper? false
-            ::intervals/upper       3.0}
-      (intervals/encompassing-bounds [(intervals/bounds -3.0 -1.0 true true)
-                                      (intervals/bounds 1.0 3.0)]))
-    (t/is= {::intervals/lower       -3.0
-            ::intervals/open-lower? false
-            ::intervals/open-upper? false
-            ::intervals/upper       1.0}
-      (intervals/encompassing-bounds
-        [(intervals/bounds -3.0 -1.0 true true)
-         (intervals/bounds -3.0 1.0 false false)]))))
