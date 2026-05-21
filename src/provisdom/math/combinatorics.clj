@@ -918,6 +918,7 @@
 (s/fdef count-integer-partitions
   :args (s/with-gen
           (s/cat :n ::m/int)
+          ;;just keeping generated numbers in check -- ME
           #(gen/fmap vector (m/long-gen {:min -5 :max 500})))
   :ret #(and (integer? %) (not (neg? %))))
 

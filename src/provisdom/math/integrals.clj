@@ -146,6 +146,7 @@
          (cond-> {::samples samples}
            seed (assoc ::seed seed)))
        (gen/tuple
+         ;;this is ok since it's similar to iterations -- ME
          (m/long+-gen {:max 1000})
          (gen/one-of [(gen/return nil) (s/gen ::seed)])))))
 

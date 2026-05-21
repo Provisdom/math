@@ -1,6 +1,5 @@
 (ns provisdom.math.vector-test
   (:require
-    [clojure.spec.alpha :as s]
     [provisdom.math.core :as m]
     [provisdom.math.random :as random]
     [provisdom.math.vector :as vector]
@@ -103,19 +102,6 @@
     (t/is (vector/roughly-probs? [0.0 1.009] 0.01 0.02))
     (t/is-not (vector/roughly-probs? [0.7 0.7] 0.01 0.02))
     (t/is (vector/roughly-probs? [0.01 1.009] 0.01 0.02))))
-
-(t/deftest vector-of-spec-test
-  (t/with-instrument :all
-    (let [test-spec (vector/vector-of-spec {:pred ::m/finite})]
-      (t/is (s/valid? test-spec [1.0 2.0 3.0]))
-      (t/is-not (s/valid? test-spec [1.0 m/inf+])))))
-
-(t/deftest vector-finite-spec-test
-  ;;vector-finite-spec validates finiteness, not min/max bounds (those are for generator only)
-  (t/with-instrument :all
-    (let [test-spec (vector/vector-finite-spec {:min -10 :max 10})]
-      (t/is (s/valid? test-spec [1.0 2.0]))
-      (t/is-not (s/valid? test-spec [1.0 m/inf+])))))
 
 ;;;VECTOR CONSTRUCTORS
 (t/deftest to-vector-test

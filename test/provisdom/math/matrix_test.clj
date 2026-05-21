@@ -748,7 +748,7 @@
 
 (t/deftest ereduce-kv-test
   (t/with-instrument `mx/ereduce-kv
-    ;;fspec with multiple matrix arities adds generator complexity -- ME
+    ;;fspec with multiple matrix arities adds generator complexity; slow -- ME
     (t/is-spec-check mx/ereduce-kv {:num-tests 250}))
   (t/with-instrument :all
     (t/is= 29.9
@@ -1060,7 +1060,7 @@
 
 (t/deftest kronecker-product-test
   (t/with-instrument `mx/kronecker-product
-    ;;variadic matrix args with limited generator (1-2 matrices) -- ME
+    ;;variadic matrix args with limited generator (1-2 matrices); slow -- ME
     (t/is-spec-check mx/kronecker-product {:num-tests 350}))
   (t/with-instrument :all
     (t/is= [[]] (mx/kronecker-product))
