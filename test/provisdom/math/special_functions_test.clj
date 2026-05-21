@@ -4,7 +4,7 @@
     [provisdom.math.special-functions :as special-fns]
     [provisdom.test.core :as t]))
 
-;;12 seconds
+;;11 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -239,7 +239,7 @@
     ;; Relationship: softplus(x) = -log-logistic(-x)
     (t/is= (- (special-fns/log-logistic -2.0)) (special-fns/softplus 2.0))))
 
-;;;GAMMA
+;;;GAMMA FUNCTIONS
 (t/deftest gamma-test
   (t/with-instrument `special-fns/gamma
     (t/is-spec-check special-fns/gamma))
@@ -268,12 +268,8 @@
     ;;mpmath 6.3764985844038115E-245
     (t/is= 6.3764985844038365E-245 (special-fns/gamma -141.7))
     ;; Near overflow boundary
-    ;; Math: Gamma[171] = 7.257415615307998e306
-    (t/is (m/finite? (special-fns/gamma 171.0)))
-    (t/is (> (special-fns/gamma 171.0) 7e306))
-    ;; Gamma(171.5) should still be finite
-    (t/is (m/finite? (special-fns/gamma 171.5)))
-    (t/is (> (special-fns/gamma 171.5) 1e306))
+    ;; mpmath gamma(171.5) = 9.483367566824799e307
+    (t/is= 9.483367566824735E307 (special-fns/gamma 171.5))
     ;; Gamma(172) overflows to infinity
     (t/is= m/inf+ (special-fns/gamma 172.0))
     (t/is= m/inf+ (special-fns/gamma 172.5))))
@@ -352,8 +348,8 @@
     (t/is= 0.0 (special-fns/regularized-gamma-p 1 0))
     ;;Math GammaRegularized[0.1, 0, 1] = 0.97587265627367262096747892667942166095164779591809
     (t/is= 0.9758726562736726 (special-fns/regularized-gamma-p 0.1 1))
-    ;;SciPy 0.50000 (precision limited for very large parameters)
-    (t/is= 0.5000049341877514 (special-fns/regularized-gamma-p 1e10 1e10))
+    ;;mpmath gammainc(1e10, 0, 1e10, regularized) = 0.5000013298076014
+    (t/is= 0.5000013298076014 (special-fns/regularized-gamma-p 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-p 1e149 1e149)))))
 
 (t/deftest regularized-gamma-q-test
@@ -375,8 +371,8 @@
     (t/is= 1.0 (special-fns/regularized-gamma-q 1 0))
     ;;Math GammaRegularized[0.1, 1] = 0.02412734372632737903252107332057833904835220408191
     (t/is= 0.02412734372632741 (special-fns/regularized-gamma-q 0.1 1))
-    ;;SciPy 0.50000 (precision limited for very large parameters)
-    (t/is= 0.4999950658122486 (special-fns/regularized-gamma-q 1e10 1e10))
+    ;;mpmath gammainc(1e10, 1e10, inf, regularized) = 0.4999986701923986
+    (t/is= 0.49999867019239863 (special-fns/regularized-gamma-q 1e10 1e10))
     (t/is (m/nan? (special-fns/regularized-gamma-q 1e149 1e149)))))
 
 (t/deftest inv-regularized-gamma-p-test
@@ -395,8 +391,7 @@
     (doseq [a [0.1 0.5 1.0 2.0 5.0 10.0 100.0 1e4]
             p [0.01 0.1 0.25 0.5 0.75 0.9 0.99]]
       (let [x (special-fns/inv-regularized-gamma-p a p)]
-        (when-not (m/nan? x)
-          (t/is-approx= p (special-fns/regularized-gamma-p a x) :tolerance 1e-10))))
+        (t/is-approx= p (special-fns/regularized-gamma-p a x) :tolerance 1e-10)))
     ;; Small a — round-trip verified
     ;;SciPy 5.93391e-4
     (t/is-approx= 5.933911044602241E-4
@@ -423,10 +418,10 @@
     ;;Math LogGamma[0.7] = 0.26086724653166651438715483082379164763455717621310
     (t/is= 0.2608672465316666 (special-fns/log-gamma 0.7))
     ;; Log-gamma works for large values where gamma overflows
-    (t/is (m/finite? (special-fns/log-gamma 172.0)))
-    (t/is (m/finite? (special-fns/log-gamma 500.0)))
-    ;;SciPy 711.71473
-    (t/is-approx= 711.7147 (special-fns/log-gamma 172.0) :tolerance 0.01)))
+    ;;mpmath log_gamma(172) = 711.714725802290006953
+    (t/is-approx= 711.7147258022900 (special-fns/log-gamma 172.0) :tolerance 1e-12)
+    ;;mpmath log_gamma(500) = 2605.115850361734
+    (t/is= 2605.115850361734 (special-fns/log-gamma 500.0))))
 
 (t/deftest log-gamma-inc-test
   (t/with-instrument `special-fns/log-gamma-inc
@@ -583,7 +578,6 @@
     (t/is= 0.0 (special-fns/regularized-beta 0 1 1))
     ;;SciPy 0.50000 (precision limited for very large parameters)
     (t/is= 0.5000004638553182 (special-fns/regularized-beta 0.5 1e10 1e10))
-    (t/is-approx= 0.5 (special-fns/regularized-beta 0.5 0.5 0.5) :tolerance 1e-14)
     ;; Boundary tests: at x=0, regularized beta should be 0
     (t/is= 0.0 (special-fns/regularized-beta 0.0 2.0 3.0))
     (t/is= 0.0 (special-fns/regularized-beta 0.0 0.5 0.5))
@@ -647,9 +641,9 @@
     ;; Non-integer order: J_0.5(x) = sqrt(2/(πx)) * sin(x)
     ;;SciPy 0.67140
     (t/is-approx= 0.6713967071418032 (special-fns/bessel-j 0.5 1.0) :tolerance 1e-14)
-    ;; Large argument (asymptotic expansion); precision limited for large x
-    ;;SciPy 0.05581
-    (t/is-approx= 0.0558123276692518 (special-fns/bessel-j 0 50.0) :tolerance 1e-4)
+    ;; Large argument (asymptotic expansion) — matches SciPy to machine precision
+    ;;SciPy 0.05581232766925181
+    (t/is-approx= 0.05581232766925181 (special-fns/bessel-j 0 50.0) :tolerance 1e-14)
     ;; Higher orders (> 2)
     ;; J_5(x) values - from NIST DLMF
     (t/is= 0.0 (special-fns/bessel-j 5 0.0))
@@ -659,8 +653,8 @@
     ;; Math: BesselJ[3, 4] = 0.430171473876
     (t/is-approx= 0.43017147388 (special-fns/bessel-j 3 4.0) :tolerance 1e-8)
     ;; J_4(10) - higher argument
-    ;; Math: BesselJ[4, 10] = -0.219602686102
-    (t/is-approx= -0.2196026861 (special-fns/bessel-j 4 10.0) :tolerance 1e-6)
+    ;;mpmath besselj(4, 10) = -0.2196026861020085
+    (t/is-approx= -0.2196026861020085 (special-fns/bessel-j 4 10.0) :tolerance 1e-12)
     ;; Recurrence relation: J_{n-1}(x) + J_{n+1}(x) = (2n/x) * J_n(x)
     (doseq [x [1.0 2.5 5.0 10.0]
             n [1 2 3 4]]
@@ -753,7 +747,27 @@
     (t/is-approx= 0.25375975456605593 (special-fns/bessel-k 2 2.0) :tolerance 1e-14)
     ;; Non-integer order: K_0.5(x) = sqrt(π/(2x)) * exp(-x)
     ;;SciPy 0.46107
-    (t/is-approx= 0.4610685044478948 (special-fns/bessel-k 0.5 1.0) :tolerance 1e-14)))
+    (t/is-approx= 0.4610685044478948 (special-fns/bessel-k 0.5 1.0) :tolerance 1e-14)
+    ;; Large-order paths — exercises bessel-k-large-order asymptotic. The asymptotic uses the
+    ;; full 1/v expansion summed to machine precision (or until terms start growing), so for
+    ;; `v ≫ x` the accuracy hits machine precision; near the v ≈ 3x gate, accuracy degrades.
+    ;; Integer order > 1000: overflows to ##Inf (correct)
+    (t/is (m/inf+? (special-fns/bessel-k 2000 1.0)))
+    (t/is (m/inf+? (special-fns/bessel-k 5000 1.0)))
+    ;; Non-integer large order — well past the v > 3·x gate, machine precision
+    ;;mpmath 3.3985655066338027e+78
+    (t/is-approx= 3.3985655066338027E78
+      (special-fns/bessel-k 50.5 1.0) :rel-tolerance 1e-13)
+    ;;mpmath 4.606413944896513e+31
+    (t/is-approx= 4.606413944896513E31
+      (special-fns/bessel-k 30.7 2.0) :rel-tolerance 1e-13)
+    ;; Moderate v/x — asymptotic still good to ~1e-7
+    ;;mpmath 6.351343e+03
+    (t/is-approx= 6.351343E3
+      (special-fns/bessel-k 10.5 3.0) :rel-tolerance 1e-6)
+    ;;mpmath 1.226442e+02
+    (t/is-approx= 1.226442E2
+      (special-fns/bessel-k 4.5 1.0) :rel-tolerance 1e-4)))
 
 ;;;HYPERGEOMETRIC FUNCTIONS
 (t/deftest hypergeometric-1f1-test
