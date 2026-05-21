@@ -6,7 +6,7 @@
     [provisdom.math.vector :as vector]
     [provisdom.test.core :as t]))
 
-;;13 SECONDS
+;;17 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -80,6 +80,19 @@
     (t/is-not (vector/open-probs? [0.7 0.7] 0.01))
     (t/is (vector/open-probs? [0.1 0.909] 0.01))))
 
+(t/deftest probs+?-test
+  (t/with-instrument `vector/probs+?
+    (t/is-spec-check vector/probs+?))
+  (t/with-instrument :all
+    (t/is-not (vector/probs+? 1 0.01))
+    (t/is-not (vector/probs+? [] 0.01))
+    (t/is (vector/probs+? [1.0] 0.01))
+    (t/is (vector/probs+? [0.3 0.7] 0.01))
+    (t/is-not (vector/probs+? [0.0 1.0] 0.01))
+    (t/is-not (vector/probs+? [0.3 0.7 0.0] 0.01))
+    (t/is-not (vector/probs+? [0.0 1.01] 0.01))
+    (t/is-not (vector/probs+? [0.7 0.7] 0.01))))
+
 (t/deftest roughly-probs?-test
   (t/with-instrument `vector/roughly-probs?
     (t/is-spec-check vector/roughly-probs?))
@@ -92,15 +105,17 @@
     (t/is (vector/roughly-probs? [0.01 1.009] 0.01 0.02))))
 
 (t/deftest vector-of-spec-test
-  (let [test-spec (vector/vector-of-spec {:pred ::m/finite})]
-    (t/is (s/valid? test-spec [1.0 2.0 3.0]))
-    (t/is-not (s/valid? test-spec [1.0 m/inf+]))))
+  (t/with-instrument :all
+    (let [test-spec (vector/vector-of-spec {:pred ::m/finite})]
+      (t/is (s/valid? test-spec [1.0 2.0 3.0]))
+      (t/is-not (s/valid? test-spec [1.0 m/inf+])))))
 
 (t/deftest vector-finite-spec-test
   ;;vector-finite-spec validates finiteness, not min/max bounds (those are for generator only)
-  (let [test-spec (vector/vector-finite-spec {:min -10 :max 10})]
-    (t/is (s/valid? test-spec [1.0 2.0]))
-    (t/is-not (s/valid? test-spec [1.0 m/inf+]))))
+  (t/with-instrument :all
+    (let [test-spec (vector/vector-finite-spec {:min -10 :max 10})]
+      (t/is (s/valid? test-spec [1.0 2.0]))
+      (t/is-not (s/valid? test-spec [1.0 m/inf+])))))
 
 ;;;VECTOR CONSTRUCTORS
 (t/deftest to-vector-test

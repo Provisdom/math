@@ -165,14 +165,13 @@
   `m/max-double`, then normalizes by the Kahan sum. Falls back to the uniform simplex point
   `[1/n ... 1/n]` when the max is zero or non-finite."
   [n]
-  (gen/fmap
-    (fn [weights]
-      (let [mx (apply max weights)]
-        (if (or (zero? mx) (not (m/finite? mx)))
-          (vec (repeat n (/ 1.0 n)))
-          (let [scaled (mapv (fn [x] (/ x mx)) weights)
-                total (kahan-sum scaled)]
-            (mapv (fn [x] (/ x total)) scaled)))))
+  (gen/fmap (fn [weights]
+              (let [mx (apply max weights)]
+                (if (or (zero? mx) (not (m/finite? mx)))
+                  (vec (repeat n (/ 1.0 n)))
+                  (let [scaled (mapv (fn [x] (/ x mx)) weights)
+                        total (kahan-sum scaled)]
+                    (mapv (fn [x] (/ x total)) scaled)))))
     (gen/vector (s/gen ::m/finite+) n)))
 
 (s/def ::vector-probs
@@ -354,9 +353,9 @@
 (defn probs+?
   "Returns true if `x` is a probability distribution vector with no zero entries.
 
-  Every entry must be a `m/prob+?` value — strictly positive, possibly 1.0 — and
-  the vector must sum to 1.0 within `sum-accu`. Equivalent to `open-probs?` plus
-  the singleton case `[1.0]` (a degenerate one-outcome distribution).
+  Every entry must be a `m/prob+?` value — strictly positive, possibly 1.0 — and the vector must sum
+  to 1.0 within `sum-accu`. Equivalent to `open-probs?` plus the singleton case `[1.0]` (a
+  degenerate one-outcome distribution).
 
   Examples:
     (probs+? [0.3 0.7] 1e-8) => true
@@ -405,8 +404,7 @@
     (to-vector 5) => [5]
     (to-vector [1 \"a\"]) => nil (contains non-number)"
   [x]
-  (cond
-    (number? x) [x]
+  (cond (number? x) [x]
     (sequential? x) (let [flat (into []
                                  (mapcat #(if (sequential? %) % [%]))
                                  x)]
@@ -604,18 +602,12 @@
     (concat-by-index [1 2] [8 9] 3) => (1 2 nil 8 9)"
   [coll1 coll2 i]
   (lazy-seq
-    (cond
-      (and (empty? coll1) (empty? coll2)) coll2
-
-      (zero? i)
-      (if (empty? coll2)
-        (cons (first coll1) (concat-by-index (rest coll1) '() 0))
-        (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
-
+    (cond (and (empty? coll1) (empty? coll2)) coll2
+      (zero? i) (if (empty? coll2)
+                  (cons (first coll1) (concat-by-index (rest coll1) '() 0))
+                  (cons (first coll2) (concat-by-index (rest coll1) (rest coll2) i)))
       (neg? i) (cons (first coll2) (concat-by-index coll1 (rest coll2) (inc i)))
-
-      (pos? i)
-      (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
+      (pos? i) (cons (first coll1) (concat-by-index (rest coll1) coll2 (dec i))))))
 
 (s/fdef concat-by-index
   :args (s/cat :coll1 (s/coll-of any?)
@@ -790,8 +782,7 @@
         v11 (double (get v1 1))
         v21 (double (get v2 1))
         t (- (* v10 v21) (* v20 v11))]
-    (cond
-      (= (count v1) (count v2) 3) (let [v12 (get v1 2)
+    (cond (= (count v1) (count v2) 3) (let [v12 (get v1 2)
                                         v22 (get v2 2)]
                                     [(- (* v11 v22) (* v21 v12))
                                      (- (* v12 v20) (* v22 v10))
@@ -857,7 +848,8 @@
   Computes the angle using the dot product formula:
   theta = acos((v1 . v2) / (|v1| |v2|))
 
-  The result is always in the range [0, pi].
+  The result is always in the range [0, pi]. Returns `m/nan` when either vector is the zero vector
+  (or has zero norm), since the angle is undefined.
 
   Examples:
     (angle-between [1 0] [0 1]) => 1.5707963267948966 (pi/2)
@@ -867,8 +859,12 @@
   (let [dot (dot-product v1 v2)
         n1 (tensor/norm v1)
         n2 (tensor/norm v2)
-        cos-theta (m/clamp-corr (m/div dot (* n1 n2)))]
-    (m/acos cos-theta)))
+        denom (* n1 n2)]
+    (if (or (zero? denom) (not (m/finite? denom)) (m/nan? dot))
+      m/nan
+      (if-some [cos-theta (m/clamp-corr (m/div dot denom))]
+        (m/acos cos-theta)
+        m/nan))))
 
 (s/fdef angle-between
   :args (s/and (s/cat :v1 ::vector :v2 ::vector)
@@ -879,8 +875,8 @@
 (defn distance
   "Returns the Euclidean distance between vectors `v1` and `v2`.
 
-  Computes the L2 norm of the difference: |v1 - v2|.
-  Treats vectors as points in n-dimensional space.
+  Computes the L2 norm of the difference: |v1 - v2|. Treats vectors as points in n-dimensional
+  space.
 
   Examples:
     (distance [0 0] [3 4]) => 5.0
