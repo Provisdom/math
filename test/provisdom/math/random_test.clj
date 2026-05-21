@@ -5,7 +5,7 @@
     [provisdom.test.core :as t])
   (:import (java.util UUID)))
 
-;;21 seconds
+;;22 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -49,7 +49,7 @@
     ;; Successive calls return independent RNGs (different random values)
     (let [rng1 (random/next-rng$)
           rng2 (random/next-rng$)]
-      (t/is-not (= (random/rnd rng1) (random/rnd rng2))))))
+      (t/is-not= (random/rnd rng1) (random/rnd rng2)))))
 
 ;;;IMMUTABLE RNG
 (t/deftest rng-test
@@ -84,7 +84,7 @@
   (t/with-instrument `random/rnd-bool
     (t/is-spec-check random/rnd-bool))
   (t/with-instrument :all
-    (t/is (random/rnd-bool (random/rng 3)))))
+    (t/is= true (random/rnd-bool (random/rng 3)))))
 
 (t/deftest rnd-normal-test
   (t/with-instrument `random/rnd-normal
@@ -177,7 +177,7 @@
   (t/with-instrument `random/rnd-bool!
     (t/is-spec-check random/rnd-bool!))
   (t/with-instrument :all
-    (t/is (random/bind-seed 3 (random/rnd-bool!)))))
+    (t/is= true (random/bind-seed 3 (random/rnd-bool!)))))
 
 (t/deftest rnd-normal!-test
   (t/with-instrument `random/rnd-normal!
@@ -218,55 +218,52 @@
 ;;;USE CLOCK
 (t/deftest rng$-test
   (t/with-instrument `random/rng$
-    (t/is-spec-check random/rng$))
-  (t/with-instrument :all))
-;(t/is= 0.9790050362451599 (random/rnd (random/rng$)))
+    (t/is-spec-check random/rng$)))
 
 (t/deftest seed$-test
   (t/with-instrument `random/seed$
-    (t/is-spec-check random/seed$))
-  (t/with-instrument :all))
-;(t/is= 3765021903556771769 (random/seed$))
+    (t/is-spec-check random/seed$)))
 
 (t/deftest set-seed!$-test
   (t/with-instrument `random/set-seed!$
-    (t/is-spec-check random/set-seed!$))
-  (t/with-instrument :all))
+    (t/is-spec-check random/set-seed!$)))
 
 ;;;MACROS
 (t/deftest bind-seed-test
-  ;; Macros cannot have spec-check or instrumentation
-  ;; bind-seed creates a thread-local binding for *rng-gen*
-  (t/is= 0.17343824438608113 (random/bind-seed 3 (random/rnd!)))
-  ;; Multiple calls within same binding produce a sequence
-  (t/is= [0.17343824438608113 0.5672348695804793]
-    (random/bind-seed 3
-      [(random/rnd!) (random/rnd!)]))
-  ;; Same seed produces same results
-  (t/is= (random/bind-seed 42 (random/rnd!))
-    (random/bind-seed 42 (random/rnd!)))
-  ;; Different seeds produce different results
-  (t/is-not (= (random/bind-seed 1 (random/rnd!))
-              (random/bind-seed 2 (random/rnd!))))
-  ;; Binding is thread-local - outer binding unaffected by inner
-  (t/is= [0.17343824438608113 0.5672348695804793]
-    (random/bind-seed 3
-      (let [first-val (random/rnd!)]
-        ;; Inner bind-seed uses different seed
-        (random/bind-seed 100 (random/rnd!))
-        ;; Continue with outer binding
-        [first-val (random/rnd!)]))))
+  ;; The macro itself cannot have spec-check or instrumentation, but its helpers can.
+  ;; bind-seed creates a thread-local binding for *rng-gen*.
+  (t/with-instrument :all
+    (t/is= 0.17343824438608113 (random/bind-seed 3 (random/rnd!)))
+    ;; Multiple calls within same binding produce a sequence
+    (t/is= [0.17343824438608113 0.5672348695804793]
+      (random/bind-seed 3
+        [(random/rnd!) (random/rnd!)]))
+    ;; Same seed produces same results
+    (t/is= (random/bind-seed 42 (random/rnd!))
+      (random/bind-seed 42 (random/rnd!)))
+    ;; Different seeds produce different results
+    (t/is-not= (random/bind-seed 1 (random/rnd!))
+      (random/bind-seed 2 (random/rnd!)))
+    ;; Binding is thread-local - outer binding unaffected by inner
+    (t/is= [0.17343824438608113 0.5672348695804793]
+      (random/bind-seed 3
+        (let [first-val (random/rnd!)]
+          ;; Inner bind-seed uses different seed
+          (random/bind-seed 100 (random/rnd!))
+          ;; Continue with outer binding
+          [first-val (random/rnd!)])))))
 
 (t/deftest do-set-seed!-test
-  ;; Macros cannot have spec-check or instrumentation
-  ;; do-set-seed! sets global *rng-gen* then executes body
-  (t/is= 0.17343824438608113 (random/do-set-seed! 3 (random/rnd!)))
-  ;; The seed persists after the macro completes (unlike bind-seed)
-  (random/do-set-seed! 3 nil)
-  (t/is= 0.17343824438608113 (random/rnd!))
-  ;; Calling again with same seed resets the sequence
-  (random/do-set-seed! 3 nil)
-  (t/is= 0.17343824438608113 (random/rnd!)))
+  ;; The macro itself cannot have spec-check or instrumentation, but its helpers can.
+  ;; do-set-seed! sets global *rng-gen* then executes body.
+  (t/with-instrument :all
+    (t/is= 0.17343824438608113 (random/do-set-seed! 3 (random/rnd!)))
+    ;; The seed persists after the macro completes (unlike bind-seed)
+    (random/do-set-seed! 3 nil)
+    (t/is= 0.17343824438608113 (random/rnd!))
+    ;; Calling again with same seed resets the sequence
+    (random/do-set-seed! 3 nil)
+    (t/is= 0.17343824438608113 (random/rnd!))))
 
 ;;;INTROSPECTION
 (t/deftest rng-algorithm-test
@@ -414,14 +411,12 @@
   (t/with-instrument `random/parallel-sample
     (t/is-spec-check random/parallel-sample))
   (t/with-instrument :all
-    (let [samples (random/parallel-sample (random/rng 3) #(random/rnd-int % 100) 5)]
-      (t/is= 5 (count samples))
-      (t/is (every? #(and (int? %) (<= 0 % 99)) samples)))))
+    (t/is= [66 89 33 73 63]
+      (random/parallel-sample (random/rng 3) #(random/rnd-int % 100) 5))))
 
 (t/deftest parallel-fold-test
   (t/with-instrument `random/parallel-fold
     (t/is-spec-check random/parallel-fold))
   (t/with-instrument :all
-    (let [result (random/parallel-fold (random/rng 3) 100 (constantly 0) + #(random/rnd-int % 100))]
-      (t/is (int? result))
-      (t/is (pos? result)))))
+    (t/is= 4504
+      (random/parallel-fold (random/rng 3) 100 (constantly 0) + #(random/rnd-int % 100)))))
