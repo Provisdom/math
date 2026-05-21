@@ -24,13 +24,14 @@
     [clojure.spec.gen.alpha :as gen]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
-    [provisdom.math.special-functions :as special-fns])
+    [provisdom.math.special-functions :as special-fns]
+    [provisdom.utility-belt.anomalies :as anomalies])
   (:import
     [java.util UUID]
     [java.util.random RandomGenerator$SplittableGenerator RandomGeneratorFactory]
     [java.security SecureRandom]))
 
-(declare ensure-rng-gen!)
+(declare ensure-rng-gen! rng rnd)
 
 (def mdl 6)
 
@@ -174,6 +175,48 @@
     ::m/int-non-
     #(gen/choose 0 mdl)))
 
+;; Use fn? instead of fspec - Orchestra would call the function to validate, which consumes state
+;; from the lazy RNG sequence
+(s/def ::rng-gen-fn
+  (s/with-gen fn?
+    #(gen/return (fn [] (rng 42)))))
+
+(s/def ::weighted-choice-args
+  (s/with-gen
+    (s/and (s/cat :rng ::rng
+             :weights (s/coll-of ::m/non- :min-count 1)
+             :coll (s/coll-of any? :min-count 1))
+      #(= (count (:weights %)) (count (:coll %))))
+    #(gen/bind (gen/choose 1 mdl)
+       (fn [n]
+         (gen/tuple (s/gen ::rng)
+           (gen/vector (s/gen ::m/non-) n)
+           (gen/vector (s/gen any?) n))))))
+
+(s/def ::weighted-choice!-args
+  (s/with-gen
+    (s/and (s/cat :weights (s/coll-of ::m/non- :min-count 1)
+             :coll (s/coll-of any? :min-count 1))
+      #(= (count (:weights %)) (count (:coll %))))
+    #(gen/bind (gen/choose 1 mdl)
+       (fn [n]
+         (gen/tuple (gen/vector (s/gen ::m/non-) n)
+           (gen/vector (s/gen any?) n))))))
+
+(s/def ::sample-fn
+  (s/with-gen fn?
+    #(gen/return (fn [rng] (rnd rng)))))
+
+;; Generic HOF function specs - use fn? because these accept ANY function
+;; Generators provide sample functions for spec-checking
+(s/def ::combine-fn
+  (s/with-gen fn?
+    #(gen/return (fn [] []))))
+
+(s/def ::reduce-fn
+  (s/with-gen fn?
+    #(gen/return (fn [acc sample] (conj (if (vector? acc) acc []) sample)))))
+
 (def ^:dynamic *rng-gen* nil)
 
 ;;;HELPERS
@@ -259,8 +302,7 @@
                   Options: :default, :fast, :quality, :max-quality, :legacy, :secure
 
   Returns a new RNG instance that implements IRandom."
-  ([seed]
-   (make-rng seed))
+  ([seed] (make-rng seed))
   ([seed algorithm]
    (make-rng seed algorithm)))
 
@@ -419,12 +461,6 @@
       (let [rng (first @gens)]
         (swap! gens rest)
         rng))))
-
-;; Use fn? instead of fspec - Orchestra would call the function to validate,
-;; which consumes state from the lazy RNG sequence
-(s/def ::rng-gen-fn
-  (s/with-gen fn?
-    #(gen/return (fn [] (rng 42)))))
 
 (s/fdef rng-gen
   :args (s/cat :rng ::rng)
@@ -640,14 +676,17 @@
 
   Returns the algorithm string (e.g., `\"L64X128MixRandom\"`) or `:secure` for `SecureRandom`."
   [rng]
-  (cond
-    (instance? Java17SplittableRandom rng) (.-algorithm ^Java17SplittableRandom rng)
+  (cond (instance? Java17SplittableRandom rng) (.-algorithm ^Java17SplittableRandom rng)
     (instance? SecureRandomWrapper rng) :secure
-    :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
+    :else {::anomalies/category ::anomalies/incorrect
+           ::anomalies/fn       (var rng-algorithm)
+           ::anomalies/message  "Unknown RNG type"}))
 
 (s/fdef rng-algorithm
   :args (s/cat :rng ::rng)
-  :ret (s/or :algorithm string? :secure #{:secure}))
+  :ret (s/or :algorithm string?
+         :secure #{:secure}
+         :anomaly ::anomalies/anomaly))
 
 (defn rng-seed
   "Returns the original seed for the given RNG.
@@ -657,14 +696,16 @@
 
   Returns the seed (long) or `nil` for `SecureRandom` (which has no seed)."
   [rng]
-  (cond
-    (instance? Java17SplittableRandom rng) (.-seed ^Java17SplittableRandom rng)
+  (cond (instance? Java17SplittableRandom rng) (.-seed ^Java17SplittableRandom rng)
     (instance? SecureRandomWrapper rng) nil
-    :else (throw (ex-info "Unknown RNG type" {:rng rng}))))
+    :else {::anomalies/category ::anomalies/incorrect
+           ::anomalies/fn       (var rng-seed)
+           ::anomalies/message  "Unknown RNG type"}))
 
 (s/fdef rng-seed
   :args (s/cat :rng ::rng)
-  :ret (s/nilable ::seed))
+  :ret (s/or :seed (s/nilable ::seed)
+         :anomaly ::anomalies/anomaly))
 
 ;;;BATCH GENERATION
 (defn rnd-doubles
@@ -948,18 +989,6 @@
             (recur (inc i) cum-sum')))
         (peek v)))))
 
-(s/def ::weighted-choice-args
-  (s/with-gen
-    (s/and (s/cat :rng ::rng
-             :weights (s/coll-of ::m/non- :min-count 1)
-             :coll (s/coll-of any? :min-count 1))
-      #(= (count (:weights %)) (count (:coll %))))
-    #(gen/bind (gen/choose 1 mdl)
-       (fn [n]
-         (gen/tuple (s/gen ::rng)
-           (gen/vector (s/gen ::m/non-) n)
-           (gen/vector (s/gen any?) n))))))
-
 (s/fdef rnd-weighted-choice
   :args ::weighted-choice-args
   :ret any?)
@@ -974,16 +1003,6 @@
   Returns a randomly selected element, with selection probability proportional to weight."
   [weights coll]
   (rnd-weighted-choice (rng!) weights coll))
-
-(s/def ::weighted-choice!-args
-  (s/with-gen
-    (s/and (s/cat :weights (s/coll-of ::m/non- :min-count 1)
-             :coll (s/coll-of any? :min-count 1))
-      #(= (count (:weights %)) (count (:coll %))))
-    #(gen/bind (gen/choose 1 mdl)
-       (fn [n]
-         (gen/tuple (gen/vector (s/gen ::m/non-) n)
-           (gen/vector (s/gen any?) n))))))
 
 (s/fdef rnd-weighted-choice!
   :args ::weighted-choice!-args
@@ -1002,10 +1021,6 @@
   [rng sample-fn n]
   (let [rngs (split-n rng n)]
     (into [] (pmap sample-fn rngs))))
-
-(s/def ::sample-fn
-  (s/with-gen fn?
-    #(gen/return (fn [rng] (rnd rng)))))
 
 (s/fdef parallel-sample
   :args (s/cat :rng ::rng :sample-fn ::sample-fn :n ::n)
@@ -1026,16 +1041,6 @@
   (let [rngs (split-n rng n)
         samples (pmap sample-fn rngs)]
     (reduce reduce-fn (combine-fn) samples)))
-
-;; Generic HOF function specs - use fn? because these accept ANY function
-;; Generators provide sample functions for spec-checking
-(s/def ::combine-fn
-  (s/with-gen fn?
-    #(gen/return (fn [] []))))
-
-(s/def ::reduce-fn
-  (s/with-gen fn?
-    #(gen/return (fn [acc sample] (conj (if (vector? acc) acc []) sample)))))
 
 (s/fdef parallel-fold
   :args (s/cat :rng ::rng
