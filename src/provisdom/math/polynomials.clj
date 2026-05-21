@@ -64,9 +64,8 @@
                      (mapv vector xs ys))
            (gen/tuple
              (gen/fmap (fn [nums] (vec (take n (distinct (map double nums)))))
-               (gen/vector (m/finite-gen {:min -1e6 :max 1e6})
-                 n (* n 10)))
-             (gen/vector (m/finite-gen {:min -1e6 :max 1e6}) n)))))))
+               (gen/vector (s/gen ::m/finite) n (* n 10)))
+             (gen/vector (s/gen ::m/finite) n)))))))
 
 (s/def ::node-count
   (s/with-gen (s/int-in 1 1000)
@@ -243,9 +242,7 @@
   Example:
     (chebyshev-poly-factors-to-regular-poly-factors [1 2 3])
     ; => [0 2 6] representing 0 + 2x + 6x²"
-  ([chebyshev-factors]
-   (chebyshev-poly-factors-to-regular-poly-factors
-     chebyshev-factors {}))
+  ([chebyshev-factors] (chebyshev-poly-factors-to-regular-poly-factors chebyshev-factors {}))
   ([chebyshev-factors {::keys [second-kind?] :or {second-kind? false}}]
    (let [n (count chebyshev-factors)]
      (mapv (fn [i]
@@ -451,12 +448,9 @@
          []
          (vec (take
                 basis-count
-                ((polynomial-2D-fn-by-degree
-                   end-degree
-                   {::chebyshev-kind chebyshev-kind
-                    ::start-degree   start-degree})
-                 x
-                 y))))))))
+                ((polynomial-2D-fn-by-degree end-degree {::chebyshev-kind chebyshev-kind
+                                                         ::start-degree   start-degree})
+                 x y))))))))
 
 (s/fdef polynomial-2D-fn-by-basis-count
   :args (s/cat :basis-count ::basis-count
@@ -493,14 +487,12 @@
                               (* tot ((get fv index m/nan) degree)))
                    1.0
                    (vec degrees)))
-           (sort-by
-             (fn [degrees]
-               (reduce-kv
-                 (fn [[tot1 tot2] index degree]
-                   [(+ tot1 degree)
-                    (+ tot2 (* degree (inc (- (m/pow 0.01 (+ 2 index))))))])
-                 [0.0 0.0]
-                 (vec degrees)))
+           (sort-by (fn [degrees]
+                      (reduce-kv (fn [[tot1 tot2] index degree]
+                                   [(+ tot1 degree)
+                                    (+ tot2 (* degree (inc (- (m/pow 0.01 (+ 2 index))))))])
+                        [0.0 0.0]
+                        (vec degrees)))
              (apply combinatorics/cartesian-product
                (repeat (count v) (range (inc end-degree)))))))))))
 
@@ -577,7 +569,9 @@
   "Helper for Clenshaw algorithm recurrence."
   [coeffs x multiplier]
   (let [n (dec (count coeffs))]
-    (loop [k n, b1 0.0, b2 0.0]
+    (loop [k n
+           b1 0.0
+           b2 0.0]
       (if (zero? k)
         [b1 b2]
         (recur (dec k) (+ (get coeffs k) (* multiplier x b1) (- b2)) b1)))))
@@ -660,7 +654,7 @@
         c2 (vec coeffs2)
         n (max (count c1) (count c2))]
     (mapv (fn [i]
-            (- (double (get c1 i 0.0)) (double (get c2 i 0.0))))
+            (- (double (get c1 i 0.0)) (get c2 i 0.0)))
       (range n))))
 
 (s/fdef poly-subtract
@@ -692,7 +686,7 @@
                 (reduce (fn [sum i]
                           (let [j (- k i)]
                             (if (and (>= j 0) (< j n2))
-                              (+ sum (* (double (get c1 i 0.0)) (double (get c2 j 0.0))))
+                              (+ sum (* (double (get c1 i 0.0)) (get c2 j 0.0)))
                               sum)))
                   0.0
                   (range n1)))
@@ -714,7 +708,7 @@
   Example:
     (poly-scale [1 2 3] 2.0) ; => [2.0 4.0 6.0]"
   [coeffs scalar]
-  (mapv #(* (double scalar) (double %)) coeffs))
+  (mapv #(* (double scalar) %) coeffs))
 
 (s/fdef poly-scale
   :args (s/cat :coeffs ::coefficients :scalar ::m/number)
@@ -764,15 +758,14 @@
                :remainder (if (neg? deg-rem)
                             [0.0]
                             (mapv double (take (inc deg-rem) remainder)))}
-              (let [coef (/ (double (get remainder deg-rem))
-                           (double (get divisor deg-divisor)))
+              (let [coef (/ (double (get remainder deg-rem)) (get divisor deg-divisor))
                     pos (- deg-rem deg-divisor)
                     new-quotient (assoc quotient pos coef)
                     shift-divisor (vec (concat (repeat pos 0.0)
                                          (map #(* coef (double %)) divisor)))
                     new-remainder (mapv (fn [i]
                                           (- (double (get remainder i 0.0))
-                                            (double (get shift-divisor i 0.0))))
+                                            (get shift-divisor i 0.0)))
                                     (range (count remainder)))]
                 (recur new-remainder new-quotient)))))))))
 
@@ -904,19 +897,17 @@
     ((legendre-polynomial-fn 2) 0.5) ; => P₂(0.5) = -0.125"
   [degree]
   (let [degree (long degree)]
-    (cond
-      (zero? degree) (constantly 1.0)
+    (cond (zero? degree) (constantly 1.0)
       (= 1 degree) (fn [x] (* 1.0 x))
-      :else
-      (fn [x]
-        (loop [p0 1.0
-               p1 x
-               n 1]
-          (if (= n degree)
-            p1
-            (let [p2 (/ (- (* (inc (* 2 n)) x p1) (* n p0))
-                       (inc n))]
-              (recur p1 p2 (inc n)))))))))
+      :else (fn [x]
+              (loop [p0 1.0
+                     p1 x
+                     n 1]
+                (if (= n degree)
+                  p1
+                  (let [p2 (/ (- (* (inc (* 2 n)) x p1) (* n p0))
+                             (inc n))]
+                    (recur p1 p2 (inc n)))))))))
 
 (s/fdef legendre-polynomial-fn
   :args (s/cat :degree ::degree)
@@ -946,31 +937,27 @@
   ([degree] (hermite-polynomial-fn degree {}))
   ([degree {::keys [physicist?] :or {physicist? true}}]
    (let [degree (long degree)]
-     (cond
-       (zero? degree) (constantly 1.0)
-       (= 1 degree) (if physicist?
-                      (fn [x] (* 2.0 x))
-                      (fn [x] (* 1.0 x)))
-       :else
-       (if physicist?
-         ;; H_{n+1}(x) = 2xH_n(x) - 2nH_{n-1}(x)
-         (fn [x]
-           (loop [h0 1.0
-                  h1 (* 2.0 x)
-                  n 1]
-             (if (= n degree)
-               h1
-               (let [h2 (- (* 2.0 x h1) (* 2.0 n h0))]
-                 (recur h1 h2 (inc n))))))
-         ;; He_{n+1}(x) = xHe_n(x) - nHe_{n-1}(x)
-         (fn [x]
-           (loop [h0 1.0
-                  h1 x
-                  n 1]
-             (if (= n degree)
-               h1
-               (let [h2 (- (* x h1) (* n h0))]
-                 (recur h1 h2 (inc n)))))))))))
+     (cond (zero? degree) (constantly 1.0)
+       (= 1 degree) (if physicist? (fn [x] (* 2.0 x)) (fn [x] (* 1.0 x)))
+       :else (if physicist?
+               ;; H_{n+1}(x) = 2xH_n(x) - 2nH_{n-1}(x)
+               (fn [x]
+                 (loop [h0 1.0
+                        h1 (* 2.0 x)
+                        n 1]
+                   (if (= n degree)
+                     h1
+                     (let [h2 (- (* 2.0 x h1) (* 2.0 n h0))]
+                       (recur h1 h2 (inc n))))))
+               ;; He_{n+1}(x) = xHe_n(x) - nHe_{n-1}(x)
+               (fn [x]
+                 (loop [h0 1.0
+                        h1 x
+                        n 1]
+                   (if (= n degree)
+                     h1
+                     (let [h2 (- (* x h1) (* n h0))]
+                       (recur h1 h2 (inc n)))))))))))
 
 (s/fdef hermite-polynomial-fn
   :args (s/cat :degree ::degree
@@ -996,20 +983,18 @@
     ((laguerre-polynomial-fn 2) 1.0) ; => L₂(1) = 0.5"
   [degree]
   (let [degree (long degree)]
-    (cond
-      (zero? degree) (constantly 1.0)
+    (cond (zero? degree) (constantly 1.0)
       (= 1 degree) (fn [x] (- 1.0 x))
-      :else
       ;; L_{n+1}(x) = ((2n+1-x)L_n(x) - nL_{n-1}(x)) / (n+1)
-      (fn [x]
-        (loop [l0 1.0
-               l1 (- 1.0 x)
-               n 1]
-          (if (= n degree)
-            l1
-            (let [l2 (/ (- (* (- (inc (* 2 n)) x) l1) (* n l0))
-                       (inc n))]
-              (recur l1 l2 (inc n)))))))))
+      :else (fn [x]
+              (loop [l0 1.0
+                     l1 (- 1.0 x)
+                     n 1]
+                (if (= n degree)
+                  l1
+                  (let [l2 (/ (- (* (- (inc (* 2 n)) x) l1) (* n l0))
+                             (inc n))]
+                    (recur l1 l2 (inc n)))))))))
 
 (s/fdef laguerre-polynomial-fn
   :args (s/cat :degree ::degree)
@@ -1038,17 +1023,15 @@
         xs (mapv first points)
         ys (mapv second points)]
     (fn [x]
-      (reduce-kv
-        (fn [sum i yi]
-          (let [xi (get xs i)
-                li (reduce-kv
-                     (fn [prod j xj]
-                       (if (= i j)
-                         prod
-                         (* prod (/ (- x xj) (- xi xj)))))
-                     1.0
-                     xs)]
-            (+ sum (* yi li))))
+      (reduce-kv (fn [sum i yi]
+                   (let [xi (get xs i)
+                         li (reduce-kv (fn [prod j xj]
+                                         (if (= i j)
+                                           prod
+                                           (* prod (/ (- x xj) (- xi xj)))))
+                              1.0
+                              xs)]
+                     (+ sum (* yi li))))
         0.0
         ys))))
 
@@ -1059,8 +1042,8 @@
 (defn lagrange-interpolation-coefficients
   "Returns the coefficients of the Lagrange interpolating polynomial.
 
-  Given n points, computes the standard polynomial coefficients [a₀ a₁ ... a_{n-1}]
-  such that p(x) = a₀ + a₁x + ... + a_{n-1}x^{n-1} passes through all points.
+  Given n points, computes the standard polynomial coefficients [a₀ a₁ ... a_{n-1}] such that
+  p(x) = a₀ + a₁x + ... + a_{n-1}x^{n-1} passes through all points.
 
   Parameters:
     `points` - Sequence of [x y] coordinate pairs
@@ -1080,13 +1063,12 @@
         (let [xi (get xs i)
               ;; Build the basis polynomial L_i(x) = prod_{j≠i} (x - xj)/(xi - xj)
               ;; Start with [1] and multiply by (x - xj)/(xi - xj) = [-xj/(xi-xj), 1/(xi-xj)]
-              basis (reduce-kv
-                      (fn [coeffs j xj]
-                        (if (= i j)
-                          coeffs
-                          (let [denom (- xi xj)
-                                factor [(/ (- xj) denom) (/ 1.0 denom)]]
-                            (poly-multiply coeffs factor))))
+              basis (reduce-kv (fn [coeffs j xj]
+                                 (if (= i j)
+                                   coeffs
+                                   (let [denom (- xi xj)
+                                         factor [(/ (- xj) denom) (/ 1.0 denom)]]
+                                     (poly-multiply coeffs factor))))
                       [1.0]
                       xs)]
           (poly-add result (poly-scale basis yi))))
@@ -1117,8 +1099,8 @@
   [points]
   (let [points (vec points)
         n (count points)
-        xs (mapv first points)
-        ys (mapv second points)
+        xs (mapv (comp double first) points)
+        ys (mapv (comp double second) points)
         ;; Build divided difference table
         table (loop [table [ys]
                      k 1]

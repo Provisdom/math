@@ -3,7 +3,7 @@
     [provisdom.math.polynomials :as poly]
     [provisdom.test.core :as t]))
 
-;;12 seconds
+;;11 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -194,7 +194,8 @@
 
 (t/deftest polynomial-ND-fn-test
   (t/with-instrument `poly/polynomial-ND-fn
-    ;;:num-tests 200; N-dimensional polynomial evaluation with variable degree creates large search space
+    ;; N-D polynomial basis generation is combinatorial in
+    ;; (count v) * (inc end-degree); -- ME
     (t/is-spec-check poly/polynomial-ND-fn {:num-tests 200}))
   (t/with-instrument :all
     (t/is= [1.0 2.0 3.0 4.0 4.0 6.0 8.0 9.0 12.0 16.0 12.0 16.0 18.0 24.0 32.0 36.0 48.0 36.0 48.0
@@ -301,22 +302,25 @@
 (t/deftest chebyshev-nodes-test
   (t/with-instrument `poly/chebyshev-nodes
     (t/is-spec-check poly/chebyshev-nodes))
-  (t/is= 3 (count (poly/chebyshev-nodes 3)))
-  ;; Nodes should be in [-1, 1]
-  (t/is (every? #(<= -1 % 1) (poly/chebyshev-nodes 5)))
-  ;; n=1 should give cos(π/2) = 0
-  (t/is-approx= 0.0 (first (poly/chebyshev-nodes 1)) :tolerance 1e-10)
-  ;; n=2 should give cos(π/4) and cos(3π/4)
-  (let [nodes (poly/chebyshev-nodes 2)]
-    ;;Math 0.70710
-    (t/is-approx= 0.7071067811865476 (first nodes) :tolerance 1e-10)
-    ;;Math -0.70710
-    (t/is-approx= -0.7071067811865476 (second nodes) :tolerance 1e-10)))
+  (t/with-instrument :all
+    (t/is= 3 (count (poly/chebyshev-nodes 3)))
+    ;; Nodes should be in [-1, 1]
+    (t/is= [0.9510565162951535 0.5877852522924731 6.123233995736766E-17 -0.587785252292473
+            -0.9510565162951535]
+      (poly/chebyshev-nodes 5))
+    ;; n=1 should give cos(π/2) = 0
+    (t/is-approx= 0.0 (first (poly/chebyshev-nodes 1)) :tolerance 1e-10)
+    ;; n=2 should give cos(π/4) and cos(3π/4)
+    (let [nodes (poly/chebyshev-nodes 2)]
+      ;;Math 0.70710
+      (t/is-approx= 0.7071067811865476 (first nodes) :tolerance 1e-10)
+      ;;Math -0.70710
+      (t/is-approx= -0.7071067811865476 (second nodes) :tolerance 1e-10))))
 
 (t/deftest chebyshev-extrema-test
   (t/with-instrument `poly/chebyshev-extrema
     (t/is-spec-check poly/chebyshev-extrema))
-  (t/with-instrument `poly/chebyshev-extrema
+  (t/with-instrument :all
     (t/is= 3 (count (poly/chebyshev-extrema 3)))
     ;; Extrema should include ±1
     (t/is= 1.0 (first (poly/chebyshev-extrema 5)))
@@ -397,7 +401,7 @@
 (t/deftest lagrange-interpolation-fn-test
   (t/with-instrument `poly/lagrange-interpolation-fn
     (t/is-spec-check poly/lagrange-interpolation-fn))
-  (t/with-instrument `poly/lagrange-interpolation-fn
+  (t/with-instrument :all
     ;; Points on y = x²: (0,0), (1,1), (2,4)
     (let [f (poly/lagrange-interpolation-fn [[0 0] [1 1] [2 4]])]
       (t/is= 0.0 (f 0.0))
@@ -432,7 +436,7 @@
   (t/with-instrument :all
     ;; Points (0,1), (1,2), (2,5)
     (let [{:keys [coefficients xs]} (poly/newton-interpolation-coefficients [[0 1] [1 2] [2 5]])]
-      (t/is= [0 1 2] xs)
+      (t/is= [0.0 1.0 2.0] xs)
       ;; c₀ = f(x₀) = 1
       ;; c₁ = (f(x₁)-f(x₀))/(x₁-x₀) = (2-1)/(1-0) = 1
       ;; c₂ = divided difference = 1
