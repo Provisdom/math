@@ -99,9 +99,57 @@
 (s/def ::integration-result (s/keys :req [::error-estimate ::value]))
 (s/def ::monte-carlo-result (s/keys :req [::samples ::standard-error ::value]))
 
-(s/def ::opts (s/? (s/keys :opt [::accu ::iter-interval ::parallel? ::points ::singularities])))
-(s/def ::cc-opts (s/? (s/keys :opt [::accu ::cc-points ::iter-interval])))
-(s/def ::monte-carlo-opts (s/? (s/keys :opt [::samples ::seed])))
+(s/def ::opts-map
+  (s/with-gen
+    (s/keys :opt [::accu ::iter-interval ::parallel? ::points ::singularities])
+    ;; Test gen always includes ::iter-interval so spec-check never falls back to the unbounded
+    ;; [10 1000] default that the function would use when opts is absent.
+    #(gen/fmap
+       (fn [[it accu points sing par]]
+         (cond-> {::iter-interval it ::parallel? par}
+           accu (assoc ::accu accu)
+           points (assoc ::points points)
+           sing (assoc ::singularities sing)))
+       (gen/tuple
+         (s/gen ::iter-interval)
+         (gen/one-of [(gen/return nil) (s/gen ::accu)])
+         (gen/one-of [(gen/return nil) (s/gen ::points)])
+         (gen/one-of [(gen/return nil) (s/gen ::singularities)])
+         (gen/elements [true false])))))
+
+(s/def ::opts (s/? ::opts-map))
+
+(s/def ::cc-opts-map
+  (s/with-gen
+    (s/keys :opt [::accu ::cc-points ::iter-interval])
+    ;; Clenshaw-Curtis doubles the point count each iteration (n → 2n-1), so cc-points × 2^max-iter
+    ;; grows fast. Constrain iter-interval to [1, 5] here so even cc-points=65 stays tractable.
+    #(gen/fmap
+       (fn [[it cc-pts accu]]
+         (cond-> {::iter-interval it}
+           cc-pts (assoc ::cc-points cc-pts)
+           accu (assoc ::accu accu)))
+       (gen/tuple
+         (intervals/long-interval-gen 1 5)
+         (gen/one-of [(gen/return nil) (s/gen ::cc-points)])
+         (gen/one-of [(gen/return nil) (s/gen ::accu)])))))
+
+(s/def ::cc-opts (s/? ::cc-opts-map))
+
+(s/def ::monte-carlo-opts-map
+  (s/with-gen
+    (s/keys :opt [::samples ::seed])
+    ;; Test gen bounds ::samples to a tractable range so spec-check doesn't generate
+    ;; integrations over millions of sample points.
+    #(gen/fmap
+       (fn [[samples seed]]
+         (cond-> {::samples samples}
+           seed (assoc ::seed seed)))
+       (gen/tuple
+         (m/long+-gen {:max 1000})
+         (gen/one-of [(gen/return nil) (s/gen ::seed)])))))
+
+(s/def ::monte-carlo-opts (s/? ::monte-carlo-opts-map))
 (s/def ::oscillatory-opts (s/keys :req [::omega] :opt [::oscillation-type ::points]))
 (s/def ::sparse-grid-opts (s/? (s/keys :opt [::sparse-grid-level])))
 (s/def ::tanh-sinh-opts (s/? (s/keys :opt [::accu ::level])))
@@ -192,6 +240,24 @@
 (s/def ::high-precision-values ::tensor/tensor)
 (s/def ::rectangular-error ::m/number)
 (s/def ::one-dimension-errors ::vector/vector)
+
+(s/def ::multiplicative-fn ::number->number)
+(s/def ::converter-fn ::number->number)
+
+(s/def ::skip ::m/long-non-)
+
+(s/def ::quasi-monte-carlo-opts-map
+  (s/with-gen
+    (s/keys :opt [::samples ::skip])
+    #(gen/fmap
+       (fn [[samples skip]]
+         (cond-> {::samples samples}
+           skip (assoc ::skip skip)))
+       (gen/tuple
+         (m/long+-gen {:max 1000})
+         (gen/one-of [(gen/return nil) (s/gen ::skip)])))))
+
+(s/def ::quasi-monte-carlo-opts (s/? ::quasi-monte-carlo-opts-map))
 
 (defn- convert-gk-weights
   ([number] (convert-gk-weights number true))
@@ -413,34 +479,174 @@
           :value ::m/number)
   :ret ::m/number)
 
+(defn- get-error-scalar
+  "Scalar fast path for get-error-and-high-precision-values."
+  [number->tensor half-sum half-diff
+   low-precision-weights high-precision-weights nodes]
+  (let [n (int (count nodes))
+        n-low (int (count low-precision-weights))
+        ;; Evaluate f at all nodes
+        ^doubles vals (double-array n)
+        _ (dotimes [i n]
+            (aset vals i
+              (double (number->tensor
+                        (unnormalize half-sum half-diff (nth nodes i))))))
+        high-sum (loop [i (int 0)
+                        s 0.0]
+                   (if (< i n)
+                     (recur (inc i)
+                       (+ s (* (double (nth high-precision-weights i))
+                              (aget vals i))))
+                     s))
+        low-sum (loop [i (int 0)
+                       s 0.0]
+                  (if (< i n-low)
+                    (recur (inc i)
+                      (+ s (* (double (nth low-precision-weights i))
+                             (aget vals (inc (* 2 i))))))
+                    s))
+        high-precision-values (* half-diff high-sum)
+        low-precision-values (* half-diff low-sum)]
+    {::error                 (m/abs (- low-precision-values high-precision-values))
+     ::high-precision-values high-precision-values}))
+
 (defn- get-error-and-high-precision-values
   "For a single integration approximation, returns a map containing:
    `::error`
    `::high-precision-values`."
   [number->tensor [a b] [low-precision-weights high-precision-weights nodes]]
-  (let [half-sum (* 0.5 (+ a b))
+  (let [a (double a)
+        b (double b)
+        half-sum (* 0.5 (+ a b))
         half-diff (* 0.5 (- b a))
-        unnormalized-nodes (map (partial unnormalize half-sum half-diff) nodes)
-        mapped-nodes (mapv number->tensor unnormalized-nodes)
-        high-precision-values (tensor/multiply
-                                half-diff
-                                (tensor/inner-product high-precision-weights mapped-nodes))
-        low-precision-nodes (tensor/filter-kv (fn [idx _]
-                                                (odd? idx))
-                              mapped-nodes)
-        low-precision-values (tensor/multiply
-                               half-diff
-                               (tensor/inner-product low-precision-weights low-precision-nodes))
-        error (tensor/emap m/abs
-                (tensor/subtract low-precision-values high-precision-values))]
-    {::error                 error
-     ::high-precision-values high-precision-values}))
+        ;; Probe with first node to decide scalar vs tensor path
+        first-val (number->tensor (unnormalize half-sum half-diff (nth nodes 0)))]
+    (if (number? first-val)
+      (get-error-scalar number->tensor half-sum half-diff
+        low-precision-weights high-precision-weights nodes)
+      (let [unnormalized-nodes (map (partial unnormalize half-sum half-diff) nodes)
+            mapped-nodes (mapv number->tensor unnormalized-nodes)
+            low-precision-nodes (tensor/filter-kv (fn [idx _]
+                                                    (odd? idx))
+                                  mapped-nodes)
+            high-precision-values (tensor/multiply half-diff
+                                    (tensor/inner-product high-precision-weights mapped-nodes))
+            low-precision-values (tensor/multiply half-diff
+                                   (tensor/inner-product low-precision-weights low-precision-nodes))
+            error (tensor/emap m/abs
+                    (tensor/subtract low-precision-values high-precision-values))]
+        {::error                 error
+         ::high-precision-values high-precision-values}))))
 
 (s/fdef get-error-and-high-precision-values
   :args (s/cat :number->tensor ::number->tensor
           :finite-interval ::intervals/finite-interval
           :weights-and-nodes ::weights-and-nodes)
   :ret (s/keys :req [::error ::high-precision-values]))
+
+(defn- reduce-dim-high
+  "Reduce outermost dim using full high weights."
+  [^doubles cur cur-len ^doubles high-w N]
+  (let [N (long N)
+        cur-len (long cur-len)
+        next-len (quot cur-len N)
+        ^doubles out (double-array next-len)]
+    (dotimes [j next-len]
+      (let [j (long j)
+            v (loop [i 0
+                     s 0.0]
+                (if (>= i N)
+                  s
+                  (recur (inc i)
+                    (+ s (* (aget high-w i)
+                           (aget cur (+ (* i next-len) j)))))))]
+        (aset out j (double v))))
+    out))
+
+(defn- reduce-dim-low
+  "Reduce outermost dim using low weights at odd indices, mirroring
+  (inner-product low-w (take-nth 2 (rest cur))) summation order."
+  [^doubles cur cur-len ^doubles low-w n-low N]
+  (let [N (long N)
+        n-low (long n-low)
+        cur-len (long cur-len)
+        next-len (quot cur-len N)
+        ^doubles out (double-array next-len)]
+    (dotimes [j next-len]
+      (let [j (long j)
+            v (loop [i 0
+                     s 0.0]
+                (if (>= i n-low)
+                  s
+                  (recur (inc i)
+                    (+ s (* (aget low-w i)
+                           (aget cur (+ (* (inc (* 2 i)) next-len) j)))))))]
+        (aset out j (double v))))
+    out))
+
+(defn- compute-d-dim-sum
+  [^doubles values ^doubles high-w ^doubles low-w n-low N d use-low-per-dim]
+  (let [d (long d)]
+    (loop [k (long 0)
+           ^doubles cur values
+           cur-len (long (alength values))]
+      (if (>= k d)
+        (aget cur 0)
+        (let [next-arr (if (nth use-low-per-dim k)
+                         (reduce-dim-low cur cur-len low-w n-low N)
+                         (reduce-dim-high cur cur-len high-w N))]
+          (recur (inc k) next-arr (alength ^doubles next-arr)))))))
+
+(defn- get-rectangular-errors-scalar
+  "Scalar fast path for rectangular get-error. v->tensor must return a number.
+  Numerics match the tensor path's sequential dim-reduction summation order."
+  [v->tensor finite-intervals
+   [low-precision-weights high-precision-weights nodes]]
+  (let [d (int (count finite-intervals))
+        N (int (count nodes))
+        n-low (int (count low-precision-weights))
+        per-dim-nodes (mapv (fn [[a b]]
+                              (let [a (double a)
+                                    b (double b)
+                                    hs (* 0.5 (+ a b))
+                                    hd (* 0.5 (- b a))]
+                                (double-array (mapv (partial unnormalize hs hd) nodes))))
+                        finite-intervals)
+        half-diffs (mapv (fn [[a b]]
+                           (* 0.5 (- (double b) (double a))))
+                     finite-intervals)
+        multiplier (double (apply * half-diffs))
+        total (int (apply * (repeat d N)))
+        ^doubles high-w (double-array high-precision-weights)
+        ^doubles low-w (double-array low-precision-weights)
+        ^longs strides (long-array d)
+        _ (loop [k (dec d) s 1]
+            (when (>= k 0)
+              (aset strides k s)
+              (recur (dec k) (* s N))))
+        ^doubles values (double-array total)
+        _ (let [arg (double-array d)]
+            (dotimes [flat total]
+              (dotimes [k d]
+                (let [^doubles pdn (nth per-dim-nodes k)
+                      i-k (mod (quot flat (aget strides k)) N)]
+                  (aset arg k (aget pdn i-k))))
+              (aset values flat (double (v->tensor (vec arg))))))
+        all-high (vec (repeat d false))
+        all-low (vec (repeat d true))
+        high-precision-value (* multiplier
+                               (double (compute-d-dim-sum values high-w low-w n-low N d all-high)))
+        low-precision-value (* multiplier
+                              (double (compute-d-dim-sum values high-w low-w n-low N d all-low)))
+        dim1-values (mapv (fn [m]
+                            (let [pattern (assoc (vec (repeat d false)) m true)]
+                              (* multiplier
+                                (double
+                                  (compute-d-dim-sum values high-w low-w n-low N d pattern)))))
+                      (range d))]
+    {::high-precision-values high-precision-value
+     ::one-dimension-errors  (mapv #(m/abs (- (double %) high-precision-value)) dim1-values)
+     ::rectangular-error     (m/abs (- low-precision-value high-precision-value))}))
 
 (defn- get-rectangular-errors-and-high-precision-value
   "For a single integration approximation, returns a map containing:
@@ -449,51 +655,56 @@
    `::one-dimension-errors`."
   [v->tensor
    finite-intervals
-   [low-precision-weights high-precision-weights nodes]]
-  (let [half-sums (mapv tensor/average finite-intervals)
-        half-diffs (mapv (fn [[a b]]
-                           (* 0.5 (- b a)))
-                     finite-intervals)
-        unnormalized-nodes (for [v (range (count finite-intervals))]
-                             (mapv
-                               (partial unnormalize
-                                 (nth half-sums v)
-                                 (nth half-diffs v))
-                               nodes))
-        mapped-nodes (mapv v->tensor
-                       (tensor/to-tensor
-                         (apply combo/cartesian-product unnormalized-nodes)))
-        multiplier (apply * half-diffs)
-        dimensions (count finite-intervals)
-        f-low-precision #(tensor/inner-product
-                           low-precision-weights
-                           (vec (take-nth 2 (rest %))))
-        f-high-precision #(tensor/inner-product high-precision-weights %)
-        f1dim (if (zero? dimensions)
-                [[]]
-                (mapv (fn [row]
-                        (mapv
-                          (fn [column]
-                            (if (= row column)
-                              f-low-precision
-                              f-high-precision))
-                          (range dimensions)))
-                  (range dimensions)))
-        partitioned-nodes (tensor/partition-recursively
-                            (count high-precision-weights) mapped-nodes)
-        reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef]
-                                                        (ef tot))
-                                                partitioned-nodes
-                                                %))
-        high-precision-values (reduce-f (repeat dimensions f-high-precision))
-        low-precision-values (reduce-f (repeat dimensions f-low-precision))
-        dim1 (mapv reduce-f f1dim)
-        err-f #(tensor/average
-                 (tensor/emap m/abs
-                   (tensor/subtract % high-precision-values)))]
-    {::high-precision-values high-precision-values
-     ::one-dimension-errors  (mapv err-f dim1)
-     ::rectangular-error     (err-f low-precision-values)}))
+   [low-precision-weights high-precision-weights nodes :as wn]]
+  (let [d (count finite-intervals)
+        ;; Probe with the first cartesian point to decide scalar vs tensor path
+        first-arg (mapv (fn [[a b]]
+                          (let [a (double a) b (double b)]
+                            (unnormalize (* 0.5 (+ a b))
+                              (* 0.5 (- b a))
+                              (nth nodes 0))))
+                    finite-intervals)
+        first-val (v->tensor first-arg)]
+    (if (and (number? first-val) (pos? d))
+      (get-rectangular-errors-scalar v->tensor finite-intervals wn)
+      (let [half-sums (mapv tensor/average finite-intervals)
+            half-diffs (mapv (fn [[a b]]
+                               (* 0.5 (- (double b) (double a))))
+                         finite-intervals)
+            unnormalized-nodes (for [v (range (count finite-intervals))]
+                                 (mapv (partial unnormalize
+                                         (nth half-sums v)
+                                         (nth half-diffs v))
+                                   nodes))
+            mapped-nodes (mapv v->tensor
+                           (tensor/to-tensor
+                             (apply combo/cartesian-product unnormalized-nodes)))
+            multiplier (apply * half-diffs)
+            dimensions (count finite-intervals)
+            f-low-precision #(tensor/inner-product low-precision-weights
+                               (vec (take-nth 2 (rest %))))
+            f-high-precision #(tensor/inner-product high-precision-weights %)
+            f1dim (if (zero? dimensions)
+                    [[]]
+                    (mapv (fn [row]
+                            (mapv (fn [column]
+                                    (if (= row column) f-low-precision f-high-precision))
+                              (range dimensions)))
+                      (range dimensions)))
+            partitioned-nodes (tensor/partition-recursively
+                                (count high-precision-weights) mapped-nodes)
+            reduce-f #(tensor/multiply multiplier (reduce (fn [tot ef]
+                                                            (ef tot))
+                                                    partitioned-nodes
+                                                    %))
+            high-precision-values (reduce-f (repeat dimensions f-high-precision))
+            low-precision-values (reduce-f (repeat dimensions f-low-precision))
+            dim1 (mapv reduce-f f1dim)
+            err-f #(tensor/average (tensor/emap m/abs
+                                     (tensor/subtract % high-precision-values)))]
+        {::high-precision-values high-precision-values
+         ::one-dimension-errors  (mapv err-f dim1)
+         ::rectangular-error     (err-f low-precision-values)}))))
 
 (s/fdef get-rectangular-errors-and-high-precision-value
   :args (s/cat :v->tensor ::v->tensor
@@ -501,34 +712,47 @@
           :weights-and-nodes ::weights-and-nodes)
   :ret (s/keys :req [::high-precision-values ::one-dimension-errors ::rectangular-error]))
 
+(defn- tensor-magnitude
+  "Sum of absolute values of all components. For scalars, |x|."
+  [t]
+  (if (number? t)
+    (m/abs t)
+    (tensor/norm1 t)))
+
+(defn- effective-tolerance
+  "max(abs_tol, abs_tol * |I|) — switches to relative for large-magnitude integrals
+  so that wide intervals don't iterate to max-iter chasing impossible absolute precision."
+  [abs-tol value]
+  (let [mag (tensor-magnitude value)]
+    (if (m/finite? mag)
+      (max abs-tol (* abs-tol mag))
+      abs-tol)))
+
 (defn- adaptive-quadrature
   "Integration. Could be parallelized."
   [number->tensor [a b] accu [min-iter max-iter] weights-and-nodes parallel?]
   (let [tolerance (adjust-accu-gk accu)
-
-        {::keys [error high-precision-values]}
-        (get-error-and-high-precision-values
-          number->tensor [a b] weights-and-nodes)]
+        {::keys [error high-precision-values]} (get-error-and-high-precision-values number->tensor
+                                                 [a b] weights-and-nodes)]
     (loop [iter 1
            error-maps [{:finite-interval [a b]
                         :high-values     high-precision-values
                         :uni-error       error}]]
-      (let [total-error (apply + (flatten (map :uni-error error-maps)))]
+      (let [total-error (apply + (flatten (map :uni-error error-maps)))
+            current-value (apply tensor/add (map :high-values error-maps))
+            tolerance (effective-tolerance tolerance current-value)]
         (if (and (>= iter min-iter)
               (not (> total-error tolerance)))              ;using 'not' captures NaN
           (if (<= total-error tolerance)
-            (apply tensor/add (map :high-values error-maps))
+            current-value
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature)
-             ::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))})
+             ::anomalies/message  (str "Error contains NaN. Value: " current-value)})
           (if (>= iter max-iter)
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature)
-             ::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))}
+             ::anomalies/message  (str "Iteration limit reached. Error: " total-error
+                                    ". Value: " current-value)}
             (let [{[an bn] :finite-interval} (peek error-maps)
                   mn (* 0.5 (+ an bn))
 
@@ -537,16 +761,15 @@
                    {error2                 ::error
                     high-precision-values2 ::high-precision-values}]
                   (if parallel?
-                    (async/thread
-                      :all
-                      [#(get-error-and-high-precision-values
-                          number->tensor [an mn] weights-and-nodes)
-                       #(get-error-and-high-precision-values
-                          number->tensor [mn bn] weights-and-nodes)])
-                    [(get-error-and-high-precision-values
-                       number->tensor [an mn] weights-and-nodes)
-                     (get-error-and-high-precision-values
-                       number->tensor [mn bn] weights-and-nodes)])
+                    (async/thread :all
+                      [#(get-error-and-high-precision-values number->tensor
+                          [an mn] weights-and-nodes)
+                       #(get-error-and-high-precision-values number->tensor
+                          [mn bn] weights-and-nodes)])
+                    [(get-error-and-high-precision-values number->tensor [an mn] weights-and-nodes)
+                     (get-error-and-high-precision-values number->tensor
+                       [mn bn] weights-and-nodes)])
+
                   new-error-maps [{:finite-interval [an mn]
                                    :high-values     high-precision-values1
                                    :uni-error       error1}
@@ -619,37 +842,32 @@
         {rectangular-error     ::rectangular-error
          high-precision-values ::high-precision-values
          one-dimension-errors  ::one-dimension-errors}
-        (get-rectangular-errors-and-high-precision-value
-          v->tensor finite-intervals weights-and-nodes)]
+        (get-rectangular-errors-and-high-precision-value v->tensor
+          finite-intervals weights-and-nodes)]
     (loop [iter 1
            error-maps [{:finite-intervals     finite-intervals
                         :high-values          high-precision-values
                         :one-dim-errors       one-dimension-errors
                         :rect-error           rectangular-error
-                        :splitting-importance (splitting-importance-fn
-                                                rectangular-error
+                        :splitting-importance (splitting-importance-fn rectangular-error
                                                 one-dimension-errors)}]]
-      (let [total-error (apply + (map :rect-error error-maps))]
+      (let [total-error (apply + (map :rect-error error-maps))
+            current-value (apply tensor/add (map :high-values error-maps))
+            tolerance (effective-tolerance tolerance current-value)]
         (if (and (>= iter min-iter) (not (> total-error tolerance))) ;using 'not' captures NaN
           (if (<= total-error tolerance)
-            (apply tensor/add (map :high-values error-maps))
+            current-value
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
-             ::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))})
+             ::anomalies/message  (str "Error contains NaN. Value: " current-value)})
           (if (>= iter max-iter)
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var rectangular-adaptive-quadrature)
-             ::anomalies/message  (str "Iteration limit reached.  Error: "
-                                    total-error
-                                    " Value: "
-                                    (apply tensor/add
-                                      (map :high-values error-maps)))}
+             ::anomalies/message  (str "Iteration limit reached.  Error: " total-error
+                                    " Value: " current-value)}
             (let [{intervals-n    :finite-intervals
                    one-dim-errors :one-dim-errors} (peek error-maps)
-                  dimensions (select-dimensions-fn
-                               one-dim-errors (< iter min-iter))
+                  dimensions (select-dimensions-fn one-dim-errors (< iter min-iter))
                   dims-with-new-intervals (map
                                             #(let [[an bn] (nth intervals-n %)
                                                    mn (* 0.5 (+ an bn))]
@@ -662,32 +880,29 @@
                                          dim-with-interval))
                                   (apply combo/cartesian-product
                                     dims-with-new-intervals))
-                  new-fns (map
-                            (fn [intervals-local]
-                              #(get-rectangular-errors-and-high-precision-value
-                                 v->tensor intervals-local weights-and-nodes))
+                  new-fns (map (fn [intervals-local]
+                                 #(get-rectangular-errors-and-high-precision-value v->tensor
+                                    intervals-local weights-and-nodes))
                             new-intervals)
-                  new-err-maps (mapv
-                                 (fn [finite-intervals
-                                      {rect-error     ::rectangular-error
-                                       one-dim-errors ::one-dimension-errors
-                                       high-values    ::high-precision-values}]
-                                   {:finite-intervals     finite-intervals
-                                    :high-values          high-values
-                                    :one-dim-errors       one-dim-errors
-                                    :rect-error           rect-error
-                                    :splitting-importance (splitting-importance-fn
-                                                            rect-error one-dim-errors)})
+                  new-err-maps (mapv (fn [finite-intervals
+                                          {rect-error     ::rectangular-error
+                                           one-dim-errors ::one-dimension-errors
+                                           high-values    ::high-precision-values}]
+                                       {:finite-intervals     finite-intervals
+                                        :high-values          high-values
+                                        :one-dim-errors       one-dim-errors
+                                        :rect-error           rect-error
+                                        :splitting-importance (splitting-importance-fn rect-error
+                                                                one-dim-errors)})
                                  new-intervals
                                  (if parallel?
                                    (async/thread :all new-fns)
                                    (map (fn [f] (f)) new-fns)))
                   new-error-maps (into []
-                                   (sort-by
-                                     (fn [m]
-                                       (if (m/nan? (:splitting-importance m))
-                                         m/inf+
-                                         (:splitting-importance m)))
+                                   (sort-by (fn [m]
+                                              (if (m/nan? (:splitting-importance m))
+                                                m/inf+
+                                                (:splitting-importance m)))
                                      (concat (pop error-maps) new-err-maps)))]
               (recur (inc iter) new-error-maps))))))))
 
@@ -706,9 +921,8 @@
 (defn change-of-variable
   "Transforms an interval to enable integration over infinite domains.
 
-  Implementation detail exposed for advanced users who need custom integration
-  strategies. For standard use, prefer [[integration]] which handles this
-  automatically.
+  Implementation detail exposed for advanced users who need custom integration strategies. For
+  standard use, prefer [[integration]] which handles this automatically.
 
   Given a num-interval [a b] (possibly infinite), returns a map containing:
     `::multiplicative-fn` - Jacobian factor for the change of variables
@@ -721,8 +935,7 @@
     (-inf, b)    -> [0, 1]  via x = b - (1-t)/t
     [a, b]       -> [a, b]  (identity)"
   [[a b]]
-  (cond
-    (and (m/inf-? a) (m/inf+? b))
+  (cond (and (m/inf-? a) (m/inf+? b))
     {::converter-fn              (fn [number]
                                    (m/div number (m/one- (m/sq number))))
      ::multiplicative-fn         (fn [number]
@@ -749,9 +962,6 @@
      ::multiplicative-fn         (constantly 1.0)
      ::intervals/finite-interval [a b]}))
 
-(s/def ::multiplicative-fn ::number->number)
-(s/def ::converter-fn ::number->number)
-
 (s/fdef change-of-variable
   :args (s/cat :num-interval ::intervals/num-interval)
   :ret (s/keys :req [::converter-fn
@@ -761,11 +971,13 @@
 (defn- change-of-variable-for-integration
   "Returns the new function and new finite-interval as a tuple."
   [number->tensor [a b]]
-  (let [{:keys [::multiplicative-fn
-                ::converter-fn
-                ::intervals/finite-interval]} (change-of-variable [a b])]
-    [#(tensor/multiply (multiplicative-fn %) (number->tensor (converter-fn %)))
-     finite-interval]))
+  (if (and (m/finite? a) (m/finite? b))
+    [number->tensor [(double a) (double b)]]
+    (let [{:keys [::multiplicative-fn
+                  ::converter-fn
+                  ::intervals/finite-interval]} (change-of-variable [a b])]
+      [#(tensor/multiply (multiplicative-fn %) (number->tensor (converter-fn %)))
+       finite-interval])))
 
 (s/fdef change-of-variable-for-integration
   :args (s/cat :number->tensor ::number->tensor
@@ -775,19 +987,21 @@
 (defn- change-of-variable-for-rectangular-integration
   "Returns the new function and new finite-intervals."
   [v->tensor num-intervals]
-  (let [maps (map change-of-variable num-intervals)
-        fms (map ::multiplicative-fn maps)
-        fvs (map ::converter-fn maps)
-        new-intervals (mapv ::intervals/finite-interval maps)]
-    [#(tensor/multiply (apply * (map (fn [f a]
-                                       (f a))
-                                  fms
-                                  %))
-        (v->tensor (mapv (fn [f a]
-                           (f a))
-                     fvs
-                     %)))
-     new-intervals]))
+  (if (every? (fn [[a b]] (and (m/finite? a) (m/finite? b))) num-intervals)
+    [v->tensor (mapv (fn [[a b]] [(double a) (double b)]) num-intervals)]
+    (let [maps (map change-of-variable num-intervals)
+          fms (map ::multiplicative-fn maps)
+          fvs (map ::converter-fn maps)
+          new-intervals (mapv ::intervals/finite-interval maps)]
+      [#(tensor/multiply (apply * (map (fn [f a]
+                                         (f a))
+                                    fms
+                                    %))
+          (v->tensor (mapv (fn [f a]
+                             (f a))
+                       fvs
+                       %)))
+       new-intervals])))
 
 (s/fdef change-of-variable-for-rectangular-integration
   :args (s/cat :v->tensor ::v->tensor
@@ -870,8 +1084,8 @@
 (defn rectangular-integration
   "Integrates a function over a rectangular region in multiple dimensions.
 
-  Computes ∫...∫ f(x₁,...,xₙ) dx₁...dxₙ using global adaptive Gauss-Kronrod quadrature. The
-  function `v->tensor` takes a vector with one element for each interval and returns a tensor.
+  Computes ∫...∫ f(x₁,...,xₙ) dx₁...dxₙ using global adaptive Gauss-Kronrod quadrature. The function
+  `v->tensor` takes a vector with one element for each interval and returns a tensor.
 
   Options:
     `::accu` - Accuracy target (default `m/dbl-close`, or `m/sgl-close` for 4+ dimensions or 3+
@@ -899,11 +1113,10 @@
                 m/sgl-close
 
                 :else m/dbl-close)
-         [new-fn new-intervals] (change-of-variable-for-rectangular-integration
-                                  v->tensor num-intervals)
+         [new-fn new-intervals] (change-of-variable-for-rectangular-integration v->tensor
+                                  num-intervals)
          weights-and-nodes (weights-and-nodes-gk points)]
-     (rectangular-adaptive-quadrature
-       new-fn new-intervals accu iter-interval weights-and-nodes
+     (rectangular-adaptive-quadrature new-fn new-intervals accu iter-interval weights-and-nodes
        simple-splitting-importance-fn simple-select-dimensions-fn parallel?))))
 
 (s/fdef rectangular-integration
@@ -928,17 +1141,14 @@
     `::parallel?` - Enable parallel processing (default `false`)
     `::points` - Quadrature points: 15, 21, 31, 41, 51, 61 (default `15`)"
   ([number2->tensor outer-interval outer->inner-interval]
-   (non-rectangular-2D-integration
-     number2->tensor outer-interval outer->inner-interval {}))
+   (non-rectangular-2D-integration number2->tensor outer-interval outer->inner-interval {}))
   ([number2->tensor outer-interval outer->inner-interval opts]
-   (integration
-     (fn [outer]
-       (let [ret (integration
-                   (fn [inner]
-                     (number2->tensor outer inner))
-                   (outer->inner-interval outer)
-                   opts)]
-         (if (tensor/tensor? ret) ret m/nan)))
+   (integration (fn [outer]
+                  (let [ret (integration (fn [inner]
+                                           (number2->tensor outer inner))
+                              (outer->inner-interval outer)
+                              opts)]
+                    (if (tensor/tensor? ret) ret m/nan)))
      outer-interval
      opts)))
 
@@ -965,27 +1175,27 @@
   [number->tensor [a b] accu [min-iter max-iter] weights-and-nodes parallel?]
   (let [tolerance (adjust-accu-gk accu)
         {::keys [error high-precision-values]}
-        (get-error-and-high-precision-values
-          number->tensor [a b] weights-and-nodes)]
+        (get-error-and-high-precision-values number->tensor [a b] weights-and-nodes)]
     (loop [iter 1
            error-maps [{:finite-interval [a b]
                         :high-values     high-precision-values
                         :uni-error       error}]]
-      (let [total-error (apply + (flatten (map :uni-error error-maps)))]
+      (let [total-error (apply + (flatten (map :uni-error error-maps)))
+            current-value (apply tensor/add (map :high-values error-maps))
+            tolerance (effective-tolerance tolerance current-value)]
         (if (and (>= iter min-iter)
               (not (> total-error tolerance)))
           (if (<= total-error tolerance)
             {::error-estimate total-error
-             ::value          (apply tensor/add (map :high-values error-maps))}
+             ::value          current-value}
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature-with-error)
-             ::anomalies/message  (str "Error contains NaN. Value: "
-                                    (apply tensor/add (map :high-values error-maps)))})
+             ::anomalies/message  (str "Error contains NaN. Value: " current-value)})
           (if (>= iter max-iter)
             {::anomalies/category ::anomalies/no-solve
              ::anomalies/fn       (var adaptive-quadrature-with-error)
-             ::anomalies/message  (str "Iteration limit reached. Error: " total-error ". Value: "
-                                    (apply tensor/add (map :high-values error-maps)))}
+             ::anomalies/message  (str "Iteration limit reached. Error: " total-error
+                                    ". Value: " current-value)}
             (let [{[an bn] :finite-interval} (peek error-maps)
                   mn (* 0.5 (+ an bn))
                   [{error1                 ::error
@@ -993,16 +1203,14 @@
                    {error2                 ::error
                     high-precision-values2 ::high-precision-values}]
                   (if parallel?
-                    (async/thread
-                      :all
-                      [#(get-error-and-high-precision-values
-                          number->tensor [an mn] weights-and-nodes)
-                       #(get-error-and-high-precision-values
-                          number->tensor [mn bn] weights-and-nodes)])
-                    [(get-error-and-high-precision-values
-                       number->tensor [an mn] weights-and-nodes)
-                     (get-error-and-high-precision-values
-                       number->tensor [mn bn] weights-and-nodes)])
+                    (async/thread :all
+                      [#(get-error-and-high-precision-values number->tensor
+                          [an mn] weights-and-nodes)
+                       #(get-error-and-high-precision-values number->tensor
+                          [mn bn] weights-and-nodes)])
+                    [(get-error-and-high-precision-values number->tensor [an mn] weights-and-nodes)
+                     (get-error-and-high-precision-values number->tensor
+                       [mn bn] weights-and-nodes)])
                   new-error-maps [{:finite-interval [an mn]
                                    :high-values     high-precision-values1
                                    :uni-error       error1}
@@ -1044,15 +1252,9 @@
    (let [points (cond points points
                   (some m/inf? [a b]) 15
                   :else 21)
-         [new-fn new-interval] (change-of-variable-for-integration
-                                 number->tensor [a b])]
-     (adaptive-quadrature-with-error
-       new-fn
-       new-interval
-       accu
-       iter-interval
-       (weights-and-nodes-gk points)
-       parallel?))))
+         [new-fn new-interval] (change-of-variable-for-integration number->tensor [a b])]
+     (adaptive-quadrature-with-error new-fn new-interval accu iter-interval
+       (weights-and-nodes-gk points) parallel?))))
 
 (s/fdef integration-with-error
   :args (s/cat :number->tensor ::number->tensor
@@ -1131,7 +1333,9 @@
   ([number->tensor [a b]] (tanh-sinh-integration number->tensor [a b] {}))
   ([number->tensor [a b] {::keys [level accu]
                           :or    {level 3 accu m/dbl-close}}]
-   (let [half-sum (* 0.5 (+ a (double b)))
+   (let [a (double a)
+         b (double b)
+         half-sum (* 0.5 (+ a b))
          half-diff (* 0.5 (- b a))
          tolerance (adjust-accu-gk accu)]
      ;; Adaptive: try increasing levels until convergence
@@ -1156,14 +1360,10 @@
                           (tensor/norm1 (tensor/subtract result prev-result)))]
                (<= diff tolerance)))
            result
-
            ;; Max level reached
-           (>= current-level 5)
-           result
-
+           (>= current-level 5) result
            ;; Try next level
-           :else
-           (recur (inc current-level) result)))))))
+           :else (recur (inc current-level) result)))))))
 
 (s/fdef tanh-sinh-integration
   :args (s/cat :number->tensor ::number->tensor
@@ -1231,7 +1431,9 @@
                           :or    {cc-points     17
                                   accu          m/dbl-close
                                   iter-interval [1 10]}}]
-   (let [half-sum (* 0.5 (+ a b))
+   (let [a (double a)
+         b (double b)
+         half-sum (* 0.5 (+ a b))
          half-diff (* 0.5 (- b a))
          tolerance (adjust-accu-gk accu)
          [min-iter max-iter] iter-interval]
@@ -1258,14 +1460,10 @@
                           (tensor/norm1 (tensor/subtract result prev-result)))]
                (<= diff tolerance)))
            result
-
            ;; Max iterations
-           (>= iter max-iter)
-           result
-
+           (>= iter max-iter) result
            ;; Next nested level (n -> 2n-1)
-           :else
-           (recur (dec (* 2 n)) (inc iter) result)))))))
+           :else (recur (dec (* 2 n)) (inc iter) result)))))))
 
 (s/fdef clenshaw-curtis-integration
   :args (s/cat :number->tensor ::number->tensor
@@ -1338,7 +1536,7 @@
    (let [dims (count num-intervals)
          intervals-vec (vec num-intervals)
          ;; Compute volume of integration region
-         volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
+         volume (reduce * 1.0 (map (fn [[a b]] (- (double b) a)) intervals-vec))
          ;; Generate sample points
          sample-fn (if seed
                      #(random/bind-seed seed
@@ -1347,26 +1545,33 @@
          ;; Transform [0,1]^d to actual intervals
          transform-point (fn [u]
                            (mapv (fn [ui [a b]]
-                                   (+ a (* (- b a) ui)))
+                                   (let [a (double a)
+                                         b (double b)]
+                                     (+ a (* (- b a) ui))))
                              u intervals-vec))
          ;; Collect samples and evaluate
          points (repeatedly samples sample-fn)
          transformed (map transform-point points)
          values (mapv v->tensor transformed)
          n (double samples)
-         ;; Compute mean
-         sum (reduce tensor/add values)
-         mean (tensor/multiply (/ n) sum)
-         ;; Compute variance (for scalar results)
-         variance (when (number? (first values))
-                    (/ (reduce + (map #(m/sq (- % mean)) values))
+         scalar? (number? (first values))
+         sum (if scalar?
+               (reduce + 0.0 values)
+               (reduce tensor/add values))
+         mean (if scalar?
+                (* (/ n) (double sum))
+                (tensor/multiply (/ n) sum))
+         variance (when scalar?
+                    (/ (reduce + (map #(m/sq (- (double %) mean)) values))
                       (dec n)))
          std-error (if variance
-                     (* volume (m/sqrt (/ variance n)))
+                     (* volume (m/sqrt (/ (double variance) n)))
                      m/nan)]
      {::samples        samples
       ::standard-error std-error
-      ::value          (tensor/multiply volume mean)})))
+      ::value          (if scalar?
+                         (* (double volume) mean)
+                         (tensor/multiply volume mean))})))
 
 (s/fdef monte-carlo-integration
   :args (s/cat :v->tensor ::v->tensor
@@ -1408,30 +1613,34 @@
         ::anomalies/message  (str "Halton sequences only support up to 100 dimensions. Dims: "
                                dims)}
        (let [intervals-vec (vec num-intervals)
-             volume (reduce * 1.0 (map (fn [[a b]] (- b a)) intervals-vec))
+             volume (reduce * 1.0 (map (fn [[a b]] (- (double b) (double a))) intervals-vec))
              transform-point (fn [u]
                                (mapv (fn [ui [a b]]
-                                       (+ a (* (- b a) ui)))
+                                       (let [a (double a) b (double b)]
+                                         (+ a (* (- b a) ui))))
                                  u intervals-vec))
              points (map #(halton-point (+ skip %) dims) (range samples))
              transformed (map transform-point points)
              values (mapv v->tensor transformed)
              n (double samples)
-             sum (reduce tensor/add values)
-             mean (tensor/multiply (/ n) sum)
-             variance (when (number? (first values))
-                        (/ (reduce + (map #(m/sq (- % mean)) values))
+             scalar? (number? (first values))
+             sum (if scalar?
+                   (reduce + 0.0 values)
+                   (reduce tensor/add values))
+             mean (if scalar?
+                    (* (/ n) (double sum))
+                    (tensor/multiply (/ n) sum))
+             variance (when scalar?
+                        (/ (reduce + (map #(m/sq (- (double %) (double mean))) values))
                           (dec n)))
              std-error (if variance
-                         (* volume (m/sqrt (/ variance n)))
+                         (* volume (m/sqrt (/ (double variance) n)))
                          m/nan)]
          {::samples        samples
           ::standard-error std-error
-          ::value          (tensor/multiply volume mean)})))))
-
-(s/def ::skip ::m/long-non-)
-
-(s/def ::quasi-monte-carlo-opts (s/? (s/keys :opt [::samples ::skip])))
+          ::value          (if scalar?
+                             (* (double volume) (double mean))
+                             (tensor/multiply volume mean))})))))
 
 (s/fdef quasi-monte-carlo-integration
   :args (s/cat :v->tensor ::v->tensor
@@ -1510,23 +1719,22 @@
       (fn [v] (reduce * (map #(m/exp (- (m/sq %))) v)))
       (repeat 8 [-3.0 3.0])
       {::sparse-grid-level 4})"
-  ([v->tensor num-intervals]
-   (sparse-grid-integration v->tensor num-intervals {}))
+  ([v->tensor num-intervals] (sparse-grid-integration v->tensor num-intervals {}))
   ([v->tensor num-intervals {::keys [sparse-grid-level]
                              :or    {sparse-grid-level 4}}]
    (let [dim (count num-intervals)
          intervals-vec (vec num-intervals)
          ;; Functions to map between [-1,1] and actual intervals
          from-ref (fn [t i]
-                    (let [[a b] (nth intervals-vec i)]
+                    (let [[a b] (nth intervals-vec i)
+                          a (double a)
+                          b (double b)]
                       (* 0.5 (+ (* (- b a) t) a b))))
-         jacobian (reduce * (map (fn [[a b]] (* 0.5 (- b a))) intervals-vec))
+         jacobian (reduce * (map (fn [[a b]] (* 0.5 (- (double b) a))) intervals-vec))
          ;; Generate Smolyak indices
          indices (smolyak-indices dim sparse-grid-level)]
-     (tensor/multiply
-       jacobian
-       (reduce
-         tensor/add
+     (tensor/multiply jacobian
+       (reduce tensor/add
          (for [idx indices]
            (let [coeff (smolyak-coefficient idx dim sparse-grid-level)
                  ;; Generate tensor product of 1D rules
@@ -1535,15 +1743,12 @@
                  ;; Cartesian product of all point combinations
                  all-points (apply combo/cartesian-product points-per-dim)
                  all-weights (apply combo/cartesian-product weights-per-dim)]
-             (tensor/multiply
-               coeff
-               (reduce
-                 tensor/add
-                 (map (fn [pt wts]
-                        (let [x (vec (map-indexed #(from-ref %2 %1) pt))
-                              w (reduce * wts)]
-                          (tensor/multiply w (v->tensor x))))
-                   all-points all-weights))))))))))
+             (tensor/multiply coeff (reduce tensor/add
+                                      (map (fn [pt wts]
+                                             (let [x (vec (map-indexed #(from-ref %2 %1) pt))
+                                                   w (reduce * wts)]
+                                               (tensor/multiply w (v->tensor x))))
+                                        all-points all-weights))))))))))
 
 (s/fdef sparse-grid-integration
   :args (s/cat :v->tensor ::v->tensor
@@ -1608,6 +1813,8 @@
      ::anomalies/fn       (var oscillatory-integration)
      ::anomalies/message  "::omega is required for oscillatory-integration"}
     (let [omega (double omega)
+          a (double a)
+          b (double b)
           n (if (even? points) (inc points) points)         ; Need odd for Filon
           h (/ (- b a) (dec n))
           xs (mapv #(+ a (* % h)) (range n))
@@ -1642,20 +1849,18 @@
           sin-a (m/sin (* omega a))
           sin-b (m/sin (* omega b))]
       (case oscillation-type
-        :sin (tensor/multiply h
-               (tensor/add
-                 (tensor/multiply alpha
-                   (tensor/subtract (tensor/multiply cos-b fb)
-                     (tensor/multiply cos-a fa)))
-                 (tensor/multiply (* beta 2.0) sum-odd)
-                 (tensor/multiply gamma sum-even)))
-        :cos (tensor/multiply h
-               (tensor/add
-                 (tensor/multiply alpha
-                   (tensor/subtract (tensor/multiply sin-b fb)
-                     (tensor/multiply sin-a fa)))
-                 (tensor/multiply (* beta 2.0) sum-odd)
-                 (tensor/multiply gamma sum-even)))))))
+        :sin (tensor/multiply h (tensor/add
+                                  (tensor/multiply alpha
+                                    (tensor/subtract (tensor/multiply cos-a fa)
+                                      (tensor/multiply cos-b fb)))
+                                  (tensor/multiply beta sum-even)
+                                  (tensor/multiply gamma sum-odd)))
+        :cos (tensor/multiply h (tensor/add
+                                  (tensor/multiply alpha
+                                    (tensor/subtract (tensor/multiply sin-b fb)
+                                      (tensor/multiply sin-a fa)))
+                                  (tensor/multiply beta sum-even)
+                                  (tensor/multiply gamma sum-odd)))))))
 
 (s/fdef oscillatory-integration
   :args (s/cat :number->tensor ::number->tensor
