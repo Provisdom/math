@@ -290,8 +290,7 @@
     `(multiplicative-generalized-continued-fraction [1 3 6 8] [2 3 2 6])`
     => numerically stable convergents"
   ([a-term-series b-term-series]
-   (multiplicative-generalized-continued-fraction
-     a-term-series b-term-series {}))
+   (multiplicative-generalized-continued-fraction a-term-series b-term-series {}))
   ([a-term-series b-term-series {::keys [rel-accu] :or {rel-accu 1e-50}}]
    (if (empty? a-term-series)
      '()
@@ -522,7 +521,8 @@
     `::max-iter` - maximum number of output terms (default `20`)
 
   Example:
-    `(power-series-compose [1 1 1] [0 2])` ; `f(x) = 1 + x + x^2`, `g(x) = 2x`, `f(2x) = 1 + 2x + 4x^2`
+    `(power-series-compose [1 1 1] [0 2])` ; `f(x) = 1 + x + x^2`, `g(x) = 2x`,
+                                             `f(2x) = 1 + 2x + 4x^2`
     => `[1.0 2.0 4.0]`"
   ([outer-coeffs inner-coeffs]
    (power-series-compose outer-coeffs inner-coeffs {}))
@@ -578,8 +578,7 @@
    (let [cs (vec (take max-iter coeffs))
          a0 (nth cs 0 0)
          a1 (nth cs 1 0)]
-     (cond
-       (not (m/roughly? a0 0.0 m/quad-close))
+     (cond (not (m/roughly? a0 0.0 m/quad-close))
        {::anomalies/category ::anomalies/incorrect
         ::anomalies/fn       (var power-series-inverse)
         ::anomalies/message  "First coefficient must be 0 for power series inverse"}
@@ -895,9 +894,7 @@
        (error-pred sum i val)
        {::anomalies/category ::anomalies/no-solve
         ::anomalies/fn       (var multiplicative-sum-convergent-series)
-        ::anomalies/message  (str "Error predicate true. "
-                               " Sum: " sum
-                               " Iteration: " i
+        ::anomalies/message  (str "Error predicate true. Sum: " sum " Iteration: " i
                                " Next value: " val)}
 
        (converged-pred sum i val) (* sum val)

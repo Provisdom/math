@@ -3,9 +3,10 @@
     [provisdom.math.combinatorics :as cm]
     [provisdom.math.core :as m]
     [provisdom.math.series :as series]
-    [provisdom.test.core :as t]))
+    [provisdom.test.core :as t]
+    [provisdom.utility-belt.anomalies :as anomalies]))
 
-;;10 seconds
+;;8 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -57,48 +58,6 @@
       (vec (series/multiplicative-generalized-continued-fraction
              [1.0 3.0 6.0 8.0] [2.0 3.0 2.0 6.0])))))
 
-;;;SUM CONVERGENT SERIES
-(defn sin-series
-  [x]
-  (map #(* (/ (cm/factorial (inc (* 2 %))))
-          x
-          (m/pow (- (m/sq x)) %))
-    (range)))
-
-(t/deftest sum-convergent-series-test
-  (t/with-instrument `series/sum-convergent-series
-    (t/is-spec-check series/sum-convergent-series))
-  (t/with-instrument :all
-    (t/is= 11.12 (series/sum-convergent-series [1.02 3.05 7.05]))
-    (t/is= 11.120000000000001
-      (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? false}))
-    (t/is= 11.0 (series/sum-convergent-series [1 3 7]))
-    ;;Math 0.0000
-    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series m/PI)) :tolerance 1e-14)
-    ;;Math -1.0000
-    (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 1.5 m/PI))) :tolerance 1e-12)
-    ;;Math 0.0000
-    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 2 m/PI))) :tolerance 1e-12)
-    ;;Math 1.0000
-    (t/is-approx= 1.0 (series/sum-convergent-series (sin-series (* 2.5 m/PI))) :tolerance 1e-12)
-    ;;Math 0.0000
-    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 3.0 m/PI))) :tolerance 1e-12)
-    ;;Math -1.0000
-    (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 3.5 m/PI))) :tolerance 1e-12)
-    (t/is= 0.9999999999999877
-      (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))
-    ;; Harmonic series diverges - should return anomaly
-    (let [harmonic (map #(/ 1.0 (inc %)) (range))
-          result (series/sum-convergent-series harmonic {::series/max-iter 100})]
-      (t/is (map? result)))))
-
-(t/deftest multiplicative-sum-convergent-series-test
-  (t/with-instrument `series/multiplicative-sum-convergent-series
-    (t/is-spec-check series/multiplicative-sum-convergent-series))
-  (t/with-instrument :all
-    (t/is= 21.93255 (series/multiplicative-sum-convergent-series [1.02 3.05 7.05]))
-    (t/is= 21.0 (series/multiplicative-sum-convergent-series [1 3 7]))))
-
 ;;;SERIES ACCELERATION
 (t/deftest aitken-accelerate-test
   (t/with-instrument `series/aitken-accelerate
@@ -116,13 +75,12 @@
               0.6931668512550866 0.6931303775344023]
         accelerated))
     ;; Verify acceleration is closer to true value than naive sum
-    (let [ln2 0.6931471805599453
-          terms (map #(/ (m/pow -1.0 %) (inc %)) (range 50))
+    (let [terms (map #(/ (m/pow -1.0 %) (inc %)) (range 50))
           partial-sums (vec (reductions + terms))
           naive-50 (last partial-sums)
           aitken-result (last (series/aitken-accelerate partial-sums))]
-      (t/is (< (m/abs (- aitken-result ln2)) (m/abs (- naive-50 ln2))))
-      (t/is-approx= ln2 naive-50 :tolerance 0.02))))
+      (t/is= 0.6931461504749081 aitken-result)
+      (t/is= 0.6832471605759183 naive-50))))
 
 (t/deftest wynn-epsilon-test
   (t/with-instrument `series/wynn-epsilon
@@ -183,29 +141,29 @@
   (t/with-instrument `series/power-series-inverse
     (t/is-spec-check series/power-series-inverse))
   (t/with-instrument :all
-    ;; Inverse of f(x)=x should be g(x)=x
-    (let [result (series/power-series-inverse [0 1])]
-      (t/is (vector? result))
-      (t/is (m/roughly? 0.0 (first result) 1e-10))
-      (t/is (m/roughly? 1.0 (second result) 1e-10)))
+    ;; Inverse of f(x)=x should be g(x)=x (padded to max-iter)
+    (t/is= [0.0 1 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0 -0.0
+            -0.0 -0.0]
+      (series/power-series-inverse [0 1]))
     ;; Invalid input: first coeff not 0
-    (t/is (map? (series/power-series-inverse [1 1])))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/fn       #'series/power-series-inverse
+            ::anomalies/message  "First coefficient must be 0 for power series inverse"}
+      (series/power-series-inverse [1 1]))
     ;; Invalid input: second coeff is 0
-    (t/is (map? (series/power-series-inverse [0 0 1])))
+    (t/is= {::anomalies/category ::anomalies/incorrect
+            ::anomalies/fn       #'series/power-series-inverse
+            ::anomalies/message  "Second coefficient must be non-zero for power series inverse"}
+      (series/power-series-inverse [0 0 1]))
     ;; f(x) = x + x² has inverse related to Catalan numbers
     (let [f-coeffs [0 1 1 0 0 0 0 0]
           g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 8})]
-      (t/is (vector? g-coeffs))
-      (t/is (m/roughly? 0.0 (nth g-coeffs 0) 1e-10))
-      (t/is (m/roughly? 1.0 (nth g-coeffs 1) 1e-10))
-      (t/is (m/roughly? -1.0 (nth g-coeffs 2) 1e-10))
-      (t/is (m/roughly? 2.0 (nth g-coeffs 3) 1e-10)))
+      (t/is= [0.0 1 -1.0 2.0 -5.0 14.0 -42.0 132.0] g-coeffs))
     ;; Verify composition f(g(x)) ≈ x for first few terms
     (let [f-coeffs [0 1 1]
           g-coeffs (series/power-series-inverse f-coeffs {::series/max-iter 4})
           composed (series/power-series-compose f-coeffs g-coeffs)]
-      (t/is (m/roughly? 0.0 (nth composed 0) 1e-8))
-      (t/is (m/roughly? 1.0 (nth composed 1) 1e-8)))))
+      (t/is= [0.0 1.0 0.0] composed))))
 
 (t/deftest radius-of-convergence-test
   (t/with-instrument `series/radius-of-convergence
@@ -219,18 +177,18 @@
     ;; Alternating signs - should converge for |x| < 1
     (let [alt-coeffs (mapv #(* (m/pow -1 %) 1.0) (range 20))
           result (series/radius-of-convergence alt-coeffs)]
-      (t/is-approx= 1.0 (::series/combined-estimate result) :tolerance 0.01))
+      (t/is= 1.0 (::series/combined-estimate result)))
     ;; Coefficients that grow - smaller radius
     (let [growing-coeffs (mapv double (range 1 11))
           result (series/radius-of-convergence growing-coeffs)]
-      (t/is (< (::series/combined-estimate result) 2.0)))
+      (t/is= 0.7742636826811271 (::series/combined-estimate result)))
     ;; Geometric coefficients 1,r,r^2,... - radius = 1/r
     (let [r 0.5
           geometric (mapv #(m/pow r %) (range 15))
           result (series/radius-of-convergence geometric)]
-      (t/is-approx= 2.0 (::series/combined-estimate result) :tolerance 0.1))))
+      (t/is= 2.0 (::series/combined-estimate result)))))
 
-;;;PADÉ APPROXIMANTS
+;;;PADE APPROXIMANTS
 (t/deftest pade-approximant-test
   (t/with-instrument `series/pade-approximant
     (t/is-spec-check series/pade-approximant))
@@ -251,23 +209,67 @@
   (t/with-instrument :all
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120)]
           pade22 (series/pade-approximant e-coeffs 2 2)]
-      ;; [2/2] Padé at x=1 should approximate e
-      (t/is (m/roughly? m/E (series/evaluate-pade pade22 1.0) 0.01))
+      ;; [2/2] Padé at x=1 approximates e to algorithmic precision (~4e-3 error for 5 terms)
+      (t/is= 2.7142857142857144 (series/evaluate-pade pade22 1.0))
       ;; At x=0, should equal 1
       (t/is= 1.0 (series/evaluate-pade pade22 0.0)))
     ;; Higher-order Padé approximants
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720)]
           pade22 (series/pade-approximant e-coeffs 2 2)]
-      (t/is-approx= m/E (series/evaluate-pade pade22 1.0) :tolerance 0.01)
-      (t/is-approx= (m/exp 2.0) (series/evaluate-pade pade22 2.0) :tolerance 0.5))
+      (t/is= 2.7142857142857144 (series/evaluate-pade pade22 1.0))
+      (t/is= 6.999999999999996 (series/evaluate-pade pade22 2.0)))
     ;; [3/2] Padé - asymmetric
     (let [e-coeffs [1 1 0.5 (/ 6) (/ 24) (/ 120) (/ 720) (/ 5040)]
           pade32 (series/pade-approximant e-coeffs 3 2)]
       (t/is= 4 (count (::series/numerator pade32)))
       (t/is= 3 (count (::series/denominator pade32)))
-      (t/is-approx= m/E (series/evaluate-pade pade32 1.0) :tolerance 0.001))))
+      (t/is= 2.717948717948718 (series/evaluate-pade pade32 1.0)))))
 
-;;;IMPROVED SUMMATION
+;;;SUMMATION
+(defn sin-series
+  [x]
+  (map #(* (/ (cm/factorial (inc (* 2 %))))
+          x
+          (m/pow (- (m/sq x)) %))
+    (range)))
+
+(t/deftest sum-convergent-series-test
+  (t/with-instrument `series/sum-convergent-series
+    (t/is-spec-check series/sum-convergent-series))
+  (t/with-instrument :all
+    (t/is= 11.12 (series/sum-convergent-series [1.02 3.05 7.05]))
+    (t/is= 11.120000000000001
+      (series/sum-convergent-series [1.02 3.05 7.05] {::series/kahan? false}))
+    (t/is= 11.0 (series/sum-convergent-series [1 3 7]))
+    ;;Math 0.0000
+    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series m/PI)) :tolerance 1e-14)
+    ;;Math -1.0000
+    (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 1.5 m/PI))) :tolerance 1e-12)
+    ;;Math 0.0000
+    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 2 m/PI))) :tolerance 1e-12)
+    ;;Math 1.0000
+    (t/is-approx= 1.0 (series/sum-convergent-series (sin-series (* 2.5 m/PI))) :tolerance 1e-12)
+    ;;Math 0.0000
+    (t/is-approx= 0.0 (series/sum-convergent-series (sin-series (* 3.0 m/PI))) :tolerance 1e-12)
+    ;;Math -1.0000
+    (t/is-approx= -1.0 (series/sum-convergent-series (sin-series (* 3.5 m/PI))) :tolerance 1e-12)
+    (t/is= 0.9999999999999877
+      (series/sum-convergent-series (sin-series (* 2.5 m/PI)) {::series/kahan? false}))
+    ;; Harmonic series diverges - should return anomaly
+    (let [harmonic (map #(/ 1.0 (inc %)) (range))
+          result (series/sum-convergent-series harmonic
+                   {::series/error-pred (fn [_sum index _term] (> index 100))})]
+      (t/is= ::anomalies/no-solve (::anomalies/category result))
+      (t/is= #'series/sum-convergent-series (::anomalies/fn result)))))
+
+(t/deftest multiplicative-sum-convergent-series-test
+  (t/with-instrument `series/multiplicative-sum-convergent-series
+    (t/is-spec-check series/multiplicative-sum-convergent-series))
+  (t/with-instrument :all
+    (t/is= 21.93255 (series/multiplicative-sum-convergent-series [1.02 3.05 7.05]))
+    (t/is= 21.0 (series/multiplicative-sum-convergent-series [1 3 7]))))
+
+;;;IMPROVED SUMMATION METHODS
 (t/deftest neumaier-sum-test
   (t/with-instrument `series/neumaier-sum
     (t/is-spec-check series/neumaier-sum))
@@ -297,16 +299,21 @@
     ;; Geometric series converges to 2
     (let [terms (map #(m/pow 0.5 %) (range))
           result (series/sum-with-diagnostics terms)]
-      (t/is (::series/converged? result))
-      ;;Math 2.0000
-      (t/is (m/roughly? 2.0 (::series/sum result) 1e-10))
-      (t/is (pos? (::series/iterations result))))
+      (t/is= {::series/converged?       true
+              ::series/estimated-error 1.5407439555097887E-33
+              ::series/final-term      1.5407439555097887E-33
+              ::series/iterations      110
+              ::series/sum             2.0}
+        result))
     ;; Finite sequence
     (let [result (series/sum-with-diagnostics [1 2 3])]
-      (t/is (::series/converged? result))
-      (t/is= 6.0 (::series/sum result)))
+      (t/is= {::series/converged?       true
+              ::series/estimated-error 0.0
+              ::series/final-term      0.0
+              ::series/iterations      3
+              ::series/sum             6.0}
+        result))
     ;; Harmonic series diverges - should report non-convergence
     (let [harmonic (map #(/ 1.0 (inc %)) (range))
           result (series/sum-with-diagnostics harmonic {::series/max-iter 100})]
       (t/is-not (::series/converged? result)))))
-
