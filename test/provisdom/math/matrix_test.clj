@@ -7,7 +7,7 @@
     [provisdom.test.core :as t]
     [provisdom.utility-belt.anomalies :as anom]))
 
-;;43 seconds
+;;50 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -62,6 +62,36 @@
     (t/is-not (mx/matrix-finite? [[m/nan]]))
     (t/is-not (mx/matrix-finite? [[m/inf+]]))
     (t/is (mx/matrix-finite? [[0.0] [0.0]]))))
+
+(t/deftest all-matrix-values?-test
+  (t/with-instrument `mx/all-matrix-values?
+    (t/is-spec-check mx/all-matrix-values?))
+  (t/with-instrument :all
+    (t/is (mx/all-matrix-values? [[]] 0.0 1.0))
+    (t/is (mx/all-matrix-values? [[1.0 2.0] [3.0 4.0]] 0.0 5.0))
+    (t/is (mx/all-matrix-values? [[1.0 2.0] [3.0 4.0]] 1.0 4.0))
+    (t/is-not (mx/all-matrix-values? [[1.0 2.0] [3.0 4.0]] 2.0 4.0))
+    (t/is-not (mx/all-matrix-values? [[1.0 2.0] [3.0 4.0]] 0.0 3.0))))
+
+(t/deftest matrix-size?-test
+  (t/with-instrument `mx/matrix-size?
+    (t/is-spec-check mx/matrix-size?))
+  (t/with-instrument :all
+    (t/is (mx/matrix-size? [[1 2] [3 4]] 2 2))
+    (t/is (mx/matrix-size? [[1 2 3]] 1 3))
+    (t/is-not (mx/matrix-size? [[1 2]] 2 2))
+    (t/is-not (mx/matrix-size? [[1 2] [3 4]] 1 2))
+    (t/is (mx/matrix-size? [[]] 0 0))))
+
+(t/deftest matrix-min-size?-test
+  (t/with-instrument `mx/matrix-min-size?
+    (t/is-spec-check mx/matrix-min-size?))
+  (t/with-instrument :all
+    (t/is (mx/matrix-min-size? [[1 2] [3 4]] 2 2))
+    (t/is (mx/matrix-min-size? [[1 2] [3 4]] 1 1))
+    (t/is-not (mx/matrix-min-size? [[1 2]] 2 2))
+    (t/is (mx/matrix-min-size? [[1 2 3] [4 5 6]] 2 2))
+    (t/is-not (mx/matrix-min-size? [[1 2]] 1 3))))
 
 (t/deftest matrix-finite-non-?-test
   (t/with-instrument `mx/matrix-finite-non-?
@@ -714,11 +744,11 @@
       (mx/some-kv (fn [row column number]
                     (> (+ row column) number))
         [[1.0 0.5] [2.0 4.0]]
-        {::mx/by-row false}))))
+        {::mx/by-row? false}))))
 
 (t/deftest ereduce-kv-test
   (t/with-instrument `mx/ereduce-kv
-    ;;:num-tests 250; fspec with multiple matrix arities adds generator complexity
+    ;;fspec with multiple matrix arities adds generator complexity -- ME
     (t/is-spec-check mx/ereduce-kv {:num-tests 250}))
   (t/with-instrument :all
     (t/is= 29.9
@@ -846,6 +876,30 @@
     (t/is= ::anom/incorrect (::anom/category (mx/insert-column [[1]] 2 [2])))
     (t/is= [[8.0 1.0 0.5] [9.0 2.0 4.0]] (mx/insert-column [[1.0 0.5] [2.0 4.0]] 0 [8.0 9.0]))))
 
+(t/deftest remove-row-test
+  (t/with-instrument `mx/remove-row
+    (t/is-spec-check mx/remove-row))
+  (t/with-instrument :all
+    (t/is= [[]] (mx/remove-row [[]] 0))
+    (t/is= [[]] (mx/remove-row [[1]] 0))
+    (t/is= [[1]] (mx/remove-row [[1]] 1))
+    (t/is= [[3 4]] (mx/remove-row [[1 2] [3 4]] 0))
+    (t/is= [[1 2]] (mx/remove-row [[1 2] [3 4]] 1))
+    (t/is= [[1 2] [3 4]] (mx/remove-row [[1 2] [3 4]] 2))
+    (t/is= [[1 2] [5 6]] (mx/remove-row [[1 2] [3 4] [5 6]] 1))))
+
+(t/deftest remove-column-test
+  (t/with-instrument `mx/remove-column
+    (t/is-spec-check mx/remove-column))
+  (t/with-instrument :all
+    (t/is= [[]] (mx/remove-column [[]] 0))
+    (t/is= [[]] (mx/remove-column [[1]] 0))
+    (t/is= [[1]] (mx/remove-column [[1]] 1))
+    (t/is= [[2] [4]] (mx/remove-column [[1 2] [3 4]] 0))
+    (t/is= [[1] [3]] (mx/remove-column [[1 2] [3 4]] 1))
+    (t/is= [[1 2] [3 4]] (mx/remove-column [[1 2] [3 4]] 2))
+    (t/is= [[1 3] [4 6]] (mx/remove-column [[1 2 3] [4 5 6]] 1))))
+
 (t/deftest update-row-test
   (t/with-instrument `mx/update-row
     (t/is-spec-check mx/update-row))
@@ -893,30 +947,6 @@
     (t/is= [[2.0 0.5] [2.0 6.0]]
       (mx/update-diagonal [[1.0 0.5] [2.0 4.0]] (fn [row number]
                                                   (+ row number 1))))))
-
-(t/deftest remove-row-test
-  (t/with-instrument `mx/remove-row
-    (t/is-spec-check mx/remove-row))
-  (t/with-instrument :all
-    (t/is= [[]] (mx/remove-row [[]] 0))
-    (t/is= [[]] (mx/remove-row [[1]] 0))
-    (t/is= [[1]] (mx/remove-row [[1]] 1))
-    (t/is= [[3 4]] (mx/remove-row [[1 2] [3 4]] 0))
-    (t/is= [[1 2]] (mx/remove-row [[1 2] [3 4]] 1))
-    (t/is= [[1 2] [3 4]] (mx/remove-row [[1 2] [3 4]] 2))
-    (t/is= [[1 2] [5 6]] (mx/remove-row [[1 2] [3 4] [5 6]] 1))))
-
-(t/deftest remove-column-test
-  (t/with-instrument `mx/remove-column
-    (t/is-spec-check mx/remove-column))
-  (t/with-instrument :all
-    (t/is= [[]] (mx/remove-column [[]] 0))
-    (t/is= [[]] (mx/remove-column [[1]] 0))
-    (t/is= [[1]] (mx/remove-column [[1]] 1))
-    (t/is= [[2] [4]] (mx/remove-column [[1 2] [3 4]] 0))
-    (t/is= [[1] [3]] (mx/remove-column [[1 2] [3 4]] 1))
-    (t/is= [[1 2] [3 4]] (mx/remove-column [[1 2] [3 4]] 2))
-    (t/is= [[1 3] [4 6]] (mx/remove-column [[1 2 3] [4 5 6]] 1))))
 
 (t/deftest concat-rows-test
   (t/with-instrument `mx/concat-rows
@@ -1030,8 +1060,8 @@
 
 (t/deftest kronecker-product-test
   (t/with-instrument `mx/kronecker-product
-    ;;:num-tests 300; variadic matrix args with limited generator (1-2 matrices)
-    (t/is-spec-check mx/kronecker-product {:num-tests 300}))
+    ;;variadic matrix args with limited generator (1-2 matrices) -- ME
+    (t/is-spec-check mx/kronecker-product {:num-tests 350}))
   (t/with-instrument :all
     (t/is= [[]] (mx/kronecker-product))
     (t/is= [[]] (mx/kronecker-product [[]]))

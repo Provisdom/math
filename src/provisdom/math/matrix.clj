@@ -30,8 +30,8 @@
   deserialize-lower-triangular-matrix deserialize-symmetric-matrix
   deserialize-upper-triangular-matrix diagonal diagonal-matrix diagonal-matrix?
   ecount-of-symmetric-or-triangular-matrix ecount-of-symmetric-or-triangular-matrix-without-diag
-  get-slices-as-matrix lower-triangular-matrix? matrix-finite-non-? matrix-finite? matrix-prob?
-  matrix? mx* row-matrix row-matrix? rows size-of-symmetric-or-triangular-matrix
+  get-slices-as-matrix lower-triangular-matrix? matrix-finite-non-? matrix-finite? matrix-num?
+  matrix-prob? matrix? mx* row-matrix row-matrix? rows size-of-symmetric-or-triangular-matrix
   size-of-symmetric-or-triangular-matrix-without-diag some-kv square-matrix?
   symmetric-matrix-by-averaging symmetric-matrix-finite-non-? symmetric-matrix? to-matrix transpose
   upper-triangular-matrix?)
@@ -114,6 +114,16 @@
        (fn [i]
          (gen/vector
            (gen/vector (s/gen ::m/number) i)
+           1
+           mdl)))))
+
+(s/def ::matrix-num
+  (s/with-gen
+    #(matrix-num? %)
+    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
+       (fn [i]
+         (gen/vector
+           (gen/vector (s/gen ::m/num) i)
            1
            mdl)))))
 
@@ -288,16 +298,6 @@
   :args (s/cat :x any?)
   :ret boolean?)
 
-(s/def ::matrix-num
-  (s/with-gen
-    matrix-num?
-    #(gen/bind (gen/large-integer* {:min 0 :max mdl})
-       (fn [i]
-         (gen/vector
-           (gen/vector (s/gen ::m/num) i)
-           1
-           mdl)))))
-
 (defn matrix-finite?
   "Returns `true` if `x` is a valid matrix containing only finite numbers.
 
@@ -333,6 +333,10 @@
     #(every? (fn [e] (and (>= e m1) (<= e m2))) %)
     x))
 
+(s/fdef all-matrix-values?
+  :args (s/cat :x ::matrix-finite :m1 ::m/finite :m2 ::m/finite)
+  :ret boolean?)
+
 (defn matrix-size?
   "Returns `true` if the matrix has exactly the specified dimensions.
 
@@ -344,6 +348,10 @@
   (and (= (rows x) row-count)
     (= (columns x) column-count)))
 
+(s/fdef matrix-size?
+  :args (s/cat :x ::matrix :row-count ::rows :column-count ::columns)
+  :ret boolean?)
+
 (defn matrix-min-size?
   "Returns `true` if the matrix has at least the specified dimensions.
 
@@ -354,6 +362,10 @@
   [x min-rows min-columns]
   (and (>= (rows x) min-rows)
     (>= (columns x) min-columns)))
+
+(s/fdef matrix-min-size?
+  :args (s/cat :x ::matrix :min-rows ::rows :min-columns ::columns)
+  :ret boolean?)
 
 (defmacro matrix-finite-spec
   [{m1          :min
@@ -2172,8 +2184,8 @@
 (defn round-roughly-zero-rows
   "Rounds matrix rows that are approximately zero to exact zeros.
   
-  Any row where all elements are within the accuracy tolerance of zero
-  is replaced with a row of exact zeros.
+  Any row where all elements are within the accuracy tolerance of zero is replaced with a row of
+  exact zeros.
   
   Examples:
     (round-roughly-zero-rows [[1e-10 2e-10] [1 2]] 1e-6) ;=> [[0.0 0.0] [1 2]]"
@@ -2191,8 +2203,8 @@
 (defn round-roughly-zero-columns
   "Rounds matrix columns that are approximately zero to exact zeros.
   
-  Any column where all elements are within the accuracy tolerance of zero
-  is replaced with a column of exact zeros.
+  Any column where all elements are within the accuracy tolerance of zero is replaced with a column
+  of exact zeros.
   
   Examples:
     (round-roughly-zero-columns [[1e-10 1] [2e-10 2]] 1e-6) ;=> [[0.0 1] [0.0 2]]"
