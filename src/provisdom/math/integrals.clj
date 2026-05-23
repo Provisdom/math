@@ -23,7 +23,9 @@
   - Endpoint singularities: `tanh-sinh-integration` - handles 1/sqrt(x), log(x)
   - Need endpoint values in approximation: `clenshaw-curtis-integration`
   - Highly oscillatory (large omega): `oscillatory-integration`
-  - Known interior singularities: `integration` with `::singularities` option
+  - Piecewise-smooth or known interior non-smoothness (step functions, mixture densities,
+    indicator-based integrands, kinks, integrable singularities): `integration` with
+    `::singularities` option — splits the interval and integrates each smooth piece
 
   **Multi-dimensional Integration:**
   - 2-4 dimensions, smooth: `rectangular-integration`
@@ -1030,14 +1032,21 @@
     `::iter-interval` - [min-iter max-iter] bounds (default `[10 1000]`)
     `::parallel?` - Use parallel processing (default `false`)
     `::points` - Quadrature points: 15, 21, 31, 41, 51, 61 (auto-selected by default)
-    `::singularities` - Known singularity/discontinuity locations to split at
+    `::singularities` - x-values where the integrand is non-smooth (jumps, kinks,
+                        mixture/indicator breakpoints, integrable singularities). The interval is
+                        split at these points and sub-integrals are summed, so each smooth piece
+                        converges fast — preventing adaptive quadrature from thrashing across the
+                        discontinuity. Use for piecewise-constant rate curves, step functions,
+                        mixture densities, and any 'piecewise-smooth with known breakpoints'
+                        integrand.
 
   Returns integral value or anomaly map if convergence fails.
 
   Examples:
     (integration #(* % %) [0 1])                        ;=> 0.33333... (x^2)
     (integration #(m/exp (- (* % %))) [m/inf- m/inf+])  ;=> ~1.77245 (sqrt(pi))
-    (integration f [-1 1] {::singularities [0]})        ;=> splits at discontinuity
+    (integration f [-1 1] {::singularities [0]})        ;=> splits at a jump/kink at 0
+    (integration step-fn [0 5] {::singularities [1 2 3 4]})  ;=> piecewise-constant integrand
 
   Known limitations: Very large finite intervals may lose precision due to floating-point limits.
   For such cases, increase `::points` or `::iter-interval`."
