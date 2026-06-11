@@ -332,7 +332,7 @@
     (multinomial-coefficient [3])      ;=> 1.0 (only one way)
     (multinomial-coefficient [1 1 1])  ;=> 6.0 (3! permutations)"
   [ks]
-  (let [n (reduce + 0 ks)]
+  (let [n (reduce +' 0 ks)]
     (/ (factorial n) (reduce * 1.0 (map factorial ks)))))
 
 (s/fdef multinomial-coefficient
@@ -358,7 +358,7 @@
         (if-not (seq remaining)
           acc
           (let [k (first remaining)
-                n+k (+ n k)]
+                n+k (+' n k)]
             (recur (rest remaining) n+k (+ acc (log-choose-k-from-n k n+k)))))))))
 
 (s/fdef log-multinomial-coefficient

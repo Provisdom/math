@@ -212,7 +212,7 @@
   (t/with-instrument `combo/log-multinomial-coefficient
     ;;:num-tests reduced; large k values in ::m/non- collections cause
     ;;log-choose-k-from-n direct summation to dominate runtime -- ME
-    (t/is-spec-check combo/log-multinomial-coefficient {:num-tests 100}))
+    (t/is-spec-check combo/log-multinomial-coefficient {:num-tests 200}))
   (t/with-instrument :all
     (t/is= 0.0 (combo/log-multinomial-coefficient [3]))
     ;;SciPy 4.0943
