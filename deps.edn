@@ -11,7 +11,7 @@
 
                                            provisdom/test
                                            {:git/url "https://github.com/Provisdom/test.git"
-                                            :git/sha "95d38491d70515d43e091908dcda9b17a4af61c2"}}}
+                                            :git/sha "edf9ed2a6d553c4da139dacb6763c7e3b4e903eb"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
