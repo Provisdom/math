@@ -359,10 +359,16 @@
   ([] (finite+-gen {}))
   ([{m2 :max, :or {m2 max-dbl}}]
    (let [long-max (min max-long (ceil' m2))
-         dbl-gen (finite-gen {:min tiny-dbl :max m2})]
-     (if (< long-max 1)
-       dbl-gen
-       (gen/one-of [dbl-gen (gen/large-integer* {:min 1 :max long-max})])))))
+         ;; gen/double* can emit 0.0 when :min is the denormal tiny-dbl together with a :max;
+         ;; map any non-positive draw up to the smallest positive double so output is finite+.
+         dbl-gen (gen/fmap (fn [x] (if (finite+? x) x tiny-dbl))
+                   (finite-gen {:min tiny-dbl :max m2}))]
+     (cond
+       (< long-max 1) dbl-gen
+       ;; gen/large-integer* overflows at the max-long boundary and emits 0 (not finite+);
+       ;; drop the upper bound there, matching the ::finite+ spec generator.
+       (>= long-max max-long) (gen/one-of [dbl-gen (gen/large-integer* {:min 1})])
+       :else (gen/one-of [dbl-gen (gen/large-integer* {:min 1 :max long-max})])))))
 
 (s/def ::nan-or-finite+
   (s/spec #(or (nan? %) (finite+? %))

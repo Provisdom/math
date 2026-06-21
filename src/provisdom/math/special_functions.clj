@@ -1068,7 +1068,7 @@
 
   Examples:
     (multivariate-log-gamma 2.0 1) => 0.0
-    (multivariate-log-gamma 2.0 2) => -0.12078223763524518"
+    (multivariate-log-gamma 2.0 2) => 0.4515827052894549"
   [a p]
   (+ (* m/log-pi 0.25 p (dec p))
     (apply + (map (fn [i]
@@ -1081,7 +1081,8 @@
                       #(gen/large-integer* {:min 0 :max 20})))
           (fn [{:keys [a p]}]
             (and (< p 1.0e7)                                ;speed
-              (or (m/nan? a) (> a (* 0.5 p))))))
+              ;; Γ_p(a) is defined for a > (p-1)/2 (the i=p term a+(1-p)/2 must be positive);
+              (or (m/nan? a) (> a (* 0.5 (dec p)))))))
   :ret ::m/non-inf-)
 
 ;;;BETA FUNCTIONS
@@ -1264,7 +1265,7 @@
   - I_c(x,y) = 1 - I_{1-c}(y,x)
 
   Examples:
-    (regularized-beta 0.5 2.0 3.0) => 0.875
+    (regularized-beta 0.5 2.0 3.0) => 0.6875
     (regularized-beta 0.0 2.0 3.0) => 0.0
     (regularized-beta 1.0 2.0 3.0) => 1.0"
   [c x y]
@@ -1300,14 +1301,31 @@
                        (drop 1 (range)))
             gcf (series/multiplicative-generalized-continued-fraction
                   a-series b-series)
-            sum (series/multiplicative-sum-convergent-series gcf)]
-        (if (anomalies/anomaly? sum)
-          m/nan
-          (m/div (m/exp (+ (* x (m/log c))
-                          (* y (m/log-inc (- c)))
-                          (- (m/log x))
-                          (- (log-beta x y))))
-            sum))))))
+            sum (series/multiplicative-sum-convergent-series gcf)
+            cf-result (if (anomalies/anomaly? sum)
+                        m/nan
+                        (m/div (m/exp (+ (* x (m/log c))
+                                        (* y (m/log-inc (- c)))
+                                        (- (m/log x))
+                                        (- (log-beta x y))))
+                          sum))]
+        (if (and (m/finite? cf-result) (<= -1.0e-9 cf-result) (<= cf-result (+ 1.0 1.0e-9)))
+          (m/clamp cf-result 0.0 1.0)
+          ;; The continued fraction loses accuracy and returns NaN or garbage when both x and y are
+          ;; very large and c is near the mean. There Beta(x,y) approaches Normal(x/(x+y),
+          ;; xy/((x+y)^2 (x+y+1))) with negligible skew, so use the normal-approximation CDF.
+          (let [s (+ x y)
+                mean (m/div x s)
+                ;; sd in log-space: the direct `(* x y)` and `(* s s (inc s))` both overflow to +Inf
+                ;; at extreme shapes (giving Inf/Inf = NaN, then a NaN z into cdf-standard-normal).
+                ;; log-space keeps sd finite; it underflows to 0 only when the variance is genuinely
+                ;; negligible (handled below).
+                sd (m/exp (* 0.5 (- (+ (m/log x) (m/log y))
+                                   (+ (* 2.0 (m/log s)) (m/log (inc s))))))
+                z (m/div (- c mean) sd)]
+            ;; z is NaN only for the degenerate c==mean & sd→0 (point mass at the mean); F there is
+            ;; the midpoint 0.5 (z=0). cdf-standard-normal handles ±Inf (sd→0, c≠mean) itself.
+            (cdf-standard-normal (if (m/nan? z) 0.0 z))))))))
 
 (s/fdef regularized-beta
   :args (s/cat :c ::m/prob

@@ -93,13 +93,22 @@
 ;; any real-world matrix while avoiding generator-induced overflow. --ME
 (defn pos-def-matrix-finite-gen
   "Returns a test.check generator for a `dim`x`dim` positive-definite matrix with finite entries.
-  Construction is m·mᵀ + 0.1·I; matrix entries are bounded at ±1e50 to avoid overflow when squared."
+  Construction is m·mᵀ + 0.1·I; matrix entries are bounded at ±1e50 to avoid overflow when squared.
+
+  At large `dim` and magnitude the squared matrix m·mᵀ can be ill-conditioned enough that the 0.1·I
+  bump is lost to roundoff, leaving the result numerically singular (`cholesky-decomposition` → nil).
+  Such matrices are positive-definite in exact arithmetic but fail `pos-definite-matrix-finite?` (up
+  to ~50% of raw draws at `dim` 9), so the output is filtered through that predicate — every
+  generated matrix satisfies the contract it is generated for."
   [dim]
-  (gen/fmap (fn [m]
-              (tensor/add (mx/mx* m (mx/transpose m))
-                (mx/diagonal-matrix dim (constantly 0.1))))
-    ;;1e50 is needed for PSD -- ME
-    (gen/vector (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) dim) dim)))
+  (gen/such-that
+    pos-definite-matrix-finite?
+    (gen/fmap (fn [m]
+                (tensor/add (mx/mx* m (mx/transpose m))
+                  (mx/diagonal-matrix dim (constantly 0.1))))
+      ;;1e50 is needed for PSD -- ME
+      (gen/vector (gen/vector (m/finite-gen {:min -1e50 :max 1e50}) dim) dim))
+    {:max-tries 100}))
 
 (defn pos-def-matrix-finite-invertible-gen
   "Returns a test.check generator for a `dim`x`dim` positive-definite matrix well-conditioned enough

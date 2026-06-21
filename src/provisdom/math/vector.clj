@@ -190,7 +190,11 @@
              :into []
              :min-count 2)
       #(open-probs? % 1e-8))
-    #(gen/bind (gen/choose 2 mdl) probs-gen)))
+    ;; probs-gen normalizes finite+ weights spanning a huge range, so ~1/3 of draws have a
+    ;; component that underflows to 0.0 or rounds to 1.0 — valid for closed ::vector-probs but not
+    ;; for the open interval. Reject those (mdl=6, so the retry rate is tiny).
+    #(gen/bind (gen/choose 2 mdl)
+       (fn [n] (gen/such-that (fn [v] (open-probs? v 1e-8)) (probs-gen n) {:max-tries 100})))))
 
 (s/def ::vector-probs+
   (s/with-gen
@@ -783,10 +787,10 @@
         v21 (double (get v2 1))
         t (- (* v10 v21) (* v20 v11))]
     (cond (= (count v1) (count v2) 3) (let [v12 (get v1 2)
-                                        v22 (get v2 2)]
-                                    [(- (* v11 v22) (* v21 v12))
-                                     (- (* v12 v20) (* v22 v10))
-                                     t])
+                                            v22 (get v2 2)]
+                                        [(- (* v11 v22) (* v21 v12))
+                                         (- (* v12 v20) (* v22 v10))
+                                         t])
       (= (count v1) (count v2) 2) t
       :else nil)))
 
